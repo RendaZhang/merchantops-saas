@@ -23,3 +23,6 @@
 - Make active Spring profile configurable via `SPRING_PROFILES_ACTIVE` (default: `dev`)
 - Update README with profile/configuration usage guidance
 - Replace hardcoded `application-dev.yml` credentials with environment-variable overrides and local defaults
+- Add Flyway dependencies (`flyway-core`, `flyway-mysql`) in `merchantops-infra`
+- Add first migration script `V1__init_schema.sql` and initialize base tables
+- Configure Flyway in `application-dev.yml` and document migration workflow

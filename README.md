@@ -12,6 +12,7 @@ It includes a backend skeleton for ticket handling, async import workflows, bill
 - Requirements & Version Policy
 - Local Dependencies (Docker Compose)
 - Profiles & Local Config
+- Database Migrations (Flyway)
 - Quick Start
 - Health Checks
 - Troubleshooting
@@ -64,7 +65,7 @@ merchantops-saas/
 - Build target: Java 21
 - Local build requirement: JDK 21
 - Build tool: Maven 3.9.x (or Maven Wrapper)
-- Frameworks: Spring Boot 3.3.8, Spring Web, Spring Validation, Spring Boot Actuator
+- Frameworks: Spring Boot 3.3.8, Spring Web, Spring Validation, Spring Boot Actuator, Flyway
 - Network requirement: access to Maven Central (`https://repo.maven.apache.org`)
 
 ## Local Dependencies (Docker Compose)
@@ -125,6 +126,22 @@ Default local access:
   - Redis (`localhost:6379`)
   - RabbitMQ (`localhost:5672`)
 - `application-dev.yml` supports environment-variable overrides (for example `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`), with local-safe defaults.
+
+## Database Migrations (Flyway)
+
+- Flyway dependencies are managed in `merchantops-infra` (`flyway-core`, `flyway-mysql`).
+- Migration scripts are loaded from:
+  - `merchantops-api/src/main/resources/db/migration`
+- Naming convention:
+  - `V{version}__{description}.sql` (example: `V1__init_schema.sql`)
+- In `dev` profile, Flyway is enabled and runs automatically on application startup.
+- Verify migration history in MySQL:
+
+```sql
+SELECT installed_rank, version, description, script, success
+FROM flyway_schema_history
+ORDER BY installed_rank;
+```
 
 ## Quick Start
 
