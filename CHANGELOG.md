@@ -33,3 +33,10 @@
 - Restore unauthenticated health checks for `/health`
 - Document `PasswordHashGenerator` usage context for demo seed password hash generation
 - Add Flyway checksum troubleshooting note: avoid editing applied migrations, create a new `Vx__...sql` instead
+- Add unified API response model (`ApiResponse`) and shared error codes (`ErrorCode`)
+- Add business exception type (`BizException`) and global exception handler in API module
+- Add dev endpoints and DTO for response/validation exception path checks
+- Update README with API response and error handling documentation
+- Fix malformed JSON handling to return `400 BAD_REQUEST` instead of `500`
+- Map `BizException` codes to corresponding HTTP status (401/403/404/400/500)
+- Avoid leaking internal exception messages in generic `INTERNAL_ERROR` responses

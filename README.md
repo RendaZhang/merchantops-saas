@@ -13,6 +13,7 @@ It includes a backend skeleton for ticket handling, async import workflows, bill
 - Local Dependencies (Docker Compose)
 - Profiles & Local Config
 - Database Migrations (Flyway)
+- API Response & Error Handling
 - Quick Start
 - Health Checks
 - Troubleshooting
@@ -160,6 +161,52 @@ SELECT
   (SELECT COUNT(*) FROM users) AS user_cnt,
   (SELECT COUNT(*) FROM user_role) AS user_role_cnt,
   (SELECT COUNT(*) FROM role_permission) AS role_perm_cnt;
+```
+
+## API Response & Error Handling
+
+- Unified response wrapper: `ApiResponse<T>` with fields:
+  - `code` (business-level result code)
+  - `message` (human-readable message)
+  - `data` (payload, nullable)
+- Shared error model:
+  - `ErrorCode` enum in `merchantops-common`
+  - `BizException` for business-layer errors
+- Global exception mapping:
+  - `GlobalExceptionHandler` in `merchantops-api`
+  - Handles validation, bind, malformed JSON body, business, and fallback exceptions
+  - Maps business error codes to proper HTTP status (for example `NOT_FOUND -> 404`, `FORBIDDEN -> 403`)
+  - Returns generic message for unexpected server exceptions (no internal detail leak)
+- Example success response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "message": "hello"
+  }
+}
+```
+
+- Example validation failure response:
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "message: message must not be blank",
+  "data": null
+}
+```
+
+- Example malformed JSON response:
+
+```json
+{
+  "code": "BAD_REQUEST",
+  "message": "invalid request body",
+  "data": null
+}
 ```
 
 ## Quick Start
