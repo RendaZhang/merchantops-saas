@@ -14,6 +14,8 @@ It includes a backend skeleton for ticket handling, async import workflows, bill
 - Profiles & Local Config
 - Database Migrations (Flyway)
 - API Response & Error Handling
+- Request Tracing (X-Request-Id)
+- API Docs & Security
 - Quick Start
 - Health Checks
 - Troubleshooting
@@ -67,7 +69,7 @@ merchantops-saas/
 - Build target: Java 21
 - Local build requirement: JDK 21
 - Build tool: Maven 3.9.x (or Maven Wrapper)
-- Frameworks: Spring Boot 3.3.8, Spring Web, Spring Validation, Spring Boot Actuator, Flyway
+- Frameworks: Spring Boot 3.3.8, Spring Web, Spring Validation, Spring Boot Actuator, Spring Security, SpringDoc OpenAPI, Flyway
 - Network requirement: access to Maven Central (`https://repo.maven.apache.org`)
 
 ## Local Dependencies (Docker Compose)
@@ -209,6 +211,39 @@ SELECT
 }
 ```
 
+## Request Tracing (X-Request-Id)
+
+- Request header pass-through:
+  - If client sends `X-Request-Id`, the same value is used.
+- Automatic generation:
+  - If client does not send `X-Request-Id`, backend generates a UUID.
+- Response header echo:
+  - API always returns `X-Request-Id` in response headers.
+- Logging correlation:
+  - `requestId` is written into MDC and included in console logs.
+  - Filter order is fixed to ensure request ID is available when request-completion logs are emitted.
+
+Quick check examples:
+
+```bash
+curl -i http://localhost:8080/health
+curl -i -H "X-Request-Id: demo-request-id-001" http://localhost:8080/health
+```
+
+## API Docs & Security
+
+- OpenAPI endpoint: `GET /v3/api-docs`
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Public endpoints (no auth):
+  - `/health`
+  - `/actuator/**`
+  - `/swagger-ui/**`
+  - `/swagger-ui.html`
+  - `/v3/api-docs/**`
+  - `/api/v1/dev/**`
+- Other endpoints require authentication via HTTP Basic.
+- If no custom user is configured, Spring Security creates a default user (`user`) and prints the generated password in startup logs.
+
 ## Quick Start
 
 1. Start local dependencies (optional for now, recommended for future integration work):
@@ -228,6 +263,12 @@ docker compose up -d
 
 ```bash
 ./mvnw -f merchantops-api/pom.xml spring-boot:run
+```
+
+After startup, open Swagger UI:
+
+```text
+http://localhost:8080/swagger-ui/index.html
 ```
 
 Start with an explicit profile if needed:

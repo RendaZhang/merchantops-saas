@@ -40,3 +40,8 @@
 - Fix malformed JSON handling to return `400 BAD_REQUEST` instead of `500`
 - Map `BizException` codes to corresponding HTTP status (401/403/404/400/500)
 - Avoid leaking internal exception messages in generic `INTERNAL_ERROR` responses
+- Add request ID tracing support: pass-through/generation via `X-Request-Id`, response header echo, and MDC-based logging correlation
+- Fix request tracing filter execution order to ensure `requestId` is reliably present in completion logs
+- Add Spring Security (`spring-boot-starter-security`) and define endpoint authorization policy
+- Add SpringDoc OpenAPI integration and Swagger UI support
+- Document request tracing, security behavior, and API docs access in README
