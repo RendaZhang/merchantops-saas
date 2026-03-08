@@ -46,6 +46,7 @@ merchantops-saas/
 ├── sql/
 ├── CHANGELOG.md
 ├── README.md
+├── .env.example
 ├── docker-compose.yml
 ├── mvnw
 ├── mvnw.cmd
@@ -135,12 +136,30 @@ Default local access:
 - Naming convention:
   - `V{version}__{description}.sql` (example: `V1__init_schema.sql`)
 - In `dev` profile, Flyway is enabled and runs automatically on application startup.
+- Current migrations:
+  - `V1__init_schema.sql`: creates base RBAC and tenant tables
+  - `V2__seed_demo_data.sql`: inserts first demo tenant/admin/role/permissions data
+- A helper tool is available to generate BCrypt hashes for seed/demo users:
+  - `merchantops-api/src/main/java/com/renda/merchantops/api/tools/PasswordHashGenerator.java`
+- Current demo seed account (local only): `admin` with temporary password `123456`
 - Verify migration history in MySQL:
 
 ```sql
 SELECT installed_rank, version, description, script, success
 FROM flyway_schema_history
 ORDER BY installed_rank;
+```
+
+Verify seeded demo data (example):
+
+```sql
+SELECT
+  (SELECT COUNT(*) FROM tenant) AS tenant_cnt,
+  (SELECT COUNT(*) FROM role) AS role_cnt,
+  (SELECT COUNT(*) FROM permission) AS perm_cnt,
+  (SELECT COUNT(*) FROM users) AS user_cnt,
+  (SELECT COUNT(*) FROM user_role) AS user_role_cnt,
+  (SELECT COUNT(*) FROM role_permission) AS role_perm_cnt;
 ```
 
 ## Quick Start
@@ -199,6 +218,7 @@ curl -s http://localhost:8080/actuator/health
 - If `docker` or `docker compose` is unavailable in your shell, run commands in the environment where Docker Desktop/Engine is installed and integrated (for example, WSL with Docker integration enabled).
 - If Docker reports missing environment variables, ensure `.env` exists in the repository root (you can initialize it with `cp .env.example .env`).
 - If Docker services fail due to port conflicts (`3306`, `6379`, `5672`, `15672`), stop conflicting local processes/containers or adjust mapped ports in `docker-compose.yml`.
+- If Flyway reports `Migration checksum mismatch`, do not edit an already-applied `Vx__...sql` migration. Revert that file and create a new migration version (for example `V3__...sql`) for follow-up changes.
 - If you see missing internal SNAPSHOT dependencies (for example `merchantops-common`, `merchantops-domain`, or `merchantops-infra`), install from root with `-am`: `./mvnw -pl merchantops-api -am -DskipTests install`
 - `No plugin found for prefix 'spring-boot'` means the command is being resolved from the aggregator root POM. Run using the module POM: `./mvnw -f merchantops-api/pom.xml spring-boot:run`
 - If startup fails with `Port 8080 was already in use`, stop the process using port `8080` or run on another port: `./mvnw -f merchantops-api/pom.xml spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`

@@ -26,3 +26,10 @@
 - Add Flyway dependencies (`flyway-core`, `flyway-mysql`) in `merchantops-infra`
 - Add first migration script `V1__init_schema.sql` and initialize base tables
 - Configure Flyway in `application-dev.yml` and document migration workflow
+- Add second migration script `V2__seed_demo_data.sql` for initial demo tenant/role/user/permission data
+- Add seed data verification notes and SQL examples in README
+- Document `/health` vs `/actuator/health` behavior with Spring Security enabled
+- Replace `spring-boot-starter-security` with `spring-security-crypto` to keep password hashing support without enabling global default endpoint authentication
+- Restore unauthenticated health checks for `/health`
+- Document `PasswordHashGenerator` usage context for demo seed password hash generation
+- Add Flyway checksum troubleshooting note: avoid editing applied migrations, create a new `Vx__...sql` instead
