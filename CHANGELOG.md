@@ -15,3 +15,7 @@
 - Reorganize README sections and consolidate version policy, prerequisites, and stack details
 - Improve startup reliability guidance (`install` + module-level `spring-boot:run`)
 - Add health check expected output examples
+- Add Docker Compose documentation for local MySQL/Redis/RabbitMQ dependencies
+- Document Docker startup, shutdown, access endpoints, and common port-conflict troubleshooting
+- Move Docker credentials to `.env`-based configuration
+- Add `.env.example` and document local environment initialization

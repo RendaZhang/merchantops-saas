@@ -21,6 +21,7 @@ logs/
 # Env
 .env
 .env.*
+!.env.example
 
 # Maven wrapper temporary
 .mvn/wrapper/maven-wrapper.jar
@@ -28,6 +29,7 @@ logs/
 # Docker local data
 mysql_data/
 redis_data/
+rabbitmq_data/
 
 # Coverage / reports
 coverage/
