@@ -1,6 +1,9 @@
 # MerchantOps SaaS
 
-一个面向跨境卖家团队的多租户运营支持平台，提供工单处理、异步导入、账单追溯、功能开关、审计日志和基础工程化能力，模拟真实 SaaS 后端研发场景。
+A multi-tenant operations support platform for cross-border seller teams, 
+providing ticket management, asynchronous imports, billing traceability, 
+feature toggles, audit logging, and foundational engineering capabilities, 
+simulating real-world SaaS backend development scenarios.
 
 ## Project Goals
 
