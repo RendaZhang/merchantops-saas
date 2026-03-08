@@ -11,6 +11,7 @@ It includes a backend skeleton for ticket handling, async import workflows, bill
 - Module Responsibilities
 - Requirements & Version Policy
 - Local Dependencies (Docker Compose)
+- Profiles & Local Config
 - Quick Start
 - Health Checks
 - Troubleshooting
@@ -114,6 +115,17 @@ Default local access:
 - RabbitMQ AMQP: `localhost:5672`
 - RabbitMQ Management UI: `http://localhost:15672` (credentials from `.env`: `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS`)
 
+## Profiles & Local Config
+
+- `application.yml` defaults to the `dev` profile and can be overridden:
+  - default: `SPRING_PROFILES_ACTIVE=dev`
+  - override example: `SPRING_PROFILES_ACTIVE=prod`
+- `application-dev.yml` contains local integration settings for:
+  - MySQL (`localhost:3306`)
+  - Redis (`localhost:6379`)
+  - RabbitMQ (`localhost:5672`)
+- `application-dev.yml` supports environment-variable overrides (for example `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`), with local-safe defaults.
+
 ## Quick Start
 
 1. Start local dependencies (optional for now, recommended for future integration work):
@@ -135,10 +147,23 @@ docker compose up -d
 ./mvnw -f merchantops-api/pom.xml spring-boot:run
 ```
 
+Start with an explicit profile if needed:
+
+```bash
+SPRING_PROFILES_ACTIVE=dev ./mvnw -f merchantops-api/pom.xml spring-boot:run
+```
+
 Windows Command Prompt / PowerShell equivalents:
 
 ```powershell
 mvnw.cmd -pl merchantops-api -am -DskipTests install
+mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
+```
+
+PowerShell profile override example:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE="dev"
 mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 

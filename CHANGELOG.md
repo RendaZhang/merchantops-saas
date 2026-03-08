@@ -19,3 +19,7 @@
 - Document Docker startup, shutdown, access endpoints, and common port-conflict troubleshooting
 - Move Docker credentials to `.env`-based configuration
 - Add `.env.example` and document local environment initialization
+- Add `application-dev.yml` for local MySQL/Redis/RabbitMQ integration settings
+- Make active Spring profile configurable via `SPRING_PROFILES_ACTIVE` (default: `dev`)
+- Update README with profile/configuration usage guidance
+- Replace hardcoded `application-dev.yml` credentials with environment-variable overrides and local defaults

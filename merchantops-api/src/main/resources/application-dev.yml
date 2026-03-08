@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:merchantops}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=${TZ:Asia/Shanghai}
+    username: ${MYSQL_USER:merchantops}
+    password: ${MYSQL_PASSWORD:merchantops}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3000ms
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:merchantops}
+    password: ${RABBITMQ_DEFAULT_PASS:merchantops}
+    virtual-host: ${RABBITMQ_VHOST:/}
+
+logging:
+  level:
+    org.springframework.amqp: INFO
+    org.springframework.data.redis: INFO
+    com.zaxxer.hikari: INFO
