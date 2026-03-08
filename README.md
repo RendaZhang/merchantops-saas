@@ -14,6 +14,7 @@ It includes a backend skeleton for ticket handling, async import workflows, bill
 - Profiles & Local Config
 - Database Migrations (Flyway)
 - API Response & Error Handling
+- Authentication (Current Scope)
 - Request Tracing (X-Request-Id)
 - API Docs & Security
 - Quick Start
@@ -211,6 +212,47 @@ SELECT
 }
 ```
 
+## Authentication (Current Scope)
+
+- Implemented endpoint:
+  - `POST /api/v1/auth/login`
+- Current behavior:
+  - Verifies `tenantCode`, `username`, and `password`
+  - Requires tenant and user status to be `ACTIVE`
+  - Returns JWT `accessToken` on successful login
+- Current scope boundary:
+  - JWT issuing is implemented
+  - JWT authentication filter is not implemented yet
+  - `/api/v1/me` is not implemented yet
+- Request example:
+
+```json
+{
+  "tenantCode": "demo-tenant",
+  "username": "admin",
+  "password": "123456"
+}
+```
+
+- Response `data` example:
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9....",
+  "tokenType": "Bearer",
+  "expiresIn": 7200
+}
+```
+
+- JWT config keys (`application-dev.yml`):
+  - `jwt.secret`
+  - `jwt.expire-seconds`
+- Environment variable overrides:
+  - `JWT_SECRET`
+  - `JWT_EXPIRE_SECONDS`
+- Tenant isolation hardening:
+  - Role and permission lookup in login flow is constrained by both `userId` and `tenantId` to avoid cross-tenant claim pollution when inconsistent link data exists.
+
 ## Request Tracing (X-Request-Id)
 
 - Request header pass-through:
@@ -241,6 +283,7 @@ curl -i -H "X-Request-Id: demo-request-id-001" http://localhost:8080/health
   - `/swagger-ui.html`
   - `/v3/api-docs/**`
   - `/api/v1/dev/**`
+  - `/api/v1/auth/login`
 - Other endpoints require authentication via HTTP Basic.
 - If no custom user is configured, Spring Security creates a default user (`user`) and prints the generated password in startup logs.
 

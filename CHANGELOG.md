@@ -45,3 +45,11 @@
 - Add Spring Security (`spring-boot-starter-security`) and define endpoint authorization policy
 - Add SpringDoc OpenAPI integration and Swagger UI support
 - Document request tracing, security behavior, and API docs access in README
+- Add initial auth entrypoint: `POST /api/v1/auth/login` with login request/response DTOs
+- Add `AuthService` and `JwtTokenService`; return JWT access token on successful login
+- Add JPA entities/repositories for tenant/user/role/permission lookup in login flow
+- Add JWT dependencies (`jjwt-api`, `jjwt-impl`, `jjwt-jackson`) and JWT dev config (`jwt.secret`, `jwt.expire-seconds`)
+- Support JWT config overrides via env vars (`JWT_SECRET`, `JWT_EXPIRE_SECONDS`) in `application-dev.yml`
+- Keep scope explicit: JWT issuance only (no JWT auth filter yet, no `/api/v1/me` yet)
+- Harden tenant isolation in login claims assembly by constraining role/permission queries with both `userId` and `tenantId`
+- Update README with authentication scope, login API examples, and JWT configuration notes
