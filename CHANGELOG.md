@@ -53,3 +53,12 @@
 - Keep scope explicit: JWT issuance only (no JWT auth filter yet, no `/api/v1/me` yet)
 - Harden tenant isolation in login claims assembly by constraining role/permission queries with both `userId` and `tenantId`
 - Update README with authentication scope, login API examples, and JWT configuration notes
+- Add JWT authentication filter for `Authorization: Bearer <token>` validation and claim parsing
+- Populate `SecurityContext` with current user principal from JWT claims
+- Add current-user endpoint `GET /api/v1/me` (with compatibility path `/api/v1/user/me`)
+- Return `401 UNAUTHORIZED` JSON response for unauthenticated access to protected endpoints
+- Add `403 FORBIDDEN` JSON access-denied handler
+- Add Swagger Bearer security scheme and expose `UserController` endpoint with bearer requirement
+- Update README with JWT auth flow (`/api/v1/me`, 401/403 behavior, Bearer usage)
+- Standardize current-user endpoint to `GET /api/v1/user/me` and remove `/api/v1/me` compatibility mapping
+- Add troubleshooting note for stale Swagger docs caused by old process/port occupancy

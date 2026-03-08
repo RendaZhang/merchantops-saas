@@ -220,10 +220,14 @@ SELECT
   - Verifies `tenantCode`, `username`, and `password`
   - Requires tenant and user status to be `ACTIVE`
   - Returns JWT `accessToken` on successful login
-- Current scope boundary:
-  - JWT issuing is implemented
-  - JWT authentication filter is not implemented yet
-  - `/api/v1/me` is not implemented yet
+- Authenticated user endpoint:
+  - `GET /api/v1/user/me`
+  - Returns current user identity/tenant/roles/permissions from `SecurityContext`
+- Token usage:
+  - Send `Authorization: Bearer <accessToken>` on protected endpoints
+- Error behavior:
+  - Missing/invalid token on protected endpoint returns `401 UNAUTHORIZED`
+  - Access denied returns `403 FORBIDDEN` via JSON response handler
 - Request example:
 
 ```json
@@ -276,6 +280,8 @@ curl -i -H "X-Request-Id: demo-request-id-001" http://localhost:8080/health
 
 - OpenAPI endpoint: `GET /v3/api-docs`
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Swagger security scheme:
+  - `bearerAuth` (HTTP Bearer JWT)
 - Public endpoints (no auth):
   - `/health`
   - `/actuator/**`
@@ -284,8 +290,7 @@ curl -i -H "X-Request-Id: demo-request-id-001" http://localhost:8080/health
   - `/v3/api-docs/**`
   - `/api/v1/dev/**`
   - `/api/v1/auth/login`
-- Other endpoints require authentication via HTTP Basic.
-- If no custom user is configured, Spring Security creates a default user (`user`) and prints the generated password in startup logs.
+- Other endpoints require Bearer token authentication.
 
 ## Quick Start
 
@@ -353,6 +358,7 @@ curl -s http://localhost:8080/actuator/health
 - If you see missing internal SNAPSHOT dependencies (for example `merchantops-common`, `merchantops-domain`, or `merchantops-infra`), install from root with `-am`: `./mvnw -pl merchantops-api -am -DskipTests install`
 - `No plugin found for prefix 'spring-boot'` means the command is being resolved from the aggregator root POM. Run using the module POM: `./mvnw -f merchantops-api/pom.xml spring-boot:run`
 - If startup fails with `Port 8080 was already in use`, stop the process using port `8080` or run on another port: `./mvnw -f merchantops-api/pom.xml spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`
+- If Swagger UI does not show newly added endpoints, verify you are connected to the newly started process (not an older process still occupying `8080`), and check `http://localhost:8080/v3/api-docs` directly.
 
 ## Current Status
 

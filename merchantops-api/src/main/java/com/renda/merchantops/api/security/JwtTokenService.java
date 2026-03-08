@@ -1,6 +1,7 @@
 package com.renda.merchantops.api.security;
 
 import com.renda.merchantops.api.config.JwtProperties;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -45,7 +47,64 @@ public class JwtTokenService {
                 .compact();
     }
 
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public CurrentUser parseCurrentUser(String token) {
+        Claims claims = parseClaims(token);
+
+        Long userId = parseRequiredLong(claims.getSubject(), "sub");
+        Long tenantId = parseRequiredLong(claims.get("tenantId"), "tenantId");
+        String tenantCode = claims.get("tenantCode", String.class);
+        String username = claims.get("username", String.class);
+        if (!org.springframework.util.StringUtils.hasText(tenantCode)) {
+            throw new IllegalArgumentException("missing claim: tenantCode");
+        }
+        if (!org.springframework.util.StringUtils.hasText(username)) {
+            throw new IllegalArgumentException("missing claim: username");
+        }
+
+        List<String> roles = toStringList(claims.get("roles"));
+        List<String> permissions = toStringList(claims.get("permissions"));
+
+        return new CurrentUser(
+                userId,
+                tenantId,
+                tenantCode,
+                username,
+                roles,
+                permissions
+        );
+    }
+
     public long getExpireSeconds() {
         return jwtProperties.getExpireSeconds();
     }
+
+    private List<String> toStringList(Object value) {
+        if (value instanceof List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        return Collections.emptyList();
+    }
+
+    private Long parseRequiredLong(Object value, String claimName) {
+        if (value == null) {
+            throw new IllegalArgumentException("missing claim: " + claimName);
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.valueOf(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("invalid claim: " + claimName, ex);
+        }
+    }
+
 }
