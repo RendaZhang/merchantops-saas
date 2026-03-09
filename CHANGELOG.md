@@ -76,3 +76,5 @@
 - Add RBAC demo controller with three permission-protected test endpoints
 - Fix permission-denied path to return unified `403 FORBIDDEN` JSON instead of falling back to `500`
 - Update README with RBAC test endpoints, permission mapping, and demo user guidance
+- Add `GET /api/v1/users` endpoint protected by `USER_READ` to return summary DTOs for users in the current tenant
+- Update README and docs with current-tenant user listing behavior, permissions, and verification steps

@@ -19,6 +19,7 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 
 - Multi-module Spring Boot backend
 - JWT login and authenticated user context endpoints
+- Current-tenant user listing endpoint protected by `USER_READ`
 - RBAC demo endpoints with permission interception
 - Flyway-based schema and seed data bootstrapping
 - Health checks, request tracing, and Swagger UI

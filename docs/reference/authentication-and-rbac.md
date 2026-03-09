@@ -34,6 +34,7 @@ Response `data` example:
 
 - `GET /api/v1/user/me`: current user identity, tenant, roles, and permissions
 - `GET /api/v1/context`: current tenant and user context from thread-local holders
+- `GET /api/v1/users`: returns a summary list of users in the current tenant and requires `USER_READ`
 
 Token usage:
 
@@ -47,6 +48,7 @@ Quick check:
 TOKEN=<paste-accessToken-from-login-response>
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users
 ```
 
 PowerShell:
@@ -55,6 +57,7 @@ PowerShell:
 $token = "<paste-accessToken-from-login-response>"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/me
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 ```
 
 ## Context Propagation
@@ -68,6 +71,37 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/conte
 - `GET /api/v1/rbac/users` requires `USER_READ`
 - `GET /api/v1/rbac/users/manage` requires `USER_WRITE`
 - `GET /api/v1/rbac/feature-flags` requires `FEATURE_FLAG_MANAGE`
+
+## User Listing Endpoint
+
+- `GET /api/v1/users`
+- requires `USER_READ`
+- reads `tenantId` from the authenticated request context
+- returns only users that belong to the current tenant
+- response items use a summary DTO with:
+  - `id`
+  - `username`
+  - `displayName`
+  - `email`
+  - `status`
+
+Response example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": [
+    {
+      "id": 1,
+      "username": "admin",
+      "displayName": "Admin User",
+      "email": "admin@demo-shop.local",
+      "status": "ACTIVE"
+    }
+  ]
+}
+```
 
 Demo users under tenant `demo-shop`:
 

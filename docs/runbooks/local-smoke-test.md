@@ -31,6 +31,7 @@ Copy the returned `accessToken`.
 TOKEN=<paste-accessToken-from-login-response>
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users
 ```
 
 PowerShell:
@@ -39,7 +40,10 @@ PowerShell:
 $token = "<paste-accessToken-from-login-response>"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/me
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 ```
+
+`GET /api/v1/users` should return a summary list for the current tenant only.
 
 ## 4. Check RBAC Demo Endpoints
 
