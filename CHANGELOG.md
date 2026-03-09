@@ -62,3 +62,12 @@
 - Update README with JWT auth flow (`/api/v1/me`, 401/403 behavior, Bearer usage)
 - Standardize current-user endpoint to `GET /api/v1/user/me` and remove `/api/v1/me` compatibility mapping
 - Add troubleshooting note for stale Swagger docs caused by old process/port occupancy
+
+## 2026-03-09
+
+- Add context endpoint `GET /api/v1/context` to return current tenant/user context after login
+- Return `401 UNAUTHORIZED` when accessing context endpoint without token
+- Write `TenantContext` and `CurrentUserContext` in JWT authentication filter after successful token parsing
+- Clear thread-local context holders at request end to avoid context leakage across requests
+- Add `ContextAccess` helper for unified `currentTenantId/currentUserId` access in business code
+- Update README with context endpoint behavior and verification examples

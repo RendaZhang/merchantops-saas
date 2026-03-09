@@ -223,16 +223,23 @@ SELECT
 - Authenticated user endpoint:
   - `GET /api/v1/user/me`
   - Returns current user identity/tenant/roles/permissions from `SecurityContext`
+- Authenticated context endpoint:
+  - `GET /api/v1/context`
+  - Returns tenant/user context data from thread-local context holders
 - Token usage:
   - Send `Authorization: Bearer <accessToken>` on protected endpoints
 - Error behavior:
   - Missing/invalid token on protected endpoint returns `401 UNAUTHORIZED`
   - Access denied returns `403 FORBIDDEN` via JSON response handler
+- Context propagation:
+  - `JwtAuthenticationFilter` writes `TenantContext` and `CurrentUserContext` after successful JWT parsing
+  - Context is always cleared in filter `finally` block after request completion
+  - Business code can use `ContextAccess.requireTenantId()` / `ContextAccess.requireUserId()` for unified access
 - Request example:
 
 ```json
 {
-  "tenantCode": "demo-tenant",
+  "tenantCode": "demo-shop",
   "username": "admin",
   "password": "123456"
 }
@@ -246,6 +253,17 @@ SELECT
   "tokenType": "Bearer",
   "expiresIn": 7200
 }
+```
+
+- Context endpoint quick check:
+
+```bash
+# no token -> 401
+curl -i http://localhost:8080/api/v1/context
+
+# with token -> 200
+TOKEN=<paste-accessToken-from-login-response>
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
 ```
 
 - JWT config keys (`application-dev.yml`):

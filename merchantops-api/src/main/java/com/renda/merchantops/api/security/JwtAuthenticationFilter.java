@@ -1,5 +1,7 @@
 package com.renda.merchantops.api.security;
 
+import com.renda.merchantops.api.context.CurrentUserContext;
+import com.renda.merchantops.api.context.TenantContext;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,28 +37,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (StringUtils.hasText(authHeader) && authHeader.startsWith(BEARER_PREFIX)) {
-            String token = authHeader.substring(BEARER_PREFIX.length());
+        try {
+            if (StringUtils.hasText(authHeader) && authHeader.startsWith(BEARER_PREFIX)) {
+                String token = authHeader.substring(BEARER_PREFIX.length());
 
-            try {
-                CurrentUser currentUser = jwtTokenService.parseCurrentUser(token);
+                try {
+                    CurrentUser currentUser = jwtTokenService.parseCurrentUser(token);
 
-                List<SimpleGrantedAuthority> authorities = Stream.concat(
-                                currentUser.getRoles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role)),
-                                currentUser.getPermissions().stream().map(SimpleGrantedAuthority::new)
-                        )
-                        .toList();
+                    List<SimpleGrantedAuthority> authorities = Stream.concat(
+                                    currentUser.getRoles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role)),
+                                    currentUser.getPermissions().stream().map(SimpleGrantedAuthority::new)
+                            )
+                            .toList();
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(currentUser, null, authorities);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(currentUser, null, authorities);
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            } catch (JwtException | IllegalArgumentException ex) {
-                SecurityContextHolder.clearContext();
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                    CurrentUserContext.set(currentUser);
+                    TenantContext.setTenant(currentUser.getTenantId(), currentUser.getTenantCode());
+                } catch (JwtException | IllegalArgumentException ex) {
+                    SecurityContextHolder.clearContext();
+                }
             }
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+        } finally {
+            CurrentUserContext.clear();
+            TenantContext.clear();
+        }
     }
 
 }
