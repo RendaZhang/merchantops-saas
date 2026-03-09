@@ -7,6 +7,14 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+springdoc:
+  show-actuator: true
+  swagger-ui:
+    operations-sorter: alpha
+    tags-sorter: alpha
+    persist-authorization: true
+    try-it-out-enabled: true
+
 management:
   endpoints:
     web:

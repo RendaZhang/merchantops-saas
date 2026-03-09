@@ -21,6 +21,18 @@ The `dev` profile contains local integration settings for:
 - RabbitMQ
 - JWT
 
+## `application.yml`
+
+Shared application configuration currently includes:
+
+- `spring.application.name=merchantops-saas`
+- `SPRING_PROFILES_ACTIVE=dev` by default
+- `springdoc.show-actuator=true`
+- Swagger UI operation sorting: alphabetical
+- Swagger UI tag sorting: alphabetical
+- Swagger authorization persistence enabled
+- Swagger try-it-out enabled by default
+
 ## Supported Environment Variable Overrides
 
 - `MYSQL_HOST`

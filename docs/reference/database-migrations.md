@@ -12,6 +12,7 @@
 - `V1__init_schema.sql`: creates base tenant and RBAC tables
 - `V2__seed_demo_data.sql`: inserts the first demo tenant, admin user, roles, and permissions
 - `V3__seed_rbac_roles_and_users.sql`: adds demo RBAC roles and the `ops` / `viewer` users
+- `V4__ensure_demo_accounts_consistency.sql`: idempotently enforces demo tenant/users/roles/permissions consistency
 
 ## Demo Accounts
 
@@ -20,6 +21,17 @@ Tenant: `demo-shop`
 - `admin` / `123456`
 - `ops` / `123456`
 - `viewer` / `123456`
+
+To verify the accounts really exist in database:
+
+```sql
+SELECT t.tenant_code, u.username, u.display_name, u.status
+FROM users u
+JOIN tenant t ON t.id = u.tenant_id
+WHERE t.tenant_code = 'demo-shop'
+  AND u.username IN ('admin', 'ops', 'viewer')
+ORDER BY u.username;
+```
 
 ## Verify Migration History
 

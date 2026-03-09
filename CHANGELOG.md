@@ -87,3 +87,5 @@
 - Cross-link `api-demo.http` with the regression checklist and normalize current-user references to `/api/v1/user/me`
 - Replace the single foundation design document with ADR-style architecture records under `docs/architecture/adr/`
 - Add ADRs for tenant-aware repository methods and keeping Week 1 focused on foundation work
+- Improve Swagger / OpenAPI coverage with centralized contract annotations, reusable examples, and richer UI defaults
+- Update docs to describe enhanced Swagger behavior, SpringDoc settings, and related verification steps

@@ -1,14 +1,36 @@
 # Authentication and RBAC
 
-## Implemented Auth Endpoint
+## Endpoints
 
 - `POST /api/v1/auth/login`
+- `GET /api/v1/user/me`
+- `GET /api/v1/context`
+- `GET /api/v1/users` (requires `USER_READ`)
+- `GET /api/v1/rbac/users` (requires `USER_READ`)
+- `GET /api/v1/rbac/users/manage` (requires `USER_WRITE`)
+- `GET /api/v1/rbac/feature-flags` (requires `FEATURE_FLAG_MANAGE`)
 
-Current behavior:
+All endpoints above are visible in Swagger UI.
 
-- verifies `tenantCode`, `username`, and `password`
-- requires both tenant and user status to be `ACTIVE`
-- returns a JWT `accessToken` when login succeeds
+## Demo Tenant and Accounts
+
+Tenant:
+
+- `demo-shop`
+
+Accounts:
+
+- `admin / 123456` (`TENANT_ADMIN`)
+- `ops / 123456` (`OPS_USER`)
+- `viewer / 123456` (`READ_ONLY`)
+
+## Login Flow
+
+Behavior:
+
+- login is tenant-scoped: `tenantCode + username + password`
+- tenant and user must both be `ACTIVE`
+- success returns `accessToken` with tenant, user, roles, and permissions claims
 
 Request example:
 
@@ -20,37 +42,35 @@ Request example:
 }
 ```
 
-Response `data` example:
+Success response:
 
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiJ9....",
-  "tokenType": "Bearer",
-  "expiresIn": 7200
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "accessToken": "<jwt-token>",
+    "tokenType": "Bearer",
+    "expiresIn": 7200
+  }
 }
 ```
 
-## Protected Endpoints
+Credential failure response:
 
-- `GET /api/v1/user/me`: current user identity, tenant, roles, and permissions
-- `GET /api/v1/context`: current tenant and user context from thread-local holders
-- `GET /api/v1/users`: returns a summary list of users in the current tenant and requires `USER_READ`
+```json
+{
+  "code": "BAD_REQUEST",
+  "message": "username or password is incorrect",
+  "data": null
+}
+```
 
-## Authentication and Authorization Model
-
-- login uses `tenantCode + username + password`
-- successful login returns a JWT `accessToken`
-- protected requests must send `Authorization: Bearer <accessToken>`
-- JWT parsing restores the authenticated user, tenant, roles, and permissions
-- endpoint permissions are enforced with `@RequirePermission`
-- business queries can read the current tenant and user from request context helpers
-- tenant-scoped reads must use the authenticated tenant context rather than caller-provided tenant identifiers
-
-Token usage:
+## Bearer Token Usage
 
 - send `Authorization: Bearer <accessToken>`
-- missing or invalid token returns `401 UNAUTHORIZED`
-- permission denial returns `403 FORBIDDEN`
+- missing/invalid token returns `401 UNAUTHORIZED`
+- missing required permission returns `403 FORBIDDEN`
 
 Quick check:
 
@@ -70,32 +90,41 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/conte
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 ```
 
-## Context Propagation
+## Core Response Examples
 
-- `JwtAuthenticationFilter` parses the JWT and writes `TenantContext` and `CurrentUserContext`
-- context is cleared in the filter `finally` block after every request
-- business code can use `ContextAccess.requireTenantId()` and `ContextAccess.requireUserId()`
+### `GET /api/v1/user/me`
 
-## RBAC Demo Endpoints
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "userId": 1,
+    "tenantId": 1,
+    "tenantCode": "demo-shop",
+    "username": "admin",
+    "roles": ["TENANT_ADMIN"],
+    "permissions": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"]
+  }
+}
+```
 
-- `GET /api/v1/rbac/users` requires `USER_READ`
-- `GET /api/v1/rbac/users/manage` requires `USER_WRITE`
-- `GET /api/v1/rbac/feature-flags` requires `FEATURE_FLAG_MANAGE`
+### `GET /api/v1/context`
 
-## User Listing Endpoint
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "tenantId": 1,
+    "tenantCode": "demo-shop",
+    "userId": 1,
+    "username": "admin"
+  }
+}
+```
 
-- `GET /api/v1/users`
-- requires `USER_READ`
-- reads `tenantId` from the authenticated request context
-- returns only users that belong to the current tenant
-- response items use a summary DTO with:
-  - `id`
-  - `username`
-  - `displayName`
-  - `email`
-  - `status`
-
-Response example:
+### `GET /api/v1/users`
 
 ```json
 {
@@ -105,27 +134,51 @@ Response example:
     {
       "id": 1,
       "username": "admin",
-      "displayName": "Admin User",
+      "displayName": "Demo Admin",
       "email": "admin@demo-shop.local",
+      "status": "ACTIVE"
+    },
+    {
+      "id": 2,
+      "username": "ops",
+      "displayName": "Ops User",
+      "email": "ops@demo-shop.local",
+      "status": "ACTIVE"
+    },
+    {
+      "id": 3,
+      "username": "viewer",
+      "displayName": "Viewer User",
+      "email": "viewer@demo-shop.local",
       "status": "ACTIVE"
     }
   ]
 }
 ```
 
-Demo users under tenant `demo-shop`:
+### `GET /api/v1/rbac/users/manage` (with `viewer` token)
 
-- `admin`: full demo permissions from `TENANT_ADMIN`
-- `ops`: `USER_READ`, `ORDER_READ`
-- `viewer`: `USER_READ`
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "permission denied",
+  "data": null
+}
+```
 
-Expected behavior:
+## Context Propagation
 
-- `admin` can access `/api/v1/users` and all demo RBAC endpoints
+- `JwtAuthenticationFilter` parses JWT and writes `TenantContext` and `CurrentUserContext`
+- context is cleared in `finally` for every request
+- business code reads context through `ContextAccess`
+
+## Expected RBAC Behavior
+
+- `admin` can access `/api/v1/users`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
 - `ops` can access `/api/v1/users` and `/api/v1/rbac/users`
 - `viewer` can access `/api/v1/users` and `/api/v1/rbac/users`
-- `ops` and `viewer` should receive `403 FORBIDDEN` on endpoints that require permissions they do not have
+- `ops` and `viewer` are denied on endpoints requiring permissions they do not have
 
 ## Tenant Isolation Note
 
-Role and permission lookup during login is constrained by both `userId` and `tenantId` to reduce the chance of cross-tenant claim pollution when inconsistent link data exists.
+Role and permission lookup during login is constrained by both `userId` and `tenantId` to reduce cross-tenant claim pollution risk when inconsistent link data exists.

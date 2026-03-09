@@ -27,7 +27,7 @@ The current repository includes:
 - permission checks through `@RequirePermission`
 - RBAC demo endpoints for permission verification
 - unified API response and exception handling model
-- health checks, request tracing, and Swagger / OpenAPI support
+- health checks, request tracing, and enriched Swagger / OpenAPI support
 
 ## Week 1 Completion Checklist
 
@@ -40,7 +40,7 @@ The current repository includes:
 - [x] Unified API response structure
 - [x] Global exception handling
 - [x] RequestId and request logging
-- [x] Swagger / OpenAPI enabled
+- [x] Swagger / OpenAPI enabled with examples and grouped coverage
 - [x] Login API implemented
 - [x] JWT token issuance implemented
 - [x] JWT authentication filter implemented

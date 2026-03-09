@@ -17,6 +17,8 @@ Use this checklist after foundation-level changes, security changes, or environm
 - [ ] `/health` returns `UP`
 - [ ] `/actuator/health` shows `db`, `redis`, and `rabbit` as `UP`
 - [ ] Swagger UI is accessible
+- [ ] Swagger UI shows documented business endpoints and actuator health coverage
+- [ ] Swagger UI preserves Bearer authorization across requests after login
 
 ## Database
 

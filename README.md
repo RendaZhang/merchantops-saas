@@ -22,7 +22,7 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 - Current-user and current-context endpoints
 - Current-tenant user listing protected by `USER_READ`
 - RBAC demo endpoints and permission interception
-- Flyway migrations, Swagger UI, health checks, and request tracing
+- Flyway migrations, enriched Swagger / OpenAPI docs, health checks, and request tracing
 
 ## Repository Structure
 
