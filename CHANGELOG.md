@@ -71,3 +71,8 @@
 - Clear thread-local context holders at request end to avoid context leakage across requests
 - Add `ContextAccess` helper for unified `currentTenantId/currentUserId` access in business code
 - Update README with context endpoint behavior and verification examples
+- Add `V3__seed_rbac_roles_and_users.sql` with second batch RBAC demo data (`ops`, `viewer`)
+- Add `@RequirePermission` annotation and `RequirePermissionInterceptor` for endpoint-level permission checks
+- Add RBAC demo controller with three permission-protected test endpoints
+- Fix permission-denied path to return unified `403 FORBIDDEN` JSON instead of falling back to `500`
+- Update README with RBAC test endpoints, permission mapping, and demo user guidance

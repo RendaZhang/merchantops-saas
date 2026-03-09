@@ -235,6 +235,10 @@ SELECT
   - `JwtAuthenticationFilter` writes `TenantContext` and `CurrentUserContext` after successful JWT parsing
   - Context is always cleared in filter `finally` block after request completion
   - Business code can use `ContextAccess.requireTenantId()` / `ContextAccess.requireUserId()` for unified access
+- RBAC permission interception:
+  - `@RequirePermission("PERMISSION_CODE")` can be used on controller class/method
+  - `RequirePermissionInterceptor` validates required permissions from current authentication authorities
+  - Permission denied returns unified `403 FORBIDDEN` JSON response
 - Request example:
 
 ```json
@@ -265,6 +269,15 @@ curl -i http://localhost:8080/api/v1/context
 TOKEN=<paste-accessToken-from-login-response>
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
 ```
+
+- RBAC demo endpoints:
+  - `GET /api/v1/rbac/users` requires `USER_READ`
+  - `GET /api/v1/rbac/users/manage` requires `USER_WRITE`
+  - `GET /api/v1/rbac/feature-flags` requires `FEATURE_FLAG_MANAGE`
+- Demo RBAC seed users (tenant `demo-shop`, password `123456`):
+  - `admin`: full demo permissions from `TENANT_ADMIN`
+  - `ops`: `USER_READ`, `ORDER_READ`
+  - `viewer`: `USER_READ`
 
 - JWT config keys (`application-dev.yml`):
   - `jwt.secret`

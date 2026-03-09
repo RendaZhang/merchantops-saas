@@ -14,11 +14,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/user")
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "User")
 public class UserController {
 
     @Operation(summary = "Get current logged-in user")
-    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> me(@AuthenticationPrincipal CurrentUser currentUser) {
         return ApiResponse.success(Map.of(

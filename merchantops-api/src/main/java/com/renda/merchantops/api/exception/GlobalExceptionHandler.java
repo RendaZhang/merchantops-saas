@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -67,6 +69,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.failure(ErrorCode.BAD_REQUEST, "invalid request body"));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.failure(ErrorCode.FORBIDDEN, "permission denied"));
+    }
+
+    @ExceptionHandler(InsufficientAuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInsufficientAuthenticationException(InsufficientAuthenticationException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.failure(ErrorCode.UNAUTHORIZED, "authentication required"));
     }
 
     @ExceptionHandler(Exception.class)
