@@ -36,6 +36,16 @@ Response `data` example:
 - `GET /api/v1/context`: current tenant and user context from thread-local holders
 - `GET /api/v1/users`: returns a summary list of users in the current tenant and requires `USER_READ`
 
+## Authentication and Authorization Model
+
+- login uses `tenantCode + username + password`
+- successful login returns a JWT `accessToken`
+- protected requests must send `Authorization: Bearer <accessToken>`
+- JWT parsing restores the authenticated user, tenant, roles, and permissions
+- endpoint permissions are enforced with `@RequirePermission`
+- business queries can read the current tenant and user from request context helpers
+- tenant-scoped reads must use the authenticated tenant context rather than caller-provided tenant identifiers
+
 Token usage:
 
 - send `Authorization: Bearer <accessToken>`
@@ -108,6 +118,13 @@ Demo users under tenant `demo-shop`:
 - `admin`: full demo permissions from `TENANT_ADMIN`
 - `ops`: `USER_READ`, `ORDER_READ`
 - `viewer`: `USER_READ`
+
+Expected behavior:
+
+- `admin` can access `/api/v1/users` and all demo RBAC endpoints
+- `ops` can access `/api/v1/users` and `/api/v1/rbac/users`
+- `viewer` can access `/api/v1/users` and `/api/v1/rbac/users`
+- `ops` and `viewer` should receive `403 FORBIDDEN` on endpoints that require permissions they do not have
 
 ## Tenant Isolation Note
 

@@ -15,14 +15,14 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 - Support interview storytelling and portfolio presentation
 - Keep the repository easy to run and easy to extend
 
-## Current Capabilities
+## What It Does
 
 - Multi-module Spring Boot backend
-- JWT login and authenticated user context endpoints
-- Current-tenant user listing endpoint protected by `USER_READ`
-- RBAC demo endpoints with permission interception
-- Flyway-based schema and seed data bootstrapping
-- Health checks, request tracing, and Swagger UI
+- JWT login and Bearer-token authentication
+- Current-user and current-context endpoints
+- Current-tenant user listing protected by `USER_READ`
+- RBAC demo endpoints and permission interception
+- Flyway migrations, Swagger UI, health checks, and request tracing
 
 ## Repository Structure
 
@@ -107,6 +107,8 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 ## Documentation
 
 - [docs/README.md](docs/README.md): documentation index
+- [docs/project-status.md](docs/project-status.md): implemented scope, completion status, and known gaps
+- [docs/roadmap.md](docs/roadmap.md): planned next-phase work
 - [docs/getting-started/local-environment.md](docs/getting-started/local-environment.md): Docker services, ports, and `.env`
 - [docs/getting-started/quick-start.md](docs/getting-started/quick-start.md): full local startup flow
 - [docs/reference/configuration.md](docs/reference/configuration.md): profiles and environment variables
@@ -118,9 +120,9 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 - [docs/runbooks/local-smoke-test.md](docs/runbooks/local-smoke-test.md): manual verification flow
 - [docs/runbooks/troubleshooting.md](docs/runbooks/troubleshooting.md): common local problems
 - [docs/architecture/tenant-rbac-integrity-gap.md](docs/architecture/tenant-rbac-integrity-gap.md): recorded database isolation gap
+- [api-demo.http](api-demo.http): IDE-friendly API request examples
 
-## Current Status
+## Summary
 
-- Initial repository setup is complete
-- Core backend skeleton is running
-- Documentation is split into README for entry-level context and `docs/` for detailed references
+- Current project status: [docs/project-status.md](docs/project-status.md)
+- Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)

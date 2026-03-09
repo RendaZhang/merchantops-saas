@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:8080
+@contentType = application/json
+@tenantCode = demo-shop
+@username = admin
+@password = 123456
+@token = replace-with-access-token
+
+### Login - admin
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "tenantCode": "{{tenantCode}}",
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### Get current user
+GET {{baseUrl}}/api/v1/user/me
+Authorization: Bearer {{token}}
+
+### Get context
+GET {{baseUrl}}/api/v1/context
+Authorization: Bearer {{token}}
+
+### List tenant users
+GET {{baseUrl}}/api/v1/users
+Authorization: Bearer {{token}}
+
+### RBAC - read users
+GET {{baseUrl}}/api/v1/rbac/users
+Authorization: Bearer {{token}}
+
+### RBAC - manage users
+GET {{baseUrl}}/api/v1/rbac/users/manage
+Authorization: Bearer {{token}}
+
+### RBAC - feature flags
+GET {{baseUrl}}/api/v1/rbac/feature-flags
+Authorization: Bearer {{token}}

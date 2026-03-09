@@ -62,3 +62,5 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/rbac/
 ```
 
 Use `ops` or `viewer` to confirm permission-denied behavior on endpoints they should not access.
+
+You can also run the same requests from [../../api-demo.http](../../api-demo.http) in an IDE that supports `.http` request files.

@@ -78,3 +78,7 @@
 - Update README with RBAC test endpoints, permission mapping, and demo user guidance
 - Add `GET /api/v1/users` endpoint protected by `USER_READ` to return summary DTOs for users in the current tenant
 - Update README and docs with current-tenant user listing behavior, permissions, and verification steps
+- Split project status and future planning into dedicated docs pages: `docs/project-status.md` and `docs/roadmap.md`
+- Restructure README into a concise entry page with links to status, roadmap, references, and runbooks
+- Add IDE-friendly `api-demo.http` with login, context, user, and RBAC request examples
+- Expand auth documentation with a clearer authentication and authorization model description
