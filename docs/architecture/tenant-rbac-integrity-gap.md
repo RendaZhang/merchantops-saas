@@ -38,7 +38,7 @@ That means the database currently allows a user from tenant A to be linked to a 
 
 ## Recommended Future Fix
 
-Implement in a new Flyway migration (for example `V2__enforce_user_role_tenant_consistency.sql`):
+Implement in a new Flyway migration:
 
 1. Add `tenant_id` to `user_role`
 2. Backfill `tenant_id` from existing valid associations
