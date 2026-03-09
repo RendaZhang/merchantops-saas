@@ -19,5 +19,6 @@ This directory contains the detailed project documentation that sits behind the 
 1. [Local Environment](getting-started/local-environment.md)
 2. [Quick Start](getting-started/quick-start.md)
 3. [Project Status](project-status.md)
-4. [Authentication and RBAC](reference/authentication-and-rbac.md)
-5. [Local Smoke Test](runbooks/local-smoke-test.md)
+4. [Roadmap](roadmap.md)
+5. [Authentication and RBAC](reference/authentication-and-rbac.md)
+6. [Regression Checklist](runbooks/regression-checklist.md)

@@ -82,3 +82,8 @@
 - Restructure README into a concise entry page with links to status, roadmap, references, and runbooks
 - Add IDE-friendly `api-demo.http` with login, context, user, and RBAC request examples
 - Expand auth documentation with a clearer authentication and authorization model description
+- Add Week 1 completion, limitations, and Week 2 plan details to the documentation structure
+- Add `docs/architecture/foundation-design-decisions.md` and `docs/runbooks/regression-checklist.md`
+- Cross-link `api-demo.http` with the regression checklist and normalize current-user references to `/api/v1/user/me`
+- Replace the single foundation design document with ADR-style architecture records under `docs/architecture/adr/`
+- Add ADRs for tenant-aware repository methods and keeping Week 1 focused on foundation work

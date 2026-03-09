@@ -4,7 +4,13 @@ Last updated: 2026-03-09
 
 ## Overview
 
-MerchantOps SaaS is currently a runnable multi-tenant backend skeleton. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but it is not yet a complete merchant operations product.
+MerchantOps SaaS has completed its Week 1 foundation phase and is entering Week 2. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but it is not yet a complete merchant operations product.
+
+## Foundation Phase Summary
+
+- Current phase: Week 1 completed
+- Next phase: Week 2 business API expansion
+- Primary outcome: the backend foundation is in place and ready for real business modules
 
 ## Implemented Scope
 
@@ -22,6 +28,27 @@ The current repository includes:
 - RBAC demo endpoints for permission verification
 - unified API response and exception handling model
 - health checks, request tracing, and Swagger / OpenAPI support
+
+## Week 1 Completion Checklist
+
+- [x] Multi-module project skeleton
+- [x] Docker Compose for MySQL / Redis / RabbitMQ
+- [x] Spring Boot connects to infra dependencies
+- [x] Flyway migration setup
+- [x] Core SaaS schema initialized
+- [x] Demo tenant / users / roles / permissions seeded
+- [x] Unified API response structure
+- [x] Global exception handling
+- [x] RequestId and request logging
+- [x] Swagger / OpenAPI enabled
+- [x] Login API implemented
+- [x] JWT token issuance implemented
+- [x] JWT authentication filter implemented
+- [x] `/api/v1/user/me` implemented
+- [x] Tenant context implemented
+- [x] Current user context implemented
+- [x] RBAC permission interceptor implemented
+- [x] Tenant-scoped user listing API implemented
 
 ## Current Completion Status
 
@@ -44,6 +71,20 @@ Not yet implemented:
 - deployment-ready Docker or Kubernetes manifests
 - deeper observability and performance documentation
 
+## Current Limitations
+
+Current implementation is intentionally focused on the Week 1 foundation, so the following are not yet implemented:
+
+- refresh token flow
+- logout or token revocation
+- fine-grained operator audit logs
+- pagination for user listing
+- create, update, and delete user APIs
+- integration tests
+- production-ready secret management
+- tenant admin UI or frontend
+- async business modules such as import, billing, and ticket workflow
+
 ## Known Gaps
 
 - `user_role` tenant consistency is not yet enforced at the database layer
@@ -51,3 +92,4 @@ Not yet implemented:
 - the project currently relies on manual verification flows more than automated test coverage
 
 See [architecture/tenant-rbac-integrity-gap.md](architecture/tenant-rbac-integrity-gap.md) for the current tenant-integrity design note.
+See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current Week 1 regression checklist.

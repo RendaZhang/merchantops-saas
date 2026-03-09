@@ -109,6 +109,7 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 - [docs/README.md](docs/README.md): documentation index
 - [docs/project-status.md](docs/project-status.md): implemented scope, completion status, and known gaps
 - [docs/roadmap.md](docs/roadmap.md): planned next-phase work
+- [docs/architecture/README.md](docs/architecture/README.md): ADRs and architecture notes
 - [docs/getting-started/local-environment.md](docs/getting-started/local-environment.md): Docker services, ports, and `.env`
 - [docs/getting-started/quick-start.md](docs/getting-started/quick-start.md): full local startup flow
 - [docs/reference/configuration.md](docs/reference/configuration.md): profiles and environment variables
@@ -118,6 +119,7 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 - [docs/reference/api-docs.md](docs/reference/api-docs.md): Swagger and OpenAPI access
 - [docs/reference/observability.md](docs/reference/observability.md): health checks and request tracing
 - [docs/runbooks/local-smoke-test.md](docs/runbooks/local-smoke-test.md): manual verification flow
+- [docs/runbooks/regression-checklist.md](docs/runbooks/regression-checklist.md): Week 1 regression checks
 - [docs/runbooks/troubleshooting.md](docs/runbooks/troubleshooting.md): common local problems
 - [docs/architecture/tenant-rbac-integrity-gap.md](docs/architecture/tenant-rbac-integrity-gap.md): recorded database isolation gap
 - [api-demo.http](api-demo.http): IDE-friendly API request examples
@@ -126,3 +128,4 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 
 - Current project status: [docs/project-status.md](docs/project-status.md)
 - Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
+- Week 1 foundation is complete and Week 2 planning is now captured in the roadmap
