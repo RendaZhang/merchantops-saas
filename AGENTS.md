@@ -1,11 +1,12 @@
 # Project Guidance
 
-This repository currently organizes handoff rules around four roles:
+This repository currently organizes handoff rules around five roles:
 
 1. Documentation
 2. Testing
 3. Development
 4. Review and Release
+5. Execution Planning
 
 ## AGENTS Maintenance Policy
 
@@ -29,6 +30,7 @@ This repository currently organizes handoff rules around four roles:
 - Testing-focused work may update runbooks, automated test guidance, regression checklists, and related reference docs when coverage or verification reality changes.
 - Development-focused work may update docs when implementation changes, but must not present internal groundwork as public API.
 - Review and release work may update changelog, versioning, release notes, and milestone summaries when the staged diff supports it.
+- Execution-planning work may update status, roadmap, plan, and architecture guidance when it finds phase drift, scope mismatch, or planning assumptions that no longer match repository reality.
 - If a role updates a doc outside its usual focus area, it should keep the change scoped to the facts learned through that role's work rather than rewriting unrelated narrative.
 
 ## Documentation Role
@@ -68,3 +70,16 @@ This repository currently organizes handoff rules around four roles:
   - `RR tag`: suggest a tag name and tag commands
   - `RR release-notes`: draft changelog or release-note text from the staged diff or recent release context
   - `RR branch-check`: check whether the current work looks suitable for `main` or a short-lived branch instead
+
+## Execution Planning Role
+
+- Read [docs/contributing/execution-planning-agent-guidance.md](docs/contributing/execution-planning-agent-guidance.md) before assessing current phase, completed scope, remaining work, or next recommended slice.
+- Ground execution guidance in code, tests, Swagger, staged changes, and status docs before trusting milestone text alone.
+- Output concrete next tasks, validation steps, and doc-update expectations without dropping into code unless the requester asks for implementation.
+- If the current plan, architecture, or milestone sequencing no longer matches repository reality, call that out explicitly and point to the docs that should change.
+- Shortcut prefix: `EP`
+- Supported shortcuts include:
+  - `EP now`: summarize current phase, completed scope, and remaining work
+  - `EP next`: recommend the next concrete slice and implementation steps
+  - `EP plan-check`: compare status, roadmap, and plan for drift or mismatch
+  - `EP adjust`: suggest plan, milestone, or architecture adjustments when current direction no longer fits reality

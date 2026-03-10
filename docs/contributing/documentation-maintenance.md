@@ -38,6 +38,7 @@ Use it as the routing table for answering two questions:
 - `docs/contributing/development-agent-guidance.md`: tenant-scoped implementation and contributor guidance for coding work
 - `docs/contributing/testing-agent-guidance.md`: verification and regression rules for testing-focused work
 - `docs/contributing/review-release-agent-guidance.md`: staged review, commit, and release rules
+- `docs/contributing/execution-planning-agent-guidance.md`: current-phase assessment and next-step planning rules
 - `docs/runbooks/`: validation, regression, and operational checklists
 - `docs/architecture/adr/`: formal architecture decisions
 - `docs/contributing/release-versioning.md`: version rules and tag progression
@@ -94,6 +95,7 @@ Update when the internal rule or boundary changed:
 - `docs/contributing/development-agent-guidance.md`
 - `docs/contributing/testing-agent-guidance.md`
 - `docs/contributing/review-release-agent-guidance.md`
+- `docs/contributing/execution-planning-agent-guidance.md`
 - `AGENTS.md` if the rule should guide future agents by default
 
 Do not update as current public API:

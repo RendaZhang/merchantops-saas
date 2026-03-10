@@ -15,6 +15,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Development Agent Guidance](contributing/development-agent-guidance.md): tenant-scoped implementation and contributor guidance for coding work
 - [Testing Agent Guidance](contributing/testing-agent-guidance.md): verification, regression, and coverage guidance for testing-focused work
 - [Review And Release Agent Guidance](contributing/review-release-agent-guidance.md): staged review, commit, and release guidance for review-focused work
+- [Execution Planning Agent Guidance](contributing/execution-planning-agent-guidance.md): current-phase assessment, next-step planning, and plan-adjustment guidance
 - [User Management Reference](reference/user-management.md): the current `/api/v1/users` contract, validation path, and current Week 2 delivery boundary
 - [AI Integration Reference](reference/ai-integration.md): workflow-first AI design, guardrails, and planned endpoint direction
 - [AI Provider Configuration](reference/ai-provider-configuration.md): who should own model-provider keys, how cost should be understood, and why the project starts with instance-level configuration
@@ -42,11 +43,12 @@ This directory contains the detailed project documentation that sits behind the 
 10. [Development Agent Guidance](contributing/development-agent-guidance.md)
 11. [Testing Agent Guidance](contributing/testing-agent-guidance.md)
 12. [Review And Release Agent Guidance](contributing/review-release-agent-guidance.md)
-13. [User Management Reference](reference/user-management.md)
-14. [AI Integration Reference](reference/ai-integration.md)
-15. [AI Provider Configuration](reference/ai-provider-configuration.md)
-16. [AI Docs](ai/README.md)
-17. [AI Workflow Candidates](ai/workflow-candidates.md)
-18. [Automated Test Runbook](runbooks/automated-tests.md)
-19. [Regression Checklist](runbooks/regression-checklist.md)
-20. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
+13. [Execution Planning Agent Guidance](contributing/execution-planning-agent-guidance.md)
+14. [User Management Reference](reference/user-management.md)
+15. [AI Integration Reference](reference/ai-integration.md)
+16. [AI Provider Configuration](reference/ai-provider-configuration.md)
+17. [AI Docs](ai/README.md)
+18. [AI Workflow Candidates](ai/workflow-candidates.md)
+19. [Automated Test Runbook](runbooks/automated-tests.md)
+20. [Regression Checklist](runbooks/regression-checklist.md)
+21. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
