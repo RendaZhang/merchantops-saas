@@ -71,6 +71,7 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
 SMOKE_TOKEN=<paste-accessToken-from-smoke-user-login-response>
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users/$NEW_USER_ID
 curl -i -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"displayName\":\"Cashier User Updated\",\"email\":\"$SMOKE_USERNAME.updated@demo-shop.local\"}" \
   http://localhost:8080/api/v1/users/$NEW_USER_ID
@@ -111,6 +112,7 @@ curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: applicat
 $newUserId = "<paste-id-from-create-response>"
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
 $smokeToken = "<paste-accessToken-from-smoke-user-login-response>"
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users/$newUserId
 $updateBody = @{ displayName = "Cashier User Updated"; email = "$smokeUsername.updated@demo-shop.local" } | ConvertTo-Json -Compress
 curl.exe -i -X PUT -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $updateBody http://localhost:8080/api/v1/users/$newUserId
 $assignRolesBody = @{ roleCodes = @("TENANT_ADMIN") } | ConvertTo-Json -Compress
@@ -131,6 +133,7 @@ Expected results:
 
 - `GET /api/v1/roles` returns only current-tenant role options
 - `GET /api/v1/users` returns a page object for the current tenant only
+- `GET /api/v1/users/{id}` returns one current-tenant user and includes current `roleCodes`
 - `POST /api/v1/users` with the admin token creates an `ACTIVE` user whose password works immediately for login
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` or `DISABLED`

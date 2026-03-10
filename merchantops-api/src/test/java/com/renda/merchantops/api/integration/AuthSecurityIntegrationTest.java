@@ -231,6 +231,43 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void getUserDetailShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        String token = loginAndGetToken("demo-shop", "billing", "123456");
+
+        mockMvc.perform(get("/api/v1/users/103")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("permission denied"));
+    }
+
+    @Test
+    void getUserDetailShouldReturnTenantScopedUserDetailWhenPermissionIsGranted() throws Exception {
+        String token = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(get("/api/v1/users/103")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(103))
+                .andExpect(jsonPath("$.data.tenantId").value(1))
+                .andExpect(jsonPath("$.data.username").value("viewer"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.roleCodes", contains("READ_ONLY")));
+    }
+
+    @Test
+    void getUserDetailShouldReturnNotFoundWhenUserIsOutsideCurrentTenant() throws Exception {
+        String token = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(get("/api/v1/users/201")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("user not found"));
+    }
+
+    @Test
     void listRolesShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
         String token = loginAndGetToken("demo-shop", "viewer", "123456");
 

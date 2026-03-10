@@ -13,6 +13,7 @@ import com.renda.merchantops.api.dto.user.command.UserStatusUpdateRequest;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserUpdateRequest;
 import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
+import com.renda.merchantops.api.dto.user.query.UserDetailResponse;
 import com.renda.merchantops.api.dto.user.query.UserPageQuery;
 import com.renda.merchantops.api.dto.user.query.UserPageResponse;
 import com.renda.merchantops.api.security.RequirePermission;
@@ -37,6 +38,13 @@ public class UserManagementController implements UserManagementApi {
     public ApiResponse<UserPageResponse> listUsers(UserPageQuery query) {
         Long tenantId = ContextAccess.requireTenantId();
         return ApiResponse.success(userQueryService.pageUsers(tenantId, query));
+    }
+
+    @Override
+    @RequirePermission("USER_READ")
+    public ApiResponse<UserDetailResponse> getUserDetail(@PathVariable("id") Long id) {
+        Long tenantId = ContextAccess.requireTenantId();
+        return ApiResponse.success(userQueryService.getUserDetail(tenantId, id));
     }
 
     @Override

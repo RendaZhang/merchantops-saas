@@ -7,6 +7,7 @@
 - `GET /api/v1/context`
 - `GET /api/v1/roles` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `GET /api/v1/users` (requires `USER_READ`; see [user-management.md](user-management.md))
+- `GET /api/v1/users/{id}` (requires `USER_READ`; see [user-management.md](user-management.md))
 - `POST /api/v1/users` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PUT /api/v1/users/{id}` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PATCH /api/v1/users/{id}/status` (requires `USER_WRITE`; see [user-management.md](user-management.md))
@@ -114,6 +115,7 @@ curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
   -d "{\"username\":\"$SMOKE_USERNAME\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" \
   http://localhost:8080/api/v1/users
 NEW_USER_ID=<paste-id-from-create-response>
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users/$NEW_USER_ID
 curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
@@ -152,6 +154,7 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 $createBody = @{ username = $smokeUsername; displayName = "Cashier User"; email = $smokeEmail; password = "123456"; roleCodes = @("READ_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $createBody http://localhost:8080/api/v1/users
 $newUserId = "<paste-id-from-create-response>"
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users/$newUserId
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
 $smokeToken = "<paste-accessToken-from-smoke-user-login-response>"
 $updateBody = @{ displayName = "Updated Cashier"; email = "$smokeUsername.updated@demo-shop.local" } | ConvertTo-Json -Compress
@@ -230,6 +233,32 @@ Current notes:
 - supported filters are `username` (fuzzy), `status` (exact), and `roleCode` (exact)
 - supported pagination parameters are `page` and `size`
 - use [user-management.md](user-management.md) for the current user-management boundary and validation references
+
+### `GET /api/v1/users/{id}`
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 3,
+    "tenantId": 1,
+    "username": "viewer",
+    "displayName": "Viewer User",
+    "email": "viewer@demo-shop.local",
+    "status": "ACTIVE",
+    "roleCodes": ["READ_ONLY"],
+    "createdAt": "2026-03-10T10:00:00",
+    "updatedAt": "2026-03-10T10:30:00"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- returns only current-tenant users
+- includes current `roleCodes` so detail and role-management screens can share one read path
 
 ### `GET /api/v1/roles`
 
@@ -381,25 +410,25 @@ Current notes:
 
 ## Expected RBAC Behavior
 
-- `admin` can access `GET /api/v1/roles`, `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
-- `ops` can access `/api/v1/users` and `/api/v1/rbac/users`
-- `viewer` can access `/api/v1/users` and `/api/v1/rbac/users`
+- `admin` can access `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
+- `ops` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, and `/api/v1/rbac/users`
+- `viewer` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, and `/api/v1/rbac/users`
 - `ops` and `viewer` are denied on `GET /api/v1/roles`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
 - after `viewer` is promoted and logs in again, the refreshed token can access `/api/v1/rbac/users/manage` and `/api/v1/rbac/feature-flags`
 
-The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`) permission path end to end, including disabled-user rejection, stale-claim rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
+The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`) permission path end to end, including disabled-user rejection, stale-claim rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
 
 ## Current User Management Boundary
 
-- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` under the `User Management` tag
+- Swagger currently exposes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` under the `User Management` tag
 - Swagger exposes `GET /api/v1/roles` under the `Role Management` tag
 - `GET /api/v1/users` is the formal paged tenant query endpoint
+- `GET /api/v1/users/{id}` is the formal tenant-scoped detail endpoint
 - `POST /api/v1/users` is the current public create endpoint
 - `PUT /api/v1/users/{id}` is the current public profile update endpoint
 - `PATCH /api/v1/users/{id}/status` is the current public status-management endpoint
 - `PUT /api/v1/users/{id}/roles` is the current public role-assignment endpoint
-- detail flow still remains non-public until controller and contract methods are added
 - Treat the Swagger-visible endpoints in this document as the only public API surface
 
 ## Tenant Isolation Note

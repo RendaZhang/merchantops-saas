@@ -219,11 +219,11 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 ### 推荐交付接口
 
 - `GET /api/v1/users`
-- `GET /api/v1/users/{userId}`
+- `GET /api/v1/users/{id}`
 - `POST /api/v1/users`
-- `PUT /api/v1/users/{userId}`
-- `PATCH /api/v1/users/{userId}/status`
-- `PUT /api/v1/users/{userId}/roles`
+- `PUT /api/v1/users/{id}`
+- `PATCH /api/v1/users/{id}/status`
+- `PUT /api/v1/users/{id}/roles`
 
 ### 验收标准
 

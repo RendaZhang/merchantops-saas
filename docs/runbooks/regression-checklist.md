@@ -67,9 +67,10 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## User Management
 
-- [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
+- [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
 - [ ] Swagger `Role Management` tag shows `GET /api/v1/roles`
 - [ ] `GET /api/v1/users` returns a page object rather than a bare array
+- [ ] `GET /api/v1/users/{id}` returns one current-tenant user and includes `roleCodes`
 - [ ] `GET /api/v1/roles` returns only current-tenant role options
 - [ ] `GET /api/v1/users?page=0&size=10` works
 - [ ] `GET /api/v1/users?username=ad` filters by username

@@ -6,7 +6,7 @@ Last updated: 2026-03-10
 
 - Week 1 Platform Foundation is complete
 - Week 2 First Business Loop - Tenant User Management is in progress
-- Public Week 2 HTTP coverage currently includes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles`
+- Public Week 2 HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
@@ -38,7 +38,6 @@ Complete the first business loop by turning the current user-management groundwo
 
 Continue with real user management APIs:
 
-- add tenant-scoped user detail lookup
 - add operator audit fields and verification coverage
 - finish Week 2 before expanding into ticket workflow and AI layers
 
@@ -46,7 +45,6 @@ Continue with real user management APIs:
 
 Week 2 completion:
 
-- add `GET /api/v1/users/{userId}` detail endpoint
 - add audit logging fields and operator tracking for user-management writes
 - keep Swagger, `api-demo.http`, and reference docs aligned
 
@@ -90,7 +88,7 @@ Stretch target after Week 10:
 ## Near-Term Priorities
 
 - move from RBAC demo endpoints to clearer business-oriented endpoints
-- finish the remaining detail and audit-tracking pieces of the first user-management loop
+- finish the remaining audit-tracking pieces of the first user-management loop
 - keep Week 2 documentation aligned with the public API as endpoints are exposed
 - sequence Week 3 ticket work only after Week 2 user management is usable end to end
 - treat AI as an embedded workflow layer, not as a standalone chatbot detour

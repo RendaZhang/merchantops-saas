@@ -46,6 +46,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/context` | Yes | Current tenant/user context |
 | `GET` | `/api/v1/roles` | Yes + `USER_WRITE` | List assignable roles in current tenant |
 | `GET` | `/api/v1/users` | Yes + `USER_READ` | Page users in current tenant |
+| `GET` | `/api/v1/users/{id}` | Yes + `USER_READ` | Get one tenant-scoped user detail |
 | `POST` | `/api/v1/users` | Yes + `USER_WRITE` | Create an active user in current tenant |
 | `PUT` | `/api/v1/users/{id}` | Yes + `USER_WRITE` | Update user profile fields |
 | `PATCH` | `/api/v1/users/{id}/status` | Yes + `USER_WRITE` | Enable or disable a user |
@@ -61,14 +62,14 @@ Notes about security whitelist routes:
 
 User Management tag note:
 
-- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` for user management.
+- Swagger currently exposes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` for user management.
 - `GET /api/v1/users` supports `page`, `size`, `username`, `status`, and `roleCode` query parameters in Swagger.
+- `GET /api/v1/users/{id}` returns one tenant-scoped user plus current `roleCodes`.
 - `POST /api/v1/users` exposes example payloads for username, password, and tenant-local role binding.
 - `PUT /api/v1/users/{id}` exposes only `displayName` and `email`.
 - `PATCH /api/v1/users/{id}/status` exposes only `ACTIVE` and `DISABLED`.
 - `PUT /api/v1/users/{id}/roles` exposes `roleCodes` only and documents the forced re-login requirement after claim changes.
 - Swagger exposes a separate `Role Management` tag for `GET /api/v1/roles`.
-- User detail and write DTOs/services may exist in code, but they must not be treated as public API until contract/controller methods publish them into OpenAPI.
 - See [user-management.md](user-management.md) for the current public contract and validation path.
 
 ## Core Endpoint Examples
@@ -151,7 +152,35 @@ Current notes:
 - the same request is available in [../../api-demo.http](../../api-demo.http)
 - automated checks for the controller/query mapping live in [../runbooks/automated-tests.md](../runbooks/automated-tests.md)
 
-### 4. Create User (`POST /api/v1/users`)
+### 4. Tenant User Detail (`GET /api/v1/users/{id}`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 3,
+    "tenantId": 1,
+    "username": "viewer",
+    "displayName": "Viewer User",
+    "email": "viewer@demo-shop.local",
+    "status": "ACTIVE",
+    "roleCodes": ["READ_ONLY"],
+    "createdAt": "2026-03-10T10:00:00",
+    "updatedAt": "2026-03-10T10:30:00"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- returns `404` when the target user is outside the current tenant
+- useful as the current read-side detail endpoint before any admin UI exists
+
+### 5. Create User (`POST /api/v1/users`)
 
 Request:
 
@@ -185,7 +214,7 @@ Response:
 }
 ```
 
-### 5. Update User (`PUT /api/v1/users/{id}`)
+### 6. Update User (`PUT /api/v1/users/{id}`)
 
 Request:
 
@@ -214,7 +243,7 @@ Response:
 }
 ```
 
-### 6. Disable User (`PATCH /api/v1/users/{id}/status`)
+### 7. Disable User (`PATCH /api/v1/users/{id}/status`)
 
 Request:
 
@@ -242,7 +271,7 @@ Response:
 }
 ```
 
-### 7. Role List (`GET /api/v1/roles`)
+### 8. Role List (`GET /api/v1/roles`)
 
 Response:
 
@@ -267,7 +296,7 @@ Response:
 }
 ```
 
-### 8. Replace User Roles (`PUT /api/v1/users/{id}/roles`)
+### 9. Replace User Roles (`PUT /api/v1/users/{id}/roles`)
 
 Request:
 
@@ -298,7 +327,7 @@ Current note:
 
 - old JWT claims are rejected after this change; the user must login again to get a new token with the new roles and permissions
 
-### 9. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
+### 10. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
 
 Response:
 
@@ -310,7 +339,7 @@ Response:
 }
 ```
 
-### 10. Health (`GET /health`)
+### 11. Health (`GET /health`)
 
 Response:
 

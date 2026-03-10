@@ -6,7 +6,9 @@ import com.renda.merchantops.api.dto.user.query.UserPageQuery;
 import com.renda.merchantops.api.dto.user.query.UserPageResponse;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
+import com.renda.merchantops.infra.persistence.entity.RoleEntity;
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
+import com.renda.merchantops.infra.repository.RoleRepository;
 import com.renda.merchantops.infra.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,9 @@ class UserQueryServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private RoleRepository roleRepository;
 
     @InjectMocks
     private UserQueryService userQueryService;
@@ -110,6 +115,8 @@ class UserQueryServiceTest {
     void getUserDetailShouldMapEntity() {
         UserEntity user = user(3L, 2L, "viewer", "Viewer User", "viewer@demo-shop.local", "ACTIVE");
         when(userRepository.findByIdAndTenantId(3L, 2L)).thenReturn(Optional.of(user));
+        when(roleRepository.findRolesByUserIdAndTenantId(3L, 2L))
+                .thenReturn(List.of(role(22L, 2L, "READ_ONLY"), role(23L, 2L, "OPS_USER")));
 
         UserDetailResponse response = userQueryService.getUserDetail(2L, 3L);
 
@@ -119,6 +126,7 @@ class UserQueryServiceTest {
         assertThat(response.getDisplayName()).isEqualTo("Viewer User");
         assertThat(response.getEmail()).isEqualTo("viewer@demo-shop.local");
         assertThat(response.getStatus()).isEqualTo("ACTIVE");
+        assertThat(response.getRoleCodes()).containsExactly("READ_ONLY", "OPS_USER");
         assertThat(response.getCreatedAt()).isEqualTo(user.getCreatedAt());
         assertThat(response.getUpdatedAt()).isEqualTo(user.getUpdatedAt());
     }
@@ -158,5 +166,16 @@ class UserQueryServiceTest {
         user.setCreatedAt(LocalDateTime.of(2026, 3, 10, 10, 0));
         user.setUpdatedAt(LocalDateTime.of(2026, 3, 10, 10, 30));
         return user;
+    }
+
+    private RoleEntity role(Long id, Long tenantId, String roleCode) {
+        RoleEntity role = new RoleEntity();
+        role.setId(id);
+        role.setTenantId(tenantId);
+        role.setRoleCode(roleCode);
+        role.setRoleName(roleCode);
+        role.setCreatedAt(LocalDateTime.of(2026, 3, 10, 10, 0));
+        role.setUpdatedAt(LocalDateTime.of(2026, 3, 10, 10, 30));
+        return role;
     }
 }

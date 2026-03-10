@@ -7,6 +7,7 @@ import com.renda.merchantops.api.dto.user.query.UserPageResponse;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
+import com.renda.merchantops.infra.repository.RoleRepository;
 import com.renda.merchantops.infra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,10 +26,11 @@ public class UserQueryService {
     private static final int MAX_SIZE = 100;
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
     public UserDetailResponse getUserDetail(Long tenantId, Long userId) {
         return userRepository.findByIdAndTenantId(userId, tenantId)
-                .map(this::toDetailResponse)
+                .map(user -> toDetailResponse(user, tenantId))
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "user not found"));
     }
 
@@ -119,7 +121,7 @@ public class UserQueryService {
         );
     }
 
-    private UserDetailResponse toDetailResponse(UserEntity user) {
+    private UserDetailResponse toDetailResponse(UserEntity user, Long tenantId) {
         return new UserDetailResponse(
                 user.getId(),
                 user.getTenantId(),
@@ -127,6 +129,10 @@ public class UserQueryService {
                 user.getDisplayName(),
                 user.getEmail(),
                 user.getStatus(),
+                roleRepository.findRolesByUserIdAndTenantId(user.getId(), tenantId)
+                        .stream()
+                        .map(role -> role.getRoleCode())
+                        .toList(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );

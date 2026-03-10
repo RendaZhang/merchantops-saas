@@ -33,12 +33,13 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
   - JWT claim generation and parsing for tenant, role, and permission data
-  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
+  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
   - `401` when Bearer token is missing or invalid
   - `403` when login succeeds but `USER_READ` is absent
   - `403` when login succeeds but `USER_WRITE` is absent
   - `200` for a valid admin token on `GET /api/v1/roles`, including tenant-only role visibility
   - `200` for a valid read-only user token on `GET /api/v1/users`, including tenant-only user visibility
+  - `200` for a valid read-only user token on `GET /api/v1/users/{id}`, including tenant-only role-code visibility
   - `400` when create requests try to bind role codes outside the current tenant
   - successful create-user flow with BCrypt password persistence and immediate login
   - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence
@@ -53,7 +54,7 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
   - page result mapping into `UserPageResponse`
   - list and status-filtered list mapping
   - username existence delegation
-  - detail lookup success path
+  - detail lookup success path with role-code hydration
   - detail lookup `NOT_FOUND` path
 - `UserCommandServiceTest`
   - duplicate username rejection
@@ -69,6 +70,7 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
   - current password-update placeholder returning unified `BIZ_ERROR` rather than an uncaught runtime exception
 - `UserManagementControllerTest`
   - HTTP request binding for `page`, `size`, `username`, `status`, and `roleCode`
+  - HTTP request binding for `GET /api/v1/users/{id}`
   - HTTP request binding for `POST /api/v1/users`
   - HTTP request binding for `PUT /api/v1/users/{id}` and `PATCH /api/v1/users/{id}/status`
   - HTTP request binding for `PUT /api/v1/users/{id}/roles`
@@ -94,7 +96,7 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 
 These areas are not replaced by the current unit tests:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`) path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`) path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

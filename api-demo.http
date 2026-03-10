@@ -87,6 +87,10 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/users?page=0&size=10&roleCode=TENANT_ADMIN
 Authorization: Bearer {{token}}
 
+### Get tenant user detail
+GET {{baseUrl}}/api/v1/users/{{targetUserId}}
+Authorization: Bearer {{token}}
+
 ### List assignable roles
 GET {{baseUrl}}/api/v1/roles
 Authorization: Bearer {{token}}

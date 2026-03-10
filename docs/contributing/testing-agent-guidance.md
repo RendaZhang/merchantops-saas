@@ -39,7 +39,7 @@ Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
-- `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles` authentication and permission behavior
+- `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles` authentication and permission behavior
 - controller request binding and tenant-context forwarding
 - user-management query and command service behavior
 - repository-backed tenant-scoped page query behavior

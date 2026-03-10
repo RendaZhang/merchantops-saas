@@ -4,11 +4,12 @@ Last updated: 2026-03-10
 
 ## Public API Surface
 
-Swagger currently exposes five user-management endpoints plus one companion role-query endpoint:
+Swagger currently exposes six user-management endpoints plus one companion role-query endpoint:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
 | `GET` | `/api/v1/users` | Bearer JWT | `USER_READ` | Pages users for the current tenant only |
+| `GET` | `/api/v1/users/{id}` | Bearer JWT | `USER_READ` | Returns one current-tenant user with current role codes |
 | `POST` | `/api/v1/users` | Bearer JWT | `USER_WRITE` | Creates an `ACTIVE` user in the current tenant and binds tenant-local roles |
 | `PUT` | `/api/v1/users/{id}` | Bearer JWT | `USER_WRITE` | Updates mutable profile fields only |
 | `PATCH` | `/api/v1/users/{id}/status` | Bearer JWT | `USER_WRITE` | Enables or disables a user in the current tenant |
@@ -77,6 +78,42 @@ Verification references:
 - [../runbooks/automated-tests.md](../runbooks/automated-tests.md): current automated coverage and recommended Maven commands
 - [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md): live verification flow and smoke-data cleanup
 - [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md): regression checks for `/api/v1/users`
+
+## `GET /api/v1/users/{id}`
+
+Current behavior:
+
+- tenant scope is derived from JWT and request context, not request parameters
+- requires `USER_READ`, so seeded `admin`, `ops`, and `viewer` can all view current-tenant detail
+- returns one user from the current tenant only
+- response includes `id`, `tenantId`, `username`, `displayName`, `email`, `status`, `roleCodes`, `createdAt`, and `updatedAt`
+- returns `404` if the target user is not in the current tenant
+
+Example request:
+
+```text
+GET /api/v1/users/3
+```
+
+Response example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 3,
+    "tenantId": 1,
+    "username": "viewer",
+    "displayName": "Viewer User",
+    "email": "viewer@demo-shop.local",
+    "status": "ACTIVE",
+    "roleCodes": ["READ_ONLY"],
+    "createdAt": "2026-03-10T10:00:00",
+    "updatedAt": "2026-03-10T10:30:00"
+  }
+}
+```
 
 ## `POST /api/v1/users`
 
@@ -271,24 +308,6 @@ Response example:
 }
 ```
 
-Response example:
-
-```json
-{
-  "code": "SUCCESS",
-  "message": "ok",
-  "data": {
-    "id": 5,
-    "tenantId": 1,
-    "username": "cashier",
-    "displayName": "Updated Cashier",
-    "email": "cashier.updated@demo-shop.local",
-    "status": "DISABLED",
-    "updatedAt": "2026-03-10T14:10:00"
-  }
-}
-```
-
 ## Developer Guardrails
 
 For future user-management work:
@@ -319,13 +338,13 @@ Current automated tests for user management focus on:
 - role reassignment flow, stale-token rejection after claim changes, and re-login with new permissions
 - query-side page normalization and DTO mapping
 - query-side list and username-exists helper paths
-- detail lookup `NOT_FOUND` handling
+- detail lookup success mapping, role-code hydration, and `NOT_FOUND` handling
 - command-side duplicate-username, role-scope rejection, profile update, status update, and role reassignment behavior
 - repository-level verification of the native paged search query for tenant, username, status, roleCode, and deduplication behavior
 
 Current automated tests do not replace:
 
-- authenticated verification for endpoints outside the covered login + `/api/v1/users` flow
+- authenticated verification for endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` flow
 - Swagger rendering validation
 
 Use [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md) after the automated suite passes.

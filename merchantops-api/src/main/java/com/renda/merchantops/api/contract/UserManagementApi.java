@@ -7,6 +7,7 @@ import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentResponse;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateRequest;
 import com.renda.merchantops.api.dto.user.command.UserUpdateRequest;
 import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
+import com.renda.merchantops.api.dto.user.query.UserDetailResponse;
 import com.renda.merchantops.api.dto.user.query.UserPageQuery;
 import com.renda.merchantops.api.dto.user.query.UserPageResponse;
 import com.renda.merchantops.common.response.ApiResponse;
@@ -34,6 +35,7 @@ import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_ROL
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_USERNAME_EXISTS;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FORBIDDEN;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_UNAUTHORIZED;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_DETAIL;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_CREATED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_LIST;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_PROFILE_UPDATED;
@@ -73,6 +75,35 @@ public interface UserManagementApi {
     })
     @GetMapping
     ApiResponse<UserPageResponse> listUsers(@ParameterObject UserPageQuery query);
+
+    @Operation(
+            summary = "Get user detail in current tenant",
+            description = "Requires USER_READ permission. Returns a single tenant-scoped user with current roleCodes. The tenant scope is derived from JWT, not request parameters."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Query successful",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_USER_DETAIL))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Missing USER_READ permission",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "User not found in current tenant",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"code\":\"NOT_FOUND\",\"message\":\"user not found\",\"data\":null}"))
+            )
+    })
+    @GetMapping("/{id}")
+    ApiResponse<UserDetailResponse> getUserDetail(@PathVariable("id") Long id);
 
     @Operation(
             summary = "Create user in current tenant",

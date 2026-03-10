@@ -65,6 +65,7 @@ Use query DTOs for:
 
 - list items
 - detail views
+- detail role-code hydration
 - page query objects
 - page response objects
 
@@ -78,6 +79,7 @@ Do not use query DTOs for:
 Current `/api/v1/users` contract is the baseline example:
 
 - tenant-scoped page query
+- companion detail query at `GET /api/v1/users/{id}`
 - explicit filters: `username`, `status`, `roleCode`
 - response object with `items`, `page`, `size`, `total`, `totalPages`
 - companion role lookup at `GET /api/v1/roles`

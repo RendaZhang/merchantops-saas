@@ -32,6 +32,7 @@ The current repository includes:
 - authenticated current-user endpoint
 - authenticated tenant/user context endpoint
 - tenant-scoped user listing endpoint with `USER_READ`
+- tenant-scoped user detail endpoint with `USER_READ`
 - tenant-scoped user create endpoint with `USER_WRITE`, BCrypt password hashing, and tenant-local role binding
 - tenant-scoped user profile update endpoint with `USER_WRITE`
 - tenant-scoped user status-management endpoint with `USER_WRITE`
@@ -77,6 +78,7 @@ Completed:
 - authorization flow works for protected endpoints
 - current-tenant user query works with permission protection
 - current-tenant user query supports page, size, username, status, and roleCode filters
+- current-tenant user detail works with `USER_READ` and returns current tenant-local role codes
 - current-tenant user create works with `USER_WRITE`, username uniqueness, BCrypt storage, and tenant-local role validation
 - current-tenant user profile update works with `USER_WRITE` and explicit mutable-field boundaries
 - current-tenant user status management works with `USER_WRITE` and `ACTIVE` / `DISABLED` validation
@@ -89,7 +91,6 @@ Completed:
 
 Not yet implemented:
 
-- public user detail endpoint
 - audit logging fields and operator tracking
 - Week 3 ticket workflow module
 - Week 4 audit trail and approval patterns
@@ -101,7 +102,7 @@ Not yet implemented:
 - Week 10 delivery hardening, feature flag rollout control, and portfolio packaging
 - formal open-source release packaging such as license choice, contribution guide, security policy, and sanitized public demo assets
 - usage / ledger / invoice remains a stretch goal after the core workflow + AI path is stable
-- broader automated coverage beyond the current login + `/api/v1/users` Week 2 surface
+- broader automated coverage beyond the current login + `/api/v1/roles` + `/api/v1/users` Week 2 surface
 - deployment-ready Docker or Kubernetes manifests
 - performance documentation and benchmark artifacts
 
@@ -109,15 +110,15 @@ Not yet implemented:
 
 Current implementation is intentionally focused on the Week 1 foundation plus the in-progress Week 2 user-management loop, so the following are not yet implemented:
 
-- Swagger-visible Week 2 business endpoints are currently `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles`
+- Swagger-visible Week 2 business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles`
 - `GET /api/v1/users` is a paged current-tenant query endpoint ordered by `id ASC`
+- `GET /api/v1/users/{id}` is the current tenant-scoped detail query endpoint and includes current `roleCodes`
 - `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` are the public user-management write endpoints today
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` and `DISABLED`
 - `GET /api/v1/roles` returns only current-tenant roles that can be assigned by the current operator
 - `PUT /api/v1/users/{id}/roles` replaces the user's current role bindings within the current tenant
 - when a user's current roles or effective permissions no longer match the JWT claims, the next protected request is rejected and the user must log in again
-- user detail flow is not yet published in controllers or Swagger
 - `UserCommandService#updatePassword` still returns a unified business error until that write flow is implemented
 - no workflow-level modules such as ticketing or import jobs are public yet
 - no AI-assisted workflow endpoints, runtime AI audit trail, or code-backed evaluation datasets exist yet
@@ -133,7 +134,7 @@ Current implementation is intentionally focused on the Week 1 foundation plus th
 
 - `user_role` tenant consistency is not yet enforced at the database layer
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs
-- the project now has focused automated coverage for login, `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`), `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, stale-claim rejection, query/service behavior, and repository-backed search behavior, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management flow
+- the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, stale-claim rejection, query/service behavior, and repository-backed search behavior, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management flow
 
 See [architecture/tenant-rbac-integrity-gap.md](architecture/tenant-rbac-integrity-gap.md) for the current tenant-integrity design note.
 See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.

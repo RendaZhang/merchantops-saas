@@ -8,6 +8,7 @@ import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentResponse;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
+import com.renda.merchantops.api.dto.user.query.UserDetailResponse;
 import com.renda.merchantops.api.dto.user.query.UserListItemResponse;
 import com.renda.merchantops.api.dto.user.query.UserPageQuery;
 import com.renda.merchantops.api.dto.user.query.UserPageResponse;
@@ -154,6 +155,48 @@ class UserManagementControllerTest {
         assertThat(queryCaptor.getValue().getUsername()).isEqualTo("adm");
         assertThat(queryCaptor.getValue().getStatus()).isEqualTo("ACTIVE");
         assertThat(queryCaptor.getValue().getRoleCode()).isEqualTo("TENANT_ADMIN");
+    }
+
+    @Test
+    void getUserDetailShouldReturnForbiddenWhenUserLacksPermission() throws Exception {
+        mockMvc.perform(get("/api/v1/users/8")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "ORDER_READ"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("permission denied"));
+    }
+
+    @Test
+    void getUserDetailShouldReturnTenantScopedDetail() throws Exception {
+        UserDetailResponse response = new UserDetailResponse(
+                8L,
+                9L,
+                "viewer",
+                "Viewer User",
+                "viewer@demo-shop.local",
+                "ACTIVE",
+                List.of("READ_ONLY"),
+                LocalDateTime.of(2026, 3, 10, 10, 0),
+                LocalDateTime.of(2026, 3, 10, 10, 30)
+        );
+
+        when(userQueryService.getUserDetail(9L, 8L)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/users/8")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(8))
+                .andExpect(jsonPath("$.data.username").value("viewer"))
+                .andExpect(jsonPath("$.data.roleCodes[0]").value("READ_ONLY"));
+
+        verify(userQueryService).getUserDetail(9L, 8L);
     }
 
     @Test
