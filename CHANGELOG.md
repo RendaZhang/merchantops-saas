@@ -1,91 +1,47 @@
 # Changelog
 
-## 2026-03-08
+This file tracks release-level changes that matter to users, reviewers, and future open-source collaborators.
 
-- Initialize MerchantOps SaaS repository
-- Add base directory structure
-- Add initial README
-- Add initial .gitignore
-- Initialize multi-module Spring Boot backend skeleton
-- Add Maven Wrapper
-- Finalize base package structure
-- Improve README with run instructions and module responsibilities
-- Update project compiler baseline to Java 21
-- Record current local environment as Java 21.0.10
-- Reorganize README sections and consolidate version policy, prerequisites, and stack details
-- Improve startup reliability guidance (`install` + module-level `spring-boot:run`)
-- Add health check expected output examples
-- Add Docker Compose documentation for local MySQL/Redis/RabbitMQ dependencies
-- Document Docker startup, shutdown, access endpoints, and common port-conflict troubleshooting
-- Move Docker credentials to `.env`-based configuration
-- Add `.env.example` and document local environment initialization
-- Add `application-dev.yml` for local MySQL/Redis/RabbitMQ integration settings
-- Make active Spring profile configurable via `SPRING_PROFILES_ACTIVE` (default: `dev`)
-- Update README with profile/configuration usage guidance
-- Replace hardcoded `application-dev.yml` credentials with environment-variable overrides and local defaults
-- Add Flyway dependencies (`flyway-core`, `flyway-mysql`) in `merchantops-infra`
-- Add first migration script `V1__init_schema.sql` and initialize base tables
-- Configure Flyway in `application-dev.yml` and document migration workflow
-- Add second migration script `V2__seed_demo_data.sql` for initial demo tenant/role/user/permission data
-- Add seed data verification notes and SQL examples in README
-- Document `/health` vs `/actuator/health` behavior with Spring Security enabled
-- Replace `spring-boot-starter-security` with `spring-security-crypto` to keep password hashing support without enabling global default endpoint authentication
-- Restore unauthenticated health checks for `/health`
-- Document `PasswordHashGenerator` usage context for demo seed password hash generation
-- Add Flyway checksum troubleshooting note: avoid editing applied migrations, create a new `Vx__...sql` instead
-- Add unified API response model (`ApiResponse`) and shared error codes (`ErrorCode`)
-- Add business exception type (`BizException`) and global exception handler in API module
-- Add dev endpoints and DTO for response/validation exception path checks
-- Update README with API response and error handling documentation
-- Fix malformed JSON handling to return `400 BAD_REQUEST` instead of `500`
-- Map `BizException` codes to corresponding HTTP status (401/403/404/400/500)
-- Avoid leaking internal exception messages in generic `INTERNAL_ERROR` responses
-- Add request ID tracing support: pass-through/generation via `X-Request-Id`, response header echo, and MDC-based logging correlation
-- Fix request tracing filter execution order to ensure `requestId` is reliably present in completion logs
-- Add Spring Security (`spring-boot-starter-security`) and define endpoint authorization policy
-- Add SpringDoc OpenAPI integration and Swagger UI support
-- Document request tracing, security behavior, and API docs access in README
-- Add initial auth entrypoint: `POST /api/v1/auth/login` with login request/response DTOs
-- Add `AuthService` and `JwtTokenService`; return JWT access token on successful login
-- Add JPA entities/repositories for tenant/user/role/permission lookup in login flow
-- Add JWT dependencies (`jjwt-api`, `jjwt-impl`, `jjwt-jackson`) and JWT dev config (`jwt.secret`, `jwt.expire-seconds`)
-- Support JWT config overrides via env vars (`JWT_SECRET`, `JWT_EXPIRE_SECONDS`) in `application-dev.yml`
-- Keep scope explicit: JWT issuance only (no JWT auth filter yet, no `/api/v1/me` yet)
-- Harden tenant isolation in login claims assembly by constraining role/permission queries with both `userId` and `tenantId`
-- Update README with authentication scope, login API examples, and JWT configuration notes
-- Add JWT authentication filter for `Authorization: Bearer <token>` validation and claim parsing
-- Populate `SecurityContext` with current user principal from JWT claims
-- Add current-user endpoint `GET /api/v1/me` (with compatibility path `/api/v1/user/me`)
-- Return `401 UNAUTHORIZED` JSON response for unauthenticated access to protected endpoints
-- Add `403 FORBIDDEN` JSON access-denied handler
-- Add Swagger Bearer security scheme and expose `UserController` endpoint with bearer requirement
-- Update README with JWT auth flow (`/api/v1/me`, 401/403 behavior, Bearer usage)
-- Standardize current-user endpoint to `GET /api/v1/user/me` and remove `/api/v1/me` compatibility mapping
-- Add troubleshooting note for stale Swagger docs caused by old process/port occupancy
+Low-level implementation steps stay in Git commit history. This changelog is intentionally version-oriented instead of day-by-day development-oriented.
 
-## 2026-03-09
+## [Unreleased]
 
-- Add context endpoint `GET /api/v1/context` to return current tenant/user context after login
-- Return `401 UNAUTHORIZED` when accessing context endpoint without token
-- Write `TenantContext` and `CurrentUserContext` in JWT authentication filter after successful token parsing
-- Clear thread-local context holders at request end to avoid context leakage across requests
-- Add `ContextAccess` helper for unified `currentTenantId/currentUserId` access in business code
-- Update README with context endpoint behavior and verification examples
-- Add `V3__seed_rbac_roles_and_users.sql` with second batch RBAC demo data (`ops`, `viewer`)
-- Add `@RequirePermission` annotation and `RequirePermissionInterceptor` for endpoint-level permission checks
-- Add RBAC demo controller with three permission-protected test endpoints
-- Fix permission-denied path to return unified `403 FORBIDDEN` JSON instead of falling back to `500`
-- Update README with RBAC test endpoints, permission mapping, and demo user guidance
-- Add `GET /api/v1/users` endpoint protected by `USER_READ` to return summary DTOs for users in the current tenant
-- Update README and docs with current-tenant user listing behavior, permissions, and verification steps
-- Split project status and future planning into dedicated docs pages: `docs/project-status.md` and `docs/roadmap.md`
-- Restructure README into a concise entry page with links to status, roadmap, references, and runbooks
-- Add IDE-friendly `api-demo.http` with login, context, user, and RBAC request examples
-- Expand auth documentation with a clearer authentication and authorization model description
-- Add Week 1 completion, limitations, and Week 2 plan details to the documentation structure
-- Add `docs/architecture/foundation-design-decisions.md` and `docs/runbooks/regression-checklist.md`
-- Cross-link `api-demo.http` with the regression checklist and normalize current-user references to `/api/v1/user/me`
-- Replace the single foundation design document with ADR-style architecture records under `docs/architecture/adr/`
-- Add ADRs for tenant-aware repository methods and keeping Week 1 focused on foundation work
-- Improve Swagger / OpenAPI coverage with centralized contract annotations, reusable examples, and richer UI defaults
-- Update docs to describe enhanced Swagger behavior, SpringDoc settings, and related verification steps
+### Changed
+
+- Reframed the project plan as a 10-week workflow-first, AI-enhanced vertical SaaS roadmap.
+- Clarified the project progression as portfolio first, open-source second, and potential commercial exploration later.
+- Aligned version planning with the existing `v0.1.0` tag instead of reusing that version number for later milestones.
+
+### Added
+
+- Added AI reference docs for workflow integration, provider configuration, prompt versioning, eval datasets, and candidate workflow rollout.
+- Added AI governance ADRs for workflow placement, audit and evaluation baseline, and instance-level provider-key ownership.
+- Added an explicit release-versioning reference page to define tag ownership and future version progression.
+
+### Docs
+
+- Expanded README and docs navigation so project plan, release versioning, AI docs, and AI runbooks are easier to discover.
+- Updated status and roadmap docs to reflect the current Week 2 position and the open-source release track.
+
+## [v0.1.0] - 2026-03-09
+
+Tagged as `Week 1 complete: foundation phase`.
+
+### Added
+
+- Multi-module Spring Boot backend foundation for a tenant-aware SaaS system.
+- Local development support for MySQL, Redis, RabbitMQ, Docker Compose, and Flyway migrations.
+- JWT login, Bearer-token authentication, tenant and user context propagation, and endpoint-level RBAC checks.
+- Public foundation endpoints including `POST /api/v1/auth/login`, `GET /api/v1/user/me`, `GET /api/v1/context`, and `GET /api/v1/users`.
+- Swagger / OpenAPI support, request tracing, unified API response handling, and health checks.
+
+### Changed
+
+- Standardized the current-user endpoint to `GET /api/v1/user/me`.
+- Improved Swagger contract coverage, reusable examples, and demo-account consistency.
+- Strengthened demo seed consistency through follow-up migration and documentation cleanup.
+
+### Docs
+
+- Split high-level status, roadmap, reference docs, runbooks, and ADRs into a clearer documentation structure.
+- Added API demo requests, regression guidance, and reference pages for authentication, Swagger, configuration, and user management.

@@ -4,13 +4,21 @@ Last updated: 2026-03-10
 
 ## Overview
 
-MerchantOps SaaS has completed Week 1 Platform Foundation and is now in Week 2 First Business Loop - Tenant User Management. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but its public business API surface is still intentionally narrow while the first real business loop is being completed.
+MerchantOps SaaS has completed Week 1 Platform Foundation and is now in Week 2 First Business Loop - Tenant User Management within the new 10-week market-aligned plan. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but it has not yet reached the later workflow and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
 
 ## Current Phase Summary
 
 - Current phase: Week 2 First Business Loop - Tenant User Management
-- Next phase: finish the remaining public user-management APIs and then move into Week 3 Ticket Workflow and Audit Trail
-- Primary outcome: the backend foundation is being validated by the first real tenant-scoped business loop
+- Next phase: finish the remaining public user-management APIs and then move into Week 3 Ticket Workflow - System of Action
+- Primary outcome: the backend foundation is being validated by the first real tenant-scoped business loop before broader workflow and AI delivery begins
+- Current tagged milestone: `v0.1.0` on 2026-03-09, recorded as `Week 1 complete: foundation phase`
+- Open-source timing expectation: an early preview becomes more realistic after Week 5, while a stronger public release should wait until at least the first AI Copilot milestone in Week 6 or Week 7
+
+## Project Direction
+
+- near-term goal: turn the project into a credible workflow-first portfolio system instead of a generic CRUD backend
+- mid-term goal: turn that system into an open-source reference implementation that other developers can run and study
+- longer-term goal: use the open-source project as the base for product discovery, collaboration, or commercial validation once workflow, AI, and governance layers are proven
 
 ## Implemented Scope
 
@@ -67,14 +75,20 @@ Completed:
 Not yet implemented:
 
 - public user detail endpoint
-- public user create, update, and password-update endpoints
+- public user create, update, status-toggle, and role-assignment endpoints
 - public pagination and status-filter query parameters for `/api/v1/users`
 - end-to-end write persistence inside `UserCommandService`
 - audit logging fields and operator tracking
-- Week 3 ticket workflow and audit trail module
-- Week 4 async import and background processing module
-- Week 5 feature flag, delivery hardening, and stronger observability coverage
-- usage / ledger / invoice minimal loop
+- Week 3 ticket workflow module
+- Week 4 audit trail and approval patterns
+- Week 5 async import and data operations
+- Week 6 ticket AI Copilot
+- Week 7 import AI Copilot
+- Week 8 agentic workflows with human oversight
+- Week 9 AI governance, eval, cost, and usage tracking
+- Week 10 delivery hardening, feature flag rollout control, and portfolio packaging
+- formal open-source release packaging such as license choice, contribution guide, security policy, and sanitized public demo assets
+- usage / ledger / invoice remains a stretch goal after the core workflow + AI path is stable
 - integration tests
 - deployment-ready Docker or Kubernetes manifests
 - performance documentation and benchmark artifacts
@@ -87,13 +101,15 @@ Current implementation is intentionally focused on the Week 1 foundation plus th
 - `/api/v1/users` currently returns an unpaged array of current-tenant users ordered by `id ASC`
 - user detail, page, and write flows exist only as internal DTO/service groundwork and are not yet published in controllers or Swagger
 - `UserCommandService#createUser`, `updateUser`, and `updatePassword` currently stop at `UnsupportedOperationException`
+- no workflow-level modules such as ticketing or import jobs are public yet
+- no AI-assisted workflow endpoints, runtime AI audit trail, or code-backed evaluation datasets exist yet
 - refresh token flow
 - logout or token revocation
 - fine-grained operator audit logs
 - integration tests
 - production-ready secret management
 - tenant admin UI or frontend
-- later-phase modules such as ticket workflow, async import, feature flag support, and billing-related capabilities
+- later-phase modules such as ticket workflow, async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
 
 ## Known Gaps
 

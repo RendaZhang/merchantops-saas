@@ -1,40 +1,32 @@
-# MerchantOps SaaS（5 周）项目计划
+# MerchantOps SaaS（10 周）项目计划
 
-> 面向跨境卖家团队的多租户运营支持平台  
-> 目标不是只做一个能跑的 Demo，而是做出一个**像真实 SaaS 后端项目**、**能支撑简历经历**、**适合放 GitHub / 作品集**、并且**可以在面试中完整讲清业务、技术、稳定性与工程化**的成品项目。
-
----
-
-## 目录
-
-- [1. 项目定位](#1-项目定位)
-- [2. 项目目标](#2-项目目标)
-- [3. 技术栈建议](#3-技术栈建议)
-- [4. 推荐仓库结构](#4-推荐仓库结构)
-- [5. 5 周整体推进节奏](#5-5-周整体推进节奏)
-- [6. 第 1 周计划：平台底座](#6-第-1-周计划平台底座)
-- [7. 第 2 周计划：第一个真实业务闭环租户用户管理](#7-第-2-周计划第一个真实业务闭环租户用户管理)
-- [8. 第 3 周计划：工单与审计](#8-第-3-周计划工单与审计)
-- [9. 第 4 周计划：异步导入与后台处理](#9-第-4-周计划异步导入与后台处理)
-- [10. 第 5 周计划：SaaS 差异化能力与工程化收口](#10-第-5-周计划saas-差异化能力与工程化收口)
-- [11. 5 周后的完成状态](#11-5-周后的完成状态)
-- [12. 迭代原则](#12-迭代原则)
-- [13. 每周里程碑](#13-每周里程碑)
-- [14. 风险控制建议](#14-风险控制建议)
-- [15. 执行优先级分层](#15-执行优先级分层)
-- [16. 每周执行建议](#16-每周执行建议)
+> 一个面向跨境卖家团队的 AI-enhanced vertical SaaS 项目。  
+> 目标不是只做一个能跑的 Demo，而是做出一个**符合 2025-2026 市场预期**、**可以支撑简历与面试表达**、并且**能展示 SaaS + AI 工作流整合能力**，还能按“作品集 -> 开源 -> 潜在商业化”路径推进的真实后端项目。
 
 ---
 
 ## 1. 项目定位
 
-### 项目名称
+### 一句话定义
 
-**MerchantOps SaaS**
+MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台，核心价值不只是“存数据”，而是把**租户隔离、权限治理、运营工作流、异步处理、AI 辅助与 AI 审计**组合成一个可以落地的垂直应用。
 
-### 项目一句话介绍
+### 为什么要改成 10 周计划
 
-一个面向跨境卖家团队的多租户运营支持平台，提供租户用户管理、工单处理、异步导入、账单追溯、功能开关、审计日志和基础工程化能力，模拟真实 SaaS 后端研发场景。
+5 周计划适合做一个“像样的 SaaS 后端”，但不够支撑现在市场上更真实的要求。当前更有说服力的项目，不是单纯的 CRUD SaaS，也不是单纯的聊天机器人，而是：
+
+- 有稳定的 system of record
+- 有明确的 system of action
+- AI 嵌入真实工作流，而不是独立悬空
+- 关键操作有权限、审批、审计、评估与成本控制
+
+这也是为什么计划需要从“5 周 SaaS 建设”升级成“10 周 workflow-first + AI-enhanced SaaS 建设”。
+
+### 项目演进路径
+
+- 第一步：做成能支撑简历、面试和技术表达的作品集项目
+- 第二步：整理成可运行、可协作、可复用的开源 reference implementation
+- 第三步：在真实 workflow、AI 与治理能力跑通后，再评估和公司合作或进一步商业化的机会
 
 ### 目标用户
 
@@ -43,200 +35,165 @@
 - 商家管理员
 - 内部支持 / 客服团队
 
-### 项目要解决的问题
+### 要解决的真实问题
 
 - 多租户团队在同一平台上的数据隔离与权限隔离
-- 用户、角色、权限等后台管理能力如何落地
-- 运营工单与任务的统一管理
-- 大批量数据导入与异步处理
-- 租户维度的用量统计、账单生成与对账追溯
-- 某租户功能灰度、白名单与快速回滚
-- 后端系统的基础可观测性、稳定性与部署流程
+- 后台用户、角色、权限如何真正落地并可运营
+- 工单流转、异步导入、异常处理等运营工作如何在线化
+- AI 如何在真实工作流里提供价值，而不是只做聊天展示
+- AI 输出如何被审计、评估、回放和受权限控制
 
 ---
 
-## 2. 项目目标
+## 2. 产品北极星
 
-### 核心目标
+### 最终希望做成什么
 
-这个项目最终要满足以下四个方向：
+不是“一个带 AI 的 SaaS”，而是一个更完整的三层结构：
 
-1. **像真实 SaaS 后端项目**
-2. **能支撑简历里相关 SaaS 经验的表达**
-3. **能在面试中完整讲清楚业务与技术细节**
-4. **适合放 GitHub / 作品集展示**
+1. **System of Record**
+   - 租户、用户、角色、权限、工单、导入任务、操作记录
+2. **System of Action**
+   - 用户管理、工单流转、导入处理、审批与回滚
+3. **System of Intelligence**
+   - 工单 AI 摘要、分类、优先级建议、回复草稿
+   - 导入错误归因、修复建议、字段映射建议
+   - 低风险自动化与人机协作审批
 
-### 核心能力
+### 项目完成后应该具备的辨识度
 
-- 多租户隔离
-- JWT / Spring Security / RBAC
-- 租户用户管理闭环
-- 工单 / 运营任务管理
-- CSV 异步导入
-- Redis 缓存
-- MQ 异步处理
-- 账单 / usage / ledger
-- Feature Flag / 白名单
-- Docker / K8s / CI/CD
-- Prometheus Metrics / 结构化日志
-- 压测 / 故障演练 / 轻量 AI 增强
-
-### 最终交付物
-
-- 完整后端项目代码
-- 可运行的本地开发环境
-- 完整 README
-- SQL 初始化脚本
-- 架构图 / ER 图 / 时序图
-- 压测报告
-- 故障演练文档
-- 面试版项目讲稿
+- 能证明你理解多租户 SaaS 的底层约束
+- 能证明你不是只会做 CRUD，而是会做 workflow
+- 能证明你知道 AI 应该嵌到哪里、不能嵌到哪里
+- 能证明你理解 AI 项目的治理与交付，不只是模型调用
+- 能证明这个项目有机会从作品集演进成公开开源项目，并保留后续商业化空间
 
 ---
 
-## 3. 技术栈建议
+## 3. 规划原则
 
-### 后端
+### 核心原则
 
-- Java 17+
-- Spring Boot 3.x
-- Spring Web
-- Spring Security
-- Spring Validation
-- Spring Data JPA / MyBatis（二选一，建议按你熟悉的技术栈）
+1. **先做可信系统，再做智能系统**
+2. **先做有 ROI 的窄场景，再做 agent 化**
+3. **AI 先做辅助，再做自动化**
+4. **所有 AI 行为都要可审计、可评估、可回退**
 
-### 数据与中间件
+### AI 整合原则
 
-- MySQL 8
-- Redis
-- RabbitMQ
+- AI 只能嵌入真实工作流，不单独做“聊天页”作为主卖点
+- AI 输出默认是建议，不默认是执行
+- 高风险动作必须 human-in-the-loop
+- AI 输入范围必须受 tenant scope 和 RBAC 约束
+- AI 能力要有 prompt/version/model/latency/cost 记录
 
-### 工程化
+### 这份计划明确不追求的东西
 
-- Docker / Docker Compose
-- GitHub Actions 或 Jenkins
-- K8s（Minikube / Kind / 轻量云环境）
-- Prometheus + Actuator
-- Grafana（可选加分）
-
-### 文档与协作
-
-- Markdown
-- Mermaid
-- Swagger / SpringDoc OpenAPI
-- Postman / Bruno / Apifox（任选其一）
+- 一开始就做大而全的 ERP
+- 一开始就做全自动 agent
+- 为了“看起来高级”而堆 RAG、向量库、Agent 框架
+- 在业务闭环没站稳前，就做复杂前端和重度 K8s
 
 ---
 
-## 4. 推荐仓库结构
-
-```text
-merchantops-saas/
-├── merchantops-api/
-├── merchantops-domain/
-├── merchantops-infra/
-├── merchantops-common/
-├── docs/
-│   ├── architecture/
-│   ├── runbooks/
-│   ├── incidents/
-│   ├── performance/
-│   └── diagrams/
-├── scripts/
-├── sql/
-├── deploy/
-│   ├── docker/
-│   └── k8s/
-├── .github/workflows/
-├── docker-compose.yml
-├── README.md
-└── CHANGELOG.md
-```
-
-### 模块职责建议
-
-- `merchantops-api`：Controller、DTO、鉴权入口、接口层
-- `merchantops-domain`：核心业务模型、服务、规则、状态机
-- `merchantops-infra`：数据库、Redis、MQ、外部依赖适配
-- `merchantops-common`：通用工具类、异常码、响应对象、上下文与常量
-- `docs/`：架构说明、故障案例、压测报告、运行手册、计划文档
-- `scripts/`：启动脚本、初始化脚本、压测辅助脚本
-- `sql/`：建表 SQL、初始化数据脚本
-- `deploy/`：Docker 与 K8s 部署文件
-
----
-
-## 5. 5 周整体推进节奏
+## 4. 10 周整体推进节奏
 
 ### Week 1：Platform Foundation
 
-做出项目骨架、租户体系、鉴权权限、API 统一规范和 OpenAPI 基础能力。
+做稳项目骨架、认证授权、上下文传递、统一异常、OpenAPI、基础可观测性。
 
 ### Week 2：First Business Loop - Tenant User Management
 
-把用户管理做成第一个真实业务闭环，验证多租户、RBAC、Swagger、回归文档是否能一起成立。
+把用户管理做成第一个真实业务闭环，验证多租户、RBAC、Swagger、文档和回归流程能一起成立。
 
-### Week 3：Ticket Workflow and Audit Trail
+### Week 3：Ticket Workflow - System of Action
 
-做工单领域模型、状态流转和审计记录，让项目开始具备真实运营后台味道。
+做工单主流程，让项目真正进入运营工作流场景。
 
-### Week 4：Async Import and Background Processing
+### Week 4：Audit Trail and Approval Patterns
 
-做 CSV 导入、任务状态机、MQ 异步消费和错误报告，补齐后台系统常见重活场景。
+把审计日志、操作记录、审批与回退模式补齐，为后续 AI 落地准备治理骨架。
 
-### Week 5：SaaS Differentiators and Delivery Hardening
+### Week 5：Async Import and Data Operations
 
-按优先级补 Feature Flag、Metrics、部署交付、压测、故障演练、作品化文档，并视时间引入 usage / ledger / invoice。
+做导入任务、异步处理、错误报告、幂等与重试，补齐后台重任务场景。
 
-### 当前现实推进建议
+### Week 6：AI Copilot for Ticket Operations
+
+把 AI 放进工单工作流，做摘要、分类、优先级建议、回复草稿和处理建议。
+
+### Week 7：AI Copilot for Import and Data Quality
+
+把 AI 放进导入与数据治理场景，做错误归因、字段映射建议、修复建议和聚类总结。
+
+### Week 8：Agentic Workflows with Human Oversight
+
+做低风险 agent 化操作，例如草稿生成、建议执行、审批后写回，不追求完全自动。
+
+### Week 9：AI Governance, Eval, Cost, and Usage
+
+把 AI 日志、评估集、回归测试、成本看板、调用限流和基础 usage 记录补齐。
+
+### Week 10：Delivery Hardening and Portfolio Packaging
+
+把 Feature Flag、部署、性能、故障演练、README、演示脚本和面试话术收口。
+
+### 当前现实推进判断
 
 - Week 1 已完成
-- Week 2 正在进行或应作为当前主线推进
-- Week 3 到 Week 5 应建立在 Week 2 这个业务闭环已经站稳的前提上
+- Week 2 正在进行，是当前最重要的主线
+- Week 3 之后的工作都应建立在 Week 2 先站稳的前提上
+
+### 与开源节奏的关系
+
+- 当前已经有 `v0.1.0` tag，对应 2026-03-09 的 Week 1 Platform Foundation 完成节点
+- Week 1-4 主要目标是把 workflow 和治理骨架站稳，不急于过早对外包装
+- Week 5 更适合作为下一阶段预览版本，例如 `v0.2.0-alpha`，前提是用户、工单、导入链路已具备可信骨架
+- Week 6-7 适合作为第一次公开强调“AI-enhanced vertical SaaS”的开源版本，例如 `v0.3.0-beta`
+- Week 10 适合作为稳定开源参考实现的里程碑，并开始验证潜在商业合作或产品化方向
 
 ---
 
-## 6. 第 1 周计划：平台底座
+## 5. 每周详细计划
 
-> 目标：**先把系统底座做稳，让后续业务开发不建立在沙地上**
+### Week 1：Platform Foundation
+
+### 目标
+
+把系统底座做稳，让后续所有业务与 AI 能力都有可信赖的边界。
 
 ### 本周范围
 
-- 初始化多模块工程与仓库结构
-- 接入 MySQL / Redis / RabbitMQ / Docker Compose
-- 建立统一响应、全局异常、错误码、requestId、日志规范
-- 接入 Swagger / SpringDoc OpenAPI
-- 建立租户、用户、角色、权限的核心表结构和 seed data
-- 完成 JWT 登录、认证过滤器、上下文传递、RBAC 权限拦截
+- 多模块工程与仓库结构
+- MySQL / Redis / RabbitMQ / Docker Compose
+- 统一响应、全局异常、错误码、requestId、日志规范
+- Swagger / SpringDoc OpenAPI
+- 租户、用户、角色、权限、上下文基础模型
+- JWT 登录、认证过滤器、RBAC 权限拦截
 
 ### 本周交付
 
-- `/health`、`/api/v1/auth/login`、`/api/v1/user/me`、`/api/v1/context`
-- Swagger 可访问且可调试
-- Demo 租户、用户、角色、权限数据
-- `@RequirePermission` 或等价机制
-- README 和基础架构文档初版
+- `/health`
+- `/api/v1/auth/login`
+- `/api/v1/user/me`
+- `/api/v1/context`
+- 基础 RBAC demo 接口
+- 基础文档与 runbook
 
 ### 验收标准
 
 - 不带 token 返回 `401`
 - 越权访问返回 `403`
-- 认证后能拿到当前租户和用户上下文
-- Swagger / OpenAPI 可作为联调入口
-- 核心基础能力可通过 runbook 手工验证
-
-### 面试可讲点
-
-- 多租户上下文怎么传递
-- JWT + Spring Security 怎么落地
-- RBAC 为什么放在接口层拦截
-- 为什么先做 Swagger、统一异常、requestId
+- 能稳定拿到 tenant/user context
+- Swagger 可以完成基础联调
 
 ---
 
-## 7. 第 2 周计划：第一个真实业务闭环（租户用户管理）
+### Week 2：First Business Loop - Tenant User Management
 
-> 目标：**用用户管理作为第一个真实业务闭环，验证平台底座真的能支撑业务**
+### 目标
+
+用用户管理作为第一个真实业务闭环，证明平台底座可承载业务写操作。
 
 ### 本周范围
 
@@ -247,363 +204,455 @@ merchantops-saas/
 - 更新用户基本信息
 - 启用 / 禁用用户
 - 给用户分配角色
-- 所有操作都带租户隔离
+- 所有读写都带租户隔离
 - 所有写操作都受 RBAC 控制
 
-### 建议推进顺序
+### 关键要求
 
-1. 先补齐只读能力：
-   - `GET /api/v1/users`
-   - 支持 `page`、`size`、`username`、`status`
-   - 排序字段白名单
-2. 再补齐单体查询：
-   - `GET /api/v1/users/{userId}`
-   - 严格 tenant-scoped 查询
-3. 再做写接口：
-   - `POST /api/v1/users`
-   - `PUT /api/v1/users/{userId}`
-   - `PATCH /api/v1/users/{userId}/status`
-   - `PUT /api/v1/users/{userId}/roles`
-4. 最后补验收与文档：
-   - Swagger 示例
-   - `api-demo.http`
-   - 回归清单
-   - project-status / roadmap / reference 文档
-
-### 关键设计要求
-
-- 所有 repository 查询都必须带 `tenantId`
+- repository 查询必须 tenant-aware
 - 用户名唯一性按租户维度约束
-- 禁止跨租户修改用户和角色分配
-- 所有写操作至少要求 `USER_WRITE`
-- 角色分配建议拆成独立接口，避免和基本信息更新耦合
-- 禁用用户后要明确其登录与已有 token 的预期行为
-- Swagger 中公开的接口必须有示例，请求路径使用真实路径，例如 `/api/v1/users`
+- 禁止跨租户改用户和分配角色
+- 写接口建议最少要求 `USER_WRITE`
+- 角色分配独立成接口，不和基本信息更新耦合
+- Swagger 中暴露的接口必须同步示例、runbook、`api-demo.http`
 
-### 本周交付
+### 推荐交付接口
 
-- 用户管理的读写接口初版
-- Swagger 中可见的用户管理接口分组
-- `api-demo.http` 中可直接验证的用户管理请求
-- 用户管理参考文档与回归检查项
+- `GET /api/v1/users`
+- `GET /api/v1/users/{userId}`
+- `POST /api/v1/users`
+- `PUT /api/v1/users/{userId}`
+- `PATCH /api/v1/users/{userId}/status`
+- `PUT /api/v1/users/{userId}/roles`
 
 ### 验收标准
 
 - 分页、筛选、详情都只返回当前租户数据
-- 创建 / 更新 / 状态变更 / 角色分配都带权限校验
-- `viewer` 不可执行写操作
-- `admin` 可执行完整用户管理链路
-- Swagger 示例和实际返回保持一致
-
-### 面试可讲点
-
-- 为什么用户管理适合作为第一个业务闭环
-- 租户隔离在 repository、service、controller 三层怎么兜底
-- 为什么角色分配要单独建接口
-- Swagger 和回归清单为什么要和业务闭环一起交付
+- `viewer` 无法做写操作
+- `admin` 可以完成完整链路
+- 文档、Swagger、HTTP 示例保持一致
 
 ---
 
-## 8. 第 3 周计划：工单与审计
+### Week 3：Ticket Workflow - System of Action
 
-> 目标：**在已有用户体系之上，做出更像真实运营后台的核心业务模块**
+### 目标
+
+进入真正的运营工作流场景，做出比 CRUD 更像真实 SaaS 的模块。
 
 ### 本周范围
 
-- 设计并实现 `ticket`、`ticket_comment`、`ticket_operation_log`
-- 创建工单、查询详情、分页列表
-- 工单指派、状态流转、评论
-- 审计日志记录关键操作
-- 为工单接口补参数校验与业务校验分层
+- 设计 `ticket`、`ticket_comment`、`ticket_operation_log`
+- 创建工单
+- 查询详情
+- 分页列表
+- 指派处理人
+- 状态流转
+- 评论能力
 
-### 关键细节
+### 关键要求
 
-- `assignee_id` 必须属于当前租户
-- 状态机规则要显式建模，禁止非法状态流转
-- 审计日志至少记录 `requestId`、`tenantId`、`userId`
-- 评论、操作记录、状态流转都要可追溯
-
-### 本周交付
-
-- 工单主流程接口
-- 工单状态流转和操作记录
-- 审计日志模型与基础查询能力
-- 工单相关文档、时序图或状态说明
+- `assignee` 必须属于当前租户
+- 状态机规则不能散落在 controller
+- 关键字段要考虑 AI 后续接入的上下文价值
+- 工单动作需要稳定的审计事件模型
 
 ### 验收标准
 
-- 能完整创建并推进一张工单
+- 能完整创建、指派、评论、关闭一张工单
 - 非法状态流转会被拒绝
-- 审计记录能追溯是谁在什么租户下做了什么操作
-
-### 面试可讲点
-
-- 参数校验与业务校验如何分层
-- 工单状态机为什么不能散落在 controller 里
-- 审计日志如何为排障和合规服务
+- 所有动作都可追溯到 tenantId / userId / requestId
 
 ---
 
-## 9. 第 4 周计划：异步导入与后台处理
+### Week 4：Audit Trail and Approval Patterns
 
-> 目标：**补齐 SaaS 后台最常见的重任务场景：导入、异步、失败追踪**
+### 目标
+
+为 AI 与自动化建立治理骨架，而不是事后补治理。
 
 ### 本周范围
 
-- 设计并实现 `import_job`、`import_job_item_error`
-- 上传文件后创建 job，并立即返回 `jobId`
+- 审计日志模型
+- 关键动作事件记录
+- 审批 / 拒绝 / 回退的基础模式
+- 操作日志查询接口
+- AI 未来要复用的 action envelope 设计
+
+### 建议沉淀的能力
+
+- `actionType`
+- `entityType`
+- `entityId`
+- `beforeValue` / `afterValue`
+- `operatorId`
+- `approvalStatus`
+- `requestId`
+
+### 验收标准
+
+- 用户写操作、工单关键流转都能记录审计事件
+- 至少有一个“建议 -> 审批 -> 执行”的基础模式落地
+
+---
+
+### Week 5：Async Import and Data Operations
+
+### 目标
+
+补齐后台系统最常见的重任务场景，为后续 AI 导入能力打地基。
+
+### 本周范围
+
+- `import_job`
+- `import_job_item_error`
+- 上传文件并创建 job
 - MQ 投递与 worker 消费
-- chunk 分片处理与失败记录
-- 进度查询、重试、幂等控制、错误报告导出
+- chunk 分片处理
+- 失败明细与错误报告
+- 幂等控制、重试与并发限制
 
-### 关键细节
+### 关键要求
 
-- 每批 chunk 大小要可配置
-- 单租户并发导入数需要限制
-- 失败明细保留上限要明确
-- job 状态机建议至少包含：
-  - `PENDING`
-  - `RUNNING`
-  - `PARTIAL_FAILED`
-  - `SUCCEEDED`
-  - `FAILED`
-
-### 本周交付
-
-- 导入任务接口与异步消费链路
-- import job 状态查询
-- 错误报告或错误明细查看能力
-- 导入流程文档和时序图
+- 导入接口要快速返回 `jobId`
+- job 状态机明确
+- 错误明细可供 AI 二次分析
+- 所有导入任务带 tenant scope 和 operator 信息
 
 ### 验收标准
 
-- 上传后请求可快速返回
-- 后台任务能独立推进
-- 能明确看到任务进度和失败原因
-
-### 面试可讲点
-
-- 为什么不能同步导入 20 万条
-- 为什么要 chunk + MQ
-- 导入失败如何做到可定位、可重试
+- 上传后立刻返回
+- 后台任务独立推进
+- 可查看进度、失败原因和错误报告
 
 ---
 
-## 10. 第 5 周计划：SaaS 差异化能力与工程化收口
+### Week 6：AI Copilot for Ticket Operations
 
-> 目标：**把项目从“有模块”推进到“像交付过的 SaaS 系统”**
+### 目标
 
-### 必做范围
+把 AI 直接嵌入工单工作流，而不是额外做一个无业务上下文的对话入口。
 
-- Feature Flag / 白名单能力
-- Metrics 与结构化日志增强
-- Dockerfile 与基础容器化交付
-- CI/CD 基础流水线
-- README、架构图、运行手册、回归文档、故障演练文档收口
+### 推荐 AI 用例
 
-### 应做范围
+- 工单摘要
+- 工单分类建议
+- 优先级建议
+- 分配建议
+- 回复草稿生成
+- 操作记录总结
 
-- K8s 最小部署样例
-- 压测与一轮性能优化
-- 发布 / 回滚 Runbook
+### 关键要求
 
-### 视时间推进
+- AI 输入范围必须 tenant-scoped
+- 输出默认是建议，不是直接写库
+- 必须记录 prompt version、model、latency、cost、approval result
+- 需要至少一个人工确认步骤
 
-- usage / ledger / invoice 最小闭环
-- Grafana 展示
-- 轻量 AI 增强能力
+### 推荐交付接口
 
-### 关键细节
-
-- Feature Flag 禁止写死 `if tenantId == xxx`
-- Metrics 至少覆盖 HTTP、导入任务、MQ 消费失败
-- 日志字段至少包括 `requestId`、`tenantId`、`userId`
-- 部署文档必须能支持本地或最小测试环境复现
-
-### 本周交付
-
-- 一套最小可交付工程化能力
-- 故障案例 / 性能说明 / 发布说明
-- README 完整版
-- 面试版讲稿素材
+- `POST /api/v1/tickets/{ticketId}/ai-summary`
+- `POST /api/v1/tickets/{ticketId}/ai-triage`
+- `POST /api/v1/tickets/{ticketId}/ai-reply-draft`
 
 ### 验收标准
 
-- 项目能以文档驱动方式被别人跑起来
-- 至少有一个明确的性能优化案例
-- 至少有一个明确的故障排查案例
-- 代码、文档、Swagger、runbook 之间没有明显冲突
-
-### 面试可讲点
-
-- 为什么 Feature Flag 是 SaaS 差异化能力
-- 为什么 Metrics、日志、Runbook 也算项目核心交付
-- 如何把一个项目从“能跑”做成“能讲、能演示、能维护”
+- AI 输出能提升工单处理效率
+- 人工可以拒绝或修改 AI 建议
+- AI 结果有审计与回放信息
 
 ---
 
-## 11. 5 周后的完成状态
+### Week 7：AI Copilot for Import and Data Quality
 
-### 业务层面
+### 目标
 
-- 有真实客户画像
-- 有租户用户管理闭环
-- 有工单、导入、功能开关等真实 SaaS 场景
+把 AI 放到导入与数据治理这种更有现实 ROI 的场景。
 
-### 技术层面
+### 推荐 AI 用例
 
-- Spring Boot + MySQL + Redis + MQ
-- JWT + Spring Security + RBAC
-- 多租户隔离
-- 用户管理、工单、导入等业务模块
-- OpenAPI / Swagger 联调能力
-- Metrics / 日志 / Docker / CI/CD 基础能力
+- 导入错误原因聚类
+- 字段映射建议
+- 数据异常总结
+- 修复建议生成
+- 失败样本摘要
 
-### 面试层面
+### 关键要求
 
-你可以用这个项目回答以下问题：
+- 只让 AI 读被授权的导入任务数据
+- AI 不能直接修改源数据
+- 修复建议要和错误明细关联
+- 输出最好能被人工一键采用或拒绝
 
-- 你做过什么业务系统？
-- 多租户怎么做？
-- 用户、角色、权限如何在 SaaS 里落地？
-- 大批量导入怎么处理？
-- 工单状态流转怎么设计？
-- 某客户要单独开功能怎么办？
-- 日志、监控、排障怎么做？
-- 为什么你说自己做过 SaaS 后端？
+### 推荐交付接口
 
----
+- `POST /api/v1/import-jobs/{jobId}/ai-error-summary`
+- `POST /api/v1/import-jobs/{jobId}/ai-mapping-suggestion`
+- `POST /api/v1/import-jobs/{jobId}/ai-fix-recommendation`
 
-## 12. 迭代原则
+### 验收标准
 
-这 5 周里，不要一开始就追求“全都最好”。
-
-按以下顺序推进最稳：
-
-1. **先跑通**
-2. **再做第一个真实业务闭环**
-3. **再扩展更复杂业务模块**
-4. **最后补工程化、作品化和面试化**
+- AI 能减少人工排查成本
+- 输出不是纯文本展示，而是服务于后续修复动作
 
 ---
 
-## 13. 每周里程碑
+### Week 8：Agentic Workflows with Human Oversight
 
-### 第 1 周末
+### 目标
 
-系统能登录、能鉴权、能隔离租户、能通过 Swagger 联调基础接口。
+把 AI 从“建议器”推进到“低风险代理”，但保留清晰的权限与审批边界。
 
-### 第 2 周末
+### 适合做的 agent 场景
 
-有完整租户用户管理闭环，能证明平台底座已经可承载真实业务。
+- 生成工单回复草稿并提交审批
+- 生成批量错误归因报告
+- 根据规则 + LLM 生成处理建议清单
+- 对低风险任务发起预执行计划
 
-### 第 3 周末
+### 不建议现在做的事情
 
-有工单主流程和审计记录。
+- 全自动改用户权限
+- 全自动关闭工单
+- 全自动修复导入数据并落库
+- 跨租户上下文推理
 
-### 第 4 周末
+### 核心交付
 
-有异步导入和后台处理链路。
+- tool calling 或等价执行层
+- action proposal / approval / execution 三段式链路
+- 角色与权限校验
+- 执行失败可回退
 
-### 第 5 周末
+### 验收标准
 
-有 Feature Flag、基础可观测性、交付文档和作品化材料。
-
----
-
-## 14. 风险控制建议
-
-### 容易超时的地方
-
-- 在 Week 2 就把用户管理做成“超完整后台”
-- 工单状态机做得过度复杂
-- 导入模块一次性追求超大吞吐
-- K8s 花太多时间
-- usage / ledger / invoice 做得太深
-- AI 功能喧宾夺主
-
-### 建议控制方式
-
-- Week 2 先做用户管理最小闭环，不先追求组织架构、批量导入用户等扩展能力
-- 工单先做核心状态流转，不上来就做复杂 SLA
-- 导入先证明异步架构正确，再追求极限性能
-- K8s 只做最小可演示版本
-- 账单先做最小模型，作为 Week 5 视时间推进项
-- AI 只做 1 个小功能
+- 至少一个 agent workflow 能稳定跑通
+- agent 不越权
+- 审批链和执行链都可审计
 
 ---
 
-## 15. 执行优先级分层
+### Week 9：AI Governance, Eval, Cost, and Usage
 
-### 必做
+### 目标
 
-- 多租户
-- 鉴权权限
-- 用户管理闭环
-- 工单
-- 导入
-- Feature Flag
-- README / docs / runbooks
+把 AI 项目最容易被忽略、但最能体现成熟度的部分补齐。
 
-### 应做
+### 本周范围
 
-- Docker
-- CI/CD
-- Metrics
-- 审计日志
-- 压测
+- prompt version 管理
+- golden set / eval dataset
+- 基础 AI 回归评估
+- latency / error / cost / token 统计
+- AI usage event 记录
+- AI 调用限流与失败降级
 
-### 加分
+### 推荐交付物
 
-- K8s
-- usage / ledger / invoice
+- `docs/ai/` 目录下的 AI 设计说明
+- 一组离线评估样本
+- 一份 prompt / model 变更回归 checklist
+- AI 请求审计日志与 usage 记录
+
+### 验收标准
+
+- 改 prompt / model 后有最小回归验证
+- 能回答“这个 AI 功能是否变好了”
+- 能回答“这个 AI 功能花了多少钱”
+
+---
+
+### Week 10：Delivery Hardening and Portfolio Packaging
+
+### 目标
+
+把项目从“工程练习”收口成“市场上能讲得通的作品”。
+
+### 本周范围
+
+- Feature Flag 控制 AI 能力灰度
+- Dockerfile 与交付文档
+- 最小 CI/CD
+- 压测与性能优化
 - 故障演练
-- AI 小功能
-- Grafana 展示
+- LICENSE、CONTRIBUTING、演示数据清理与开源发布准备
+- README、架构图、时序图、演示脚本
+- 面试版话术与 Demo 路线
+
+### 需要重点准备的故事线
+
+- 为什么这个项目不是普通 CRUD SaaS
+- 为什么 AI 放在工单与导入场景最合理
+- 为什么要做 human-in-the-loop
+- 为什么要做 eval、cost、audit，而不是只接一个模型接口
+
+### 验收标准
+
+- 项目能被别人跑起来
+- 项目能被别人理解
+- 项目能被别人演示
+- 项目能支撑现实面试问题
 
 ---
 
-## 16. 每周执行建议
+## 6. 跨周 AI 交付要求
 
-### 每周固定动作
+这些要求不是某一周单独完成，而是 Week 6 之后持续生效。
 
-- 先明确本周唯一主目标
-- 开发前写本周接口与文档清单
-- 开发中同步维护 Swagger 示例和 `api-demo.http`
-- 开发后补最小可用文档
-- 周末更新 `project-status`、`roadmap`、README
+### 安全与权限
 
-### 每周建议产物
+- AI 读写范围必须受 tenantId 和 RBAC 限制
+- AI 工具调用必须校验当前操作者权限
+- 不允许跨租户拼接上下文
 
-- 代码提交
-- 一组可验证接口
-- 一段对应文档
-- 一份回归或 smoke test 记录
-- 一张图或一段时序说明
+### 审计与合规
 
-### 周末收口动作
+- 记录输入范围、prompt 版本、model、输出摘要、审批结果
+- 高风险动作必须可追溯到操作者
 
-- 更新 README
-- 整理 `docs/`
-- 复盘本周完成 / 未完成项
-- 把本周内容转成“可面试表达”的话术
+### 质量与评估
+
+- 至少准备一套 golden set
+- 至少准备一套失败样本集
+- 每次提示词或模型变更都应做最小回归
+
+### 成本与可用性
+
+- 记录 token、耗时、失败率
+- 对 AI 调用设置降级路径
+- 对关键 AI 功能设置 Feature Flag
 
 ---
 
-## 附：这份计划的使用方式
+## 7. 里程碑与成功标准
 
-建议把这份文件放进仓库，并作为 README 之后的详细规划入口，例如：
+### Week 2 结束时
 
-```text
-docs/project-plan.md
-```
+- 你有一个可信的 tenant-scoped 用户管理闭环
 
-同时建议保持以下分工：
+### Week 5 结束时
 
-- `README.md`：面向面试官和仓库访客的总入口
-- `docs/project-plan.md`：5 周整体推进计划
-- `docs/project-status.md`：当前真实进展与已完成范围
-- `docs/roadmap.md`：下一阶段计划与近期待办
-- `docs/architecture/`：架构设计与 ADR
+- 你有一个可信的运营工作流和异步处理链路
+- 项目适合整理成下一阶段开源预览版，例如 `v0.2.0-alpha`
 
-这样项目会更像一个真正交付过、维护过、可讲可演示的 SaaS 后端系统。
+### Week 7 结束时
+
+- 你有至少一个真实工作流里的 AI Copilot
+- 项目适合以“AI-enhanced vertical SaaS”定位做第一次较正式的公开开源发布，例如 `v0.3.0-beta`
+
+### Week 8 结束时
+
+- 你有两个真实工作流里的 AI Copilot，以及至少一个 agent approval flow
+
+### Week 10 结束时
+
+- 你有一个可以拿去讲“AI-enhanced vertical SaaS”的完整作品
+- 项目适合作为稳定开源参考实现对外展示，并开始验证潜在商业合作机会
+
+---
+
+## 8. 开源与商业化路径
+
+### 开源定位
+
+更合适的定位不是“完整商用成品”，而是：
+
+- 一个 workflow-first 的多租户 SaaS reference implementation
+- 一个带 AI Copilot 与治理约束的 vertical SaaS 样例项目
+- 一个可支撑作品集、开源协作和后续产品探索的工程基础
+
+### 推荐发布时间点
+
+- 当前基线：`v0.1.0` 已用于 Week 1 Platform Foundation
+- Week 5 后：下一阶段预览版本，例如 `v0.2.0-alpha`
+- Week 6-7 后：带第一个 AI Copilot 的公开版本，例如 `v0.3.0-beta`
+- Week 10 后：更稳定的开源参考实现，可作为商业探索起点
+
+### 开源前最低准备项
+
+- 明确 License 选择
+- 补齐 CONTRIBUTING、最小安全说明和本地运行文档
+- 确保 demo 数据、账号和配置说明可公开
+- AI provider 配置保持可插拔，不与单一厂商强绑定
+- 任何模型密钥、测试密钥和私有数据都不能进仓库
+
+### 商业化判断方式
+
+只有当下面几项同时成立时，才值得认真评估商业合作：
+
+- 至少一个 workflow 模块被证明有实际效率收益
+- AI 不是独立聊天功能，而是真的缩短处理链路
+- 审计、权限、审批、成本和回归机制已经站稳
+- 开源版本已经能说明项目的工程可信度与复用价值
+
+---
+
+## 9. 最终交付物
+
+### 业务与系统能力
+
+- 多租户与 RBAC
+- 用户管理闭环
+- 工单工作流
+- 异步导入与错误治理
+- 工单 AI Copilot
+- 导入 AI Copilot
+- 有审批边界的低风险 agent workflow
+
+### 工程与治理能力
+
+- Swagger / OpenAPI
+- runbook / regression checklist
+- 审计日志
+- AI eval 与 usage 记录
+- 部署与灰度控制
+- 开源发布准备材料
+- 压测 / 故障演练
+
+### 面试与作品能力
+
+- README 完整版
+- 架构图 / 时序图 / ER 图
+- 演示脚本
+- 面试版项目讲稿
+- 面向开源发布的定位说明与版本说明
+
+---
+
+## 10. 风险控制建议
+
+### 容易失控的地方
+
+- Week 2 就把用户管理做成超大后台
+- Week 3-5 一次性铺太多模块
+- Week 6 以后把 AI 做成通用聊天系统
+- Week 8 过早追求 fully autonomous agent
+- Week 9 才想起来补 audit 和 eval
+
+### 控制方式
+
+- 用户管理先做最小闭环，再扩展
+- 工单和导入要优先于 billing
+- AI 先做窄场景、强约束、强回报
+- agent 只做低风险、可审批动作
+- governance 不能拖到最后才补
+
+---
+
+## 11. 建议的文档分工
+
+- `README.md`：项目总入口与能力概览
+- `docs/project-plan.md`：10 周总体路线图
+- `docs/project-status.md`：当前真实进展
+- `docs/roadmap.md`：下一阶段工作安排
+- `docs/reference/`：接口、认证、配置、AI 能力说明
+- `docs/runbooks/`：验证、回归、故障处理
+- `docs/architecture/`：ADR、架构图、AI 治理设计
+
+---
+
+## 12. 一句话总结
+
+这份 10 周计划的核心，不是“把 SaaS 拉长一点做”，而是把项目重构成：
+
+**一个以真实工作流为中心、以租户与权限治理为底座、以 AI Copilot 与受控 agent 为增强层的 vertical SaaS 项目。**

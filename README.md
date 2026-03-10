@@ -13,6 +13,7 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 
 - Build a realistic multi-tenant SaaS backend
 - Support interview storytelling and portfolio presentation
+- Evolve from a portfolio-quality system into an open-source reference project, then evaluate commercial collaboration paths
 - Keep the repository easy to run and easy to extend
 
 ## What It Does
@@ -106,28 +107,22 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 
 ## Documentation
 
-- [docs/project-plan.md](docs/project-plan.md): 5-week delivery plan from platform foundation to business modules and engineering hardening
 - [docs/README.md](docs/README.md): documentation index
 - [docs/project-status.md](docs/project-status.md): implemented scope, current phase, completion status, and known gaps
-- [docs/roadmap.md](docs/roadmap.md): next-phase work aligned to the 5-week project plan
+- [docs/roadmap.md](docs/roadmap.md): next-phase work aligned to the 10-week project plan
+- [docs/project-plan.md](docs/project-plan.md): 10-week market-aligned plan for a workflow-first, AI-enhanced vertical SaaS
+- [docs/getting-started/README.md](docs/getting-started/README.md): setup and startup guides
+- [docs/reference/README.md](docs/reference/README.md): technical reference index
+- [docs/runbooks/README.md](docs/runbooks/README.md): verification and troubleshooting runbooks
 - [docs/architecture/README.md](docs/architecture/README.md): ADRs and architecture notes
-- [docs/getting-started/local-environment.md](docs/getting-started/local-environment.md): Docker services, ports, and `.env`
-- [docs/getting-started/quick-start.md](docs/getting-started/quick-start.md): full local startup flow
-- [docs/reference/configuration.md](docs/reference/configuration.md): profiles and environment variables
-- [docs/reference/database-migrations.md](docs/reference/database-migrations.md): Flyway and seed data details
-- [docs/reference/api-conventions.md](docs/reference/api-conventions.md): response and error handling rules
-- [docs/reference/authentication-and-rbac.md](docs/reference/authentication-and-rbac.md): login, JWT, context, and RBAC behavior
-- [docs/reference/user-management.md](docs/reference/user-management.md): current tenant-scoped user API and the current Week 2 delivery boundary
-- [docs/reference/api-docs.md](docs/reference/api-docs.md): Swagger and OpenAPI access
-- [docs/reference/observability.md](docs/reference/observability.md): health checks and request tracing
-- [docs/runbooks/local-smoke-test.md](docs/runbooks/local-smoke-test.md): manual verification flow
-- [docs/runbooks/regression-checklist.md](docs/runbooks/regression-checklist.md): baseline regression checks for foundation and current user-management API
-- [docs/runbooks/troubleshooting.md](docs/runbooks/troubleshooting.md): common local problems
-- [docs/architecture/tenant-rbac-integrity-gap.md](docs/architecture/tenant-rbac-integrity-gap.md): recorded database isolation gap
+- [docs/reference/release-versioning.md](docs/reference/release-versioning.md): current tag baseline and release rules
+- [docs/reference/documentation-maintenance.md](docs/reference/documentation-maintenance.md): documentation update routing rules
 - [api-demo.http](api-demo.http): IDE-friendly API request examples
 
 ## Summary
 
 - Current project status: [docs/project-status.md](docs/project-status.md)
 - Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
+- Current tagged milestone: `v0.1.0` on 2026-03-09 for Week 1 Platform Foundation
+- Project direction: portfolio first, open-source second, and potential commercial exploration after the workflow and AI layers are credible
 - Week 1 foundation is complete and Week 2 first business loop (tenant user management) is underway

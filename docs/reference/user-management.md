@@ -68,7 +68,8 @@ Verification references:
 The current staged code adds internal groundwork for broader user management, but those parts are not yet public HTTP API:
 
 - query-side DTOs and service methods exist for tenant-scoped user detail lookup, status filtering, and paged result shaping
-- write-side command DTOs and `UserCommandService` exist for create, update, and password-update flows
+- write-side command DTOs and `UserCommandService` exist for create and update flows
+- a separate internal `updatePassword` method also exists, but password management is outside the current documented Week 2 public API target
 - tenant-scoped username uniqueness checks are implemented in the repository/service layer
 - write methods still stop at `UnsupportedOperationException`, so the flows are not implemented end to end yet
 
