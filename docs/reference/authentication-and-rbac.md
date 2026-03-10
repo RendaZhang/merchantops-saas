@@ -130,36 +130,29 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 {
   "code": "SUCCESS",
   "message": "ok",
-  "data": [
-    {
-      "id": 1,
-      "username": "admin",
-      "displayName": "Demo Admin",
-      "email": "admin@demo-shop.local",
-      "status": "ACTIVE"
-    },
-    {
-      "id": 2,
-      "username": "ops",
-      "displayName": "Ops User",
-      "email": "ops@demo-shop.local",
-      "status": "ACTIVE"
-    },
-    {
-      "id": 3,
-      "username": "viewer",
-      "displayName": "Viewer User",
-      "email": "viewer@demo-shop.local",
-      "status": "ACTIVE"
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "username": "admin",
+        "displayName": "Demo Admin",
+        "email": "admin@demo-shop.local",
+        "status": "ACTIVE"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total": 1,
+    "totalPages": 1
+  }
 }
 ```
 
 Current notes:
 
 - tenant scope is derived from JWT/request context, not from request parameters
-- the current Swagger contract exposes no `page`, `size`, or `status` parameters yet
+- supported filters are `username` (fuzzy), `status` (exact), and `roleCode` (exact)
+- supported pagination parameters are `page` and `size`
 - use [user-management.md](user-management.md) for the current user-management boundary and validation references
 
 ### `GET /api/v1/rbac/users/manage` (with `viewer` token)
@@ -188,7 +181,8 @@ Current notes:
 ## Current User Management Boundary
 
 - Swagger currently exposes only `GET /api/v1/users` under the `User Management` tag
-- Week 2 DTO and service groundwork for detail, page, and write flows exists in code, but those routes are not callable until controller and contract methods are added
+- `/api/v1/users` is now a formal paged tenant query endpoint
+- detail and write flows still remain non-public until controller and contract methods are added
 - Treat the Swagger-visible endpoints in this document as the only public API surface
 
 ## Tenant Isolation Note

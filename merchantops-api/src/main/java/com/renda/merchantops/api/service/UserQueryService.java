@@ -11,7 +11,6 @@ import com.renda.merchantops.infra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -22,7 +21,7 @@ import java.util.List;
 public class UserQueryService {
 
     private static final int DEFAULT_PAGE = 0;
-    private static final int DEFAULT_SIZE = 20;
+    private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 100;
 
     private final UserRepository userRepository;
@@ -48,23 +47,23 @@ public class UserQueryService {
     }
 
     public UserPageResponse pageUsers(Long tenantId, UserPageQuery query) {
-        PageRequest pageable = PageRequest.of(
-                normalizePage(query),
-                normalizeSize(query),
-                Sort.by(Sort.Direction.ASC, "id")
+        UserPageQuery normalizedQuery = normalizeQuery(query);
+        PageRequest pageable = PageRequest.of(normalizedQuery.getPage(), normalizedQuery.getSize());
+
+        Page<UserEntity> resultPage = userRepository.searchPageByTenantId(
+                tenantId,
+                normalizedQuery.getUsername(),
+                normalizedQuery.getStatus(),
+                normalizedQuery.getRoleCode(),
+                pageable
         );
 
-        Page<UserEntity> resultPage = hasStatusFilter(query)
-                ? userRepository.findAllByTenantIdAndStatus(tenantId, query.getStatus(), pageable)
-                : userRepository.findAllByTenantId(tenantId, pageable);
-
         return new UserPageResponse(
+                resultPage.getContent().stream().map(this::toListItemResponse).toList(),
                 resultPage.getNumber(),
                 resultPage.getSize(),
                 resultPage.getTotalElements(),
-                resultPage.getTotalPages(),
-                resultPage.hasNext(),
-                resultPage.getContent().stream().map(this::toListItemResponse).toList()
+                resultPage.getTotalPages()
         );
     }
 
@@ -79,10 +78,6 @@ public class UserQueryService {
         return userRepository.existsByTenantIdAndUsernameAndIdNot(tenantId, username, excludeUserId);
     }
 
-    private boolean hasStatusFilter(UserPageQuery query) {
-        return query != null && StringUtils.hasText(query.getStatus());
-    }
-
     private int normalizePage(UserPageQuery query) {
         if (query == null || query.getPage() == null || query.getPage() < 0) {
             return DEFAULT_PAGE;
@@ -95,6 +90,23 @@ public class UserQueryService {
             return DEFAULT_SIZE;
         }
         return Math.min(query.getSize(), MAX_SIZE);
+    }
+
+    private UserPageQuery normalizeQuery(UserPageQuery query) {
+        UserPageQuery normalized = query == null ? new UserPageQuery() : query;
+        normalized.setPage(normalizePage(query));
+        normalized.setSize(normalizeSize(query));
+        normalized.setUsername(normalizeFilter(normalized.getUsername()));
+        normalized.setStatus(normalizeFilter(normalized.getStatus()));
+        normalized.setRoleCode(normalizeFilter(normalized.getRoleCode()));
+        return normalized;
+    }
+
+    private String normalizeFilter(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
     private UserListItemResponse toListItemResponse(UserEntity user) {

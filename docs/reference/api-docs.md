@@ -44,7 +44,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/dev/biz-error` | No | Dev error-shape test |
 | `GET` | `/api/v1/user/me` | Yes | Current user profile |
 | `GET` | `/api/v1/context` | Yes | Current tenant/user context |
-| `GET` | `/api/v1/users` | Yes + `USER_READ` | List users in current tenant |
+| `GET` | `/api/v1/users` | Yes + `USER_READ` | Page users in current tenant |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -57,7 +57,8 @@ Notes about security whitelist routes:
 User Management tag note:
 
 - Swagger currently exposes only `GET /api/v1/users` for user management.
-- User detail, paging, and write DTOs/services may exist in code, but they must not be treated as public API until contract/controller methods publish them into OpenAPI.
+- `/api/v1/users` now supports `page`, `size`, `username`, `status`, and `roleCode` query parameters in Swagger.
+- User detail and write DTOs/services may exist in code, but they must not be treated as public API until contract/controller methods publish them into OpenAPI.
 - See [user-management.md](user-management.md) for the current public contract and validation path.
 
 ## Core Endpoint Examples
@@ -115,36 +116,28 @@ Response:
 {
   "code": "SUCCESS",
   "message": "ok",
-  "data": [
-    {
-      "id": 1,
-      "username": "admin",
-      "displayName": "Demo Admin",
-      "email": "admin@demo-shop.local",
-      "status": "ACTIVE"
-    },
-    {
-      "id": 2,
-      "username": "ops",
-      "displayName": "Ops User",
-      "email": "ops@demo-shop.local",
-      "status": "ACTIVE"
-    },
-    {
-      "id": 3,
-      "username": "viewer",
-      "displayName": "Viewer User",
-      "email": "viewer@demo-shop.local",
-      "status": "ACTIVE"
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "username": "admin",
+        "displayName": "Demo Admin",
+        "email": "admin@demo-shop.local",
+        "status": "ACTIVE"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total": 1,
+    "totalPages": 1
+  }
 }
 ```
 
 Current notes:
 
-- today this contract is list-only and returns an array, not a page object
-- `page`, `size`, and `status` query parameters are not visible in Swagger yet
+- this contract is a page object, not a bare array
+- `page`, `size`, `username`, `status`, and `roleCode` query parameters are visible in Swagger
 - the same request is available in [../../api-demo.http](../../api-demo.http)
 
 ### 4. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)

@@ -11,6 +11,9 @@ import java.util.List;
 @Schema(description = "Tenant-scoped user page result")
 public class UserPageResponse {
 
+    @Schema(description = "Current page items")
+    private List<UserListItemResponse> items;
+
     @Schema(description = "Current page index, zero-based", example = "0")
     private int page;
 
@@ -18,14 +21,8 @@ public class UserPageResponse {
     private int size;
 
     @Schema(description = "Total item count", example = "3")
-    private long totalElements;
+    private long total;
 
     @Schema(description = "Total page count", example = "1")
     private int totalPages;
-
-    @Schema(description = "Whether there is a next page", example = "false")
-    private boolean hasNext;
-
-    @Schema(description = "Current page items")
-    private List<UserListItemResponse> items;
 }

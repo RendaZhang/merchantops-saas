@@ -60,9 +60,14 @@ Use this checklist after foundation-level changes, security changes, environment
 ## User Management
 
 - [ ] Swagger `User Management` tag shows only `GET /api/v1/users`
-- [ ] `GET /api/v1/users` returns an array rather than a page object
+- [ ] `GET /api/v1/users` returns a page object rather than a bare array
+- [ ] `GET /api/v1/users?page=0&size=10` works
+- [ ] `GET /api/v1/users?username=ad` filters by username
+- [ ] `GET /api/v1/users?status=ACTIVE` filters by status
+- [ ] `GET /api/v1/users?roleCode=TENANT_ADMIN` filters by role code
 - [ ] each `/api/v1/users` item includes `id`, `username`, `displayName`, `email`, and `status`
-- [ ] `GET /api/v1/users` returns the seeded `admin`, `ops`, and `viewer` users for tenant `demo-shop`
+- [ ] `/api/v1/users` response includes `items`, `page`, `size`, `total`, and `totalPages`
+- [ ] `GET /api/v1/users` returns the seeded `admin`, `ops`, and `viewer` users for tenant `demo-shop` when filters allow
 
 ## Tools
 

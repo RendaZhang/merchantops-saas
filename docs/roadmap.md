@@ -38,7 +38,6 @@ Complete the first business loop by turning the current user-management groundwo
 
 Continue with real user management APIs:
 
-- expose paged user listing in controller and Swagger
 - add tenant-scoped user detail lookup
 - implement create, update, status-toggle, and role-assignment flows end to end
 - add operator audit fields and verification coverage
@@ -48,7 +47,6 @@ Continue with real user management APIs:
 
 Week 2 completion:
 
-- expose `GET /api/v1/users` query parameters for pagination and status filtering
 - add `GET /api/v1/users/{userId}` detail endpoint
 - add create, update, status-toggle, and role-assignment endpoints
 - add audit logging fields and operator tracking for user-management writes

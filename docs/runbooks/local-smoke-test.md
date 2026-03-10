@@ -31,7 +31,8 @@ Copy the returned `accessToken`.
 TOKEN=<paste-accessToken-from-login-response>
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
-curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/users?page=0&size=10"
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/users?page=0&size=10&username=ad&status=ACTIVE&roleCode=TENANT_ADMIN"
 ```
 
 PowerShell:
@@ -40,10 +41,11 @@ PowerShell:
 $token = "<paste-accessToken-from-login-response>"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/me
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
-curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/users?page=0&size=10"
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/users?page=0&size=10&username=ad&status=ACTIVE&roleCode=TENANT_ADMIN"
 ```
 
-`GET /api/v1/users` should return a summary list for the current tenant only.
+`GET /api/v1/users` should return a page object for the current tenant only.
 
 ## 4. Check RBAC Demo Endpoints
 

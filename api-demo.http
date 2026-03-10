@@ -66,7 +66,19 @@ GET {{baseUrl}}/api/v1/context
 Authorization: Bearer {{token}}
 
 ### List tenant users
-GET {{baseUrl}}/api/v1/users
+GET {{baseUrl}}/api/v1/users?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List tenant users - filter by username
+GET {{baseUrl}}/api/v1/users?page=0&size=10&username=ad
+Authorization: Bearer {{token}}
+
+### List tenant users - filter by status
+GET {{baseUrl}}/api/v1/users?page=0&size=10&status=ACTIVE
+Authorization: Bearer {{token}}
+
+### List tenant users - filter by role
+GET {{baseUrl}}/api/v1/users?page=0&size=10&roleCode=TENANT_ADMIN
 Authorization: Bearer {{token}}
 
 ### RBAC - read users

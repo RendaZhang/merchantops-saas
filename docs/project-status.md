@@ -69,6 +69,7 @@ Completed:
 - authentication flow works end to end
 - authorization flow works for protected endpoints
 - current-tenant user query works with permission protection
+- current-tenant user query supports page, size, username, status, and roleCode filters
 - Week 2 first-business-loop groundwork has started, but the public HTTP contract is still incomplete
 - manual verification flow is documented
 
@@ -76,7 +77,6 @@ Not yet implemented:
 
 - public user detail endpoint
 - public user create, update, status-toggle, and role-assignment endpoints
-- public pagination and status-filter query parameters for `/api/v1/users`
 - end-to-end write persistence inside `UserCommandService`
 - audit logging fields and operator tracking
 - Week 3 ticket workflow module
@@ -98,9 +98,9 @@ Not yet implemented:
 Current implementation is intentionally focused on the Week 1 foundation plus the in-progress Week 2 user-management loop, so the following are not yet implemented:
 
 - `/api/v1/users` is still the only Swagger-visible user-management business endpoint
-- `/api/v1/users` currently returns an unpaged array of current-tenant users ordered by `id ASC`
-- user detail, page, and write flows exist only as internal DTO/service groundwork and are not yet published in controllers or Swagger
-- `UserCommandService#createUser`, `updateUser`, and `updatePassword` currently stop at `UnsupportedOperationException`
+- `/api/v1/users` is now a paged current-tenant query endpoint ordered by `id ASC`
+- user detail and write flows exist only as internal DTO/service groundwork and are not yet published in controllers or Swagger
+- `UserCommandService#createUser`, `updateUser`, and `updatePassword` currently return a unified business error until the write flows are implemented
 - no workflow-level modules such as ticketing or import jobs are public yet
 - no AI-assisted workflow endpoints, runtime AI audit trail, or code-backed evaluation datasets exist yet
 - refresh token flow
