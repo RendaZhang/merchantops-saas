@@ -1,0 +1,5 @@
+ALTER TABLE users
+    ADD COLUMN created_by BIGINT NULL;
+
+ALTER TABLE users
+    ADD COLUMN updated_by BIGINT NULL;

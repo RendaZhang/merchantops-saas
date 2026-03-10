@@ -41,11 +41,11 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
   - `200` for a valid read-only user token on `GET /api/v1/users`, including tenant-only user visibility
   - `200` for a valid read-only user token on `GET /api/v1/users/{id}`, including tenant-only role-code visibility
   - `400` when create requests try to bind role codes outside the current tenant
-  - successful create-user flow with BCrypt password persistence and immediate login
-  - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence
-  - successful disable-user flow for `PATCH /api/v1/users/{id}/status` followed by login rejection for `DISABLED`
+  - successful create-user flow with BCrypt password persistence, immediate login, and `created_by` / `updated_by` attribution
+  - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence and refreshed `updated_by`
+  - successful disable-user flow for `PATCH /api/v1/users/{id}/status` with refreshed `updated_by`, followed by login rejection for `DISABLED`
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
-  - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles`
+  - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
   - rejection of a pre-change token after role or permission claims become stale
   - successful re-login after role reassignment with new RBAC access
 - `UserQueryServiceTest`
@@ -60,11 +60,11 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
   - duplicate username rejection
   - duplicate username rejection with `excludeUserId`
   - role-code rejection when requested roles are not available in the current tenant
-  - create-user persistence with `ACTIVE` default status, BCrypt hashing, and `user_role` writes
-  - profile update persistence for mutable fields only
-  - status update persistence for `ACTIVE` and `DISABLED`
+  - create-user persistence with `ACTIVE` default status, BCrypt hashing, `user_role` writes, and operator attribution
+  - profile update persistence for mutable fields only plus operator attribution
+  - status update persistence for `ACTIVE` and `DISABLED` plus operator attribution
   - invalid status rejection
-  - role reassignment with clear-then-write `user_role` semantics
+  - role reassignment with clear-then-write `user_role` semantics plus operator attribution
   - role reassignment rejection when requested role codes are not available in the current tenant
   - tenant-scoped missing-user rejection
   - current password-update placeholder returning unified `BIZ_ERROR` rather than an uncaught runtime exception

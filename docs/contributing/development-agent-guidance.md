@@ -31,6 +31,7 @@ Use it when changing code or development-facing documentation.
 - Query model and write model must stay separate.
 - Repository methods for tenant business data must always include `tenantId`.
 - Service-layer public methods for tenant business data must always accept `tenantId` explicitly.
+- Service-layer public methods for tenant-scoped write operations should also accept `operatorId` explicitly when operator attribution matters.
 - Controllers may resolve `tenantId` from request context, but lower layers must not rely on implicit thread-local access.
 - Query DTOs must describe read results only.
 - Command DTOs must describe allowed write inputs only.
@@ -50,9 +51,10 @@ Apply these rules to user-management code and future tenant-scoped modules:
 Recommended shape:
 
 1. controller resolves `tenantId`
-2. controller calls service with explicit `tenantId`
-3. service calls repository with explicit `tenantId`
-4. repository query constrains by `tenantId`
+2. controller resolves `operatorId` for write flows when attribution is required
+3. controller calls service with explicit `tenantId` and, for writes, explicit `operatorId`
+4. service calls repository with explicit `tenantId`
+5. repository query constrains by `tenantId`
 
 ### Query Model Rules
 
@@ -100,6 +102,7 @@ Current field policy for `users`:
 - updateable profile fields: `displayName`, `email`
 - dedicated status-management field: `status`
 - credential-managed fields: persisted `passwordHash` plus create/password-update input `password`
+- internal operator-attribution fields: `createdBy`, `updatedBy`
 - system-managed only: `updatedAt`
 - create-only inputs: raw `password`, `roleCodes`
 
@@ -113,6 +116,7 @@ Implications:
 - role lookup and role reassignment should stay tenant-scoped and should not be hidden inside profile DTOs
 - create flows should accept raw `password`, but service code must persist only BCrypt hashes
 - raw passwords may contain internal spaces, but leading and trailing whitespace must be rejected consistently across create and login flows
+- Week 2 operator attribution is internal only: write flows should persist `createdBy` / `updatedBy`, but those fields are not part of the current public Swagger contract
 
 ### Repository Rules For Users
 

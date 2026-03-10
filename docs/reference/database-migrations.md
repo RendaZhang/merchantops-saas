@@ -13,6 +13,7 @@
 - `V2__seed_demo_data.sql`: inserts the first demo tenant, admin user, roles, and permissions
 - `V3__seed_rbac_roles_and_users.sql`: adds demo RBAC roles and the `ops` / `viewer` users
 - `V4__ensure_demo_accounts_consistency.sql`: idempotently enforces demo tenant/users/roles/permissions consistency
+- `V5__add_user_operator_tracking.sql`: adds nullable `created_by` and `updated_by` columns to `users` for lightweight operator attribution
 
 ## Demo Accounts
 
@@ -31,6 +32,15 @@ JOIN tenant t ON t.id = u.tenant_id
 WHERE t.tenant_code = 'demo-shop'
   AND u.username IN ('admin', 'ops', 'viewer')
 ORDER BY u.username;
+```
+
+To verify lightweight operator attribution after Week 2 write operations:
+
+```sql
+SELECT id, username, created_by, updated_by
+FROM users
+WHERE tenant_id = 1
+ORDER BY id;
 ```
 
 ## Verify Migration History
@@ -57,4 +67,5 @@ SELECT
 
 - Password hashes for seed users can be generated with `merchantops-api/src/main/java/com/renda/merchantops/api/tools/PasswordHashGenerator.java`
 - Do not edit an already-applied migration. Create a new version for follow-up changes instead.
+- `created_by` and `updated_by` are intentionally nullable so historical seed rows do not pretend to have a synthetic operator.
 - Known schema gap: [../architecture/tenant-rbac-integrity-gap.md](../architecture/tenant-rbac-integrity-gap.md)

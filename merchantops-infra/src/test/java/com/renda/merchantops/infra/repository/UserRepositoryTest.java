@@ -70,7 +70,9 @@ class UserRepositoryTest {
                     email VARCHAR(128),
                     status VARCHAR(32) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    created_by BIGINT,
+                    updated_by BIGINT
                 )
                 """);
 

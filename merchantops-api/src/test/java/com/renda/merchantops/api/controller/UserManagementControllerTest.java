@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.controller;
 
+import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
@@ -13,6 +14,7 @@ import com.renda.merchantops.api.dto.user.query.UserListItemResponse;
 import com.renda.merchantops.api.dto.user.query.UserPageQuery;
 import com.renda.merchantops.api.dto.user.query.UserPageResponse;
 import com.renda.merchantops.api.exception.GlobalExceptionHandler;
+import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.RequirePermissionInterceptor;
 import com.renda.merchantops.api.service.UserCommandService;
 import com.renda.merchantops.api.service.UserQueryService;
@@ -60,6 +62,7 @@ class UserManagementControllerTest {
     private static final String HEADER_AUTHORITIES = "X-Test-Authorities";
     private static final String HEADER_TENANT_ID = "X-Test-Tenant-Id";
     private static final String HEADER_TENANT_CODE = "X-Test-Tenant-Code";
+    private static final String HEADER_USER_ID = "X-Test-User-Id";
 
     @Mock
     private UserQueryService userQueryService;
@@ -293,10 +296,11 @@ class UserManagementControllerTest {
                 LocalDateTime.of(2026, 3, 10, 12, 0)
         );
 
-        when(userCommandService.createUser(eq(9L), any(UserCreateCommand.class))).thenReturn(response);
+        when(userCommandService.createUser(eq(9L), eq(9001L), any(UserCreateCommand.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/users")
                         .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
                         .header(HEADER_TENANT_ID, "9")
                         .header(HEADER_TENANT_CODE, "demo-shop")
                         .header(HEADER_AUTHORITIES, "USER_WRITE")
@@ -310,7 +314,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.roleCodes[0]").value("READ_ONLY"));
 
         ArgumentCaptor<UserCreateCommand> commandCaptor = ArgumentCaptor.forClass(UserCreateCommand.class);
-        verify(userCommandService).createUser(eq(9L), commandCaptor.capture());
+        verify(userCommandService).createUser(eq(9L), eq(9001L), commandCaptor.capture());
 
         assertThat(commandCaptor.getValue().getUsername()).isEqualTo("cashier");
         assertThat(commandCaptor.getValue().getDisplayName()).isEqualTo("Cashier User");
@@ -349,10 +353,11 @@ class UserManagementControllerTest {
                 "ACTIVE",
                 LocalDateTime.of(2026, 3, 10, 13, 0)
         );
-        when(userCommandService.updateUser(eq(9L), eq(8L), any(UserUpdateCommand.class))).thenReturn(response);
+        when(userCommandService.updateUser(eq(9L), eq(9001L), eq(8L), any(UserUpdateCommand.class))).thenReturn(response);
 
         mockMvc.perform(put("/api/v1/users/8")
                         .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
                         .header(HEADER_TENANT_ID, "9")
                         .header(HEADER_TENANT_CODE, "demo-shop")
                         .header(HEADER_AUTHORITIES, "USER_WRITE")
@@ -366,7 +371,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
 
         ArgumentCaptor<UserUpdateCommand> commandCaptor = ArgumentCaptor.forClass(UserUpdateCommand.class);
-        verify(userCommandService).updateUser(eq(9L), eq(8L), commandCaptor.capture());
+        verify(userCommandService).updateUser(eq(9L), eq(9001L), eq(8L), commandCaptor.capture());
         assertThat(commandCaptor.getValue().getDisplayName()).isEqualTo("Updated Cashier");
         assertThat(commandCaptor.getValue().getEmail()).isEqualTo("updated@demo-shop.local");
     }
@@ -400,10 +405,11 @@ class UserManagementControllerTest {
                 "DISABLED",
                 LocalDateTime.of(2026, 3, 10, 14, 0)
         );
-        when(userCommandService.updateStatus(eq(9L), eq(8L), any(UserStatusUpdateCommand.class))).thenReturn(response);
+        when(userCommandService.updateStatus(eq(9L), eq(9001L), eq(8L), any(UserStatusUpdateCommand.class))).thenReturn(response);
 
         mockMvc.perform(patch("/api/v1/users/8/status")
                         .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
                         .header(HEADER_TENANT_ID, "9")
                         .header(HEADER_TENANT_CODE, "demo-shop")
                         .header(HEADER_AUTHORITIES, "USER_WRITE")
@@ -415,7 +421,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.status").value("DISABLED"));
 
         ArgumentCaptor<UserStatusUpdateCommand> commandCaptor = ArgumentCaptor.forClass(UserStatusUpdateCommand.class);
-        verify(userCommandService).updateStatus(eq(9L), eq(8L), commandCaptor.capture());
+        verify(userCommandService).updateStatus(eq(9L), eq(9001L), eq(8L), commandCaptor.capture());
         assertThat(commandCaptor.getValue().getStatus()).isEqualTo("DISABLED");
     }
 
@@ -447,10 +453,11 @@ class UserManagementControllerTest {
                 List.of("USER_READ", "USER_WRITE"),
                 LocalDateTime.of(2026, 3, 10, 18, 0)
         );
-        when(userCommandService.assignRoles(eq(9L), eq(8L), any(UserRoleAssignmentCommand.class))).thenReturn(response);
+        when(userCommandService.assignRoles(eq(9L), eq(9001L), eq(8L), any(UserRoleAssignmentCommand.class))).thenReturn(response);
 
         mockMvc.perform(put("/api/v1/users/8/roles")
                         .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
                         .header(HEADER_TENANT_ID, "9")
                         .header(HEADER_TENANT_CODE, "demo-shop")
                         .header(HEADER_AUTHORITIES, "USER_WRITE")
@@ -463,7 +470,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.permissionCodes[0]").value("USER_READ"));
 
         ArgumentCaptor<UserRoleAssignmentCommand> commandCaptor = ArgumentCaptor.forClass(UserRoleAssignmentCommand.class);
-        verify(userCommandService).assignRoles(eq(9L), eq(8L), commandCaptor.capture());
+        verify(userCommandService).assignRoles(eq(9L), eq(9001L), eq(8L), commandCaptor.capture());
         assertThat(commandCaptor.getValue().getRoleCodes()).containsExactly("TENANT_ADMIN");
     }
 
@@ -512,6 +519,9 @@ class UserManagementControllerTest {
                                         FilterChain filterChain) throws ServletException, IOException {
             try {
                 if (StringUtils.hasText(request.getHeader(HEADER_AUTH))) {
+                    Long userId = StringUtils.hasText(request.getHeader(HEADER_USER_ID))
+                            ? Long.valueOf(request.getHeader(HEADER_USER_ID))
+                            : 9001L;
                     List<SimpleGrantedAuthority> authorities = Stream.of(
                                     request.getHeader(HEADER_AUTHORITIES) == null
                                             ? new String[0]
@@ -525,6 +535,16 @@ class UserManagementControllerTest {
                     SecurityContextHolder.getContext().setAuthentication(
                             new UsernamePasswordAuthenticationToken("tester", null, authorities)
                     );
+                    CurrentUserContext.set(new CurrentUser(
+                            userId,
+                            StringUtils.hasText(request.getHeader(HEADER_TENANT_ID))
+                                    ? Long.valueOf(request.getHeader(HEADER_TENANT_ID))
+                                    : null,
+                            request.getHeader(HEADER_TENANT_CODE),
+                            "tester",
+                            List.of(),
+                            List.of()
+                    ));
                 }
 
                 if (StringUtils.hasText(request.getHeader(HEADER_TENANT_ID))) {
@@ -536,6 +556,7 @@ class UserManagementControllerTest {
 
                 filterChain.doFilter(request, response);
             } finally {
+                CurrentUserContext.clear();
                 SecurityContextHolder.clearContext();
                 TenantContext.clear();
             }

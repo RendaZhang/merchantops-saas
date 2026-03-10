@@ -43,6 +43,7 @@ Today it covers:
 - controller request binding and tenant-context forwarding
 - user-management query and command service behavior
 - repository-backed tenant-scoped page query behavior
+- operator attribution persistence on `users.created_by` and `users.updated_by`
 - stale-token rejection after user status, role, or permission changes
 
 It does not replace manual checks for:

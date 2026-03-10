@@ -36,16 +36,15 @@ Complete the first business loop by turning the current user-management groundwo
 
 ## Recommended Next Step
 
-Continue with real user management APIs:
+Start Week 3 ticket workflow - system of action:
 
-- add operator audit fields and verification coverage
-- finish Week 2 before expanding into ticket workflow and AI layers
+- define the first ticket domain slice and public HTTP contract
+- keep remaining schema hardening tasks scoped so they do not reopen the Week 2 public API loop
 
 ## Planned Work By Phase
 
 Week 2 completion:
 
-- add audit logging fields and operator tracking for user-management writes
 - keep Swagger, `api-demo.http`, and reference docs aligned
 
 Week 3 target:
@@ -88,7 +87,7 @@ Stretch target after Week 10:
 ## Near-Term Priorities
 
 - move from RBAC demo endpoints to clearer business-oriented endpoints
-- finish the remaining audit-tracking pieces of the first user-management loop
+- begin the Week 3 ticket workflow slice without expanding Week 2 user-management surface again
 - keep Week 2 documentation aligned with the public API as endpoints are exposed
 - sequence Week 3 ticket work only after Week 2 user management is usable end to end
 - treat AI as an embedded workflow layer, not as a standalone chatbot detour

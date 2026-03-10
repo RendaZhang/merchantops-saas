@@ -99,7 +99,9 @@ class AuthSecurityIntegrationTest {
                     email VARCHAR(128),
                     status VARCHAR(32) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    created_by BIGINT,
+                    updated_by BIGINT
                 )
                 """);
 
@@ -356,6 +358,11 @@ class AuthSecurityIntegrationTest {
                 103L
         )).isEqualTo("viewer.updated@demo-shop.local");
         assertThat(jdbcTemplate.queryForObject(
+                "SELECT updated_by FROM users WHERE id = ?",
+                Long.class,
+                103L
+        )).isEqualTo(101L);
+        assertThat(jdbcTemplate.queryForObject(
                 "SELECT tenant_id FROM users WHERE id = ?",
                 Long.class,
                 103L
@@ -380,6 +387,11 @@ class AuthSecurityIntegrationTest {
                 String.class,
                 103L
         )).isEqualTo("DISABLED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT updated_by FROM users WHERE id = ?",
+                Long.class,
+                103L
+        )).isEqualTo(101L);
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -434,6 +446,11 @@ class AuthSecurityIntegrationTest {
                         ORDER BY r.id
                         """, String.class, 103L))
                 .containsExactly("TENANT_ADMIN");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT updated_by FROM users WHERE id = ?",
+                Long.class,
+                103L
+        )).isEqualTo(101L);
 
         mockMvc.perform(get("/api/v1/users")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
@@ -524,6 +541,16 @@ class AuthSecurityIntegrationTest {
                 userId
         );
         assertThat(status).isEqualTo("ACTIVE");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT created_by FROM users WHERE id = ?",
+                Long.class,
+                userId
+        )).isEqualTo(101L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT updated_by FROM users WHERE id = ?",
+                Long.class,
+                userId
+        )).isEqualTo(101L);
 
         assertThat(jdbcTemplate.queryForList("""
                         SELECT r.role_code

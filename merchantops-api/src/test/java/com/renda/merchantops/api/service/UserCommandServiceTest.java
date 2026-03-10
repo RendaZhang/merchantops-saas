@@ -72,7 +72,7 @@ class UserCommandServiceTest {
         when(userRepository.existsByTenantIdAndUsername(1L, "admin")).thenReturn(true);
 
         assertBizException(
-                () -> userCommandService.createUser(1L, command),
+                () -> userCommandService.createUser(1L, 101L, command),
                 ErrorCode.BAD_REQUEST,
                 "username already exists in tenant"
         );
@@ -96,7 +96,7 @@ class UserCommandServiceTest {
                 .thenReturn(List.of(role));
 
         assertBizException(
-                () -> userCommandService.createUser(1L, command),
+                () -> userCommandService.createUser(1L, 101L, command),
                 ErrorCode.BAD_REQUEST,
                 "roleCodes must exist in current tenant"
         );
@@ -123,7 +123,7 @@ class UserCommandServiceTest {
             return user;
         });
 
-        UserCreateResponse response = userCommandService.createUser(1L, command);
+        UserCreateResponse response = userCommandService.createUser(1L, 101L, command);
 
         assertThat(response.getId()).isEqualTo(205L);
         assertThat(response.getTenantId()).isEqualTo(1L);
@@ -143,6 +143,8 @@ class UserCommandServiceTest {
         assertThat(userCaptor.getValue().getEmail()).isEqualTo("cashier@demo-shop.local");
         assertThat(userCaptor.getValue().getPasswordHash()).isEqualTo("bcrypt-hash");
         assertThat(userCaptor.getValue().getStatus()).isEqualTo("ACTIVE");
+        assertThat(userCaptor.getValue().getCreatedBy()).isEqualTo(101L);
+        assertThat(userCaptor.getValue().getUpdatedBy()).isEqualTo(101L);
 
         verify(passwordEncoder).encode("123456");
         verify(userRoleRepository).saveAll(argThat(userRoles -> {
@@ -167,7 +169,7 @@ class UserCommandServiceTest {
         );
 
         assertBizException(
-                () -> userCommandService.createUser(1L, command),
+                () -> userCommandService.createUser(1L, 101L, command),
                 ErrorCode.BAD_REQUEST,
                 "password must not start or end with whitespace"
         );
@@ -189,7 +191,7 @@ class UserCommandServiceTest {
         when(userRepository.findByIdAndTenantId(8L, 1L)).thenReturn(Optional.empty());
 
         assertBizException(
-                () -> userCommandService.updateUser(1L, 8L, new UserUpdateCommand("Ops", "ops@demo.local")),
+                () -> userCommandService.updateUser(1L, 101L, 8L, new UserUpdateCommand("Ops", "ops@demo.local")),
                 ErrorCode.NOT_FOUND,
                 "user not found"
         );
@@ -203,6 +205,7 @@ class UserCommandServiceTest {
 
         UserWriteResponse response = userCommandService.updateUser(
                 1L,
+                101L,
                 1L,
                 new UserUpdateCommand("Updated Cashier", "updated@demo.local")
         );
@@ -220,6 +223,7 @@ class UserCommandServiceTest {
         assertThat(user.getTenantId()).isEqualTo(1L);
         assertThat(user.getDisplayName()).isEqualTo("Updated Cashier");
         assertThat(user.getEmail()).isEqualTo("updated@demo.local");
+        assertThat(user.getUpdatedBy()).isEqualTo(101L);
     }
 
     @Test
@@ -227,7 +231,7 @@ class UserCommandServiceTest {
         when(userRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(userEntity(1L, 1L, "cashier", "ACTIVE")));
 
         assertBizException(
-                () -> userCommandService.updateStatus(1L, 1L, new UserStatusUpdateCommand("ARCHIVED")),
+                () -> userCommandService.updateStatus(1L, 101L, 1L, new UserStatusUpdateCommand("ARCHIVED")),
                 ErrorCode.BAD_REQUEST,
                 "status must be one of ACTIVE, DISABLED"
         );
@@ -241,6 +245,7 @@ class UserCommandServiceTest {
 
         UserWriteResponse response = userCommandService.updateStatus(
                 1L,
+                101L,
                 1L,
                 new UserStatusUpdateCommand("DISABLED")
         );
@@ -248,6 +253,7 @@ class UserCommandServiceTest {
         assertThat(response.getStatus()).isEqualTo("DISABLED");
         assertThat(user.getStatus()).isEqualTo("DISABLED");
         assertThat(user.getUpdatedAt()).isNotNull();
+        assertThat(user.getUpdatedBy()).isEqualTo(101L);
     }
 
     @Test
@@ -258,7 +264,7 @@ class UserCommandServiceTest {
                 .thenReturn(List.of(roleEntity(11L, 1L, "TENANT_ADMIN")));
 
         assertBizException(
-                () -> userCommandService.assignRoles(1L, 1L, new UserRoleAssignmentCommand(List.of("TENANT_ADMIN", "OTHER_ONLY"))),
+                () -> userCommandService.assignRoles(1L, 101L, 1L, new UserRoleAssignmentCommand(List.of("TENANT_ADMIN", "OTHER_ONLY"))),
                 ErrorCode.BAD_REQUEST,
                 "roleCodes must exist in current tenant"
         );
@@ -280,6 +286,7 @@ class UserCommandServiceTest {
 
         UserRoleAssignmentResponse response = userCommandService.assignRoles(
                 1L,
+                101L,
                 1L,
                 new UserRoleAssignmentCommand(List.of("TENANT_ADMIN"))
         );
@@ -299,6 +306,7 @@ class UserCommandServiceTest {
             return true;
         }));
         verify(userRepository).save(user);
+        assertThat(user.getUpdatedBy()).isEqualTo(101L);
     }
 
     @Test
@@ -359,6 +367,8 @@ class UserCommandServiceTest {
         user.setStatus(status);
         user.setCreatedAt(LocalDateTime.now().minusDays(1));
         user.setUpdatedAt(LocalDateTime.now().minusHours(1));
+        user.setCreatedBy(88L);
+        user.setUpdatedBy(89L);
         return user;
     }
 }

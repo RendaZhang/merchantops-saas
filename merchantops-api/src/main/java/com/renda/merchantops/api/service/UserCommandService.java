@@ -37,7 +37,7 @@ import java.util.Set;
  * Updatable by profile command: displayName, email.
  * Status changes are handled through a dedicated command.
  * Password changes are handled through a dedicated command.
- * System-managed only: updatedAt.
+ * System-managed only: updatedAt plus operator-attributed createdBy/updatedBy.
  */
 @Service
 @RequiredArgsConstructor
@@ -68,7 +68,8 @@ public class UserCommandService {
     }
 
     @Transactional
-    public UserCreateResponse createUser(Long tenantId, UserCreateCommand command) {
+    public UserCreateResponse createUser(Long tenantId, Long operatorId, UserCreateCommand command) {
+        Long resolvedOperatorId = requireOperatorId(operatorId);
         String username = normalizeRequiredText(command == null ? null : command.getUsername(), "username");
         String displayName = normalizeRequiredText(command == null ? null : command.getDisplayName(), "displayName");
         String password = requireNonBlankPreserveValue(command == null ? null : command.getPassword(), "password");
@@ -93,6 +94,8 @@ public class UserCommandService {
         user.setStatus("ACTIVE");
         user.setCreatedAt(now);
         user.setUpdatedAt(now);
+        user.setCreatedBy(resolvedOperatorId);
+        user.setUpdatedBy(resolvedOperatorId);
 
         UserEntity savedUser;
         try {
@@ -125,8 +128,9 @@ public class UserCommandService {
     }
 
     @Transactional
-    public UserWriteResponse updateUser(Long tenantId, Long userId, UserUpdateCommand command) {
+    public UserWriteResponse updateUser(Long tenantId, Long operatorId, Long userId, UserUpdateCommand command) {
         UserEntity user = requireTenantUser(tenantId, userId);
+        user.setUpdatedBy(requireOperatorId(operatorId));
         user.setDisplayName(normalizeRequiredText(command == null ? null : command.getDisplayName(), "displayName"));
         user.setEmail(normalizeOptionalText(command == null ? null : command.getEmail()));
         user.setUpdatedAt(LocalDateTime.now());
@@ -134,16 +138,18 @@ public class UserCommandService {
     }
 
     @Transactional
-    public UserWriteResponse updateStatus(Long tenantId, Long userId, UserStatusUpdateCommand command) {
+    public UserWriteResponse updateStatus(Long tenantId, Long operatorId, Long userId, UserStatusUpdateCommand command) {
         UserEntity user = requireTenantUser(tenantId, userId);
+        user.setUpdatedBy(requireOperatorId(operatorId));
         user.setStatus(normalizeAllowedStatus(command == null ? null : command.getStatus()));
         user.setUpdatedAt(LocalDateTime.now());
         return toUserWriteResponse(userRepository.save(user));
     }
 
     @Transactional
-    public UserRoleAssignmentResponse assignRoles(Long tenantId, Long userId, UserRoleAssignmentCommand command) {
+    public UserRoleAssignmentResponse assignRoles(Long tenantId, Long operatorId, Long userId, UserRoleAssignmentCommand command) {
         UserEntity user = requireTenantUser(tenantId, userId);
+        user.setUpdatedBy(requireOperatorId(operatorId));
         List<String> roleCodes = normalizeRoleCodes(command == null ? null : command.getRoleCodes());
         List<RoleEntity> roles = roleRepository.findAllByTenantIdAndRoleCodeInOrderByIdAsc(tenantId, roleCodes);
         if (roles.size() != roleCodes.size()) {
@@ -188,6 +194,13 @@ public class UserCommandService {
     private UserEntity requireTenantUser(Long tenantId, Long userId) {
         return userRepository.findByIdAndTenantId(userId, tenantId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "user not found"));
+    }
+
+    private Long requireOperatorId(Long operatorId) {
+        if (operatorId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED, "user context missing");
+        }
+        return operatorId;
     }
 
     private String normalizeRequiredText(String value, String fieldName) {

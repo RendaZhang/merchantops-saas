@@ -9,7 +9,7 @@ MerchantOps SaaS has completed Week 1 Platform Foundation and is now in Week 2 F
 ## Current Phase Summary
 
 - Current phase: Week 2 First Business Loop - Tenant User Management
-- Next phase: finish the remaining public user-management APIs and then move into Week 3 Ticket Workflow - System of Action
+- Next phase: begin Week 3 Ticket Workflow - System of Action while keeping remaining Week 2 schema hardening tasks scoped
 - Primary outcome: the backend foundation is being validated by the first real tenant-scoped business loop before broader workflow and AI delivery begins
 - Current tagged milestone: `v0.1.0` on 2026-03-09, recorded as `Week 1 complete: foundation phase`
 - Open-source timing expectation: an early preview becomes more realistic after Week 5, while a stronger public release should wait until at least the first AI Copilot milestone in Week 6 or Week 7
@@ -39,7 +39,7 @@ The current repository includes:
 - tenant-scoped role listing endpoint with `USER_WRITE`
 - tenant-scoped user role-reassignment endpoint with `USER_WRITE`
 - tenant-aware user query scaffolding for detail lookup, status filtering, and page normalization
-- write-side user command service with tenant-scoped username uniqueness checks and transactional create/update/status/role-assignment flows
+- write-side user command service with tenant-scoped username uniqueness checks, transactional create/update/status/role-assignment flows, and lightweight operator attribution
 - request-time JWT claim revalidation against current user status, roles, and permissions
 - focused automated coverage for auth security integration, user-management controller/service behavior, and repository query behavior
 - permission checks through `@RequirePermission`
@@ -84,6 +84,7 @@ Completed:
 - current-tenant user status management works with `USER_WRITE` and `ACTIVE` / `DISABLED` validation
 - current-tenant role listing works with `USER_WRITE` and returns only tenant-local assignable roles
 - current-tenant role reassignment works with `USER_WRITE`, clears old bindings, and rewrites current tenant role bindings transactionally
+- lightweight operator attribution now records `created_by` / `updated_by` on `users` for create, profile update, status update, and role reassignment writes
 - role or permission changes now invalidate previously issued JWTs on the next protected request, forcing re-login before new privileges apply
 - focused automated tests now cover auth security integration, current user-management controller/service paths, and repository query behavior
 - Week 2 first-business-loop public HTTP contract now covers list, create, profile update, status management, tenant role lookup, and role reassignment
@@ -91,7 +92,6 @@ Completed:
 
 Not yet implemented:
 
-- audit logging fields and operator tracking
 - Week 3 ticket workflow module
 - Week 4 audit trail and approval patterns
 - Week 5 async import and data operations
@@ -119,6 +119,7 @@ Current implementation is intentionally focused on the Week 1 foundation plus th
 - `GET /api/v1/roles` returns only current-tenant roles that can be assigned by the current operator
 - `PUT /api/v1/users/{id}/roles` replaces the user's current role bindings within the current tenant
 - when a user's current roles or effective permissions no longer match the JWT claims, the next protected request is rejected and the user must log in again
+- lightweight operator attribution is stored internally on `users.created_by` / `users.updated_by`, but no public audit endpoint or generic audit event model exists yet
 - `UserCommandService#updatePassword` still returns a unified business error until that write flow is implemented
 - no workflow-level modules such as ticketing or import jobs are public yet
 - no AI-assisted workflow endpoints, runtime AI audit trail, or code-backed evaluation datasets exist yet
@@ -134,7 +135,7 @@ Current implementation is intentionally focused on the Week 1 foundation plus th
 
 - `user_role` tenant consistency is not yet enforced at the database layer
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs
-- the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, stale-claim rejection, query/service behavior, and repository-backed search behavior, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management flow
+- the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, operator attribution, stale-claim rejection, query/service behavior, and repository-backed search behavior, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management flow
 
 See [architecture/tenant-rbac-integrity-gap.md](architecture/tenant-rbac-integrity-gap.md) for the current tenant-integrity design note.
 See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.
