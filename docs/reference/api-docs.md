@@ -54,6 +54,12 @@ Notes about security whitelist routes:
 - `/swagger-ui/**`, `/swagger-ui.html`, and `/v3/api-docs/**` are documentation resources rather than business API operations.
 - They are intentionally not listed as OpenAPI operation paths.
 
+User Management tag note:
+
+- Swagger currently exposes only `GET /api/v1/users` for user management.
+- User detail, paging, and write DTOs/services may exist in code, but they must not be treated as public API until contract/controller methods publish them into OpenAPI.
+- See [user-management.md](user-management.md) for the current public contract and validation path.
+
 ## Core Endpoint Examples
 
 ### 1. Login (`POST /api/v1/auth/login`)
@@ -134,6 +140,12 @@ Response:
   ]
 }
 ```
+
+Current notes:
+
+- today this contract is list-only and returns an array, not a page object
+- `page`, `size`, and `status` query parameters are not visible in Swagger yet
+- the same request is available in [../../api-demo.http](../../api-demo.http)
 
 ### 4. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
 

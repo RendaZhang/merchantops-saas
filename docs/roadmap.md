@@ -1,48 +1,67 @@
 # Roadmap
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 ## Current Phase
 
-- Week 1 foundation is complete
-- Week 2 is the next active planning stage
+- Week 1 Platform Foundation is complete
+- Week 2 First Business Loop - Tenant User Management is in progress
+- Public user-management HTTP coverage is still limited to `GET /api/v1/users`
 
 ## Week 2 Goal
 
-Build real business APIs on top of the Week 1 foundation.
+Complete the first business loop by turning the current user-management groundwork into Swagger-visible business APIs on top of the Week 1 foundation.
 
-## Candidate Modules
+## Phase Sequence
 
-- user management
-- feature flag and whitelist
-- ticket workflow
-- async CSV import
-- billing and usage ledger
+- Week 2: user management (active)
+- Week 3: ticket workflow and audit trail
+- Week 4: async CSV import and background processing
+- Week 5: feature flag, metrics, deployment hardening, and documentation polish
+- Stretch after Week 5: usage / ledger / invoice minimal loop
 
 ## Recommended Next Step
 
-Start with real user management APIs:
+Continue with real user management APIs:
 
-- create user
-- update user
-- disable user
-- pagination and filters
-- operator audit fields
+- expose paged user listing in controller and Swagger
+- add tenant-scoped user detail lookup
+- implement create, update, and password-change flows end to end
+- add operator audit fields and verification coverage
 
-## Planned Next-Phase Work
+## Planned Work By Phase
 
-- create real user management APIs
-- add create and update user endpoints
-- introduce pagination and query filters
-- add audit logging fields and operator tracking
-- build ticket, import, and billing demo modules
-- add integration tests
-- improve deployment and observability docs
+Week 2 completion:
+
+- expose `GET /api/v1/users` query parameters for pagination and status filtering
+- add `GET /api/v1/users/{userId}` detail endpoint
+- add create, update, status-toggle, and role-assignment endpoints
+- add audit logging fields and operator tracking for user-management writes
+- keep Swagger, `api-demo.http`, and reference docs aligned
+
+Week 3 target:
+
+- build the ticket workflow and audit trail module
+
+Week 4 target:
+
+- build async import and background processing
+
+Week 5 target:
+
+- add feature flag support, metrics, deployment hardening, and stronger runbook/docs coverage
+- add integration tests where the current surface is stable
+
+Stretch target after Week 5:
+
+- add usage / ledger / invoice minimal loop
 
 ## Near-Term Priorities
 
 - move from RBAC demo endpoints to clearer business-oriented endpoints
-- expand user management beyond read-only listing
+- expand user management beyond read-only listing and complete the first business loop
+- keep Week 2 documentation aligned with the public API as endpoints are exposed
+- sequence Week 3 ticket work only after Week 2 user management is usable end to end
 - improve test coverage for authentication, permission checks, and tenant isolation
 - continue turning README-linked docs into a more complete developer handbook
 

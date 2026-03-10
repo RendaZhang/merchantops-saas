@@ -1,16 +1,16 @@
 # Project Status
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 ## Overview
 
-MerchantOps SaaS has completed its Week 1 foundation phase and is entering Week 2. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but it is not yet a complete merchant operations product.
+MerchantOps SaaS has completed Week 1 Platform Foundation and is now in Week 2 First Business Loop - Tenant User Management. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but its public business API surface is still intentionally narrow while the first real business loop is being completed.
 
-## Foundation Phase Summary
+## Current Phase Summary
 
-- Current phase: Week 1 completed
-- Next phase: Week 2 business API expansion
-- Primary outcome: the backend foundation is in place and ready for real business modules
+- Current phase: Week 2 First Business Loop - Tenant User Management
+- Next phase: finish the remaining public user-management APIs and then move into Week 3 Ticket Workflow and Audit Trail
+- Primary outcome: the backend foundation is being validated by the first real tenant-scoped business loop
 
 ## Implemented Scope
 
@@ -24,6 +24,8 @@ The current repository includes:
 - authenticated current-user endpoint
 - authenticated tenant/user context endpoint
 - tenant-scoped user listing endpoint with `USER_READ`
+- tenant-aware user query scaffolding for detail lookup, status filtering, and page normalization
+- initial write-side user command service skeleton with tenant-scoped username uniqueness checks
 - permission checks through `@RequirePermission`
 - RBAC demo endpoints for permission verification
 - unified API response and exception handling model
@@ -59,31 +61,39 @@ Completed:
 - authentication flow works end to end
 - authorization flow works for protected endpoints
 - current-tenant user query works with permission protection
+- Week 2 first-business-loop groundwork has started, but the public HTTP contract is still incomplete
 - manual verification flow is documented
 
 Not yet implemented:
 
-- real user-management create and update APIs
-- pagination and query filters for user listing
+- public user detail endpoint
+- public user create, update, and password-update endpoints
+- public pagination and status-filter query parameters for `/api/v1/users`
+- end-to-end write persistence inside `UserCommandService`
 - audit logging fields and operator tracking
-- ticket, import, and billing demo modules
+- Week 3 ticket workflow and audit trail module
+- Week 4 async import and background processing module
+- Week 5 feature flag, delivery hardening, and stronger observability coverage
+- usage / ledger / invoice minimal loop
 - integration tests
 - deployment-ready Docker or Kubernetes manifests
-- deeper observability and performance documentation
+- performance documentation and benchmark artifacts
 
 ## Current Limitations
 
-Current implementation is intentionally focused on the Week 1 foundation, so the following are not yet implemented:
+Current implementation is intentionally focused on the Week 1 foundation plus the in-progress Week 2 user-management loop, so the following are not yet implemented:
 
+- `/api/v1/users` is still the only Swagger-visible user-management business endpoint
+- `/api/v1/users` currently returns an unpaged array of current-tenant users ordered by `id ASC`
+- user detail, page, and write flows exist only as internal DTO/service groundwork and are not yet published in controllers or Swagger
+- `UserCommandService#createUser`, `updateUser`, and `updatePassword` currently stop at `UnsupportedOperationException`
 - refresh token flow
 - logout or token revocation
 - fine-grained operator audit logs
-- pagination for user listing
-- create, update, and delete user APIs
 - integration tests
 - production-ready secret management
 - tenant admin UI or frontend
-- async business modules such as import, billing, and ticket workflow
+- later-phase modules such as ticket workflow, async import, feature flag support, and billing-related capabilities
 
 ## Known Gaps
 
@@ -92,4 +102,4 @@ Current implementation is intentionally focused on the Week 1 foundation, so the
 - the project currently relies on manual verification flows more than automated test coverage
 
 See [architecture/tenant-rbac-integrity-gap.md](architecture/tenant-rbac-integrity-gap.md) for the current tenant-integrity design note.
-See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current Week 1 regression checklist.
+See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.

@@ -8,6 +8,7 @@
 @token = replace-with-access-token
 
 # See docs/runbooks/regression-checklist.md for the broader Week 1 verification checklist.
+# See docs/reference/user-management.md for the current /api/v1/users contract and expected demo response.
 
 ### Login - admin
 POST {{baseUrl}}/api/v1/auth/login

@@ -1,7 +1,8 @@
 package com.renda.merchantops.api.controller;
 
+import com.renda.merchantops.api.context.ContextAccess;
 import com.renda.merchantops.api.contract.UserManagementApi;
-import com.renda.merchantops.api.dto.user.UserSummaryResponse;
+import com.renda.merchantops.api.dto.user.query.UserListItemResponse;
 import com.renda.merchantops.api.security.RequirePermission;
 import com.renda.merchantops.api.service.UserQueryService;
 import com.renda.merchantops.common.response.ApiResponse;
@@ -18,7 +19,8 @@ public class UserManagementController implements UserManagementApi {
 
     @Override
     @RequirePermission("USER_READ")
-    public ApiResponse<List<UserSummaryResponse>> listUsers() {
-        return ApiResponse.success(userQueryService.listCurrentTenantUsers());
+    public ApiResponse<List<UserListItemResponse>> listUsers() {
+        Long tenantId = ContextAccess.requireTenantId();
+        return ApiResponse.success(userQueryService.listUsers(tenantId));
     }
 }

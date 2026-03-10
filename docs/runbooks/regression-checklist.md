@@ -1,8 +1,8 @@
 # Regression Checklist
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
-Use this checklist after foundation-level changes, security changes, or environment changes.
+Use this checklist after foundation-level changes, security changes, environment changes, or current user-management API changes.
 
 ## Infra
 
@@ -57,7 +57,15 @@ Use this checklist after foundation-level changes, security changes, or environm
 
 - [ ] `/api/v1/users` returns only current-tenant users
 
+## User Management
+
+- [ ] Swagger `User Management` tag shows only `GET /api/v1/users`
+- [ ] `GET /api/v1/users` returns an array rather than a page object
+- [ ] each `/api/v1/users` item includes `id`, `username`, `displayName`, `email`, and `status`
+- [ ] `GET /api/v1/users` returns the seeded `admin`, `ops`, and `viewer` users for tenant `demo-shop`
+
 ## Tools
 
 - Use [../../api-demo.http](../../api-demo.http) for the main request flow
+- Compare the current user-list behavior against [../reference/user-management.md](../reference/user-management.md)
 - Use [local-smoke-test.md](local-smoke-test.md) when you want a shorter step-by-step validation path

@@ -5,7 +5,7 @@
 - `POST /api/v1/auth/login`
 - `GET /api/v1/user/me`
 - `GET /api/v1/context`
-- `GET /api/v1/users` (requires `USER_READ`)
+- `GET /api/v1/users` (requires `USER_READ`; see [user-management.md](user-management.md))
 - `GET /api/v1/rbac/users` (requires `USER_READ`)
 - `GET /api/v1/rbac/users/manage` (requires `USER_WRITE`)
 - `GET /api/v1/rbac/feature-flags` (requires `FEATURE_FLAG_MANAGE`)
@@ -156,6 +156,12 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 }
 ```
 
+Current notes:
+
+- tenant scope is derived from JWT/request context, not from request parameters
+- the current Swagger contract exposes no `page`, `size`, or `status` parameters yet
+- use [user-management.md](user-management.md) for the current user-management boundary and validation references
+
 ### `GET /api/v1/rbac/users/manage` (with `viewer` token)
 
 ```json
@@ -178,6 +184,12 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 - `ops` can access `/api/v1/users` and `/api/v1/rbac/users`
 - `viewer` can access `/api/v1/users` and `/api/v1/rbac/users`
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
+
+## Current User Management Boundary
+
+- Swagger currently exposes only `GET /api/v1/users` under the `User Management` tag
+- Week 2 DTO and service groundwork for detail, page, and write flows exists in code, but those routes are not callable until controller and contract methods are added
+- Treat the Swagger-visible endpoints in this document as the only public API surface
 
 ## Tenant Isolation Note
 

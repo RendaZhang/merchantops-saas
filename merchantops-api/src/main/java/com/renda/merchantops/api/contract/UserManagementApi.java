@@ -1,6 +1,6 @@
 package com.renda.merchantops.api.contract;
 
-import com.renda.merchantops.api.dto.user.UserSummaryResponse;
+import com.renda.merchantops.api.dto.user.query.UserListItemResponse;
 import com.renda.merchantops.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -44,5 +44,5 @@ public interface UserManagementApi {
             )
     })
     @GetMapping
-    ApiResponse<List<UserSummaryResponse>> listUsers();
+    ApiResponse<List<UserListItemResponse>> listUsers();
 }
