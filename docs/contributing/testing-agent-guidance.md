@@ -13,10 +13,23 @@ Use it when changing tests, validating API behavior, or updating docs that descr
 When you take over an in-flight change set, use this order:
 
 1. Inspect the staged scope first with `git diff --cached --name-only` and `git diff --cached --stat`.
-2. Map the staged files to the affected test layers, then run `.\mvnw.cmd -pl merchantops-api -am test`.
+2. Map the staged files to the affected test layers, choose the smallest sufficient verification set, and execute enough of it to support a staged testing report.
 3. If the staged change touches controllers, security, repositories, entities, or a bug that only appears in real request flow, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`, and follow [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md).
 4. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
 5. Report concrete findings first. Keep summaries and changelog-style recap secondary.
+
+## `TT staged` Expectations
+
+Use `TT staged` as a testing-focused staged review, not as a lightweight routing shortcut.
+
+When handling `TT staged`:
+
+- review the staged diff only unless the requester explicitly asks for full-worktree testing review
+- inspect implementation, affected tests, and testing docs together before trusting existing coverage
+- run or recommend the smallest sufficient automated and manual verification needed to support the report
+- report concrete findings ordered by urgency, using `P1`, `P2`, and `P3` labels when issues are found
+- if no findings remain, say that explicitly and still mention residual coverage gaps, manual-only checks, or verification that was not run
+- call out when the current automated suite passed but failed to cover the bug or risk you found
 
 ## Current Coverage Baseline
 
@@ -26,7 +39,7 @@ Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
-- `GET /api/v1/users` and `POST /api/v1/users` authentication and permission behavior
+- `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` authentication and permission behavior
 - controller request binding and tenant-context forwarding
 - user-management query and command service behavior
 - repository-backed tenant-scoped page query behavior
@@ -35,7 +48,7 @@ It does not replace manual checks for:
 
 - Swagger/OpenAPI rendering
 - real infra health such as `MySQL`, `Redis`, and `RabbitMQ`
-- authenticated endpoints outside the covered login + `/api/v1/users` (`GET` and `POST`) path
+- authenticated endpoints outside the covered login + `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`) path
 
 ## Default Test Entry Point
 

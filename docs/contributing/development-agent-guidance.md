@@ -80,7 +80,7 @@ Current `/api/v1/users` contract is the baseline example:
 - tenant-scoped page query
 - explicit filters: `username`, `status`, `roleCode`
 - response object with `items`, `page`, `size`, `total`, `totalPages`
-- companion write entrypoint at `POST /api/v1/users` with explicit command DTO mapping
+- companion write entrypoints at `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` with explicit command DTO mapping
 
 ### Write Model Rules
 
@@ -94,7 +94,8 @@ Write DTOs should be split by intent rather than using one mutable all-fields ob
 Current field policy for `users`:
 
 - immutable after creation: `id`, `tenantId`, `username`, `createdAt`
-- updateable business fields: `displayName`, `email`, `status`
+- updateable profile fields: `displayName`, `email`
+- dedicated status-management field: `status`
 - credential-managed fields: persisted `passwordHash` plus create/password-update input `password`
 - system-managed only: `updatedAt`
 - create-only inputs: raw `password`, `roleCodes`
@@ -102,6 +103,8 @@ Current field policy for `users`:
 Implications:
 
 - profile updates must not accept `tenantId` or `username`
+- profile updates must not accept `status`
+- status updates should remain isolated from general profile updates
 - password changes should remain isolated from profile updates
 - future role assignment should use a dedicated command object instead of overloading user profile update
 - create flows should accept raw `password`, but service code must persist only BCrypt hashes

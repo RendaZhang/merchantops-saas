@@ -67,7 +67,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## User Management
 
-- [ ] Swagger `User Management` tag shows `GET /api/v1/users` and `POST /api/v1/users`
+- [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status`
 - [ ] `GET /api/v1/users` returns a page object rather than a bare array
 - [ ] `GET /api/v1/users?page=0&size=10` works
 - [ ] `GET /api/v1/users?username=ad` filters by username
@@ -81,6 +81,12 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `POST /api/v1/users` rejects duplicate usernames in the same tenant
 - [ ] `POST /api/v1/users` rejects role codes outside the current tenant
 - [ ] the created user's password is usable for `POST /api/v1/auth/login`
+- [ ] `PUT /api/v1/users/{id}` succeeds with an `admin` token and updates only `displayName` and `email`
+- [ ] `PUT /api/v1/users/{id}` with an `ops` or `viewer` token returns `403`
+- [ ] `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` and `DISABLED`
+- [ ] `PATCH /api/v1/users/{id}/status` with an `ops` or `viewer` token returns `403`
+- [ ] a `DISABLED` user is rejected by `POST /api/v1/auth/login`
+- [ ] a token issued before a user was disabled is rejected on protected endpoints with `403` / `user is not active`
 - [ ] password edge cases, especially leading and trailing whitespace, behave consistently between create and login
 - [ ] manual smoke users were cleaned from the local database after verification
 

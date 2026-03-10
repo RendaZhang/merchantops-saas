@@ -13,6 +13,4 @@ public class UserUpdateCommand {
     private String displayName;
 
     private String email;
-
-    private String status;
 }

@@ -28,7 +28,9 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -242,6 +244,19 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void updateUserShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        String token = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(put("/api/v1/users/103")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateUserRequest("Viewer Updated", "viewer.updated@demo-shop.local")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("permission denied"));
+    }
+
+    @Test
     void createUserShouldRejectRoleCodeOutsideCurrentTenant() throws Exception {
         String token = loginAndGetToken("demo-shop", "admin", "123456");
 
@@ -252,6 +267,101 @@ class AuthSecurityIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.message").value("roleCodes must exist in current tenant"));
+    }
+
+    @Test
+    void updateUserShouldPersistProfileWithinTenantWhenPermissionIsGranted() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(put("/api/v1/users/103")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateUserRequest("Viewer Updated", "viewer.updated@demo-shop.local")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(103))
+                .andExpect(jsonPath("$.data.username").value("viewer"))
+                .andExpect(jsonPath("$.data.displayName").value("Viewer Updated"))
+                .andExpect(jsonPath("$.data.email").value("viewer.updated@demo-shop.local"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT display_name FROM users WHERE id = ?",
+                String.class,
+                103L
+        )).isEqualTo("Viewer Updated");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT email FROM users WHERE id = ?",
+                String.class,
+                103L
+        )).isEqualTo("viewer.updated@demo-shop.local");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT tenant_id FROM users WHERE id = ?",
+                Long.class,
+                103L
+        )).isEqualTo(1L);
+    }
+
+    @Test
+    void updateUserStatusShouldDisableUserAndRejectLogin() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(patch("/api/v1/users/103/status")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(statusUpdateRequest("DISABLED")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(103))
+                .andExpect(jsonPath("$.data.status").value("DISABLED"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM users WHERE id = ?",
+                String.class,
+                103L
+        )).isEqualTo("DISABLED");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginRequest("demo-shop", "viewer", "123456")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("user is not active"));
+    }
+
+    @Test
+    void disabledUserOldTokenShouldBeRejectedOnProtectedEndpoint() throws Exception {
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(patch("/api/v1/users/103/status")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(statusUpdateRequest("DISABLED")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.status").value("DISABLED"));
+
+        mockMvc.perform(get("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("page", "0")
+                        .queryParam("size", "10"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("user is not active"));
+    }
+
+    @Test
+    void updateUserStatusShouldRejectInvalidStatus() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(patch("/api/v1/users/103/status")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(statusUpdateRequest("ARCHIVED")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("status: status must be one of ACTIVE, DISABLED"));
     }
 
     @Test
@@ -463,6 +573,23 @@ class AuthSecurityIntegrationTest {
                   "roleCodes": %s
                 }
                 """.formatted(username, displayName, email, password, roleCodesJson);
+    }
+
+    private String updateUserRequest(String displayName, String email) {
+        return """
+                {
+                  "displayName": "%s",
+                  "email": "%s"
+                }
+                """.formatted(displayName, email);
+    }
+
+    private String statusUpdateRequest(String status) {
+        return """
+                {
+                  "status": "%s"
+                }
+                """.formatted(status);
     }
 
     private String bearerToken(String token) {

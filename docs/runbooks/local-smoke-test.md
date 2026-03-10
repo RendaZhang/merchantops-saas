@@ -65,9 +65,21 @@ curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/users?pa
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"username\":\"$SMOKE_USERNAME\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" \
   http://localhost:8080/api/v1/users
+NEW_USER_ID=<paste-id-from-create-response>
 curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
+SMOKE_TOKEN=<paste-accessToken-from-smoke-user-login-response>
+curl -i -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"displayName\":\"Cashier User Updated\",\"email\":\"$SMOKE_USERNAME.updated@demo-shop.local\"}" \
+  http://localhost:8080/api/v1/users/$NEW_USER_ID
+curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"status\":\"DISABLED\"}" \
+  http://localhost:8080/api/v1/users/$NEW_USER_ID/status
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
+curl -i -H "Authorization: Bearer $SMOKE_TOKEN" http://localhost:8080/api/v1/context
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"username\":\"$SMOKE_USERNAME-bad-role\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_USERNAME-bad-role@demo-shop.local\",\"password\":\"123456\",\"roleCodes\":[\"OTHER_ONLY\"]}" \
   http://localhost:8080/api/v1/users
@@ -85,7 +97,15 @@ curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/user
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/users?page=0&size=10&username=ad&status=ACTIVE&roleCode=TENANT_ADMIN"
 $createBody = @{ username = $smokeUsername; displayName = "Cashier User"; email = $smokeEmail; password = "123456"; roleCodes = @("READ_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $createBody http://localhost:8080/api/v1/users
+$newUserId = "<paste-id-from-create-response>"
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
+$smokeToken = "<paste-accessToken-from-smoke-user-login-response>"
+$updateBody = @{ displayName = "Cashier User Updated"; email = "$smokeUsername.updated@demo-shop.local" } | ConvertTo-Json -Compress
+curl.exe -i -X PUT -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $updateBody http://localhost:8080/api/v1/users/$newUserId
+$statusBody = @{ status = "DISABLED" } | ConvertTo-Json -Compress
+curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $statusBody http://localhost:8080/api/v1/users/$newUserId/status
+curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
+curl.exe -i -H "Authorization: Bearer $smokeToken" http://localhost:8080/api/v1/context
 $badRoleBody = @{ username = "$smokeUsername-bad-role"; displayName = "Cashier User"; email = "$smokeUsername-bad-role@demo-shop.local"; password = "123456"; roleCodes = @("OTHER_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $badRoleBody http://localhost:8080/api/v1/users
 ```
@@ -94,6 +114,11 @@ Expected results:
 
 - `GET /api/v1/users` returns a page object for the current tenant only
 - `POST /api/v1/users` with the admin token creates an `ACTIVE` user whose password works immediately for login
+- `PUT /api/v1/users/{id}` updates only `displayName` and `email`
+- `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` or `DISABLED`
+- logging in with the new smoke user succeeds before the disable call
+- logging in after the disable call returns `403` because the user is no longer `ACTIVE`
+- if you captured a token for that user before disabling it, reusing that old token on a protected endpoint should now return `403` with `user is not active`
 - `POST /api/v1/users` with a role code outside the current tenant returns `400`
 
 Use a fresh generated username on each run so the smoke flow stays repeatable against a persistent local database.
@@ -101,6 +126,7 @@ Use a fresh generated username on each run so the smoke flow stays repeatable ag
 Password regression note:
 
 - The current rule rejects passwords that start or end with whitespace. If password handling changed, verify that `POST /api/v1/auth/login` and `POST /api/v1/users` both return `400 VALIDATION_ERROR` for a password like `" 123456 "`.
+- After you create a smoke user, reuse the returned `id` for the update and status calls and capture its login token before disabling it.
 
 ## 4. Check RBAC Demo Endpoints
 

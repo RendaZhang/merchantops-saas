@@ -56,9 +56,10 @@ This repository currently organizes handoff rules around five roles:
 - Read [docs/contributing/testing-agent-guidance.md](docs/contributing/testing-agent-guidance.md) before changing tests, test coverage notes, or verification guidance.
 - Start from [docs/runbooks/automated-tests.md](docs/runbooks/automated-tests.md) for the current regression command and coverage boundary.
 - Keep tests, runbooks, and public API docs aligned when verification reality changes.
+- Treat `TT staged` as a testing-focused staged review entry point: inspect the staged diff, run or choose the smallest sufficient verification set, and report findings ordered by urgency (`P1`, `P2`, `P3`) rather than stopping at scope mapping alone.
 - Shortcut prefix: `TT`
 - Supported shortcuts include:
-  - `TT staged`: inspect the staged diff first, map it to affected test layers, and choose the smallest sufficient regression set
+  - `TT staged`: review the staged diff from a testing perspective, run or select the smallest sufficient verification, and report prioritized findings plus remaining verification gaps
   - `TT test`: run or recommend the default automated regression command `.\mvnw.cmd -pl merchantops-api -am test`
   - `TT coverage`: summarize current automated coverage, manual-only gaps, and the right next verification step
   - `TT smoke`: run or guide the local smoke flow from [docs/runbooks/local-smoke-test.md](docs/runbooks/local-smoke-test.md)

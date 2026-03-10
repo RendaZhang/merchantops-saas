@@ -3,7 +3,9 @@ package com.renda.merchantops.api.service;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
 import com.renda.merchantops.api.dto.user.command.UserPasswordUpdateCommand;
+import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
+import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
 import com.renda.merchantops.api.validation.PasswordRules;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
@@ -28,13 +30,16 @@ import java.util.Set;
 /**
  * Write-side user service.
  * Immutable after creation: id, tenantId, username, createdAt.
- * Updatable by command: displayName, email, status.
+ * Updatable by profile command: displayName, email.
+ * Status changes are handled through a dedicated command.
  * Password changes are handled through a dedicated command.
  * System-managed only: updatedAt.
  */
 @Service
 @RequiredArgsConstructor
 public class UserCommandService {
+
+    private static final Set<String> ALLOWED_STATUSES = Set.of("ACTIVE", "DISABLED");
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -114,9 +119,21 @@ public class UserCommandService {
         );
     }
 
-    public void updateUser(Long tenantId, Long userId, UserUpdateCommand command) {
-        requireTenantUser(tenantId, userId);
-        throwFeatureNotReady("update user flow");
+    @Transactional
+    public UserWriteResponse updateUser(Long tenantId, Long userId, UserUpdateCommand command) {
+        UserEntity user = requireTenantUser(tenantId, userId);
+        user.setDisplayName(normalizeRequiredText(command == null ? null : command.getDisplayName(), "displayName"));
+        user.setEmail(normalizeOptionalText(command == null ? null : command.getEmail()));
+        user.setUpdatedAt(LocalDateTime.now());
+        return toUserWriteResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserWriteResponse updateStatus(Long tenantId, Long userId, UserStatusUpdateCommand command) {
+        UserEntity user = requireTenantUser(tenantId, userId);
+        user.setStatus(normalizeAllowedStatus(command == null ? null : command.getStatus()));
+        user.setUpdatedAt(LocalDateTime.now());
+        return toUserWriteResponse(userRepository.save(user));
     }
 
     public void updatePassword(Long tenantId, Long userId, UserPasswordUpdateCommand command) {
@@ -150,6 +167,14 @@ public class UserCommandService {
         return value;
     }
 
+    private String normalizeAllowedStatus(String value) {
+        String status = normalizeRequiredText(value, "status");
+        if (!ALLOWED_STATUSES.contains(status)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "status must be one of ACTIVE, DISABLED");
+        }
+        return status;
+    }
+
     private List<String> normalizeRoleCodes(List<String> roleCodes) {
         if (roleCodes == null || roleCodes.isEmpty()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must not be empty");
@@ -163,6 +188,18 @@ public class UserCommandService {
             normalized.add(roleCode.trim());
         }
         return List.copyOf(normalized);
+    }
+
+    private UserWriteResponse toUserWriteResponse(UserEntity user) {
+        return new UserWriteResponse(
+                user.getId(),
+                user.getTenantId(),
+                user.getUsername(),
+                user.getDisplayName(),
+                user.getEmail(),
+                user.getStatus(),
+                user.getUpdatedAt()
+        );
     }
 
     private void throwFeatureNotReady(String action) {

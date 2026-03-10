@@ -46,6 +46,8 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/context` | Yes | Current tenant/user context |
 | `GET` | `/api/v1/users` | Yes + `USER_READ` | Page users in current tenant |
 | `POST` | `/api/v1/users` | Yes + `USER_WRITE` | Create an active user in current tenant |
+| `PUT` | `/api/v1/users/{id}` | Yes + `USER_WRITE` | Update user profile fields |
+| `PATCH` | `/api/v1/users/{id}/status` | Yes + `USER_WRITE` | Enable or disable a user |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -57,9 +59,11 @@ Notes about security whitelist routes:
 
 User Management tag note:
 
-- Swagger currently exposes `GET /api/v1/users` and `POST /api/v1/users` for user management.
+- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` for user management.
 - `GET /api/v1/users` supports `page`, `size`, `username`, `status`, and `roleCode` query parameters in Swagger.
 - `POST /api/v1/users` exposes example payloads for username, password, and tenant-local role binding.
+- `PUT /api/v1/users/{id}` exposes only `displayName` and `email`.
+- `PATCH /api/v1/users/{id}/status` exposes only `ACTIVE` and `DISABLED`.
 - User detail and write DTOs/services may exist in code, but they must not be treated as public API until contract/controller methods publish them into OpenAPI.
 - See [user-management.md](user-management.md) for the current public contract and validation path.
 
@@ -177,7 +181,64 @@ Response:
 }
 ```
 
-### 5. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
+### 5. Update User (`PUT /api/v1/users/{id}`)
+
+Request:
+
+```json
+{
+  "displayName": "Updated Cashier",
+  "email": "cashier.updated@demo-shop.local"
+}
+```
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 5,
+    "tenantId": 1,
+    "username": "cashier",
+    "displayName": "Updated Cashier",
+    "email": "cashier.updated@demo-shop.local",
+    "status": "ACTIVE",
+    "updatedAt": "2026-03-10T14:00:00"
+  }
+}
+```
+
+### 6. Disable User (`PATCH /api/v1/users/{id}/status`)
+
+Request:
+
+```json
+{
+  "status": "DISABLED"
+}
+```
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 5,
+    "tenantId": 1,
+    "username": "cashier",
+    "displayName": "Updated Cashier",
+    "email": "cashier.updated@demo-shop.local",
+    "status": "DISABLED",
+    "updatedAt": "2026-03-10T14:10:00"
+  }
+}
+```
+
+### 7. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
 
 Response:
 
@@ -189,7 +250,7 @@ Response:
 }
 ```
 
-### 6. Health (`GET /health`)
+### 8. Health (`GET /health`)
 
 Response:
 

@@ -7,6 +7,8 @@
 - `GET /api/v1/context`
 - `GET /api/v1/users` (requires `USER_READ`; see [user-management.md](user-management.md))
 - `POST /api/v1/users` (requires `USER_WRITE`; see [user-management.md](user-management.md))
+- `PUT /api/v1/users/{id}` (requires `USER_WRITE`; see [user-management.md](user-management.md))
+- `PATCH /api/v1/users/{id}/status` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `GET /api/v1/rbac/users` (requires `USER_READ`)
 - `GET /api/v1/rbac/users/manage` (requires `USER_WRITE`)
 - `GET /api/v1/rbac/feature-flags` (requires `FEATURE_FLAG_MANAGE`)
@@ -24,6 +26,10 @@ Accounts:
 - `admin / 123456` (`TENANT_ADMIN`)
 - `ops / 123456` (`OPS_USER`)
 - `viewer / 123456` (`READ_ONLY`)
+
+Quick-check safety note:
+
+- use a newly created smoke user for update and status examples instead of mutating the seeded `admin`, `ops`, or `viewer` accounts
 
 ## Login Flow
 
@@ -88,28 +94,57 @@ Password handling note:
 - send `Authorization: Bearer <accessToken>`
 - missing/invalid token returns `401 UNAUTHORIZED`
 - missing required permission returns `403 FORBIDDEN`
+- protected requests re-check the current user row, so a token issued before a user was disabled is rejected with `403 user is not active`
 - run [../runbooks/automated-tests.md](../runbooks/automated-tests.md) before manual RBAC smoke checks when code changed
 
 Quick check:
 
 ```bash
 TOKEN=<paste-accessToken-from-login-response>
+SMOKE_USERNAME="cashier-$(date +%s)"
+SMOKE_EMAIL="${SMOKE_USERNAME}@demo-shop.local"
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"username":"cashier","displayName":"Cashier User","email":"cashier@demo-shop.local","password":"123456","roleCodes":["READ_ONLY"]}' \
+  -d "{\"username\":\"$SMOKE_USERNAME\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" \
   http://localhost:8080/api/v1/users
+NEW_USER_ID=<paste-id-from-create-response>
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
+SMOKE_TOKEN=<paste-accessToken-from-smoke-user-login-response>
+curl -i -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"displayName\":\"Updated Cashier\",\"email\":\"$SMOKE_USERNAME.updated@demo-shop.local\"}" \
+  http://localhost:8080/api/v1/users/$NEW_USER_ID
+curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"DISABLED"}' \
+  http://localhost:8080/api/v1/users/$NEW_USER_ID/status
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
+curl -i -H "Authorization: Bearer $SMOKE_TOKEN" http://localhost:8080/api/v1/context
 ```
 
 PowerShell:
 
 ```powershell
 $token = "<paste-accessToken-from-login-response>"
+$smokeUsername = "cashier-{0}" -f [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$smokeEmail = "$smokeUsername@demo-shop.local"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/me
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
-curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d "{\"username\":\"cashier\",\"displayName\":\"Cashier User\",\"email\":\"cashier@demo-shop.local\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" http://localhost:8080/api/v1/users
+$createBody = @{ username = $smokeUsername; displayName = "Cashier User"; email = $smokeEmail; password = "123456"; roleCodes = @("READ_ONLY") } | ConvertTo-Json -Compress
+curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $createBody http://localhost:8080/api/v1/users
+$newUserId = "<paste-id-from-create-response>"
+curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
+$smokeToken = "<paste-accessToken-from-smoke-user-login-response>"
+$updateBody = @{ displayName = "Updated Cashier"; email = "$smokeUsername.updated@demo-shop.local" } | ConvertTo-Json -Compress
+curl.exe -i -X PUT -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $updateBody http://localhost:8080/api/v1/users/$newUserId
+curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d "{\"status\":\"DISABLED\"}" http://localhost:8080/api/v1/users/$newUserId/status
+curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
+curl.exe -i -H "Authorization: Bearer $smokeToken" http://localhost:8080/api/v1/context
 ```
 
 ## Core Response Examples
@@ -206,6 +241,55 @@ Current notes:
 - passwords are stored as BCrypt and can be used immediately for login
 - role codes outside the current tenant return `BAD_REQUEST`
 
+### `PUT /api/v1/users/{id}`
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 5,
+    "tenantId": 1,
+    "username": "cashier",
+    "displayName": "Updated Cashier",
+    "email": "cashier.updated@demo-shop.local",
+    "status": "ACTIVE",
+    "updatedAt": "2026-03-10T14:00:00"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- only `displayName` and `email` are mutable
+- `tenantId`, `username`, and `passwordHash` are not part of the public request contract
+
+### `PATCH /api/v1/users/{id}/status`
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 5,
+    "tenantId": 1,
+    "username": "cashier",
+    "displayName": "Updated Cashier",
+    "email": "cashier.updated@demo-shop.local",
+    "status": "DISABLED",
+    "updatedAt": "2026-03-10T14:10:00"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- only `ACTIVE` and `DISABLED` are allowed
+- disabled users are rejected by login because login requires `ACTIVE`
+- tokens issued before the disable operation are also rejected on protected endpoints because request authentication re-checks the current user status
+
 ### `GET /api/v1/rbac/users/manage` (with `viewer` token)
 
 ```json
@@ -218,26 +302,28 @@ Current notes:
 
 ## Context Propagation
 
-- `JwtAuthenticationFilter` parses JWT and writes `TenantContext` and `CurrentUserContext`
+- `JwtAuthenticationFilter` parses JWT, re-checks the current user status from the database, and writes `TenantContext` and `CurrentUserContext`
 - context is cleared in `finally` for every request
 - business code reads context through `ContextAccess`
 
 ## Expected RBAC Behavior
 
-- `admin` can access `GET /api/v1/users`, `POST /api/v1/users`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
+- `admin` can access `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
 - `ops` can access `/api/v1/users` and `/api/v1/rbac/users`
 - `viewer` can access `/api/v1/users` and `/api/v1/rbac/users`
-- `ops` and `viewer` are denied on `POST /api/v1/users`
+- `ops` and `viewer` are denied on `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status`
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
 
-The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET` and `POST`) permission path end to end. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
+The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`) permission path end to end, including the disabled-user old-token rejection path. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
 
 ## Current User Management Boundary
 
-- Swagger currently exposes `GET /api/v1/users` and `POST /api/v1/users` under the `User Management` tag
+- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` under the `User Management` tag
 - `GET /api/v1/users` is the formal paged tenant query endpoint
 - `POST /api/v1/users` is the current public create endpoint
-- detail, update, status, and role-assignment flows still remain non-public until controller and contract methods are added
+- `PUT /api/v1/users/{id}` is the current public profile update endpoint
+- `PATCH /api/v1/users/{id}/status` is the current public status-management endpoint
+- detail and role-assignment flows still remain non-public until controller and contract methods are added
 - Treat the Swagger-visible endpoints in this document as the only public API surface
 
 ## Tenant Isolation Note

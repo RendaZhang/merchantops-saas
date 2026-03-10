@@ -3,7 +3,9 @@ package com.renda.merchantops.api.service;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
 import com.renda.merchantops.api.dto.user.command.UserPasswordUpdateCommand;
+import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
+import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
 import com.renda.merchantops.infra.persistence.entity.RoleEntity;
@@ -179,21 +181,65 @@ class UserCommandServiceTest {
         when(userRepository.findByIdAndTenantId(8L, 1L)).thenReturn(Optional.empty());
 
         assertBizException(
-                () -> userCommandService.updateUser(1L, 8L, new UserUpdateCommand("Ops", "ops@demo.local", "ACTIVE")),
+                () -> userCommandService.updateUser(1L, 8L, new UserUpdateCommand("Ops", "ops@demo.local")),
                 ErrorCode.NOT_FOUND,
                 "user not found"
         );
     }
 
     @Test
-    void updateUserShouldThrowBizErrorWhenFeatureIsNotReady() {
-        when(userRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(new UserEntity()));
+    void updateUserShouldPersistMutableProfileFieldsOnly() {
+        UserEntity user = userEntity(1L, 1L, "cashier", "ACTIVE");
+        when(userRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserWriteResponse response = userCommandService.updateUser(
+                1L,
+                1L,
+                new UserUpdateCommand("Updated Cashier", "updated@demo.local")
+        );
+
+        assertThat(response.getId()).isEqualTo(1L);
+        assertThat(response.getTenantId()).isEqualTo(1L);
+        assertThat(response.getUsername()).isEqualTo("cashier");
+        assertThat(response.getDisplayName()).isEqualTo("Updated Cashier");
+        assertThat(response.getEmail()).isEqualTo("updated@demo.local");
+        assertThat(response.getStatus()).isEqualTo("ACTIVE");
+        assertThat(response.getUpdatedAt()).isNotNull();
+
+        verify(userRepository).save(any(UserEntity.class));
+        assertThat(user.getUsername()).isEqualTo("cashier");
+        assertThat(user.getTenantId()).isEqualTo(1L);
+        assertThat(user.getDisplayName()).isEqualTo("Updated Cashier");
+        assertThat(user.getEmail()).isEqualTo("updated@demo.local");
+    }
+
+    @Test
+    void updateStatusShouldRejectInvalidStatus() {
+        when(userRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(userEntity(1L, 1L, "cashier", "ACTIVE")));
 
         assertBizException(
-                () -> userCommandService.updateUser(1L, 1L, new UserUpdateCommand("Ops", "ops@demo.local", "ACTIVE")),
-                ErrorCode.BIZ_ERROR,
-                "update user flow is not implemented yet"
+                () -> userCommandService.updateStatus(1L, 1L, new UserStatusUpdateCommand("ARCHIVED")),
+                ErrorCode.BAD_REQUEST,
+                "status must be one of ACTIVE, DISABLED"
         );
+    }
+
+    @Test
+    void updateStatusShouldPersistDisabledStatus() {
+        UserEntity user = userEntity(1L, 1L, "cashier", "ACTIVE");
+        when(userRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserWriteResponse response = userCommandService.updateStatus(
+                1L,
+                1L,
+                new UserStatusUpdateCommand("DISABLED")
+        );
+
+        assertThat(response.getStatus()).isEqualTo("DISABLED");
+        assertThat(user.getStatus()).isEqualTo("DISABLED");
+        assertThat(user.getUpdatedAt()).isNotNull();
     }
 
     @Test
@@ -231,5 +277,19 @@ class UserCommandServiceTest {
         role.setCreatedAt(LocalDateTime.now());
         role.setUpdatedAt(LocalDateTime.now());
         return role;
+    }
+
+    private UserEntity userEntity(Long id, Long tenantId, String username, String status) {
+        UserEntity user = new UserEntity();
+        user.setId(id);
+        user.setTenantId(tenantId);
+        user.setUsername(username);
+        user.setPasswordHash("bcrypt-hash");
+        user.setDisplayName("Cashier");
+        user.setEmail("cashier@demo.local");
+        user.setStatus(status);
+        user.setCreatedAt(LocalDateTime.now().minusDays(1));
+        user.setUpdatedAt(LocalDateTime.now().minusHours(1));
+        return user;
     }
 }

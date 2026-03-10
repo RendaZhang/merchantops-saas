@@ -3,6 +3,9 @@ package com.renda.merchantops.api.controller;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
+import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
+import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
+import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
 import com.renda.merchantops.api.dto.user.query.UserListItemResponse;
 import com.renda.merchantops.api.dto.user.query.UserPageQuery;
 import com.renda.merchantops.api.dto.user.query.UserPageResponse;
@@ -41,7 +44,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -269,6 +274,106 @@ class UserManagementControllerTest {
         assertThat(commandCaptor.getValue().getRoleCodes()).containsExactly("READ_ONLY");
     }
 
+    @Test
+    void updateUserShouldValidateRequestBody() throws Exception {
+        mockMvc.perform(put("/api/v1/users/8")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "displayName": "",
+                                  "email": "updated@demo-shop.local"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("displayName: displayName must not be blank"));
+    }
+
+    @Test
+    void updateUserShouldBindRequestAndReturnUpdatedUser() throws Exception {
+        UserWriteResponse response = new UserWriteResponse(
+                8L,
+                9L,
+                "cashier",
+                "Updated Cashier",
+                "updated@demo-shop.local",
+                "ACTIVE",
+                LocalDateTime.of(2026, 3, 10, 13, 0)
+        );
+        when(userCommandService.updateUser(eq(9L), eq(8L), any(UserUpdateCommand.class))).thenReturn(response);
+
+        mockMvc.perform(put("/api/v1/users/8")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content(validUpdateUserRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(8))
+                .andExpect(jsonPath("$.data.displayName").value("Updated Cashier"))
+                .andExpect(jsonPath("$.data.email").value("updated@demo-shop.local"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+        ArgumentCaptor<UserUpdateCommand> commandCaptor = ArgumentCaptor.forClass(UserUpdateCommand.class);
+        verify(userCommandService).updateUser(eq(9L), eq(8L), commandCaptor.capture());
+        assertThat(commandCaptor.getValue().getDisplayName()).isEqualTo("Updated Cashier");
+        assertThat(commandCaptor.getValue().getEmail()).isEqualTo("updated@demo-shop.local");
+    }
+
+    @Test
+    void updateUserStatusShouldRejectInvalidStatus() throws Exception {
+        mockMvc.perform(patch("/api/v1/users/8/status")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "status": "ARCHIVED"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("status: status must be one of ACTIVE, DISABLED"));
+    }
+
+    @Test
+    void updateUserStatusShouldBindRequestAndReturnUpdatedUser() throws Exception {
+        UserWriteResponse response = new UserWriteResponse(
+                8L,
+                9L,
+                "cashier",
+                "Updated Cashier",
+                "updated@demo-shop.local",
+                "DISABLED",
+                LocalDateTime.of(2026, 3, 10, 14, 0)
+        );
+        when(userCommandService.updateStatus(eq(9L), eq(8L), any(UserStatusUpdateCommand.class))).thenReturn(response);
+
+        mockMvc.perform(patch("/api/v1/users/8/status")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content(validStatusUpdateRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(8))
+                .andExpect(jsonPath("$.data.status").value("DISABLED"));
+
+        ArgumentCaptor<UserStatusUpdateCommand> commandCaptor = ArgumentCaptor.forClass(UserStatusUpdateCommand.class);
+        verify(userCommandService).updateStatus(eq(9L), eq(8L), commandCaptor.capture());
+        assertThat(commandCaptor.getValue().getStatus()).isEqualTo("DISABLED");
+    }
+
     private String validCreateUserRequest() {
         return """
                 {
@@ -277,6 +382,23 @@ class UserManagementControllerTest {
                   "email": "cashier@demo-shop.local",
                   "password": "123456",
                   "roleCodes": ["READ_ONLY"]
+                }
+                """;
+    }
+
+    private String validUpdateUserRequest() {
+        return """
+                {
+                  "displayName": "Updated Cashier",
+                  "email": "updated@demo-shop.local"
+                }
+                """;
+    }
+
+    private String validStatusUpdateRequest() {
+        return """
+                {
+                  "status": "DISABLED"
                 }
                 """;
     }
