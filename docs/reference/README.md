@@ -7,6 +7,7 @@ This section holds stable project details that developers may need while impleme
 - [configuration.md](configuration.md): runtime profiles and environment variable overrides
 - [database-migrations.md](database-migrations.md): Flyway setup, migration history, and seed data notes
 - [api-conventions.md](api-conventions.md): response wrapper and error handling rules
+- [development-agent-guidance.md](development-agent-guidance.md): documentation, testing, and development rules for contributors and coding agents
 - [release-versioning.md](release-versioning.md): current tag baseline, changelog ownership, and recommended version progression
 - [documentation-maintenance.md](documentation-maintenance.md): routing rules for which docs must change when implementation, API, release, or architecture changes happen
 - [authentication-and-rbac.md](authentication-and-rbac.md): login flow, JWT usage, context propagation, and RBAC demo endpoints

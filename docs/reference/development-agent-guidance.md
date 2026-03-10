@@ -1,0 +1,150 @@
+# Development Agent Guidance
+
+Last updated: 2026-03-10
+
+## Purpose
+
+This page records the current implementation guidance for developers and coding agents working inside this repository.
+
+Use it when changing code, tests, or development-facing documentation.
+
+## Documentation Concerns
+
+- Root `README.md` stays high-level. Do not use it as the place for detailed development rules.
+- Put development-facing detail under `docs/`.
+- Public API changes must update Swagger-facing reference docs, `api-demo.http`, runbooks, and `docs/project-status.md`.
+- Internal groundwork must not be described as public API.
+- If a new document is intended to be reused by later developers or agents, link it from `docs/README.md` and the appropriate docs index page.
+- Read [documentation-maintenance.md](documentation-maintenance.md) before routing documentation updates.
+
+## Testing Concerns
+
+- Start with [../runbooks/automated-tests.md](../runbooks/automated-tests.md) for the current automated regression entry point.
+- Preferred Maven command for API changes is `.\mvnw.cmd -pl merchantops-api -am test`.
+- Do not default to module-only test execution when in-repo dependencies may have changed.
+- After automated tests pass, use [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md) and [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md) as manual follow-up.
+- Public API changes require test updates and doc/runbook updates in the same change.
+- Swagger rendering, live infra health, and end-to-end authenticated behavior still require manual verification.
+
+## Development Concerns
+
+### Core Rules
+
+- Query model and write model must stay separate.
+- Repository methods for tenant business data must always include `tenantId`.
+- Service-layer public methods for tenant business data must always accept `tenantId` explicitly.
+- Controllers may resolve `tenantId` from request context, but lower layers must not rely on implicit thread-local access.
+- Query DTOs must describe read results only.
+- Command DTOs must describe allowed write inputs only.
+- Unimplemented business flows must throw unified business exceptions, not raw framework or JDK exceptions.
+
+### Tenant Scope Rules
+
+Apply these rules to user-management code and future tenant-scoped modules:
+
+- do not expose `tenantId` as a public query parameter for tenant business APIs
+- do resolve `tenantId` at the controller edge from authenticated context
+- do pass `tenantId` explicitly into service methods
+- do require `tenantId` in repository queries
+- do not add repository methods such as `findByUsername(...)` for tenant-owned data without a tenant constraint
+- do not load a user by `id` alone when the use case is tenant business access; use `id + tenantId`
+
+Recommended shape:
+
+1. controller resolves `tenantId`
+2. controller calls service with explicit `tenantId`
+3. service calls repository with explicit `tenantId`
+4. repository query constrains by `tenantId`
+
+### Query Model Rules
+
+Current user-management query model lives under:
+
+- `merchantops-api/src/main/java/com/renda/merchantops/api/dto/user/query`
+- `merchantops-api/src/main/java/com/renda/merchantops/api/service/UserQueryService.java`
+
+Use query DTOs for:
+
+- list items
+- detail views
+- page query objects
+- page response objects
+
+Do not use query DTOs for:
+
+- create requests
+- update requests
+- password changes
+- role assignment commands
+
+Current `/api/v1/users` contract is the baseline example:
+
+- tenant-scoped page query
+- explicit filters: `username`, `status`, `roleCode`
+- response object with `items`, `page`, `size`, `total`, `totalPages`
+
+### Write Model Rules
+
+Current user-management write model lives under:
+
+- `merchantops-api/src/main/java/com/renda/merchantops/api/dto/user/command`
+- `merchantops-api/src/main/java/com/renda/merchantops/api/service/UserCommandService.java`
+
+Write DTOs should be split by intent rather than using one mutable all-fields object.
+
+Current field policy for `users`:
+
+- immutable after creation: `id`, `tenantId`, `username`, `createdAt`
+- updateable business fields: `displayName`, `email`, `status`, `passwordHash`
+- system-managed only: `updatedAt`
+
+Implications:
+
+- profile updates must not accept `tenantId` or `username`
+- password changes should remain isolated from profile updates
+- future role assignment should use a dedicated command object instead of overloading user profile update
+
+### Repository Rules For Users
+
+Current `UserRepository` must continue to support:
+
+- `id + tenantId` detail lookup
+- `tenantId + username` unique lookup
+- `tenantId + username` existence check
+- `tenantId + username + id != currentId` uniqueness check for updates
+- tenant-scoped list
+- tenant-scoped status list
+- tenant-scoped paged search
+
+For future repository additions:
+
+- prefer derived query methods when the filter is simple and fully tenant-scoped
+- use explicit `@Query` when filtering crosses join tables, such as role-based filtering
+- if a query joins tenant-owned tables, keep tenant consistency in the join condition
+
+### Validation And Error Rules
+
+- uniqueness checks belong in service logic even if the database also has a unique constraint
+- not-found business reads should return `BizException(ErrorCode.NOT_FOUND, ...)`
+- not-yet-implemented business write flows should return `BizException`, not `UnsupportedOperationException`
+- permission enforcement stays at controller/interceptor level, not repository level
+
+### Extension Checklist
+
+When extending user-management or another tenant-scoped module:
+
+1. define whether the change is `public` or `internal`
+2. add or update query DTOs and command DTOs separately
+3. make `tenantId` explicit in service and repository signatures
+4. update Swagger contract only when the endpoint is actually public
+5. update [user-management.md](user-management.md) for public user-management contract changes
+6. update [documentation-maintenance.md](documentation-maintenance.md) if the routing rules themselves changed
+7. update `AGENTS.md` if the new rule should guide future agents by default
+
+## Related Documents
+
+- [user-management.md](user-management.md): current public `/api/v1/users` contract
+- [authentication-and-rbac.md](authentication-and-rbac.md): authentication and permission behavior
+- [documentation-maintenance.md](documentation-maintenance.md): which docs must change for which change type
+- [../runbooks/automated-tests.md](../runbooks/automated-tests.md): automated verification entry
+- [../project-status.md](../project-status.md): implemented reality and current limitations

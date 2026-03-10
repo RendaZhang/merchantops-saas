@@ -28,6 +28,7 @@ Use it as the routing table for answering two questions:
 - `docs/roadmap.md`: next-phase work and intended near-term sequence
 - `docs/project-plan.md`: longer-range milestone plan
 - `docs/reference/`: stable technical reference pages
+- `docs/reference/development-agent-guidance.md`: documentation, testing, and implementation rules for contributors and coding agents
 - `docs/runbooks/`: validation, regression, and operational checklists
 - `docs/architecture/adr/`: formal architecture decisions
 - `docs/reference/release-versioning.md`: version rules and tag progression
@@ -78,6 +79,11 @@ Update:
 
 - `docs/project-status.md`
 - `docs/roadmap.md` if it changes the next step or phase sequence
+
+Update when the internal rule or boundary changed:
+
+- `docs/reference/development-agent-guidance.md`
+- `AGENTS.md` if the rule should guide future agents by default
 
 Do not update as current public API:
 

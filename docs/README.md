@@ -11,6 +11,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Documentation Maintenance](reference/documentation-maintenance.md): which docs must change when API, planning, release, or architecture changes happen
 - [Getting Started](getting-started/README.md): local environment setup and the shortest path to a running API
 - [Reference](reference/README.md): configuration, migrations, API conventions, auth, observability, and API documentation
+- [Development Agent Guidance](reference/development-agent-guidance.md): documentation, testing, and implementation rules for developers and coding agents
 - [User Management Reference](reference/user-management.md): the current `/api/v1/users` contract, validation path, and current Week 2 delivery boundary
 - [AI Integration Reference](reference/ai-integration.md): workflow-first AI design, guardrails, and planned endpoint direction
 - [AI Provider Configuration](reference/ai-provider-configuration.md): who should own model-provider keys, how cost should be understood, and why the project starts with instance-level configuration
@@ -34,11 +35,12 @@ This directory contains the detailed project documentation that sits behind the 
 6. [Release Versioning](reference/release-versioning.md)
 7. [Documentation Maintenance](reference/documentation-maintenance.md)
 8. [Authentication and RBAC](reference/authentication-and-rbac.md)
-9. [User Management Reference](reference/user-management.md)
-10. [AI Integration Reference](reference/ai-integration.md)
-11. [AI Provider Configuration](reference/ai-provider-configuration.md)
-12. [AI Docs](ai/README.md)
-13. [AI Workflow Candidates](ai/workflow-candidates.md)
-14. [Automated Test Runbook](runbooks/automated-tests.md)
-15. [Regression Checklist](runbooks/regression-checklist.md)
-16. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
+9. [Development Agent Guidance](reference/development-agent-guidance.md)
+10. [User Management Reference](reference/user-management.md)
+11. [AI Integration Reference](reference/ai-integration.md)
+12. [AI Provider Configuration](reference/ai-provider-configuration.md)
+13. [AI Docs](ai/README.md)
+14. [AI Workflow Candidates](ai/workflow-candidates.md)
+15. [Automated Test Runbook](runbooks/automated-tests.md)
+16. [Regression Checklist](runbooks/regression-checklist.md)
+17. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
