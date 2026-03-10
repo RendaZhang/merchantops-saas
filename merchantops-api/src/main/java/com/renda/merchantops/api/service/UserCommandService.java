@@ -1,19 +1,35 @@
 package com.renda.merchantops.api.service;
 
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
+import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
 import com.renda.merchantops.api.dto.user.command.UserPasswordUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
+import com.renda.merchantops.api.validation.PasswordRules;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
+import com.renda.merchantops.infra.persistence.entity.RoleEntity;
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
+import com.renda.merchantops.infra.persistence.entity.UserRoleEntity;
+import com.renda.merchantops.infra.repository.RoleRepository;
 import com.renda.merchantops.infra.repository.UserRepository;
+import com.renda.merchantops.infra.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Write-side user service.
  * Immutable after creation: id, tenantId, username, createdAt.
- * Updatable by command: displayName, email, status, passwordHash.
+ * Updatable by command: displayName, email, status.
+ * Password changes are handled through a dedicated command.
  * System-managed only: updatedAt.
  */
 @Service
@@ -21,6 +37,9 @@ import org.springframework.stereotype.Service;
 public class UserCommandService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public void validateUsernameUnique(Long tenantId, String username) {
         if (userRepository.existsByTenantIdAndUsername(tenantId, username)) {
@@ -38,9 +57,61 @@ public class UserCommandService {
         }
     }
 
-    public void createUser(Long tenantId, UserCreateCommand command) {
-        validateUsernameUnique(tenantId, command.getUsername());
-        throwFeatureNotReady("create user flow");
+    @Transactional
+    public UserCreateResponse createUser(Long tenantId, UserCreateCommand command) {
+        String username = normalizeRequiredText(command == null ? null : command.getUsername(), "username");
+        String displayName = normalizeRequiredText(command == null ? null : command.getDisplayName(), "displayName");
+        String password = requireNonBlankPreserveValue(command == null ? null : command.getPassword(), "password");
+        PasswordRules.requireNoBoundaryWhitespace(password);
+        String email = normalizeOptionalText(command == null ? null : command.getEmail());
+        List<String> roleCodes = normalizeRoleCodes(command == null ? null : command.getRoleCodes());
+
+        validateUsernameUnique(tenantId, username);
+
+        List<RoleEntity> roles = roleRepository.findAllByTenantIdAndRoleCodeInOrderByIdAsc(tenantId, roleCodes);
+        if (roles.size() != roleCodes.size()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must exist in current tenant");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        UserEntity user = new UserEntity();
+        user.setTenantId(tenantId);
+        user.setUsername(username);
+        user.setDisplayName(displayName);
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setStatus("ACTIVE");
+        user.setCreatedAt(now);
+        user.setUpdatedAt(now);
+
+        UserEntity savedUser;
+        try {
+            savedUser = userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "username already exists in tenant");
+        }
+
+        List<UserRoleEntity> userRoles = roles.stream()
+                .map(role -> {
+                    UserRoleEntity userRole = new UserRoleEntity();
+                    userRole.setUserId(savedUser.getId());
+                    userRole.setRoleId(role.getId());
+                    return userRole;
+                })
+                .toList();
+        userRoleRepository.saveAll(userRoles);
+
+        return new UserCreateResponse(
+                savedUser.getId(),
+                savedUser.getTenantId(),
+                savedUser.getUsername(),
+                savedUser.getDisplayName(),
+                savedUser.getEmail(),
+                savedUser.getStatus(),
+                roleCodes,
+                savedUser.getCreatedAt(),
+                savedUser.getUpdatedAt()
+        );
     }
 
     public void updateUser(Long tenantId, Long userId, UserUpdateCommand command) {
@@ -56,6 +127,42 @@ public class UserCommandService {
     private UserEntity requireTenantUser(Long tenantId, Long userId) {
         return userRepository.findByIdAndTenantId(userId, tenantId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "user not found"));
+    }
+
+    private String normalizeRequiredText(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, fieldName + " must not be blank");
+        }
+        return value.trim();
+    }
+
+    private String normalizeOptionalText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String requireNonBlankPreserveValue(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, fieldName + " must not be blank");
+        }
+        return value;
+    }
+
+    private List<String> normalizeRoleCodes(List<String> roleCodes) {
+        if (roleCodes == null || roleCodes.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must not be empty");
+        }
+
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String roleCode : roleCodes) {
+            if (!StringUtils.hasText(roleCode)) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must not contain blank values");
+            }
+            normalized.add(roleCode.trim());
+        }
+        return List.copyOf(normalized);
     }
 
     private void throwFeatureNotReady(String action) {

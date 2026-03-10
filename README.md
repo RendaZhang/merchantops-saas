@@ -1,6 +1,6 @@
 # MerchantOps SaaS
 
-MerchantOps SaaS is a multi-tenant backend project for merchant operations scenarios. The current repository focuses on a working Spring Boot skeleton with JWT authentication, RBAC demo endpoints, tenant/user context propagation, tenant-scoped user queries, Flyway migrations, health checks, request tracing, and OpenAPI support.
+MerchantOps SaaS is a multi-tenant backend project for merchant operations scenarios. The current repository focuses on a working Spring Boot skeleton with JWT authentication, RBAC demo endpoints, tenant/user context propagation, tenant-scoped user query and create flows, Flyway migrations, health checks, request tracing, and OpenAPI support.
 
 ## Target Users
 
@@ -21,7 +21,7 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 - Multi-module Spring Boot backend
 - JWT login and Bearer-token authentication
 - Current-user and current-context endpoints
-- Current-tenant user listing protected by `USER_READ`
+- Current-tenant user listing and create flow protected by `USER_READ` / `USER_WRITE`
 - RBAC demo endpoints and permission interception
 - Flyway migrations, enriched Swagger / OpenAPI docs, health checks, and request tracing
 

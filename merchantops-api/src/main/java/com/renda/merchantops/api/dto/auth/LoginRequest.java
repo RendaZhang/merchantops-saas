@@ -1,7 +1,9 @@
 package com.renda.merchantops.api.dto.auth;
 
+import com.renda.merchantops.api.validation.PasswordRules;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 @Data
@@ -17,7 +19,11 @@ public class LoginRequest {
     private String username;
 
     @NotBlank(message = "password must not be blank")
-    @Schema(description = "Password", example = "123456")
+    @Pattern(
+            regexp = PasswordRules.NO_BOUNDARY_WHITESPACE_REGEX,
+            message = PasswordRules.NO_BOUNDARY_WHITESPACE_MESSAGE
+    )
+    @Schema(description = "Password; must not start or end with whitespace", example = "123456")
     private String password;
 
 }

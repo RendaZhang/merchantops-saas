@@ -25,6 +25,7 @@ import java.sql.SQLException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,7 +78,7 @@ class AuthSecurityIntegrationTest {
 
         jdbcTemplate.execute("""
                 CREATE TABLE tenant (
-                    id BIGINT PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     tenant_code VARCHAR(64) NOT NULL,
                     tenant_name VARCHAR(128) NOT NULL,
                     status VARCHAR(32) NOT NULL,
@@ -88,7 +89,7 @@ class AuthSecurityIntegrationTest {
 
         jdbcTemplate.execute("""
                 CREATE TABLE users (
-                    id BIGINT PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     tenant_id BIGINT NOT NULL,
                     username VARCHAR(64) NOT NULL,
                     password_hash VARCHAR(255) NOT NULL,
@@ -102,7 +103,7 @@ class AuthSecurityIntegrationTest {
 
         jdbcTemplate.execute("""
                 CREATE TABLE `role` (
-                    id BIGINT PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     tenant_id BIGINT NOT NULL,
                     role_code VARCHAR(64) NOT NULL,
                     role_name VARCHAR(128) NOT NULL,
@@ -113,7 +114,7 @@ class AuthSecurityIntegrationTest {
 
         jdbcTemplate.execute("""
                 CREATE TABLE permission (
-                    id BIGINT PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     permission_code VARCHAR(64) NOT NULL,
                     permission_name VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
@@ -123,7 +124,7 @@ class AuthSecurityIntegrationTest {
 
         jdbcTemplate.execute("""
                 CREATE TABLE user_role (
-                    id BIGINT PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     user_id BIGINT NOT NULL,
                     role_id BIGINT NOT NULL
                 )
@@ -131,7 +132,7 @@ class AuthSecurityIntegrationTest {
 
         jdbcTemplate.execute("""
                 CREATE TABLE role_permission (
-                    id BIGINT PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     role_id BIGINT NOT NULL,
                     permission_id BIGINT NOT NULL
                 )
@@ -168,6 +169,16 @@ class AuthSecurityIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.message").value("username or password is incorrect"));
+    }
+
+    @Test
+    void loginShouldRejectPasswordWithLeadingOrTrailingWhitespace() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginRequest("demo-shop", "admin", " 123456 ")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("password: password must not start or end with whitespace"));
     }
 
     @Test
@@ -217,6 +228,101 @@ class AuthSecurityIntegrationTest {
                 .andExpect(jsonPath("$.data.items[0].passwordHash").doesNotExist());
     }
 
+    @Test
+    void createUserShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        String token = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserRequest("cashier", "Cashier User", "cashier@demo-shop.local", "123456", "[\"READ_ONLY\"]")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("permission denied"));
+    }
+
+    @Test
+    void createUserShouldRejectRoleCodeOutsideCurrentTenant() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserRequest("cashier", "Cashier User", "cashier@demo-shop.local", "123456", "[\"OTHER_ONLY\"]")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("roleCodes must exist in current tenant"));
+    }
+
+    @Test
+    void createUserShouldRejectPasswordWithLeadingOrTrailingWhitespace() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserRequest("cashier", "Cashier User", "cashier@demo-shop.local", " 123456 ", "[\"READ_ONLY\"]")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("password: password must not start or end with whitespace"));
+    }
+
+    @Test
+    void createUserShouldPersistTenantScopedUserAndAllowLogin() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserRequest("cashier", "Cashier User", "cashier@demo-shop.local", "123456", "[\"READ_ONLY\"]")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.username").value("cashier"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.roleCodes", hasSize(1)))
+                .andExpect(jsonPath("$.data.roleCodes[0]").value("READ_ONLY"));
+
+        Long userId = jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE tenant_id = ? AND username = ?",
+                Long.class,
+                1L,
+                "cashier"
+        );
+        assertThat(userId).isNotNull();
+
+        String passwordHash = jdbcTemplate.queryForObject(
+                "SELECT password_hash FROM users WHERE id = ?",
+                String.class,
+                userId
+        );
+        assertThat(passwordHash).isNotBlank();
+        assertThat(passwordHash).isNotEqualTo("123456");
+        assertThat(passwordEncoder.matches("123456", passwordHash)).isTrue();
+
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM users WHERE id = ?",
+                String.class,
+                userId
+        );
+        assertThat(status).isEqualTo("ACTIVE");
+
+        assertThat(jdbcTemplate.queryForList("""
+                        SELECT r.role_code
+                        FROM user_role ur
+                        JOIN `role` r ON r.id = ur.role_id
+                        WHERE ur.user_id = ?
+                        ORDER BY r.id
+                        """, String.class, userId))
+                .containsExactly("READ_ONLY");
+
+        String createdUserToken = loginAndGetToken("demo-shop", "cashier", "123456");
+        CurrentUser currentUser = jwtTokenService.parseCurrentUser(createdUserToken);
+        assertThat(currentUser.getTenantId()).isEqualTo(1L);
+        assertThat(currentUser.getUsername()).isEqualTo("cashier");
+        assertThat(currentUser.getRoles()).containsExactly("READ_ONLY");
+        assertThat(currentUser.getPermissions()).containsExactly("USER_READ");
+    }
+
     private void seedTenants() {
         jdbcTemplate.update("""
                 INSERT INTO tenant (id, tenant_code, tenant_name, status, created_at, updated_at)
@@ -242,6 +348,7 @@ class AuthSecurityIntegrationTest {
         insertRole(13L, 1L, "READ_ONLY", "Read Only User");
         insertRole(14L, 1L, "BILLING_USER", "Billing User");
         insertRole(21L, 2L, "TENANT_ADMIN", "Tenant Admin");
+        insertRole(22L, 2L, "OTHER_ONLY", "Other Tenant Role");
     }
 
     private void seedUsers() {
@@ -340,6 +447,22 @@ class AuthSecurityIntegrationTest {
                   "password": "%s"
                 }
                 """.formatted(tenantCode, username, password);
+    }
+
+    private String createUserRequest(String username,
+                                     String displayName,
+                                     String email,
+                                     String password,
+                                     String roleCodesJson) {
+        return """
+                {
+                  "username": "%s",
+                  "displayName": "%s",
+                  "email": "%s",
+                  "password": "%s",
+                  "roleCodes": %s
+                }
+                """.formatted(username, displayName, email, password, roleCodesJson);
     }
 
     private String bearerToken(String token) {

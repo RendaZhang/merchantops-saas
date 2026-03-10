@@ -3,6 +3,7 @@ package com.renda.merchantops.api.service;
 import com.renda.merchantops.api.dto.auth.LoginRequest;
 import com.renda.merchantops.api.dto.auth.LoginResponse;
 import com.renda.merchantops.api.security.JwtTokenService;
+import com.renda.merchantops.api.validation.PasswordRules;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
 import com.renda.merchantops.infra.persistence.entity.PermissionEntity;
@@ -31,6 +32,8 @@ public class AuthService {
     private final JwtTokenService jwtTokenService;
 
     public LoginResponse login(LoginRequest request) {
+        PasswordRules.requireNoBoundaryWhitespace(request.getPassword());
+
         TenantEntity tenant = tenantRepository.findByTenantCode(request.getTenantCode())
                 .orElseThrow(() -> new BizException(ErrorCode.BAD_REQUEST, "tenant not found"));
 

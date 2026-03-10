@@ -9,6 +9,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `.\mvnw.cmd -pl merchantops-api -am test` passes
 - [ ] `AuthSecurityIntegrationTest`, `UserQueryServiceTest`, `UserCommandServiceTest`, and `UserManagementControllerTest` cover the code path you changed
 - [ ] if repository signatures changed, tests were run with `-am` rather than `-pl merchantops-api test` only
+- [ ] if H2 native SQL tests changed, `@AutoConfigureTestDatabase(replace = NONE)` is still preserved and MySQL-mode assertions still verify the runtime mode
 
 ## Infra
 
@@ -20,6 +21,7 @@ Use this checklist after foundation-level changes, security changes, environment
 ## Application
 
 - [ ] application starts successfully
+- [ ] if live smoke was needed after module-signature changes, `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` was run before `spring-boot:run`
 - [ ] `/health` returns `UP`
 - [ ] `/actuator/health` shows `db`, `redis`, and `rabbit` as `UP`
 - [ ] Swagger UI is accessible
@@ -65,7 +67,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## User Management
 
-- [ ] Swagger `User Management` tag shows only `GET /api/v1/users`
+- [ ] Swagger `User Management` tag shows `GET /api/v1/users` and `POST /api/v1/users`
 - [ ] `GET /api/v1/users` returns a page object rather than a bare array
 - [ ] `GET /api/v1/users?page=0&size=10` works
 - [ ] `GET /api/v1/users?username=ad` filters by username
@@ -74,6 +76,13 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] each `/api/v1/users` item includes `id`, `username`, `displayName`, `email`, and `status`
 - [ ] `/api/v1/users` response includes `items`, `page`, `size`, `total`, and `totalPages`
 - [ ] `GET /api/v1/users` returns the seeded `admin`, `ops`, and `viewer` users for tenant `demo-shop` when filters allow
+- [ ] `POST /api/v1/users` succeeds with an `admin` token and returns `ACTIVE`
+- [ ] `POST /api/v1/users` with a `viewer` token returns `403`
+- [ ] `POST /api/v1/users` rejects duplicate usernames in the same tenant
+- [ ] `POST /api/v1/users` rejects role codes outside the current tenant
+- [ ] the created user's password is usable for `POST /api/v1/auth/login`
+- [ ] password edge cases, especially leading and trailing whitespace, behave consistently between create and login
+- [ ] manual smoke users were cleaned from the local database after verification
 
 ## Tools
 

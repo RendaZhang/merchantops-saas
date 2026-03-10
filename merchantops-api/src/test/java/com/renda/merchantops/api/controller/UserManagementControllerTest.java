@@ -1,11 +1,14 @@
 package com.renda.merchantops.api.controller;
 
 import com.renda.merchantops.api.context.TenantContext;
+import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
+import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
 import com.renda.merchantops.api.dto.user.query.UserListItemResponse;
 import com.renda.merchantops.api.dto.user.query.UserPageQuery;
 import com.renda.merchantops.api.dto.user.query.UserPageResponse;
 import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.security.RequirePermissionInterceptor;
+import com.renda.merchantops.api.service.UserCommandService;
 import com.renda.merchantops.api.service.UserQueryService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,7 +31,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -38,6 +41,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -51,6 +55,9 @@ class UserManagementControllerTest {
 
     @Mock
     private UserQueryService userQueryService;
+
+    @Mock
+    private UserCommandService userCommandService;
 
     @InjectMocks
     private UserManagementController userManagementController;
@@ -140,6 +147,138 @@ class UserManagementControllerTest {
         assertThat(queryCaptor.getValue().getUsername()).isEqualTo("adm");
         assertThat(queryCaptor.getValue().getStatus()).isEqualTo("ACTIVE");
         assertThat(queryCaptor.getValue().getRoleCode()).isEqualTo("TENANT_ADMIN");
+    }
+
+    @Test
+    void createUserShouldReturnUnauthorizedWhenAuthenticationIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType("application/json")
+                        .content(validCreateUserRequest()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
+    void createUserShouldReturnForbiddenWhenUserLacksPermission() throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ")
+                        .contentType("application/json")
+                        .content(validCreateUserRequest()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("permission denied"));
+    }
+
+    @Test
+    void createUserShouldReturnUnauthorizedWhenTenantContextIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content(validCreateUserRequest()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("tenant context missing"));
+    }
+
+    @Test
+    void createUserShouldValidateRequestBody() throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "username": "",
+                                  "displayName": "Cashier User",
+                                  "email": "cashier@demo-shop.local",
+                                  "password": "123456",
+                                  "roleCodes": ["READ_ONLY"]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("username: username must not be blank"));
+    }
+
+    @Test
+    void createUserShouldRejectPasswordWithLeadingOrTrailingWhitespace() throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "username": "cashier",
+                                  "displayName": "Cashier User",
+                                  "email": "cashier@demo-shop.local",
+                                  "password": " 123456 ",
+                                  "roleCodes": ["READ_ONLY"]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("password: password must not start or end with whitespace"));
+    }
+
+    @Test
+    void createUserShouldBindRequestAndReturnCreatedUser() throws Exception {
+        UserCreateResponse response = new UserCreateResponse(
+                8L,
+                9L,
+                "cashier",
+                "Cashier User",
+                "cashier@demo-shop.local",
+                "ACTIVE",
+                List.of("READ_ONLY"),
+                LocalDateTime.of(2026, 3, 10, 12, 0),
+                LocalDateTime.of(2026, 3, 10, 12, 0)
+        );
+
+        when(userCommandService.createUser(eq(9L), any(UserCreateCommand.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content(validCreateUserRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(8))
+                .andExpect(jsonPath("$.data.username").value("cashier"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.roleCodes[0]").value("READ_ONLY"));
+
+        ArgumentCaptor<UserCreateCommand> commandCaptor = ArgumentCaptor.forClass(UserCreateCommand.class);
+        verify(userCommandService).createUser(eq(9L), commandCaptor.capture());
+
+        assertThat(commandCaptor.getValue().getUsername()).isEqualTo("cashier");
+        assertThat(commandCaptor.getValue().getDisplayName()).isEqualTo("Cashier User");
+        assertThat(commandCaptor.getValue().getEmail()).isEqualTo("cashier@demo-shop.local");
+        assertThat(commandCaptor.getValue().getPassword()).isEqualTo("123456");
+        assertThat(commandCaptor.getValue().getRoleCodes()).containsExactly("READ_ONLY");
+    }
+
+    private String validCreateUserRequest() {
+        return """
+                {
+                  "username": "cashier",
+                  "displayName": "Cashier User",
+                  "email": "cashier@demo-shop.local",
+                  "password": "123456",
+                  "roleCodes": ["READ_ONLY"]
+                }
+                """;
     }
 
     private static final class TestAuthenticationFilter extends OncePerRequestFilter {

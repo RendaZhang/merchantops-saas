@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,11 +14,11 @@ public class UserCreateCommand {
 
     private String username;
 
-    private String passwordHash;
+    private String password;
 
     private String displayName;
 
     private String email;
 
-    private String status;
+    private List<String> roleCodes;
 }

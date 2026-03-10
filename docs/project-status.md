@@ -32,8 +32,9 @@ The current repository includes:
 - authenticated current-user endpoint
 - authenticated tenant/user context endpoint
 - tenant-scoped user listing endpoint with `USER_READ`
+- tenant-scoped user create endpoint with `USER_WRITE`, BCrypt password hashing, and tenant-local role binding
 - tenant-aware user query scaffolding for detail lookup, status filtering, and page normalization
-- initial write-side user command service skeleton with tenant-scoped username uniqueness checks
+- write-side user command service with tenant-scoped username uniqueness checks and transactional create flow
 - focused automated coverage for auth security integration, user-management controller/service behavior, and repository query behavior
 - permission checks through `@RequirePermission`
 - RBAC demo endpoints for permission verification
@@ -71,15 +72,15 @@ Completed:
 - authorization flow works for protected endpoints
 - current-tenant user query works with permission protection
 - current-tenant user query supports page, size, username, status, and roleCode filters
+- current-tenant user create works with `USER_WRITE`, username uniqueness, BCrypt storage, and tenant-local role validation
 - focused automated tests now cover auth security integration, current user-management controller/service paths, and repository query behavior
-- Week 2 first-business-loop groundwork has started, but the public HTTP contract is still incomplete
+- Week 2 first-business-loop public HTTP contract has started with read and create coverage
 - manual and automated verification flows are documented
 
 Not yet implemented:
 
 - public user detail endpoint
-- public user create, update, status-toggle, and role-assignment endpoints
-- end-to-end write persistence inside `UserCommandService`
+- public user update, status-toggle, and role-assignment endpoints
 - audit logging fields and operator tracking
 - Week 3 ticket workflow module
 - Week 4 audit trail and approval patterns
@@ -99,10 +100,11 @@ Not yet implemented:
 
 Current implementation is intentionally focused on the Week 1 foundation plus the in-progress Week 2 user-management loop, so the following are not yet implemented:
 
-- `/api/v1/users` is still the only Swagger-visible user-management business endpoint
-- `/api/v1/users` is now a paged current-tenant query endpoint ordered by `id ASC`
-- user detail and write flows exist only as internal DTO/service groundwork and are not yet published in controllers or Swagger
-- `UserCommandService#createUser`, `updateUser`, and `updatePassword` currently return a unified business error until the write flows are implemented
+- Swagger-visible user-management business endpoints are currently limited to `GET /api/v1/users` and `POST /api/v1/users`
+- `GET /api/v1/users` is a paged current-tenant query endpoint ordered by `id ASC`
+- `POST /api/v1/users` is the only public write endpoint in user management today
+- user detail, update, status, and role-assignment flows are not yet published in controllers or Swagger
+- `UserCommandService#updateUser` and `updatePassword` still return a unified business error until those write flows are implemented
 - no workflow-level modules such as ticketing or import jobs are public yet
 - no AI-assisted workflow endpoints, runtime AI audit trail, or code-backed evaluation datasets exist yet
 - refresh token flow
@@ -117,7 +119,7 @@ Current implementation is intentionally focused on the Week 1 foundation plus th
 
 - `user_role` tenant consistency is not yet enforced at the database layer
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs
-- the project now has focused automated coverage for login, `/api/v1/users`, query/service behavior, and repository-backed search behavior, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management flow
+- the project now has focused automated coverage for login, `/api/v1/users` (`GET` and `POST`), query/service behavior, and repository-backed search behavior, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management flow
 
 See [architecture/tenant-rbac-integrity-gap.md](architecture/tenant-rbac-integrity-gap.md) for the current tenant-integrity design note.
 See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.

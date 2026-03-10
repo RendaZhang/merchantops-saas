@@ -20,6 +20,7 @@ import static com.renda.merchantops.api.doc.OpenApiExamples.LOGIN_REQUEST_VIEWER
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_CREDENTIAL;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FORBIDDEN_USER_INACTIVE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_SUCCESS_LOGIN;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_VALIDATION_ERROR_PASSWORD_WHITESPACE;
 
 @Tag(name = "Authentication")
 @RequestMapping("/api/v1/auth")
@@ -50,7 +51,10 @@ public interface AuthApi {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "Invalid request or wrong credentials",
-                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_BAD_REQUEST_CREDENTIAL))
+                    content = @Content(mediaType = "application/json", examples = {
+                            @ExampleObject(name = "wrongCredentials", value = RESP_BAD_REQUEST_CREDENTIAL),
+                            @ExampleObject(name = "passwordWhitespace", value = RESP_VALIDATION_ERROR_PASSWORD_WHITESPACE)
+                    })
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "403",

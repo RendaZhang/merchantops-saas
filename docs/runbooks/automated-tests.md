@@ -33,10 +33,13 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
   - JWT claim generation and parsing for tenant, role, and permission data
-  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/users`
+  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/users` and `POST /api/v1/users`
   - `401` when Bearer token is missing or invalid
   - `403` when login succeeds but `USER_READ` is absent
-  - `200` for a valid read-only user token, including tenant-only user visibility
+  - `403` when login succeeds but `USER_WRITE` is absent
+  - `200` for a valid read-only user token on `GET /api/v1/users`, including tenant-only user visibility
+  - `400` when create requests try to bind role codes outside the current tenant
+  - successful create-user flow with BCrypt password persistence and immediate login
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -48,14 +51,18 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 - `UserCommandServiceTest`
   - duplicate username rejection
   - duplicate username rejection with `excludeUserId`
+  - role-code rejection when requested roles are not available in the current tenant
+  - create-user persistence with `ACTIVE` default status, BCrypt hashing, and `user_role` writes
   - tenant-scoped missing-user rejection
-  - current placeholder write flows returning unified `BIZ_ERROR` rather than uncaught runtime exceptions
+  - current placeholder update and password flows returning unified `BIZ_ERROR` rather than uncaught runtime exceptions
 - `UserManagementControllerTest`
   - HTTP request binding for `page`, `size`, `username`, `status`, and `roleCode`
+  - HTTP request binding for `POST /api/v1/users`
   - `401` when authentication is missing
-  - `403` when `USER_READ` is missing
+  - `403` when `USER_READ` or `USER_WRITE` is missing
   - `401` when authentication exists but tenant context is missing
   - tenant resolution through request-scoped context and forwarding to `UserQueryService`
+  - tenant resolution through request-scoped context and forwarding to `UserCommandService`
   - wrapping successful responses with `ApiResponse.success(...)`
 
 ### `merchantops-infra` tests
@@ -70,7 +77,7 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 
 These areas are not replaced by the current unit tests:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/users` path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
+- authenticated behavior of endpoints outside the covered login + `/api/v1/users` (`GET` and `POST`) path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
@@ -82,8 +89,17 @@ Use [local-smoke-test.md](local-smoke-test.md) and [regression-checklist.md](reg
 2. If that passes, run the manual user-management smoke checks
 3. If controller, security, SQL, or docs changed, run the full regression checklist
 
+## Known Pitfalls
+
+- Keep `.\mvnw.cmd -pl merchantops-api -am test` as the default regression entry. Running only `-pl merchantops-api test` can hide sibling-module signature changes behind stale local Maven artifacts.
+- For live smoke tests after changing JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first, then start the app from the `merchantops-api` module with `..\mvnw.cmd spring-boot:run`. The `spring-boot:run` classpath resolves sibling modules from the local Maven repository, not from uninstalled reactor outputs.
+- Do not treat `merchantops-api/target/merchantops-api-0.0.1-SNAPSHOT.jar` as the default local smoke-test entry point. The current packaging does not produce a fat jar that is ready for `java -jar`.
+- For H2-based native SQL tests that rely on `MODE=MySQL`, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify the mode through `INFORMATION_SCHEMA.SETTINGS`. `DatabaseMetaData#getURL()` does not reliably echo the `MODE=...` parameter.
+- Treat password edge cases as an explicit regression item. If create-user or login password handling changes, verify that leading and trailing whitespace behavior is consistent across both flows before documenting a final business rule.
+
 ## Troubleshooting
 
 - If `-pl merchantops-api test` fails with missing repository methods or stale signatures, rerun with `-am`
+- If `spring-boot:run` fails after module-signature changes, install the reactor modules first with `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`
 - If automated `/api/v1/users` coverage passes but live verification fails, focus next on runtime config differences such as real JWT secrets, external infra, or deployment-only filters
 - If the page contract changes, update both the tests and the user-management docs in the same change

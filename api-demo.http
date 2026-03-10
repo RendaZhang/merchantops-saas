@@ -6,8 +6,10 @@
 @viewerUsername = viewer
 @password = 123456
 @token = replace-with-access-token
+@createUsername = cashier-demo
+@createUserEmail = cashier-demo@demo-shop.local
 
-# See docs/runbooks/regression-checklist.md for the broader Week 1 verification checklist.
+# See docs/runbooks/regression-checklist.md for the broader regression checklist.
 # See docs/reference/user-management.md for the current /api/v1/users contract and expected demo response.
 
 ### Login - admin
@@ -80,6 +82,20 @@ Authorization: Bearer {{token}}
 ### List tenant users - filter by role
 GET {{baseUrl}}/api/v1/users?page=0&size=10&roleCode=TENANT_ADMIN
 Authorization: Bearer {{token}}
+
+### Create tenant user
+# Change createUsername/createUserEmail before re-running against a persistent local database.
+POST {{baseUrl}}/api/v1/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "username": "{{createUsername}}",
+  "displayName": "Cashier User",
+  "email": "{{createUserEmail}}",
+  "password": "123456",
+  "roleCodes": ["READ_ONLY"]
+}
 
 ### RBAC - read users
 GET {{baseUrl}}/api/v1/rbac/users

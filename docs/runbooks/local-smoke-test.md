@@ -10,6 +10,23 @@ Preferred command:
 
 Run the manual smoke flow below after the automated checks pass. See [automated-tests.md](automated-tests.md) for current unit-test coverage and command selection notes.
 
+## 0.5 Start The App
+
+If controller, repository, entity, or other sibling-module signatures changed, prepare the local Maven cache first:
+
+```powershell
+.\mvnw.cmd -pl merchantops-api -am install -DskipTests
+```
+
+Then start the API from the module directory:
+
+```powershell
+Set-Location .\merchantops-api
+..\mvnw.cmd spring-boot:run
+```
+
+Do not default to `java -jar .\merchantops-api\target\merchantops-api-0.0.1-SNAPSHOT.jar` for local smoke tests. The current build is not packaged as a runnable fat jar.
+
 ## 1. Verify Health
 
 ```bash
@@ -39,23 +56,51 @@ Copy the returned `accessToken`.
 
 ```bash
 TOKEN=<paste-accessToken-from-login-response>
+SMOKE_USERNAME="cashier-$(date +%s)"
+SMOKE_EMAIL="${SMOKE_USERNAME}@demo-shop.local"
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
 curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/users?page=0&size=10"
 curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/users?page=0&size=10&username=ad&status=ACTIVE&roleCode=TENANT_ADMIN"
+curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"username\":\"$SMOKE_USERNAME\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" \
+  http://localhost:8080/api/v1/users
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
+curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"username\":\"$SMOKE_USERNAME-bad-role\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_USERNAME-bad-role@demo-shop.local\",\"password\":\"123456\",\"roleCodes\":[\"OTHER_ONLY\"]}" \
+  http://localhost:8080/api/v1/users
 ```
 
 PowerShell:
 
 ```powershell
 $token = "<paste-accessToken-from-login-response>"
+$smokeUsername = "cashier-{0}" -f [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$smokeEmail = "$smokeUsername@demo-shop.local"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/me
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/users?page=0&size=10"
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/users?page=0&size=10&username=ad&status=ACTIVE&roleCode=TENANT_ADMIN"
+$createBody = @{ username = $smokeUsername; displayName = "Cashier User"; email = $smokeEmail; password = "123456"; roleCodes = @("READ_ONLY") } | ConvertTo-Json -Compress
+curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $createBody http://localhost:8080/api/v1/users
+curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
+$badRoleBody = @{ username = "$smokeUsername-bad-role"; displayName = "Cashier User"; email = "$smokeUsername-bad-role@demo-shop.local"; password = "123456"; roleCodes = @("OTHER_ONLY") } | ConvertTo-Json -Compress
+curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $badRoleBody http://localhost:8080/api/v1/users
 ```
 
-`GET /api/v1/users` should return a page object for the current tenant only.
+Expected results:
+
+- `GET /api/v1/users` returns a page object for the current tenant only
+- `POST /api/v1/users` with the admin token creates an `ACTIVE` user whose password works immediately for login
+- `POST /api/v1/users` with a role code outside the current tenant returns `400`
+
+Use a fresh generated username on each run so the smoke flow stays repeatable against a persistent local database.
+
+Password regression note:
+
+- The current rule rejects passwords that start or end with whitespace. If password handling changed, verify that `POST /api/v1/auth/login` and `POST /api/v1/users` both return `400 VALIDATION_ERROR` for a password like `" 123456 "`.
 
 ## 4. Check RBAC Demo Endpoints
 
@@ -74,5 +119,23 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/rbac/
 ```
 
 Use `ops` or `viewer` to confirm permission-denied behavior on endpoints they should not access.
+
+## 5. Clean Up Smoke Data
+
+If you created local smoke users against the persistent development database, remove them after the check. Delete `user_role` rows first, then `users` rows.
+
+```sql
+DELETE ur
+FROM user_role ur
+JOIN users u ON u.id = ur.user_id
+WHERE u.username LIKE 'smoke%'
+   OR u.username LIKE 'cashier-%';
+
+DELETE FROM users
+WHERE username LIKE 'smoke%'
+   OR username LIKE 'cashier-%';
+```
+
+If you use a different prefix for generated test users, update the cleanup filter accordingly.
 
 You can also run the same requests from [../../api-demo.http](../../api-demo.http) in an IDE that supports `.http` request files.
