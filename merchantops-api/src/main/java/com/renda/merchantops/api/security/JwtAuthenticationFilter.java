@@ -5,8 +5,6 @@ import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.common.exception.ErrorCode;
 import com.renda.merchantops.common.response.ApiResponse;
-import com.renda.merchantops.infra.persistence.entity.UserEntity;
-import com.renda.merchantops.infra.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -27,7 +25,6 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 @Component
@@ -36,7 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenService jwtTokenService;
-    private final UserRepository userRepository;
+    private final CurrentUserAccessValidator currentUserAccessValidator;
     private final ObjectMapper objectMapper;
     private final RequestMatcher publicEndpointMatcher = new OrRequestMatcher(
             new AntPathRequestMatcher("/health"),
@@ -49,10 +46,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     );
 
     public JwtAuthenticationFilter(JwtTokenService jwtTokenService,
-                                   UserRepository userRepository,
+                                   CurrentUserAccessValidator currentUserAccessValidator,
                                    ObjectMapper objectMapper) {
         this.jwtTokenService = jwtTokenService;
-        this.userRepository = userRepository;
+        this.currentUserAccessValidator = currentUserAccessValidator;
         this.objectMapper = objectMapper;
     }
 
@@ -74,30 +71,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 try {
                     CurrentUser currentUser = jwtTokenService.parseCurrentUser(token);
-                    UserValidationResult validationResult = validateCurrentUser(currentUser);
-                    if (validationResult == UserValidationResult.USER_INACTIVE) {
+                    CurrentUserAccessValidator.ValidationResult validationResult = currentUserAccessValidator.validate(currentUser);
+                    if (validationResult.status() == CurrentUserAccessValidator.Status.USER_INACTIVE) {
                         writeForbiddenResponse(response, "user is not active");
                         return;
                     }
-                    if (validationResult == UserValidationResult.USER_MISSING) {
+                    if (validationResult.status() == CurrentUserAccessValidator.Status.CLAIMS_STALE) {
+                        writeForbiddenResponse(response, "token claims are stale, please login again");
+                        return;
+                    }
+                    if (validationResult.status() == CurrentUserAccessValidator.Status.USER_MISSING) {
                         SecurityContextHolder.clearContext();
                         filterChain.doFilter(request, response);
                         return;
                     }
+                    CurrentUser validatedCurrentUser = validationResult.currentUser();
 
                     List<SimpleGrantedAuthority> authorities = Stream.concat(
-                                    currentUser.getRoles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role)),
-                                    currentUser.getPermissions().stream().map(SimpleGrantedAuthority::new)
+                                    validatedCurrentUser.getRoles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role)),
+                                    validatedCurrentUser.getPermissions().stream().map(SimpleGrantedAuthority::new)
                             )
                             .toList();
 
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(currentUser, null, authorities);
+                            new UsernamePasswordAuthenticationToken(validatedCurrentUser, null, authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    CurrentUserContext.set(currentUser);
-                    TenantContext.setTenant(currentUser.getTenantId(), currentUser.getTenantCode());
+                    CurrentUserContext.set(validatedCurrentUser);
+                    TenantContext.setTenant(validatedCurrentUser.getTenantId(), validatedCurrentUser.getTenantCode());
                 } catch (JwtException | IllegalArgumentException ex) {
                     SecurityContextHolder.clearContext();
                 }
@@ -110,16 +112,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    private UserValidationResult validateCurrentUser(CurrentUser currentUser) {
-        Optional<UserEntity> user = userRepository.findByIdAndTenantId(currentUser.getUserId(), currentUser.getTenantId());
-        if (user.isEmpty()) {
-            return UserValidationResult.USER_MISSING;
-        }
-        return "ACTIVE".equalsIgnoreCase(user.get().getStatus())
-                ? UserValidationResult.USER_ACTIVE
-                : UserValidationResult.USER_INACTIVE;
-    }
-
     private void writeForbiddenResponse(HttpServletResponse response, String message) throws IOException {
         SecurityContextHolder.clearContext();
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -127,11 +119,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         ApiResponse<Void> body = ApiResponse.failure(ErrorCode.FORBIDDEN, message);
         response.getWriter().write(objectMapper.writeValueAsString(body));
-    }
-
-    private enum UserValidationResult {
-        USER_ACTIVE,
-        USER_INACTIVE,
-        USER_MISSING
     }
 }

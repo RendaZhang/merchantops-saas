@@ -5,10 +5,12 @@
 - `POST /api/v1/auth/login`
 - `GET /api/v1/user/me`
 - `GET /api/v1/context`
+- `GET /api/v1/roles` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `GET /api/v1/users` (requires `USER_READ`; see [user-management.md](user-management.md))
 - `POST /api/v1/users` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PUT /api/v1/users/{id}` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PATCH /api/v1/users/{id}/status` (requires `USER_WRITE`; see [user-management.md](user-management.md))
+- `PUT /api/v1/users/{id}/roles` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `GET /api/v1/rbac/users` (requires `USER_READ`)
 - `GET /api/v1/rbac/users/manage` (requires `USER_WRITE`)
 - `GET /api/v1/rbac/feature-flags` (requires `FEATURE_FLAG_MANAGE`)
@@ -29,7 +31,7 @@ Accounts:
 
 Quick-check safety note:
 
-- use a newly created smoke user for update and status examples instead of mutating the seeded `admin`, `ops`, or `viewer` accounts
+- use a newly created smoke user for update, status, and role-assignment examples instead of mutating the seeded `admin`, `ops`, or `viewer` accounts
 
 ## Login Flow
 
@@ -95,6 +97,7 @@ Password handling note:
 - missing/invalid token returns `401 UNAUTHORIZED`
 - missing required permission returns `403 FORBIDDEN`
 - protected requests re-check the current user row, so a token issued before a user was disabled is rejected with `403 user is not active`
+- protected requests also re-check current roles and permissions, so a token issued before role or permission changes is rejected with `403 token claims are stale, please login again`
 - run [../runbooks/automated-tests.md](../runbooks/automated-tests.md) before manual RBAC smoke checks when code changed
 
 Quick check:
@@ -105,6 +108,7 @@ SMOKE_USERNAME="cashier-$(date +%s)"
 SMOKE_EMAIL="${SMOKE_USERNAME}@demo-shop.local"
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/roles
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"username\":\"$SMOKE_USERNAME\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" \
@@ -117,13 +121,22 @@ SMOKE_TOKEN=<paste-accessToken-from-smoke-user-login-response>
 curl -i -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"displayName\":\"Updated Cashier\",\"email\":\"$SMOKE_USERNAME.updated@demo-shop.local\"}" \
   http://localhost:8080/api/v1/users/$NEW_USER_ID
+curl -i -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"roleCodes":["TENANT_ADMIN"]}' \
+  http://localhost:8080/api/v1/users/$NEW_USER_ID/roles
+curl -i -H "Authorization: Bearer $SMOKE_TOKEN" http://localhost:8080/api/v1/context
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
+REFRESHED_TOKEN=<paste-accessToken-from-role-refresh-login-response>
+curl -i -H "Authorization: Bearer $REFRESHED_TOKEN" http://localhost:8080/api/v1/rbac/users/manage
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"status":"DISABLED"}' \
   http://localhost:8080/api/v1/users/$NEW_USER_ID/status
 curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
-curl -i -H "Authorization: Bearer $SMOKE_TOKEN" http://localhost:8080/api/v1/context
+curl -i -H "Authorization: Bearer $REFRESHED_TOKEN" http://localhost:8080/api/v1/context
 ```
 
 PowerShell:
@@ -134,6 +147,7 @@ $smokeUsername = "cashier-{0}" -f [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $smokeEmail = "$smokeUsername@demo-shop.local"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/me
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/roles
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
 $createBody = @{ username = $smokeUsername; displayName = "Cashier User"; email = $smokeEmail; password = "123456"; roleCodes = @("READ_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $createBody http://localhost:8080/api/v1/users
@@ -142,9 +156,14 @@ curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: ap
 $smokeToken = "<paste-accessToken-from-smoke-user-login-response>"
 $updateBody = @{ displayName = "Updated Cashier"; email = "$smokeUsername.updated@demo-shop.local" } | ConvertTo-Json -Compress
 curl.exe -i -X PUT -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $updateBody http://localhost:8080/api/v1/users/$newUserId
+curl.exe -i -X PUT -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d "{\"roleCodes\":[\"TENANT_ADMIN\"]}" http://localhost:8080/api/v1/users/$newUserId/roles
+curl.exe -i -H "Authorization: Bearer $smokeToken" http://localhost:8080/api/v1/context
+curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
+$refreshedToken = "<paste-accessToken-from-role-refresh-login-response>"
+curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/rbac/users/manage
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d "{\"status\":\"DISABLED\"}" http://localhost:8080/api/v1/users/$newUserId/status
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
-curl.exe -i -H "Authorization: Bearer $smokeToken" http://localhost:8080/api/v1/context
+curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/context
 ```
 
 ## Core Response Examples
@@ -211,6 +230,35 @@ Current notes:
 - supported filters are `username` (fuzzy), `status` (exact), and `roleCode` (exact)
 - supported pagination parameters are `page` and `size`
 - use [user-management.md](user-management.md) for the current user-management boundary and validation references
+
+### `GET /api/v1/roles`
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 11,
+        "roleCode": "TENANT_ADMIN",
+        "roleName": "Tenant Admin"
+      },
+      {
+        "id": 13,
+        "roleCode": "READ_ONLY",
+        "roleName": "Read Only User"
+      }
+    ]
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- returns current-tenant roles that are valid for `PUT /api/v1/users/{id}/roles`
+- this endpoint is intentionally scoped to the assignment workflow rather than the read-only user list workflow
 
 ### `POST /api/v1/users`
 
@@ -290,6 +338,31 @@ Current notes:
 - disabled users are rejected by login because login requires `ACTIVE`
 - tokens issued before the disable operation are also rejected on protected endpoints because request authentication re-checks the current user status
 
+### `PUT /api/v1/users/{id}/roles`
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 3,
+    "tenantId": 1,
+    "username": "viewer",
+    "roleCodes": ["TENANT_ADMIN"],
+    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"],
+    "updatedAt": "2026-03-10T18:00:00"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- reassigns roles by clearing old `user_role` rows first, then writing the new role set
+- only role codes from the current tenant are allowed
+- tokens issued before the role or permission change are rejected on protected endpoints with `token claims are stale, please login again`
+- the affected user must login again so the new token carries the new roles and permissions
+
 ### `GET /api/v1/rbac/users/manage` (with `viewer` token)
 
 ```json
@@ -302,28 +375,31 @@ Current notes:
 
 ## Context Propagation
 
-- `JwtAuthenticationFilter` parses JWT, re-checks the current user status from the database, and writes `TenantContext` and `CurrentUserContext`
+- `JwtAuthenticationFilter` parses JWT, re-checks the current user status, roles, and permissions from the database, and writes `TenantContext` and `CurrentUserContext`
 - context is cleared in `finally` for every request
 - business code reads context through `ContextAccess`
 
 ## Expected RBAC Behavior
 
-- `admin` can access `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
+- `admin` can access `GET /api/v1/roles`, `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
 - `ops` can access `/api/v1/users` and `/api/v1/rbac/users`
 - `viewer` can access `/api/v1/users` and `/api/v1/rbac/users`
-- `ops` and `viewer` are denied on `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status`
+- `ops` and `viewer` are denied on `GET /api/v1/roles`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
+- after `viewer` is promoted and logs in again, the refreshed token can access `/api/v1/rbac/users/manage` and `/api/v1/rbac/feature-flags`
 
-The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`) permission path end to end, including the disabled-user old-token rejection path. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
+The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`) permission path end to end, including disabled-user rejection, stale-claim rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
 
 ## Current User Management Boundary
 
-- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` under the `User Management` tag
+- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` under the `User Management` tag
+- Swagger exposes `GET /api/v1/roles` under the `Role Management` tag
 - `GET /api/v1/users` is the formal paged tenant query endpoint
 - `POST /api/v1/users` is the current public create endpoint
 - `PUT /api/v1/users/{id}` is the current public profile update endpoint
 - `PATCH /api/v1/users/{id}/status` is the current public status-management endpoint
-- detail and role-assignment flows still remain non-public until controller and contract methods are added
+- `PUT /api/v1/users/{id}/roles` is the current public role-assignment endpoint
+- detail flow still remains non-public until controller and contract methods are added
 - Treat the Swagger-visible endpoints in this document as the only public API surface
 
 ## Tenant Isolation Note

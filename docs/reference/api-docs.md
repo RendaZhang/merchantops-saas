@@ -44,10 +44,12 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/dev/biz-error` | No | Dev error-shape test |
 | `GET` | `/api/v1/user/me` | Yes | Current user profile |
 | `GET` | `/api/v1/context` | Yes | Current tenant/user context |
+| `GET` | `/api/v1/roles` | Yes + `USER_WRITE` | List assignable roles in current tenant |
 | `GET` | `/api/v1/users` | Yes + `USER_READ` | Page users in current tenant |
 | `POST` | `/api/v1/users` | Yes + `USER_WRITE` | Create an active user in current tenant |
 | `PUT` | `/api/v1/users/{id}` | Yes + `USER_WRITE` | Update user profile fields |
 | `PATCH` | `/api/v1/users/{id}/status` | Yes + `USER_WRITE` | Enable or disable a user |
+| `PUT` | `/api/v1/users/{id}/roles` | Yes + `USER_WRITE` | Replace all tenant-local roles for a user |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -59,11 +61,13 @@ Notes about security whitelist routes:
 
 User Management tag note:
 
-- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` for user management.
+- Swagger currently exposes `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` for user management.
 - `GET /api/v1/users` supports `page`, `size`, `username`, `status`, and `roleCode` query parameters in Swagger.
 - `POST /api/v1/users` exposes example payloads for username, password, and tenant-local role binding.
 - `PUT /api/v1/users/{id}` exposes only `displayName` and `email`.
 - `PATCH /api/v1/users/{id}/status` exposes only `ACTIVE` and `DISABLED`.
+- `PUT /api/v1/users/{id}/roles` exposes `roleCodes` only and documents the forced re-login requirement after claim changes.
+- Swagger exposes a separate `Role Management` tag for `GET /api/v1/roles`.
 - User detail and write DTOs/services may exist in code, but they must not be treated as public API until contract/controller methods publish them into OpenAPI.
 - See [user-management.md](user-management.md) for the current public contract and validation path.
 
@@ -238,7 +242,63 @@ Response:
 }
 ```
 
-### 7. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
+### 7. Role List (`GET /api/v1/roles`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 11,
+        "roleCode": "TENANT_ADMIN",
+        "roleName": "Tenant Admin"
+      },
+      {
+        "id": 13,
+        "roleCode": "READ_ONLY",
+        "roleName": "Read Only User"
+      }
+    ]
+  }
+}
+```
+
+### 8. Replace User Roles (`PUT /api/v1/users/{id}/roles`)
+
+Request:
+
+```json
+{
+  "roleCodes": ["TENANT_ADMIN"]
+}
+```
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 3,
+    "tenantId": 1,
+    "username": "viewer",
+    "roleCodes": ["TENANT_ADMIN"],
+    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"],
+    "updatedAt": "2026-03-10T18:00:00"
+  }
+}
+```
+
+Current note:
+
+- old JWT claims are rejected after this change; the user must login again to get a new token with the new roles and permissions
+
+### 9. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
 
 Response:
 
@@ -250,7 +310,7 @@ Response:
 }
 ```
 
-### 8. Health (`GET /health`)
+### 10. Health (`GET /health`)
 
 Response:
 

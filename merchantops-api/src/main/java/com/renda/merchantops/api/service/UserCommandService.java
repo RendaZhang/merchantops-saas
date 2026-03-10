@@ -3,15 +3,19 @@ package com.renda.merchantops.api.service;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
 import com.renda.merchantops.api.dto.user.command.UserPasswordUpdateCommand;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentCommand;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentResponse;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
 import com.renda.merchantops.api.validation.PasswordRules;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
+import com.renda.merchantops.infra.persistence.entity.PermissionEntity;
 import com.renda.merchantops.infra.persistence.entity.RoleEntity;
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
 import com.renda.merchantops.infra.persistence.entity.UserRoleEntity;
+import com.renda.merchantops.infra.repository.PermissionRepository;
 import com.renda.merchantops.infra.repository.RoleRepository;
 import com.renda.merchantops.infra.repository.UserRepository;
 import com.renda.merchantops.infra.repository.UserRoleRepository;
@@ -44,6 +48,7 @@ public class UserCommandService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
+    private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
 
     public void validateUsernameUnique(Long tenantId, String username) {
@@ -134,6 +139,45 @@ public class UserCommandService {
         user.setStatus(normalizeAllowedStatus(command == null ? null : command.getStatus()));
         user.setUpdatedAt(LocalDateTime.now());
         return toUserWriteResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserRoleAssignmentResponse assignRoles(Long tenantId, Long userId, UserRoleAssignmentCommand command) {
+        UserEntity user = requireTenantUser(tenantId, userId);
+        List<String> roleCodes = normalizeRoleCodes(command == null ? null : command.getRoleCodes());
+        List<RoleEntity> roles = roleRepository.findAllByTenantIdAndRoleCodeInOrderByIdAsc(tenantId, roleCodes);
+        if (roles.size() != roleCodes.size()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must exist in current tenant");
+        }
+
+        userRoleRepository.deleteByUserId(user.getId());
+        userRoleRepository.saveAll(roles.stream()
+                .map(role -> {
+                    UserRoleEntity userRole = new UserRoleEntity();
+                    userRole.setUserId(user.getId());
+                    userRole.setRoleId(role.getId());
+                    return userRole;
+                })
+                .toList());
+
+        user.setUpdatedAt(LocalDateTime.now());
+        UserEntity savedUser = userRepository.save(user);
+        List<String> assignedRoleCodes = roles.stream()
+                .map(RoleEntity::getRoleCode)
+                .toList();
+        List<String> permissionCodes = permissionRepository.findPermissionsByUserIdAndTenantId(savedUser.getId(), tenantId)
+                .stream()
+                .map(PermissionEntity::getPermissionCode)
+                .toList();
+
+        return new UserRoleAssignmentResponse(
+                savedUser.getId(),
+                savedUser.getTenantId(),
+                savedUser.getUsername(),
+                assignedRoleCodes,
+                permissionCodes,
+                savedUser.getUpdatedAt()
+        );
     }
 
     public void updatePassword(Long tenantId, Long userId, UserPasswordUpdateCommand command) {

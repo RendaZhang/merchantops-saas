@@ -3,6 +3,8 @@ package com.renda.merchantops.api.controller;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentCommand;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentResponse;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
@@ -374,6 +376,54 @@ class UserManagementControllerTest {
         assertThat(commandCaptor.getValue().getStatus()).isEqualTo("DISABLED");
     }
 
+    @Test
+    void assignRolesShouldValidateRequestBody() throws Exception {
+        mockMvc.perform(put("/api/v1/users/8/roles")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "roleCodes": []
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("roleCodes: roleCodes must not be empty"));
+    }
+
+    @Test
+    void assignRolesShouldBindRequestAndReturnUpdatedRoles() throws Exception {
+        UserRoleAssignmentResponse response = new UserRoleAssignmentResponse(
+                8L,
+                9L,
+                "viewer",
+                List.of("TENANT_ADMIN"),
+                List.of("USER_READ", "USER_WRITE"),
+                LocalDateTime.of(2026, 3, 10, 18, 0)
+        );
+        when(userCommandService.assignRoles(eq(9L), eq(8L), any(UserRoleAssignmentCommand.class))).thenReturn(response);
+
+        mockMvc.perform(put("/api/v1/users/8/roles")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .contentType("application/json")
+                        .content(validAssignRolesRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(8))
+                .andExpect(jsonPath("$.data.roleCodes[0]").value("TENANT_ADMIN"))
+                .andExpect(jsonPath("$.data.permissionCodes[0]").value("USER_READ"));
+
+        ArgumentCaptor<UserRoleAssignmentCommand> commandCaptor = ArgumentCaptor.forClass(UserRoleAssignmentCommand.class);
+        verify(userCommandService).assignRoles(eq(9L), eq(8L), commandCaptor.capture());
+        assertThat(commandCaptor.getValue().getRoleCodes()).containsExactly("TENANT_ADMIN");
+    }
+
     private String validCreateUserRequest() {
         return """
                 {
@@ -399,6 +449,14 @@ class UserManagementControllerTest {
         return """
                 {
                   "status": "DISABLED"
+                }
+                """;
+    }
+
+    private String validAssignRolesRequest() {
+        return """
+                {
+                  "roleCodes": ["TENANT_ADMIN"]
                 }
                 """;
     }

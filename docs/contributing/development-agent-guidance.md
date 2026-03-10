@@ -80,7 +80,8 @@ Current `/api/v1/users` contract is the baseline example:
 - tenant-scoped page query
 - explicit filters: `username`, `status`, `roleCode`
 - response object with `items`, `page`, `size`, `total`, `totalPages`
-- companion write entrypoints at `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` with explicit command DTO mapping
+- companion role lookup at `GET /api/v1/roles`
+- companion write entrypoints at `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` with explicit command DTO mapping
 
 ### Write Model Rules
 
@@ -106,7 +107,8 @@ Implications:
 - profile updates must not accept `status`
 - status updates should remain isolated from general profile updates
 - password changes should remain isolated from profile updates
-- future role assignment should use a dedicated command object instead of overloading user profile update
+- role reassignment should use a dedicated command object instead of overloading user profile update
+- role lookup and role reassignment should stay tenant-scoped and should not be hidden inside profile DTOs
 - create flows should accept raw `password`, but service code must persist only BCrypt hashes
 - raw passwords may contain internal spaces, but leading and trailing whitespace must be rejected consistently across create and login flows
 
@@ -134,6 +136,7 @@ For future repository additions:
 - not-found business reads should return `BizException(ErrorCode.NOT_FOUND, ...)`
 - not-yet-implemented business write flows should return `BizException`, not `UnsupportedOperationException`
 - permission enforcement stays at controller/interceptor level, not repository level
+- protected JWT requests that depend on current roles or permissions must reject stale claims after status, role, or permission changes
 
 ### Extension Checklist
 
@@ -143,7 +146,7 @@ When extending user-management or another tenant-scoped module:
 2. add or update query DTOs and command DTOs separately
 3. make `tenantId` explicit in service and repository signatures
 4. update Swagger contract only when the endpoint is actually public
-5. update [../reference/user-management.md](../reference/user-management.md) for public user-management contract changes
+5. update [../reference/user-management.md](../reference/user-management.md) and related auth or role reference docs for public contract changes
 6. update [documentation-maintenance.md](documentation-maintenance.md) if the routing rules themselves changed
 7. update `AGENTS.md` if the new rule should guide future agents by default
 

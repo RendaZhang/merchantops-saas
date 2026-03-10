@@ -39,16 +39,17 @@ Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
-- `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status` authentication and permission behavior
+- `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles` authentication and permission behavior
 - controller request binding and tenant-context forwarding
 - user-management query and command service behavior
 - repository-backed tenant-scoped page query behavior
+- stale-token rejection after user status, role, or permission changes
 
 It does not replace manual checks for:
 
 - Swagger/OpenAPI rendering
 - real infra health such as `MySQL`, `Redis`, and `RabbitMQ`
-- authenticated endpoints outside the covered login + `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`) path
+- authenticated endpoints outside the covered login + `/api/v1/users` + `/api/v1/roles` Week 2 path
 
 ## Default Test Entry Point
 

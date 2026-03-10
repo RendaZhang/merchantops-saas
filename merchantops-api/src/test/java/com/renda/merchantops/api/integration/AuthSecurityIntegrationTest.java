@@ -231,6 +231,29 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void listRolesShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        String token = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(get("/api/v1/roles")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("permission denied"));
+    }
+
+    @Test
+    void listRolesShouldReturnTenantScopedRolesWhenPermissionIsGranted() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(get("/api/v1/roles")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items[*].roleCode", contains("TENANT_ADMIN", "OPS_USER", "READ_ONLY", "BILLING_USER")))
+                .andExpect(jsonPath("$.data.items[*].roleCode", not(hasItem("OTHER_ONLY"))));
+    }
+
+    @Test
     void createUserShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
         String token = loginAndGetToken("demo-shop", "viewer", "123456");
 
@@ -349,6 +372,55 @@ class AuthSecurityIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"))
                 .andExpect(jsonPath("$.message").value("user is not active"));
+    }
+
+    @Test
+    void assignRolesShouldReplaceRolesInvalidateOldTokenAndGrantNewPermissionsAfterRelogin() throws Exception {
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(put("/api/v1/users/103/roles")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(assignRolesRequest("[\"TENANT_ADMIN\"]")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(103))
+                .andExpect(jsonPath("$.data.roleCodes[0]").value("TENANT_ADMIN"))
+                .andExpect(jsonPath("$.data.permissionCodes", hasItem("FEATURE_FLAG_MANAGE")));
+
+        assertThat(jdbcTemplate.queryForList("""
+                        SELECT r.role_code
+                        FROM user_role ur
+                        JOIN `role` r ON r.id = ur.role_id
+                        WHERE ur.user_id = ?
+                        ORDER BY r.id
+                        """, String.class, 103L))
+                .containsExactly("TENANT_ADMIN");
+
+        mockMvc.perform(get("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("page", "0")
+                        .queryParam("size", "10"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("token claims are stale, please login again"));
+
+        String refreshedViewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+        CurrentUser refreshedViewer = jwtTokenService.parseCurrentUser(refreshedViewerToken);
+        assertThat(refreshedViewer.getRoles()).containsExactly("TENANT_ADMIN");
+        assertThat(refreshedViewer.getPermissions())
+                .containsExactly("USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE");
+
+        mockMvc.perform(get("/api/v1/rbac/users/manage")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(refreshedViewerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        mockMvc.perform(get("/api/v1/rbac/feature-flags")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(refreshedViewerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
     @Test
@@ -590,6 +662,14 @@ class AuthSecurityIntegrationTest {
                   "status": "%s"
                 }
                 """.formatted(status);
+    }
+
+    private String assignRolesRequest(String roleCodesJson) {
+        return """
+                {
+                  "roleCodes": %s
+                }
+                """.formatted(roleCodesJson);
     }
 
     private String bearerToken(String token) {

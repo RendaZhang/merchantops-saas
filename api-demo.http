@@ -9,10 +9,12 @@
 @createUsername = cashier-demo
 @createUserEmail = cashier-demo@demo-shop.local
 @targetUserId = replace-with-created-user-id
+@targetUserToken = replace-with-pre-change-user-access-token
+@refreshedTargetUserToken = replace-with-post-role-change-user-access-token
 
 # See docs/runbooks/regression-checklist.md for the broader regression checklist.
 # See docs/reference/user-management.md for the current /api/v1/users contract and expected demo response.
-# After creating a smoke user, set targetUserId to the returned id instead of mutating seeded demo accounts.
+# After creating a smoke user, set targetUserId to the returned id, targetUserToken to the pre-change token, and refreshedTargetUserToken to the post-role-change token instead of mutating seeded demo accounts.
 
 ### Login - admin
 POST {{baseUrl}}/api/v1/auth/login
@@ -85,6 +87,10 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/users?page=0&size=10&roleCode=TENANT_ADMIN
 Authorization: Bearer {{token}}
 
+### List assignable roles
+GET {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{token}}
+
 ### Create tenant user
 # Change createUsername/createUserEmail before re-running against a persistent local database.
 POST {{baseUrl}}/api/v1/users
@@ -128,6 +134,36 @@ Content-Type: {{contentType}}
 {
   "status": "ACTIVE"
 }
+
+### Replace tenant user roles
+# This clears previous roles first, then writes the new role set.
+PUT {{baseUrl}}/api/v1/users/{{targetUserId}}/roles
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "roleCodes": ["TENANT_ADMIN"]
+}
+
+### Reuse old user token after role change
+# If you captured a token for this user before changing roles, reusing it now should return 403 / token claims are stale, please login again.
+GET {{baseUrl}}/api/v1/users?page=0&size=10
+Authorization: Bearer {{targetUserToken}}
+
+### Login again after role change
+# After re-login, the new token carries the updated roles and permissions.
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "tenantCode": "{{tenantCode}}",
+  "username": "{{createUsername}}",
+  "password": "{{password}}"
+}
+
+### Verify refreshed token can use new permissions
+GET {{baseUrl}}/api/v1/rbac/users/manage
+Authorization: Bearer {{refreshedTargetUserToken}}
 
 ### RBAC - read users
 GET {{baseUrl}}/api/v1/rbac/users

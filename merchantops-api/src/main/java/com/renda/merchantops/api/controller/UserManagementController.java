@@ -5,6 +5,9 @@ import com.renda.merchantops.api.contract.UserManagementApi;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateRequest;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentCommand;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentRequest;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentResponse;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateRequest;
 import com.renda.merchantops.api.dto.user.command.UserUpdateCommand;
@@ -69,5 +72,14 @@ public class UserManagementController implements UserManagementApi {
         Long tenantId = ContextAccess.requireTenantId();
         UserStatusUpdateCommand command = new UserStatusUpdateCommand(request.getStatus());
         return ApiResponse.success(userCommandService.updateStatus(tenantId, id, command));
+    }
+
+    @Override
+    @RequirePermission("USER_WRITE")
+    public ApiResponse<UserRoleAssignmentResponse> assignRoles(@PathVariable("id") Long id,
+                                                               @Valid @RequestBody UserRoleAssignmentRequest request) {
+        Long tenantId = ContextAccess.requireTenantId();
+        UserRoleAssignmentCommand command = new UserRoleAssignmentCommand(request.getRoleCodes());
+        return ApiResponse.success(userCommandService.assignRoles(tenantId, id, command));
     }
 }

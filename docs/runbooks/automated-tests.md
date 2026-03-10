@@ -33,16 +33,20 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
   - JWT claim generation and parsing for tenant, role, and permission data
-  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status`
+  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
   - `401` when Bearer token is missing or invalid
   - `403` when login succeeds but `USER_READ` is absent
   - `403` when login succeeds but `USER_WRITE` is absent
+  - `200` for a valid admin token on `GET /api/v1/roles`, including tenant-only role visibility
   - `200` for a valid read-only user token on `GET /api/v1/users`, including tenant-only user visibility
   - `400` when create requests try to bind role codes outside the current tenant
   - successful create-user flow with BCrypt password persistence and immediate login
   - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence
   - successful disable-user flow for `PATCH /api/v1/users/{id}/status` followed by login rejection for `DISABLED`
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
+  - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles`
+  - rejection of a pre-change token after role or permission claims become stale
+  - successful re-login after role reassignment with new RBAC access
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -59,18 +63,24 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
   - profile update persistence for mutable fields only
   - status update persistence for `ACTIVE` and `DISABLED`
   - invalid status rejection
+  - role reassignment with clear-then-write `user_role` semantics
+  - role reassignment rejection when requested role codes are not available in the current tenant
   - tenant-scoped missing-user rejection
   - current password-update placeholder returning unified `BIZ_ERROR` rather than an uncaught runtime exception
 - `UserManagementControllerTest`
   - HTTP request binding for `page`, `size`, `username`, `status`, and `roleCode`
   - HTTP request binding for `POST /api/v1/users`
   - HTTP request binding for `PUT /api/v1/users/{id}` and `PATCH /api/v1/users/{id}/status`
+  - HTTP request binding for `PUT /api/v1/users/{id}/roles`
   - `401` when authentication is missing
   - `403` when `USER_READ` or `USER_WRITE` is missing
   - `401` when authentication exists but tenant context is missing
   - tenant resolution through request-scoped context and forwarding to `UserQueryService`
   - tenant resolution through request-scoped context and forwarding to `UserCommandService`
   - wrapping successful responses with `ApiResponse.success(...)`
+- `RoleControllerTest`
+  - `GET /api/v1/roles` unauthorized / forbidden / success paths
+  - tenant resolution through request-scoped context and forwarding to `RoleQueryService`
 
 ### `merchantops-infra` tests
 
@@ -84,7 +94,7 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 
 These areas are not replaced by the current unit tests:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`) path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` (`GET`, `POST`, `PUT`, and `PATCH`) path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

@@ -14,6 +14,14 @@ public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
             SELECT r.*
             FROM `role` r
             WHERE r.tenant_id = :tenantId
+            ORDER BY r.id
+            """, nativeQuery = true)
+    List<RoleEntity> findAllByTenantIdOrderByIdAsc(@Param("tenantId") Long tenantId);
+
+    @Query(value = """
+            SELECT r.*
+            FROM `role` r
+            WHERE r.tenant_id = :tenantId
               AND r.role_code IN (:roleCodes)
             ORDER BY r.id
             """, nativeQuery = true)

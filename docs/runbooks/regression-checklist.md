@@ -67,8 +67,10 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## User Management
 
-- [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}/status`
+- [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
+- [ ] Swagger `Role Management` tag shows `GET /api/v1/roles`
 - [ ] `GET /api/v1/users` returns a page object rather than a bare array
+- [ ] `GET /api/v1/roles` returns only current-tenant role options
 - [ ] `GET /api/v1/users?page=0&size=10` works
 - [ ] `GET /api/v1/users?username=ad` filters by username
 - [ ] `GET /api/v1/users?status=ACTIVE` filters by status
@@ -87,6 +89,10 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `PATCH /api/v1/users/{id}/status` with an `ops` or `viewer` token returns `403`
 - [ ] a `DISABLED` user is rejected by `POST /api/v1/auth/login`
 - [ ] a token issued before a user was disabled is rejected on protected endpoints with `403` / `user is not active`
+- [ ] `PUT /api/v1/users/{id}/roles` replaces the old role set rather than appending to it
+- [ ] `PUT /api/v1/users/{id}/roles` rejects role codes outside the current tenant
+- [ ] a token issued before role or permission changes is rejected on protected endpoints with `403` / `token claims are stale, please login again`
+- [ ] after role reassignment, the affected user can log in again and the new token reflects the new RBAC access
 - [ ] password edge cases, especially leading and trailing whitespace, behave consistently between create and login
 - [ ] manual smoke users were cleaned from the local database after verification
 

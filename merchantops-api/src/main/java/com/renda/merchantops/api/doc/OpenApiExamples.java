@@ -12,6 +12,7 @@ public final class OpenApiExamples {
     public static final String REQ_USER_CREATE = "{\"username\":\"cashier\",\"displayName\":\"Cashier User\",\"email\":\"cashier@demo-shop.local\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}";
     public static final String REQ_USER_UPDATE = "{\"displayName\":\"Updated Cashier\",\"email\":\"cashier.updated@demo-shop.local\"}";
     public static final String REQ_USER_STATUS_UPDATE = "{\"status\":\"DISABLED\"}";
+    public static final String REQ_USER_ROLE_ASSIGNMENT = "{\"roleCodes\":[\"TENANT_ADMIN\"]}";
 
     public static final String RESP_SUCCESS_LOGIN = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"accessToken\":\"<jwt-token>\",\"tokenType\":\"Bearer\",\"expiresIn\":7200}}";
     public static final String RESP_BAD_REQUEST_CREDENTIAL = "{\"code\":\"BAD_REQUEST\",\"message\":\"username or password is incorrect\",\"data\":null}";
@@ -26,14 +27,18 @@ public final class OpenApiExamples {
     public static final String RESP_VALIDATION_ERROR_PASSWORD_WHITESPACE = "{\"code\":\"VALIDATION_ERROR\",\"message\":\"password: password must not start or end with whitespace\",\"data\":null}";
     public static final String RESP_VALIDATION_ERROR_USER_UPDATE = "{\"code\":\"VALIDATION_ERROR\",\"message\":\"displayName: displayName must not be blank\",\"data\":null}";
     public static final String RESP_VALIDATION_ERROR_STATUS_UPDATE = "{\"code\":\"VALIDATION_ERROR\",\"message\":\"status: status must be one of ACTIVE, DISABLED\",\"data\":null}";
+    public static final String RESP_VALIDATION_ERROR_ROLE_ASSIGNMENT = "{\"code\":\"VALIDATION_ERROR\",\"message\":\"roleCodes: roleCodes must not be empty\",\"data\":null}";
 
     public static final String RESP_HEALTH = "{\"status\":\"UP\",\"service\":\"merchantops-saas\"}";
     public static final String RESP_CONTEXT = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"tenantId\":1,\"tenantCode\":\"demo-shop\",\"userId\":1,\"username\":\"admin\"}}";
     public static final String RESP_USER_PROFILE = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"userId\":1,\"tenantId\":1,\"tenantCode\":\"demo-shop\",\"username\":\"admin\",\"roles\":[\"TENANT_ADMIN\"],\"permissions\":[\"USER_READ\",\"USER_WRITE\",\"ORDER_READ\",\"BILLING_READ\",\"FEATURE_FLAG_MANAGE\"]}}";
     public static final String RESP_USER_LIST = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"items\":[{\"id\":1,\"username\":\"admin\",\"displayName\":\"Demo Admin\",\"email\":\"admin@demo-shop.local\",\"status\":\"ACTIVE\"},{\"id\":2,\"username\":\"ops\",\"displayName\":\"Ops User\",\"email\":\"ops@demo-shop.local\",\"status\":\"ACTIVE\"},{\"id\":3,\"username\":\"viewer\",\"displayName\":\"Viewer User\",\"email\":\"viewer@demo-shop.local\",\"status\":\"ACTIVE\"}],\"page\":0,\"size\":10,\"total\":3,\"totalPages\":1}}";
+    public static final String RESP_ROLE_LIST = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"items\":[{\"id\":11,\"roleCode\":\"TENANT_ADMIN\",\"roleName\":\"Tenant Admin\"},{\"id\":12,\"roleCode\":\"OPS_USER\",\"roleName\":\"Operations User\"},{\"id\":13,\"roleCode\":\"READ_ONLY\",\"roleName\":\"Read Only User\"}]}}";
     public static final String RESP_USER_CREATED = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":5,\"tenantId\":1,\"username\":\"cashier\",\"displayName\":\"Cashier User\",\"email\":\"cashier@demo-shop.local\",\"status\":\"ACTIVE\",\"roleCodes\":[\"READ_ONLY\"],\"createdAt\":\"2026-03-10T11:00:00\",\"updatedAt\":\"2026-03-10T11:00:00\"}}";
     public static final String RESP_USER_PROFILE_UPDATED = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":5,\"tenantId\":1,\"username\":\"cashier\",\"displayName\":\"Updated Cashier\",\"email\":\"cashier.updated@demo-shop.local\",\"status\":\"ACTIVE\",\"updatedAt\":\"2026-03-10T14:00:00\"}}";
     public static final String RESP_USER_STATUS_UPDATED = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":5,\"tenantId\":1,\"username\":\"cashier\",\"displayName\":\"Updated Cashier\",\"email\":\"cashier.updated@demo-shop.local\",\"status\":\"DISABLED\",\"updatedAt\":\"2026-03-10T14:10:00\"}}";
+    public static final String RESP_USER_ROLES_UPDATED = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":3,\"tenantId\":1,\"username\":\"viewer\",\"roleCodes\":[\"TENANT_ADMIN\"],\"permissionCodes\":[\"USER_READ\",\"USER_WRITE\",\"ORDER_READ\",\"BILLING_READ\",\"FEATURE_FLAG_MANAGE\"],\"updatedAt\":\"2026-03-10T18:00:00\"}}";
+    public static final String RESP_FORBIDDEN_STALE_TOKEN = "{\"code\":\"FORBIDDEN\",\"message\":\"token claims are stale, please login again\",\"data\":null}";
 
     public static final String RESP_DEV_PING = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"status\":\"UP\",\"module\":\"merchantops-api\"}}";
     public static final String RESP_DEV_ECHO = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"message\":\"hello merchantops\"}}";

@@ -42,6 +42,7 @@ public class OpenApiConfig {
                 .addTagsItem(new Tag().name("Context").description("Current authenticated tenant/user context"))
                 .addTagsItem(new Tag().name("User Profile").description("Current logged-in user information"))
                 .addTagsItem(new Tag().name("User Management").description("Tenant-scoped user query endpoints"))
+                .addTagsItem(new Tag().name("Role Management").description("Tenant-scoped assignable role endpoints"))
                 .addTagsItem(new Tag().name("RBAC").description("Permission-protected RBAC demonstration endpoints"))
                 .externalDocs(new ExternalDocumentation()
                         .description("Project API reference")

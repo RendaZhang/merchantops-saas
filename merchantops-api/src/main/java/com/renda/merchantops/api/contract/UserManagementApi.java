@@ -2,6 +2,8 @@ package com.renda.merchantops.api.contract;
 
 import com.renda.merchantops.api.dto.user.command.UserCreateRequest;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentRequest;
+import com.renda.merchantops.api.dto.user.command.UserRoleAssignmentResponse;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateRequest;
 import com.renda.merchantops.api.dto.user.command.UserUpdateRequest;
 import com.renda.merchantops.api.dto.user.command.UserWriteResponse;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_USER_CREATE;
+import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_USER_ROLE_ASSIGNMENT;
 import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_USER_STATUS_UPDATE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_USER_UPDATE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_ROLE_CODES;
@@ -34,8 +37,10 @@ import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_UNAUTHORIZED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_CREATED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_LIST;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_PROFILE_UPDATED;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_ROLES_UPDATED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_USER_STATUS_UPDATED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_VALIDATION_ERROR_PASSWORD_WHITESPACE;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_VALIDATION_ERROR_ROLE_ASSIGNMENT;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_VALIDATION_ERROR_STATUS_UPDATE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_VALIDATION_ERROR_USER_CREATE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_VALIDATION_ERROR_USER_UPDATE;
@@ -187,4 +192,47 @@ public interface UserManagementApi {
     @PatchMapping("/{id}/status")
     ApiResponse<UserWriteResponse> updateUserStatus(@PathVariable("id") Long id,
                                                     @Valid @org.springframework.web.bind.annotation.RequestBody UserStatusUpdateRequest request);
+
+    @Operation(
+            summary = "Replace user roles in current tenant",
+            description = "Requires USER_WRITE permission. Replaces all existing roles for the target tenant user. Every roleCode must belong to the current tenant. Old JWT claims become stale after this change, so the user must login again to get a new token."
+    )
+    @RequestBody(
+            required = true,
+            description = "User role replacement payload",
+            content = @Content(mediaType = "application/json", examples = @ExampleObject(value = REQ_USER_ROLE_ASSIGNMENT))
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Role assignment successful",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_USER_ROLES_UPDATED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Validation failed or role scope violated",
+                    content = @Content(mediaType = "application/json", examples = {
+                            @ExampleObject(name = "validationError", value = RESP_VALIDATION_ERROR_ROLE_ASSIGNMENT),
+                            @ExampleObject(name = "invalidRoleCodes", value = RESP_BAD_REQUEST_ROLE_CODES)
+                    })
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Missing USER_WRITE permission",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "User not found in current tenant",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"code\":\"NOT_FOUND\",\"message\":\"user not found\",\"data\":null}"))
+            )
+    })
+    @PutMapping("/{id}/roles")
+    ApiResponse<UserRoleAssignmentResponse> assignRoles(@PathVariable("id") Long id,
+                                                        @Valid @org.springframework.web.bind.annotation.RequestBody UserRoleAssignmentRequest request);
 }
