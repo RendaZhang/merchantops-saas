@@ -112,11 +112,10 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 - [docs/roadmap.md](docs/roadmap.md): next-phase work aligned to the 10-week project plan
 - [docs/project-plan.md](docs/project-plan.md): 10-week market-aligned plan for a workflow-first, AI-enhanced vertical SaaS
 - [docs/getting-started/README.md](docs/getting-started/README.md): setup and startup guides
+- [docs/contributing/README.md](docs/contributing/README.md): contributor and agent workflow guidance
 - [docs/reference/README.md](docs/reference/README.md): technical reference index
 - [docs/runbooks/README.md](docs/runbooks/README.md): verification and troubleshooting runbooks
 - [docs/architecture/README.md](docs/architecture/README.md): ADRs and architecture notes
-- [docs/reference/release-versioning.md](docs/reference/release-versioning.md): current tag baseline and release rules
-- [docs/reference/documentation-maintenance.md](docs/reference/documentation-maintenance.md): documentation update routing rules
 - [api-demo.http](api-demo.http): IDE-friendly API request examples
 
 ## Summary

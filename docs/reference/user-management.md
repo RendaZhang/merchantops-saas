@@ -65,7 +65,7 @@ Verification references:
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 - [authentication-and-rbac.md](authentication-and-rbac.md): auth and permission expectations
 - [api-docs.md](api-docs.md): Swagger/OpenAPI coverage notes
-- [development-agent-guidance.md](development-agent-guidance.md): repository, service, DTO, documentation, and testing extension rules
+- [../contributing/development-agent-guidance.md](../contributing/development-agent-guidance.md): repository, service, DTO, documentation, and testing extension rules
 - [../runbooks/automated-tests.md](../runbooks/automated-tests.md): current automated coverage and recommended Maven commands
 - [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md): regression checks for `/api/v1/users`
 
@@ -83,7 +83,7 @@ For future user-management work:
 - keep write DTOs under `dto/user/command`
 - keep `/api/v1/users` as the baseline example for tenant-aware paging
 - do not publish new user-management endpoints without updating Swagger, docs, `api-demo.http`, and runbooks together
-- use [development-agent-guidance.md](development-agent-guidance.md) as the implementation baseline
+- use [../contributing/development-agent-guidance.md](../contributing/development-agent-guidance.md) as the implementation baseline
 
 ## Automated Coverage Focus
 

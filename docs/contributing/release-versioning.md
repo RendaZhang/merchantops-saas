@@ -4,7 +4,7 @@ Last updated: 2026-03-10
 
 ## Purpose
 
-This page defines how MerchantOps SaaS should record versions, tags, and release milestones as the project moves from portfolio build to open-source release.
+This page defines how MerchantOps SaaS should record versions, tags, and release milestones as it moves from portfolio build to open-source release.
 
 ## Current Tagged Baseline
 

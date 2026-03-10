@@ -20,6 +20,12 @@ Use it as the routing table for answering two questions:
 - Real paths, ports, demo accounts, and seeded data must match code and database state.
 - `CHANGELOG.md` is release-oriented, not a full development diary.
 
+## Maintaining This Document
+
+- This page is itself a living routing guide and may be updated when its rules no longer match the repository's actual documentation structure or workflow.
+- If an agent or contributor finds that this page is outdated, inaccurate, missing a recurring rule, or no longer aligned with current docs, it should correct the page instead of following a known-bad routing rule.
+- If the change affects repository-level default guidance, update [../../AGENTS.md](../../AGENTS.md) in the same change.
+
 ## Document Roles
 
 - `README.md`: project overview, major capabilities, and top-level navigation
@@ -27,11 +33,14 @@ Use it as the routing table for answering two questions:
 - `docs/project-status.md`: current implemented reality, scope, and limitations
 - `docs/roadmap.md`: next-phase work and intended near-term sequence
 - `docs/project-plan.md`: longer-range milestone plan
-- `docs/reference/`: stable technical reference pages
-- `docs/reference/development-agent-guidance.md`: documentation, testing, and implementation rules for contributors and coding agents
+- `docs/reference/`: stable technical reference pages for the system itself
+- `docs/contributing/`: contributor and agent workflow guidance
+- `docs/contributing/development-agent-guidance.md`: tenant-scoped implementation and contributor guidance for coding work
+- `docs/contributing/testing-agent-guidance.md`: verification and regression rules for testing-focused work
+- `docs/contributing/review-release-agent-guidance.md`: staged review, commit, and release rules
 - `docs/runbooks/`: validation, regression, and operational checklists
 - `docs/architecture/adr/`: formal architecture decisions
-- `docs/reference/release-versioning.md`: version rules and tag progression
+- `docs/contributing/release-versioning.md`: version rules and tag progression
 - `CHANGELOG.md`: release-level notable changes
 - `api-demo.http`: IDE-friendly request examples for public APIs
 
@@ -82,7 +91,9 @@ Update:
 
 Update when the internal rule or boundary changed:
 
-- `docs/reference/development-agent-guidance.md`
+- `docs/contributing/development-agent-guidance.md`
+- `docs/contributing/testing-agent-guidance.md`
+- `docs/contributing/review-release-agent-guidance.md`
 - `AGENTS.md` if the rule should guide future agents by default
 
 Do not update as current public API:
@@ -150,7 +161,7 @@ Update when needed:
 Update:
 
 - `CHANGELOG.md`
-- `docs/reference/release-versioning.md`
+- `docs/contributing/release-versioning.md`
 
 Update when needed:
 
@@ -181,7 +192,7 @@ Always review:
 - `docs/roadmap.md`
 - `docs/project-plan.md` if milestone framing changed
 - `CHANGELOG.md` if the completion is release-worthy
-- `docs/reference/release-versioning.md` if a new tag is created
+- `docs/contributing/release-versioning.md` if a new tag is created
 
 ### New Public Module Added
 
@@ -222,7 +233,7 @@ Before staging doc changes, confirm:
 ## Related Documents
 
 - [release-versioning.md](release-versioning.md): version and tag rules
-- [ai-integration.md](ai-integration.md): AI workflow and public-vs-planned boundaries
+- [../reference/ai-integration.md](../reference/ai-integration.md): AI workflow and public-vs-planned boundaries
 - [../project-status.md](../project-status.md): current implementation reality
 - [../roadmap.md](../roadmap.md): intended next-phase work
 - [../../CHANGELOG.md](../../CHANGELOG.md): release-level change history

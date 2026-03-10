@@ -1,15 +1,14 @@
 # Reference
 
-This section holds stable project details that developers may need while implementing or reviewing changes.
+This section holds stable technical reference for the system itself: configuration, auth, APIs, observability, and other implementation-facing project details.
+
+Contributor and agent workflow guidance now lives under [../contributing/README.md](../contributing/README.md).
 
 ## Pages
 
 - [configuration.md](configuration.md): runtime profiles and environment variable overrides
 - [database-migrations.md](database-migrations.md): Flyway setup, migration history, and seed data notes
 - [api-conventions.md](api-conventions.md): response wrapper and error handling rules
-- [development-agent-guidance.md](development-agent-guidance.md): documentation, testing, and development rules for contributors and coding agents
-- [release-versioning.md](release-versioning.md): current tag baseline, changelog ownership, and recommended version progression
-- [documentation-maintenance.md](documentation-maintenance.md): routing rules for which docs must change when implementation, API, release, or architecture changes happen
 - [authentication-and-rbac.md](authentication-and-rbac.md): login flow, JWT usage, context propagation, and RBAC demo endpoints
 - [user-management.md](user-management.md): current `/api/v1/users` behavior, Swagger verification, and the current Week 2 delivery boundary
 - [ai-integration.md](ai-integration.md): AI workflow placement, permission boundaries, audit expectations, and planned endpoint shape

@@ -6,7 +6,7 @@ Last updated: 2026-03-10
 
 This page records the current implementation guidance for developers and coding agents working inside this repository.
 
-Use it when changing code, tests, or development-facing documentation.
+Use it when changing code or development-facing documentation.
 
 ## Documentation Concerns
 
@@ -19,12 +19,10 @@ Use it when changing code, tests, or development-facing documentation.
 
 ## Testing Concerns
 
+- Read [testing-agent-guidance.md](testing-agent-guidance.md) for the current verification baseline and preferred regression commands.
 - Start with [../runbooks/automated-tests.md](../runbooks/automated-tests.md) for the current automated regression entry point.
-- Preferred Maven command for API changes is `.\mvnw.cmd -pl merchantops-api -am test`.
-- Do not default to module-only test execution when in-repo dependencies may have changed.
-- After automated tests pass, use [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md) and [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md) as manual follow-up.
 - Public API changes require test updates and doc/runbook updates in the same change.
-- Swagger rendering, live infra health, and end-to-end authenticated behavior still require manual verification.
+- Swagger rendering, live infra health, and uncovered authenticated paths still require manual follow-up through the linked testing guidance and runbooks.
 
 ## Development Concerns
 
@@ -137,14 +135,16 @@ When extending user-management or another tenant-scoped module:
 2. add or update query DTOs and command DTOs separately
 3. make `tenantId` explicit in service and repository signatures
 4. update Swagger contract only when the endpoint is actually public
-5. update [user-management.md](user-management.md) for public user-management contract changes
+5. update [../reference/user-management.md](../reference/user-management.md) for public user-management contract changes
 6. update [documentation-maintenance.md](documentation-maintenance.md) if the routing rules themselves changed
 7. update `AGENTS.md` if the new rule should guide future agents by default
 
 ## Related Documents
 
-- [user-management.md](user-management.md): current public `/api/v1/users` contract
-- [authentication-and-rbac.md](authentication-and-rbac.md): authentication and permission behavior
+- [../reference/user-management.md](../reference/user-management.md): current public `/api/v1/users` contract
+- [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md): authentication and permission behavior
 - [documentation-maintenance.md](documentation-maintenance.md): which docs must change for which change type
+- [testing-agent-guidance.md](testing-agent-guidance.md): verification and regression guidance for testing-focused work
+- [review-release-agent-guidance.md](review-release-agent-guidance.md): staged review and release guidance
 - [../runbooks/automated-tests.md](../runbooks/automated-tests.md): automated verification entry
 - [../project-status.md](../project-status.md): implemented reality and current limitations

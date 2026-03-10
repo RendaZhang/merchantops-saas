@@ -7,11 +7,14 @@ This directory contains the detailed project documentation that sits behind the 
 - [Project Plan](project-plan.md): the 10-week plan for a workflow-first, AI-enhanced vertical SaaS with a portfolio-to-open-source-to-commercial progression path
 - [Project Status](project-status.md): implemented scope, current phase, completion status, and known gaps
 - [Roadmap](roadmap.md): next-phase work aligned to the 10-week project plan
-- [Release Versioning](reference/release-versioning.md): current tag baseline, release sources of truth, and recommended version progression
-- [Documentation Maintenance](reference/documentation-maintenance.md): which docs must change when API, planning, release, or architecture changes happen
 - [Getting Started](getting-started/README.md): local environment setup and the shortest path to a running API
+- [Contributing](contributing/README.md): contributor and agent workflow guidance, release rules, and documentation routing
 - [Reference](reference/README.md): configuration, migrations, API conventions, auth, observability, and API documentation
-- [Development Agent Guidance](reference/development-agent-guidance.md): documentation, testing, and implementation rules for developers and coding agents
+- [Release Versioning](contributing/release-versioning.md): current tag baseline, release sources of truth, and recommended version progression
+- [Documentation Maintenance](contributing/documentation-maintenance.md): which docs must change when API, planning, release, or architecture changes happen
+- [Development Agent Guidance](contributing/development-agent-guidance.md): tenant-scoped implementation and contributor guidance for coding work
+- [Testing Agent Guidance](contributing/testing-agent-guidance.md): verification, regression, and coverage guidance for testing-focused work
+- [Review And Release Agent Guidance](contributing/review-release-agent-guidance.md): staged review, commit, and release guidance for review-focused work
 - [User Management Reference](reference/user-management.md): the current `/api/v1/users` contract, validation path, and current Week 2 delivery boundary
 - [AI Integration Reference](reference/ai-integration.md): workflow-first AI design, guardrails, and planned endpoint direction
 - [AI Provider Configuration](reference/ai-provider-configuration.md): who should own model-provider keys, how cost should be understood, and why the project starts with instance-level configuration
@@ -32,15 +35,18 @@ This directory contains the detailed project documentation that sits behind the 
 3. [Project Plan](project-plan.md)
 4. [Project Status](project-status.md)
 5. [Roadmap](roadmap.md)
-6. [Release Versioning](reference/release-versioning.md)
-7. [Documentation Maintenance](reference/documentation-maintenance.md)
-8. [Authentication and RBAC](reference/authentication-and-rbac.md)
-9. [Development Agent Guidance](reference/development-agent-guidance.md)
-10. [User Management Reference](reference/user-management.md)
-11. [AI Integration Reference](reference/ai-integration.md)
-12. [AI Provider Configuration](reference/ai-provider-configuration.md)
-13. [AI Docs](ai/README.md)
-14. [AI Workflow Candidates](ai/workflow-candidates.md)
-15. [Automated Test Runbook](runbooks/automated-tests.md)
-16. [Regression Checklist](runbooks/regression-checklist.md)
-17. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
+6. [Contributing](contributing/README.md)
+7. [Release Versioning](contributing/release-versioning.md)
+8. [Documentation Maintenance](contributing/documentation-maintenance.md)
+9. [Authentication and RBAC](reference/authentication-and-rbac.md)
+10. [Development Agent Guidance](contributing/development-agent-guidance.md)
+11. [Testing Agent Guidance](contributing/testing-agent-guidance.md)
+12. [Review And Release Agent Guidance](contributing/review-release-agent-guidance.md)
+13. [User Management Reference](reference/user-management.md)
+14. [AI Integration Reference](reference/ai-integration.md)
+15. [AI Provider Configuration](reference/ai-provider-configuration.md)
+16. [AI Docs](ai/README.md)
+17. [AI Workflow Candidates](ai/workflow-candidates.md)
+18. [Automated Test Runbook](runbooks/automated-tests.md)
+19. [Regression Checklist](runbooks/regression-checklist.md)
+20. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
