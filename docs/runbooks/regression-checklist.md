@@ -4,6 +4,12 @@ Last updated: 2026-03-10
 
 Use this checklist after foundation-level changes, security changes, environment changes, or current user-management API changes.
 
+## Automated
+
+- [ ] `.\mvnw.cmd -pl merchantops-api -am test` passes
+- [ ] `AuthSecurityIntegrationTest`, `UserQueryServiceTest`, `UserCommandServiceTest`, and `UserManagementControllerTest` cover the code path you changed
+- [ ] if repository signatures changed, tests were run with `-am` rather than `-pl merchantops-api test` only
+
 ## Infra
 
 - [ ] `docker compose up -d` works
@@ -71,6 +77,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## Tools
 
+- Use [automated-tests.md](automated-tests.md) for the fastest regression command and coverage scope
 - Use [../../api-demo.http](../../api-demo.http) for the main request flow
 - Compare the current user-list behavior against [../reference/user-management.md](../reference/user-management.md)
 - Use [local-smoke-test.md](local-smoke-test.md) when you want a shorter step-by-step validation path

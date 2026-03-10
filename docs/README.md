@@ -17,6 +17,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [AI Docs](ai/README.md): prompt versioning and eval dataset guidance for future AI workflow rollout
 - [AI Workflow Candidates](ai/workflow-candidates.md): prioritized candidate AI workflows for future ticket and import rollout
 - [Runbooks](runbooks/README.md): smoke tests and troubleshooting steps
+- [Automated Test Runbook](runbooks/automated-tests.md): preferred Maven test commands, current automated coverage, and when to switch to manual verification
 - [AI Regression Checklist](runbooks/ai-regression-checklist.md): rollout checklist for future AI endpoints, audit logs, and eval changes
 - [Architecture](architecture/README.md): design notes and known structural gaps
 - [Diagrams](diagrams/README.md): placeholder for system and sequence diagrams
@@ -38,5 +39,6 @@ This directory contains the detailed project documentation that sits behind the 
 11. [AI Provider Configuration](reference/ai-provider-configuration.md)
 12. [AI Docs](ai/README.md)
 13. [AI Workflow Candidates](ai/workflow-candidates.md)
-14. [Regression Checklist](runbooks/regression-checklist.md)
-15. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
+14. [Automated Test Runbook](runbooks/automated-tests.md)
+15. [Regression Checklist](runbooks/regression-checklist.md)
+16. [AI Regression Checklist](runbooks/ai-regression-checklist.md)

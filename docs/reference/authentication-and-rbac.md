@@ -71,6 +71,7 @@ Credential failure response:
 - send `Authorization: Bearer <accessToken>`
 - missing/invalid token returns `401 UNAUTHORIZED`
 - missing required permission returns `403 FORBIDDEN`
+- run [../runbooks/automated-tests.md](../runbooks/automated-tests.md) before manual RBAC smoke checks when code changed
 
 Quick check:
 
@@ -177,6 +178,8 @@ Current notes:
 - `ops` can access `/api/v1/users` and `/api/v1/rbac/users`
 - `viewer` can access `/api/v1/users` and `/api/v1/rbac/users`
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
+
+The automated suite now covers the login -> JWT -> `/api/v1/users` permission path end to end. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
 
 ## Current User Management Boundary
 

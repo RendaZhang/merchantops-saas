@@ -34,6 +34,7 @@ The current repository includes:
 - tenant-scoped user listing endpoint with `USER_READ`
 - tenant-aware user query scaffolding for detail lookup, status filtering, and page normalization
 - initial write-side user command service skeleton with tenant-scoped username uniqueness checks
+- focused automated coverage for auth security integration, user-management controller/service behavior, and repository query behavior
 - permission checks through `@RequirePermission`
 - RBAC demo endpoints for permission verification
 - unified API response and exception handling model
@@ -70,8 +71,9 @@ Completed:
 - authorization flow works for protected endpoints
 - current-tenant user query works with permission protection
 - current-tenant user query supports page, size, username, status, and roleCode filters
+- focused automated tests now cover auth security integration, current user-management controller/service paths, and repository query behavior
 - Week 2 first-business-loop groundwork has started, but the public HTTP contract is still incomplete
-- manual verification flow is documented
+- manual and automated verification flows are documented
 
 Not yet implemented:
 
@@ -89,7 +91,7 @@ Not yet implemented:
 - Week 10 delivery hardening, feature flag rollout control, and portfolio packaging
 - formal open-source release packaging such as license choice, contribution guide, security policy, and sanitized public demo assets
 - usage / ledger / invoice remains a stretch goal after the core workflow + AI path is stable
-- integration tests
+- broader automated coverage beyond the current login + `/api/v1/users` Week 2 surface
 - deployment-ready Docker or Kubernetes manifests
 - performance documentation and benchmark artifacts
 
@@ -106,7 +108,7 @@ Current implementation is intentionally focused on the Week 1 foundation plus th
 - refresh token flow
 - logout or token revocation
 - fine-grained operator audit logs
-- integration tests
+- broader multi-module automated coverage outside the current auth + user-management path
 - production-ready secret management
 - tenant admin UI or frontend
 - later-phase modules such as ticket workflow, async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
@@ -115,7 +117,7 @@ Current implementation is intentionally focused on the Week 1 foundation plus th
 
 - `user_role` tenant consistency is not yet enforced at the database layer
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs
-- the project currently relies on manual verification flows more than automated test coverage
+- the project now has focused automated coverage for login, `/api/v1/users`, query/service behavior, and repository-backed search behavior, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management flow
 
 See [architecture/tenant-rbac-integrity-gap.md](architecture/tenant-rbac-integrity-gap.md) for the current tenant-integrity design note.
 See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.

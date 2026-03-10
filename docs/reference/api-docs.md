@@ -139,6 +139,7 @@ Current notes:
 - this contract is a page object, not a bare array
 - `page`, `size`, `username`, `status`, and `roleCode` query parameters are visible in Swagger
 - the same request is available in [../../api-demo.http](../../api-demo.http)
+- automated checks for the controller/query mapping live in [../runbooks/automated-tests.md](../runbooks/automated-tests.md)
 
 ### 4. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
 

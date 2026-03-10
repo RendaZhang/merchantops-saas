@@ -1,5 +1,15 @@
 # Local Smoke Test
 
+## 0. Run Automated Tests First
+
+Preferred command:
+
+```powershell
+.\mvnw.cmd -pl merchantops-api -am test
+```
+
+Run the manual smoke flow below after the automated checks pass. See [automated-tests.md](automated-tests.md) for current unit-test coverage and command selection notes.
+
 ## 1. Verify Health
 
 ```bash
