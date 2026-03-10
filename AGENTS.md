@@ -40,12 +40,32 @@ This repository currently organizes handoff rules around five roles:
 - Keep root `README.md` high-level and move development detail into `docs/`.
 - Do not document an endpoint as public unless it is visible in Swagger.
 - Follow the routing rules in the linked maintenance and development guidance pages instead of re-encoding detailed update matrices here.
+- Shortcut prefix: `DOC`
+- Supported shortcuts include:
+  - `DOC staged`: inspect the staged diff first and identify which docs must change
+  - `DOC route`: map the current change to the required doc updates using [docs/contributing/documentation-maintenance.md](docs/contributing/documentation-maintenance.md)
+  - `DOC sync`: align affected docs with the current implementation, keeping `public`, `planned`, and `internal` wording correct
+  - `DOC nav`: update `README.md`, `docs/README.md`, and the relevant index pages when docs were added, moved, or renamed
+  - `DOC swagger`: align Swagger-visible endpoints with `docs/reference/`, `api-demo.http`, and runbooks
+  - `DOC phase`: refresh `docs/project-status.md`, `docs/roadmap.md`, and related milestone docs for the current phase
+  - `DOC audit`: scan for outdated paths, ports, demo accounts, permissions, or contradictory statements
+  - `DOC split`: move low-level detail out of `README.md` and into the appropriate `docs/` page without losing navigation clarity
 
 ## Testing Role
 
 - Read [docs/contributing/testing-agent-guidance.md](docs/contributing/testing-agent-guidance.md) before changing tests, test coverage notes, or verification guidance.
 - Start from [docs/runbooks/automated-tests.md](docs/runbooks/automated-tests.md) for the current regression command and coverage boundary.
 - Keep tests, runbooks, and public API docs aligned when verification reality changes.
+- Shortcut prefix: `TT`
+- Supported shortcuts include:
+  - `TT staged`: inspect the staged diff first, map it to affected test layers, and choose the smallest sufficient regression set
+  - `TT test`: run or recommend the default automated regression command `.\mvnw.cmd -pl merchantops-api -am test`
+  - `TT coverage`: summarize current automated coverage, manual-only gaps, and the right next verification step
+  - `TT smoke`: run or guide the local smoke flow from [docs/runbooks/local-smoke-test.md](docs/runbooks/local-smoke-test.md)
+  - `TT live`: prepare live smoke prerequisites with `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, then start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`
+  - `TT auth`: focus verification on login, JWT, `/api/v1/users` (`GET` and `POST`), and password-rule regressions
+  - `TT sql`: focus verification on native SQL and H2 `MODE=MySQL` test realism, including datasource-replacement pitfalls
+  - `TT clean`: provide or execute cleanup steps for generated smoke users after manual verification
 
 ## Development Role
 

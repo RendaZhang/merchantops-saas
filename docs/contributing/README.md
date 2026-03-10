@@ -25,5 +25,7 @@ Keep [../../AGENTS.md](../../AGENTS.md) as the short repository entry point. Use
 
 ## Role Shorthand
 
+- `DOC`: Documentation role shortcut for doc routing, synchronization, navigation, and consistency checks
+- `TT`: Testing role shortcut for staged verification, automated regression, smoke checks, and test-coverage review
 - `RR`: Review and Release role shortcut for staged review, commit-message suggestion, branch checks, and tag/release checks
 - `EP`: Execution Planning role shortcut for current-phase assessment, next-step planning, and drift checks
