@@ -11,14 +11,14 @@ Last updated: 2026-03-11
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
-## Week 2 Goal
+## Week 2 Outcome
 
 Complete the first business loop by turning the current user-management groundwork into Swagger-visible business APIs on top of the Week 1 foundation.
 
 ## Phase Sequence
 
 - Week 2: user management (complete)
-- Week 3: ticket workflow - system of action (next active phase)
+- Week 3: ticket workflow - system of action (active phase)
 - Week 4: audit trail and approval patterns
 - Week 5: async import and data operations
 - Week 6: AI Copilot for ticket operations
@@ -91,11 +91,11 @@ Stretch target after Week 10:
 
 - move from RBAC demo endpoints to clearer business-oriented endpoints
 - continue the Week 3 ticket workflow slices now that the first closeable loop is public
-- keep Week 2 documentation aligned with the public API as endpoints are exposed
-- sequence Week 3 ticket work only after Week 2 user management is usable end to end
+- keep Week 2 user-management docs aligned with the now-tagged public API baseline while Week 3 grows
+- keep Week 3 ticket work layered on top of the already-usable Week 2 user-management baseline
 - treat AI as an embedded workflow layer, not as a standalone chatbot detour
 - design audit, approval, and evaluation hooks before agentic automation is added
-- shape the architecture so later open-source packaging is straightforward, but do not front-run Week 2 with licensing or release chores yet
+- shape the architecture so later open-source packaging is straightforward, but do not front-run the active Week 3 delivery work with broader licensing or release chores
 - improve test coverage for authentication, permission checks, and tenant isolation
 - continue turning README-linked docs into a more complete developer handbook
 

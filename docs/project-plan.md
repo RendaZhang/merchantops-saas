@@ -565,7 +565,8 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 推荐发布时间点
 
-- 当前基线：`v0.1.0` 已用于 Week 1 Platform Foundation
+- 当前基线：`v0.1.1` 已用于 Week 2 tenant user management loop 完成节点
+- 前一基线：`v0.1.0` 继续对应 Week 1 Platform Foundation
 - Week 5 后：下一阶段预览版本，例如 `v0.2.0-alpha`
 - Week 6-7 后：带第一个 AI Copilot 的公开版本，例如 `v0.3.0-beta`
 - Week 10 后：更稳定的开源参考实现，可作为商业探索起点
