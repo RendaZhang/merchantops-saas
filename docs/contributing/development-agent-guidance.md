@@ -14,6 +14,7 @@ Use it when changing code or development-facing documentation.
 - Put development-facing detail under `docs/`.
 - Public API changes must update Swagger-facing reference docs, `api-demo.http`, runbooks, and `docs/project-status.md`.
 - Internal groundwork must not be described as public API.
+- Internal schema or write-model changes that affect migration history or persisted audit/attribution fields should also update `docs/reference/database-migrations.md` and the relevant status docs.
 - If a new document is intended to be reused by later developers or agents, link it from `docs/README.md` and the appropriate docs index page.
 - Read [documentation-maintenance.md](documentation-maintenance.md) before routing documentation updates.
 
@@ -34,6 +35,7 @@ Use it when changing code or development-facing documentation.
 - Service-layer public methods for tenant-scoped write operations should also accept `operatorId` explicitly when operator attribution matters.
 - Service-layer public methods for tenant-scoped workflow writes should also accept `requestId` explicitly when request-level tracing or operation logs are persisted.
 - Controllers may resolve `tenantId` from request context, but lower layers must not rely on implicit thread-local access.
+- Controllers may resolve `operatorId` from request context for write flows, but lower layers must not fall back to implicit thread-local access for operator attribution.
 - Query DTOs must describe read results only.
 - Command DTOs must describe allowed write inputs only.
 - Unimplemented business flows must throw unified business exceptions, not raw framework or JDK exceptions.
@@ -56,6 +58,11 @@ Recommended shape:
 3. controller calls service with explicit `tenantId` and, for writes, explicit `operatorId`
 4. service calls repository with explicit `tenantId`
 5. repository query constrains by `tenantId`
+
+Operator-attribution note:
+
+- if a write flow persists `createdBy`, `updatedBy`, approver ids, or similar operator-owned fields, treat that attribution as an internal write concern rather than a public request field
+- keep operator attribution sourced from authenticated context, not from caller-provided DTO fields
 
 ### Query Model Rules
 

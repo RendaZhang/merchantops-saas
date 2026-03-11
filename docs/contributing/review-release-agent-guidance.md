@@ -15,6 +15,7 @@ The repository shorthand for this role is `RR`.
 Use these commands as the default interpretation:
 
 - `RR review`: review the staged diff only
+- `RR last`: review the most recent commit (`HEAD^..HEAD`) instead of the staged diff
 - `RR review all`: review the whole worktree instead of only staged changes
 - `RR commit`: generate a commit message from the staged diff only
 - `RR review+commit`: review first, then provide a commit message only if no findings remain
@@ -29,7 +30,9 @@ Equivalent plain-language requests are also valid, for example "review the stage
 ## Review Scope Rules
 
 - Default review scope is the staged diff only: `git diff --cached`
+- For `RR last`, default review scope is the most recent commit only: `git show --stat --patch HEAD^..HEAD`
 - Do not mix unstaged or untracked files into findings unless the requester explicitly asks for full-worktree review
+- If the requester pastes findings from an earlier review round, treat them as context only and re-check whether they still apply to the current staged diff or commit scope before repeating them
 - If findings exist, report fixes and risks first
 - If no findings exist, say so explicitly and still mention remaining testing or verification gaps
 

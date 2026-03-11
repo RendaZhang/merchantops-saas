@@ -39,10 +39,13 @@ This repository currently organizes handoff rules around five roles:
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before making development-facing documentation changes.
 - Keep root `README.md` high-level and move development detail into `docs/`.
 - Do not document an endpoint as public unless it is visible in Swagger.
+- Keep runbooks and reference examples honest about verification scope: only claim checks that the documented commands actually execute, and label automated-only or manual-only negative paths explicitly.
+- When a doc uses seeded IDs, demo accounts, or other environment-sensitive sample data, state whether it assumes a fresh local database or whether the reader should paste an ID from a live response.
 - Follow the routing rules in the linked maintenance and development guidance pages instead of re-encoding detailed update matrices here.
 - Shortcut prefix: `DOC`
 - Supported shortcuts include:
   - `DOC staged`: inspect the staged diff first and identify which docs must change
+  - `DOC last`: inspect the most recent commit (`HEAD^..HEAD`) first and identify which docs should have changed or still need follow-up updates
   - `DOC route`: map the current change to the required doc updates using [docs/contributing/documentation-maintenance.md](docs/contributing/documentation-maintenance.md)
   - `DOC sync`: align affected docs with the current implementation, keeping `public`, `planned`, and `internal` wording correct
   - `DOC nav`: update `README.md`, `docs/README.md`, and the relevant index pages when docs were added, moved, or renamed
@@ -56,10 +59,13 @@ This repository currently organizes handoff rules around five roles:
 - Read [docs/contributing/testing-agent-guidance.md](docs/contributing/testing-agent-guidance.md) before changing tests, test coverage notes, or verification guidance.
 - Start from [docs/runbooks/automated-tests.md](docs/runbooks/automated-tests.md) for the current regression command and coverage boundary.
 - Keep tests, runbooks, and public API docs aligned when verification reality changes.
+- Keep smoke guidance scoped to what it really executes. If a negative path stays covered only by automated tests or a broader regression checklist, say that directly instead of implying the smoke flow already exercised it.
+- If a staged change adds or edits a Flyway migration, do not stop at H2 or manually-created test schemas; verify the migration effect against the real local MySQL path as part of testing sign-off.
 - Treat `TT staged` as a testing-focused staged review entry point: inspect the staged diff, run or choose the smallest sufficient verification set, and report findings ordered by urgency (`P1`, `P2`, `P3`) rather than stopping at scope mapping alone.
 - Shortcut prefix: `TT`
 - Supported shortcuts include:
   - `TT staged`: review the staged diff from a testing perspective, run or select the smallest sufficient verification, and report prioritized findings plus remaining verification gaps
+  - `TT last`: review the most recent commit (`HEAD^..HEAD`) from a testing perspective, map it to affected test layers, and report prioritized findings plus remaining verification gaps
   - `TT test`: run or recommend the default automated regression command `.\mvnw.cmd -pl merchantops-api -am test`
   - `TT coverage`: summarize current automated coverage, manual-only gaps, and the right next verification step
   - `TT smoke`: run or guide the local smoke flow from [docs/runbooks/local-smoke-test.md](docs/runbooks/local-smoke-test.md)
@@ -72,6 +78,7 @@ This repository currently organizes handoff rules around five roles:
 
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before changing tenant-scoped repositories, services, DTOs, or user-management internals.
 - Keep tenant scoping explicit and keep query/write models separated.
+- Treat `operatorId` the same way as `tenantId` for tenant-scoped writes when operator attribution matters: resolve it at the controller edge, pass it explicitly through service methods, and keep attribution fields internal unless Swagger exposes them on purpose.
 - Do not present internal groundwork as public API.
 - If implementation changes affect public contract or reusable repo rules, update the linked docs in the same change.
 
@@ -79,10 +86,12 @@ This repository currently organizes handoff rules around five roles:
 
 - Read [docs/contributing/review-release-agent-guidance.md](docs/contributing/review-release-agent-guidance.md) before doing staged review, commit-message suggestion, or release/tag work.
 - Default review scope is the staged diff only.
+- Treat pasted findings from earlier review rounds as hints, not as still-open facts. Re-check whether they still apply to the current staged diff before repeating or carrying them forward.
 - Keep changelog, release versioning, and milestone docs aligned with the reviewed change set.
 - Shortcut prefix: `RR`
 - Supported shortcuts include:
   - `RR review`: review the staged diff only
+  - `RR last`: review the most recent commit (`HEAD^..HEAD`) instead of the staged diff
   - `RR review all`: review the whole worktree
   - `RR commit`: generate a commit message from the staged diff only
   - `RR review+commit`: review first, then provide a commit message only if no findings remain

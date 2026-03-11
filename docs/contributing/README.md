@@ -29,3 +29,9 @@ Keep [../../AGENTS.md](../../AGENTS.md) as the short repository entry point. Use
 - `TT`: Testing role shortcut for staged verification, automated regression, smoke checks, and test-coverage review
 - `RR`: Review and Release role shortcut for staged review, commit-message suggestion, branch checks, and tag/release checks
 - `EP`: Execution Planning role shortcut for current-phase assessment, next-step planning, and drift checks
+
+Common variants:
+
+- `DOC staged` / `DOC last`: inspect the staged diff or the most recent commit first, then route required doc updates
+- `TT staged` / `TT last`: inspect the staged diff or the most recent commit first, then choose the smallest sufficient verification set
+- `RR review` / `RR last`: review the staged diff or the most recent commit instead of the full worktree

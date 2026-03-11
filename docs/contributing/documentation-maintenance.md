@@ -18,6 +18,8 @@ Use it as the routing table for answering two questions:
 - Public API documentation must match what is actually exposed in controllers and visible in Swagger.
 - Internal groundwork that is not public yet must not be documented as a callable API.
 - Real paths, ports, demo accounts, and seeded data must match code and database state.
+- Runbooks and reference examples must only claim checks that the documented commands actually execute.
+- If a guide relies on seeded IDs or other environment-sensitive sample data, state whether it assumes a fresh local database or expects the reader to copy a runtime value from a previous response.
 - `CHANGELOG.md` is release-oriented, not a full development diary.
 
 ## Maintaining This Document
@@ -217,9 +219,10 @@ Usually add or update:
 
 1. classify the change as `public`, `planned`, or `internal`
 2. identify the change type from the matrix above
-3. update the required documents first
-4. verify that Swagger, examples, and docs agree
-5. update release docs only if the change affects a milestone or tag
+3. if the request is about the most recent commit instead of the staged diff, inspect `HEAD^..HEAD` first and route the same required doc updates from the actual committed scope
+4. update the required documents first
+5. verify that Swagger, examples, and docs agree
+6. update release docs only if the change affects a milestone or tag
 
 ## Pre-Stage Documentation Check
 
@@ -228,6 +231,8 @@ Before staging doc changes, confirm:
 - documented endpoints are really visible in Swagger if described as public
 - paths use real current routes
 - demo accounts, ports, and credentials still match code or seed data
+- smoke steps and expected-results text describe the same checks; move extra negative paths into automated-test notes or a broader checklist when the smoke flow does not execute them
+- any hard-coded ID in examples is either truly stable for the intended environment or clearly labeled as a fresh-local-db assumption
 - `README.md` did not absorb low-level detail that belongs in `docs/`
 - newly added docs are linked from the right navigation page
 - release/version references do not conflict with existing tags
