@@ -56,7 +56,8 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - `400` for `assigneeId` + `unassignedOnly=true` invalid query combination
   - `403` when `viewer` attempts ticket write operations
   - `400` when assignment tries to use an assignee outside the current tenant
-  - `400` when ticket status transition rules are violated
+  - `400` when ticket status transition rules are violated (including no-op transitions)
+  - `200` for `CLOSED -> OPEN` reopen with status/detail verification, `updated_at` refresh, and appended `STATUS_CHANGED` log
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
   - ticket write access changing only after role reassignment plus re-login
 - `UserQueryServiceTest`

@@ -187,7 +187,7 @@ public interface TicketManagementApi {
 
     @Operation(
             summary = "Transition ticket status in current tenant",
-            description = "Requires TICKET_WRITE permission. Allowed statuses are OPEN, IN_PROGRESS, and CLOSED. Valid transitions are OPEN -> IN_PROGRESS, OPEN -> CLOSED, and IN_PROGRESS -> CLOSED. This writes a STATUS_CHANGED workflow log entry."
+            description = "Requires TICKET_WRITE permission. Allowed statuses are OPEN, IN_PROGRESS, and CLOSED. Valid transitions are OPEN -> IN_PROGRESS, OPEN -> CLOSED, IN_PROGRESS -> CLOSED, and CLOSED -> OPEN (reopen). This writes a STATUS_CHANGED workflow log entry."
     )
     @RequestBody(
             required = true,

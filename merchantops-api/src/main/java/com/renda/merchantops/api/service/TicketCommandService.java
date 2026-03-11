@@ -174,7 +174,7 @@ public class TicketCommandService {
         boolean allowed = switch (currentStatus) {
             case "OPEN" -> "IN_PROGRESS".equals(nextStatus) || "CLOSED".equals(nextStatus);
             case "IN_PROGRESS" -> "CLOSED".equals(nextStatus);
-            case "CLOSED" -> false;
+            case "CLOSED" -> "OPEN".equals(nextStatus);
             default -> false;
         };
         if (!allowed) {

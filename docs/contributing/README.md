@@ -37,3 +37,7 @@ Common variants:
 - `DOC staged` / `DOC last`: inspect the staged diff or the most recent commit first, then route required doc updates
 - `TT staged` / `TT last`: inspect the staged diff or the most recent commit first, then choose the smallest sufficient verification set
 - `RR review` / `RR last`: review the staged diff or the most recent commit instead of the full worktree
+
+## Composite Shortcuts
+
+- `TDR last`: run three iterative passes against the most recent commit in this order: Testing, Documentation, then Review and Release. If one pass finds a fixable issue, fix it and restart the sequence from `TT last` until the full cycle is clean or blocked by a real decision.

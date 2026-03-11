@@ -110,7 +110,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `PATCH /api/v1/tickets/{id}/assignee` rejects assignees outside the current tenant
 - [ ] `PATCH /api/v1/tickets/{id}/assignee` rejects disabled assignees
 - [ ] `PATCH /api/v1/tickets/{id}/status` accepts `OPEN`, `IN_PROGRESS`, and `CLOSED`
-- [ ] `PATCH /api/v1/tickets/{id}/status` rejects illegal transitions such as `CLOSED -> OPEN`
+- [ ] `PATCH /api/v1/tickets/{id}/status` allows reopen (`CLOSED -> OPEN`) and still rejects illegal transitions such as `IN_PROGRESS -> OPEN` or no-op `CLOSED -> CLOSED`
 - [ ] `POST /api/v1/tickets/{id}/comments` appends a comment that appears in ticket detail
 - [ ] create, assign, status, comment, and close flows write `ticket_operation_log` rows
 - [ ] after promoting `viewer` to a role with `TICKET_WRITE`, the old token is rejected as stale and the refreshed token can write tickets

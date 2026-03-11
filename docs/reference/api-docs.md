@@ -85,7 +85,7 @@ Ticket Workflow tag note:
 - `GET /api/v1/tickets/{id}` includes current comments and workflow-level operation logs.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.
-- `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`.
+- `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`, including reopen (`CLOSED -> OPEN`).
 - `POST /api/v1/tickets/{id}/comments` exposes comment content only; operator and request tracing are derived server-side.
 - See [ticket-workflow.md](ticket-workflow.md) for the current public contract and workflow notes.
 
@@ -399,7 +399,7 @@ Current notes:
 
 - requires `TICKET_READ`
 - list uses a page object, not a bare array
-- current filter set is `page`, `size`, and `status`
+- current filter set is `page`, `size`, `status`, `assigneeId`, `keyword`, and `unassignedOnly`
 - see [ticket-workflow.md](ticket-workflow.md) for the closeable-loop behavior
 
 ### 13. Create Ticket (`POST /api/v1/tickets`)

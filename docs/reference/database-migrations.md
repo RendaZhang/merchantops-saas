@@ -44,7 +44,7 @@ WHERE tenant_id = 1
 ORDER BY id;
 ```
 
-To verify ticket tables and demo ticket permissions after Week 3 Slice A:
+To verify ticket tables and demo ticket permissions after Week 3 Slice C:
 
 ```sql
 SELECT permission_code

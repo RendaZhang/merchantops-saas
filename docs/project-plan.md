@@ -142,7 +142,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 - Week 1 已完成
 - Week 2 已完成，并作为当前最稳定的业务闭环基线
-- Week 3 已启动，且第一个可关闭的 ticket workflow Slice A 已经公开
+- Week 3 已启动，且 reopen 语义在内的 ticket workflow Slice C 已经公开
 - Week 4 之后的工作应建立在 Week 2 用户管理闭环和 Week 3 首个 workflow slice 都站稳的前提上
 
 ### 与开源节奏的关系

@@ -100,6 +100,10 @@ This repository currently organizes handoff rules around five roles:
   - `RR release-notes`: draft changelog or release-note text from the staged diff or recent release context
   - `RR branch-check`: check whether the current work looks suitable for `main` or a short-lived branch instead
 
+## Composite Shortcuts
+
+- `TDR last`: run a three-pass role-based check against the most recent commit (`HEAD^..HEAD`) in this order: `TT last`, `DOC last`, `RR last`. If any pass finds a fixable issue, fix it, then restart from `TT last` and repeat until all three passes report no remaining findings or a real blocker requires user input.
+
 ## Execution Planning Role
 
 - Read [docs/contributing/execution-planning-agent-guidance.md](docs/contributing/execution-planning-agent-guidance.md) before assessing current phase, completed scope, remaining work, or next recommended slice.

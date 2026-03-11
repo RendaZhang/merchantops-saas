@@ -19,7 +19,7 @@ Use Swagger UI or [../../api-demo.http](../../api-demo.http) for the current req
 
 ## Minimal Workflow Model
 
-Current Week 3 Slice A intentionally keeps the model narrow:
+Current Week 3 Slice C keeps the model narrow while adding reopen semantics:
 
 - statuses: `OPEN`, `IN_PROGRESS`, `CLOSED`
 - write permissions: `TICKET_WRITE`
@@ -31,12 +31,13 @@ Current transition rules:
 - `OPEN -> IN_PROGRESS`
 - `OPEN -> CLOSED`
 - `IN_PROGRESS -> CLOSED`
+- `CLOSED -> OPEN` (reopen)
 
 Rejected transitions today:
 
 - any no-op such as `OPEN -> OPEN`
-- any reopen attempt such as `CLOSED -> OPEN`
-- any transition from `CLOSED` to another status
+- any no-op reopen request such as `CLOSED -> CLOSED`
+- any transition that is not one of the allowed rules above
 
 ## `GET /api/v1/tickets`
 
@@ -214,6 +215,7 @@ Current behavior:
 - requires `TICKET_WRITE`
 - request body accepts only `OPEN`, `IN_PROGRESS`, or `CLOSED`
 - transition validation is enforced in service logic
+- no-op requests are rejected before transition validation and return `BAD_REQUEST` with the current status in the message
 - closing a ticket is the same endpoint with `status = CLOSED`
 - writes a `STATUS_CHANGED` workflow log entry
 
@@ -227,7 +229,8 @@ Example request:
 
 Failure example:
 
-- invalid transition such as `CLOSED -> OPEN`: `BAD_REQUEST`, message `ticket status transition is not allowed`
+- invalid transition such as `IN_PROGRESS -> OPEN`: `BAD_REQUEST`, message `ticket status transition is not allowed`
+- no-op transition such as `CLOSED -> CLOSED`: `BAD_REQUEST`, message `ticket is already in status CLOSED`
 
 ## `POST /api/v1/tickets/{id}/comments`
 
@@ -250,7 +253,7 @@ Example request:
 
 ## Internal Tracking Notes
 
-Week 3 Slice A keeps the tracking lightweight but explicit:
+Week 3 Slice C keeps the tracking lightweight but explicit:
 
 - controllers resolve `tenantId`, `operatorId`, and `requestId`
 - lower layers do not read request-scoped state implicitly

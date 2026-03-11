@@ -58,6 +58,9 @@ Copy the returned `accessToken`.
 TOKEN=<paste-accessToken-from-login-response>
 SMOKE_USERNAME="cashier-$(date +%s)"
 SMOKE_EMAIL="${SMOKE_USERNAME}@demo-shop.local"
+ASSIGNEE_ID=2
+# ASSIGNEE_ID=2 assumes a fresh local database with the seeded `ops` user.
+# If your local data has drifted, paste the current tenant `ops` id from GET /api/v1/users instead.
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/roles
@@ -91,7 +94,7 @@ curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
 TICKET_ID=<paste-id-from-ticket-create-response>
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tickets/$TICKET_ID
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"assigneeId":2}' \
+  -d "{\"assigneeId\":$ASSIGNEE_ID}" \
   http://localhost:8080/api/v1/tickets/$TICKET_ID/assignee
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"status":"IN_PROGRESS"}' \
@@ -101,6 +104,10 @@ curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
   http://localhost:8080/api/v1/tickets/$TICKET_ID/comments
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"status":"CLOSED"}' \
+  http://localhost:8080/api/v1/tickets/$TICKET_ID/status
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tickets/$TICKET_ID
+curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"OPEN"}' \
   http://localhost:8080/api/v1/tickets/$TICKET_ID/status
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tickets/$TICKET_ID
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
@@ -121,6 +128,9 @@ PowerShell:
 $token = "<paste-accessToken-from-login-response>"
 $smokeUsername = "cashier-{0}" -f [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $smokeEmail = "$smokeUsername@demo-shop.local"
+$assigneeId = 2
+# $assigneeId = 2 assumes a fresh local database with the seeded `ops` user.
+# If your local data has drifted, paste the current tenant `ops` id from GET /api/v1/users instead.
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/me
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/roles
@@ -145,7 +155,7 @@ $ticketBody = @{ title = "$smokeUsername POS register frozen"; description = "Re
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketBody http://localhost:8080/api/v1/tickets
 $ticketId = "<paste-id-from-ticket-create-response>"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/tickets/$ticketId
-$ticketAssignBody = @{ assigneeId = 2 } | ConvertTo-Json -Compress
+$ticketAssignBody = @{ assigneeId = $assigneeId } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketAssignBody http://localhost:8080/api/v1/tickets/$ticketId/assignee
 $ticketStatusBody = @{ status = "IN_PROGRESS" } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketStatusBody http://localhost:8080/api/v1/tickets/$ticketId/status
@@ -153,6 +163,9 @@ $ticketCommentBody = @{ content = "Investigating store terminal logs." } | Conve
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketCommentBody http://localhost:8080/api/v1/tickets/$ticketId/comments
 $ticketCloseBody = @{ status = "CLOSED" } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketCloseBody http://localhost:8080/api/v1/tickets/$ticketId/status
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/tickets/$ticketId
+$ticketReopenBody = @{ status = "OPEN" } | ConvertTo-Json -Compress
+curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketReopenBody http://localhost:8080/api/v1/tickets/$ticketId/status
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/tickets/$ticketId
 $statusBody = @{ status = "DISABLED" } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $statusBody http://localhost:8080/api/v1/users/$newUserId/status
@@ -171,8 +184,9 @@ Expected results:
 - `GET /api/v1/tickets/{id}` returns one current-tenant ticket with comments and workflow logs
 - `POST /api/v1/users` with the admin token creates an `ACTIVE` user whose password works immediately for login
 - `POST /api/v1/tickets` creates an `OPEN` ticket in the current tenant
-- `PATCH /api/v1/tickets/{id}/assignee` assigns the ticket to the seeded `ops` handler
-- `PATCH /api/v1/tickets/{id}/status` enforces the current `OPEN -> IN_PROGRESS -> CLOSED` loop
+- `PATCH /api/v1/tickets/{id}/assignee` assigns the ticket to the current-tenant `ops` handler identified by `ASSIGNEE_ID`
+- `PATCH /api/v1/tickets/{id}/status` enforces the current lifecycle including reopen (`OPEN -> IN_PROGRESS`, `OPEN -> CLOSED`, `IN_PROGRESS -> CLOSED`, and `CLOSED -> OPEN`)
+- the second ticket detail read shows the reopened `OPEN` state after the `CLOSED -> OPEN` request
 - `POST /api/v1/tickets/{id}/comments` appends a comment and the detail view shows it
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` or `DISABLED`
@@ -189,7 +203,7 @@ Use a fresh generated username on each run so the smoke flow stays repeatable ag
 Ticket negative-path note:
 
 - This smoke flow keeps ticket verification to the happy path.
-- Cross-tenant assignee rejection, illegal status-transition rejection, and viewer write denial are covered in automated tests and should be checked manually through [regression-checklist.md](regression-checklist.md) when needed.
+- Cross-tenant assignee rejection, illegal or no-op status-transition rejection, and viewer write denial are covered in automated tests and should be checked manually through [regression-checklist.md](regression-checklist.md) when needed.
 
 Password regression note:
 

@@ -325,17 +325,60 @@ class TicketWorkflowIntegrationTest {
     }
 
     @Test
-    void updateTicketStatusShouldRejectInvalidTransition() throws Exception {
+    void updateTicketStatusShouldAllowReopenFromClosedToOpen() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        String previousUpdatedAt = jdbcTemplate.queryForObject("SELECT CAST(updated_at AS VARCHAR) FROM ticket WHERE id = ?", String.class, 303L);
 
         mockMvc.perform(patch("/api/v1/tickets/303/status")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
                         .header(RequestIdFilter.REQUEST_ID_HEADER, "reopen-req-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(statusUpdateRequest("OPEN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("OPEN"))
+                .andExpect(jsonPath("$.data.assigneeId").value(102));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM ticket WHERE id = ?", String.class, 303L))
+                .isEqualTo("OPEN");
+
+        String reopenedUpdatedAt = jdbcTemplate.queryForObject("SELECT CAST(updated_at AS VARCHAR) FROM ticket WHERE id = ?", String.class, 303L);
+        assertThat(reopenedUpdatedAt).isNotEqualTo(previousUpdatedAt);
+
+        assertThat(jdbcTemplate.queryForList("""
+                        SELECT operation_type
+                        FROM ticket_operation_log
+                        WHERE ticket_id = ?
+                        ORDER BY id
+                        """, String.class, 303L))
+                .contains("STATUS_CHANGED");
+        assertThat(jdbcTemplate.queryForObject("""
+                        SELECT detail
+                        FROM ticket_operation_log
+                        WHERE ticket_id = ?
+                        ORDER BY id DESC
+                        LIMIT 1
+                        """, String.class, 303L))
+                .isEqualTo("status changed from CLOSED to OPEN");
+
+        mockMvc.perform(get("/api/v1/tickets/303")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("OPEN"));
+    }
+
+    @Test
+    void updateTicketStatusShouldRejectNoopClosedToClosedTransition() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(patch("/api/v1/tickets/303/status")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "closed-noop-req-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(statusUpdateRequest("CLOSED")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
-                .andExpect(jsonPath("$.message").value("ticket status transition is not allowed"));
+                .andExpect(jsonPath("$.message").value("ticket is already in status CLOSED"));
     }
 
     @Test

@@ -242,6 +242,16 @@ Content-Type: {{contentType}}
   "status": "CLOSED"
 }
 
+### Reopen tenant ticket
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "OPEN"
+}
+
+
 ### RBAC - read users
 GET {{baseUrl}}/api/v1/rbac/users
 Authorization: Bearer {{token}}

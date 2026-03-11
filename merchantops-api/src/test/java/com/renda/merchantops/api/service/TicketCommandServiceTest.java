@@ -122,13 +122,49 @@ class TicketCommandServiceTest {
     }
 
     @Test
-    void updateStatusShouldRejectInvalidTransition() {
-        when(ticketRepository.findByIdAndTenantId(11L, 1L)).thenReturn(Optional.of(ticket(11L, 1L, "CLOSED", 102L)));
+    void updateStatusShouldAllowReopenFromClosedToOpen() {
+        TicketEntity ticket = ticket(11L, 1L, "CLOSED", 102L);
+        when(ticketRepository.findByIdAndTenantId(11L, 1L)).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(any(TicketEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findByIdAndTenantId(102L, 1L)).thenReturn(Optional.of(user(102L, 1L, "ops", "ACTIVE")));
+
+        TicketWriteResponse response = ticketCommandService.updateStatus(
+                1L,
+                101L,
+                "reopen-req-1",
+                11L,
+                new TicketStatusUpdateCommand("OPEN")
+        );
+
+        assertThat(response.getStatus()).isEqualTo("OPEN");
+        assertThat(response.getAssigneeId()).isEqualTo(102L);
+        assertThat(ticket.getUpdatedAt()).isNotNull();
+
+        ArgumentCaptor<TicketOperationLogEntity> logCaptor = ArgumentCaptor.forClass(TicketOperationLogEntity.class);
+        verify(ticketOperationLogRepository).save(logCaptor.capture());
+        assertThat(logCaptor.getValue().getOperationType()).isEqualTo("STATUS_CHANGED");
+        assertThat(logCaptor.getValue().getDetail()).isEqualTo("status changed from CLOSED to OPEN");
+    }
+
+    @Test
+    void updateStatusShouldRejectIllegalTransitionFromInProgressToOpen() {
+        when(ticketRepository.findByIdAndTenantId(11L, 1L)).thenReturn(Optional.of(ticket(11L, 1L, "IN_PROGRESS", 102L)));
 
         assertBizException(
                 () -> ticketCommandService.updateStatus(1L, 101L, "status-req-1", 11L, new TicketStatusUpdateCommand("OPEN")),
                 ErrorCode.BAD_REQUEST,
                 "ticket status transition is not allowed"
+        );
+    }
+
+    @Test
+    void updateStatusShouldRejectNoopTransition() {
+        when(ticketRepository.findByIdAndTenantId(11L, 1L)).thenReturn(Optional.of(ticket(11L, 1L, "CLOSED", 102L)));
+
+        assertBizException(
+                () -> ticketCommandService.updateStatus(1L, 101L, "status-req-1", 11L, new TicketStatusUpdateCommand("CLOSED")),
+                ErrorCode.BAD_REQUEST,
+                "ticket is already in status CLOSED"
         );
     }
 
