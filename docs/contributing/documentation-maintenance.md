@@ -1,6 +1,6 @@
 # Documentation Maintenance
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Purpose
 
@@ -20,6 +20,7 @@ Use it as the routing table for answering two questions:
 - Real paths, ports, demo accounts, and seeded data must match code and database state.
 - Runbooks and reference examples must only claim checks that the documented commands actually execute.
 - If a guide relies on seeded IDs or other environment-sensitive sample data, state whether it assumes a fresh local database or expects the reader to copy a runtime value from a previous response.
+- If authentication, role assignment, or workflow-state docs describe an access change, state whether existing JWTs still work or whether stale claims are rejected until the user logs in again.
 - `CHANGELOG.md` is release-oriented, not a full development diary.
 
 ## Maintaining This Document
@@ -132,6 +133,7 @@ Update:
 Update when needed:
 
 - architecture ADR if the change is a new decision, not just implementation detail
+- document whether the change takes effect on the next protected request, only after re-login, or both
 
 ### 5. Architecture Decision Changes
 
@@ -233,6 +235,7 @@ Before staging doc changes, confirm:
 - demo accounts, ports, and credentials still match code or seed data
 - smoke steps and expected-results text describe the same checks; move extra negative paths into automated-test notes or a broader checklist when the smoke flow does not execute them
 - any hard-coded ID in examples is either truly stable for the intended environment or clearly labeled as a fresh-local-db assumption
+- access-change examples state whether a pre-change token remains valid or whether the reader must re-login because stale claims are rejected
 - `README.md` did not absorb low-level detail that belongs in `docs/`
 - newly added docs are linked from the right navigation page
 - release/version references do not conflict with existing tags

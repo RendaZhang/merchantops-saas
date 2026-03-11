@@ -14,6 +14,7 @@ This repository currently organizes handoff rules around five roles:
 - An agent may update this file when it finds guidance that is outdated, inaccurate, missing, or repeatedly needed across tasks.
 - Only promote rules into this file when they are stable, reusable, and likely to matter again for future work.
 - Do not add one-off task notes, temporary workarounds, or short-lived phase noise here.
+- Keep this file short. If a rule starts turning into implementation detail, runbook nuance, or verification edge-case guidance, move that detail into the appropriate page under `docs/contributing/` and leave only the repository-level summary here.
 - If this file or another repository guidance page is clearly outdated, inaccurate, or incomplete, fix the guidance instead of working around it silently.
 - A good promotion threshold is:
   - the same confusion or mistake has already happened more than once
@@ -39,8 +40,7 @@ This repository currently organizes handoff rules around five roles:
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before making development-facing documentation changes.
 - Keep root `README.md` high-level and move development detail into `docs/`.
 - Do not document an endpoint as public unless it is visible in Swagger.
-- Keep runbooks and reference examples honest about verification scope: only claim checks that the documented commands actually execute, and label automated-only or manual-only negative paths explicitly.
-- When a doc uses seeded IDs, demo accounts, or other environment-sensitive sample data, state whether it assumes a fresh local database or whether the reader should paste an ID from a live response.
+- Use the linked contributing pages for detailed wording rules around verification scope, environment-sensitive sample data, and stale-token versus re-login expectations instead of duplicating those details here.
 - Follow the routing rules in the linked maintenance and development guidance pages instead of re-encoding detailed update matrices here.
 - Shortcut prefix: `DOC`
 - Supported shortcuts include:
@@ -59,8 +59,7 @@ This repository currently organizes handoff rules around five roles:
 - Read [docs/contributing/testing-agent-guidance.md](docs/contributing/testing-agent-guidance.md) before changing tests, test coverage notes, or verification guidance.
 - Start from [docs/runbooks/automated-tests.md](docs/runbooks/automated-tests.md) for the current regression command and coverage boundary.
 - Keep tests, runbooks, and public API docs aligned when verification reality changes.
-- Keep smoke guidance scoped to what it really executes. If a negative path stays covered only by automated tests or a broader regression checklist, say that directly instead of implying the smoke flow already exercised it.
-- If a staged change adds or edits a Flyway migration, do not stop at H2 or manually-created test schemas; verify the migration effect against the real local MySQL path as part of testing sign-off.
+- Use the linked testing guidance for detailed rules on smoke-scope wording, Flyway migration sign-off, and stale-token versus refreshed-login verification.
 - Treat `TT staged` as a testing-focused staged review entry point: inspect the staged diff, run or choose the smallest sufficient verification set, and report findings ordered by urgency (`P1`, `P2`, `P3`) rather than stopping at scope mapping alone.
 - Shortcut prefix: `TT`
 - Supported shortcuts include:
@@ -78,7 +77,7 @@ This repository currently organizes handoff rules around five roles:
 
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before changing tenant-scoped repositories, services, DTOs, or user-management internals.
 - Keep tenant scoping explicit and keep query/write models separated.
-- Treat `operatorId` the same way as `tenantId` for tenant-scoped writes when operator attribution matters: resolve it at the controller edge, pass it explicitly through service methods, and keep attribution fields internal unless Swagger exposes them on purpose.
+- Use the linked development guidance for detailed rules on `operatorId` / `requestId` propagation, internal attribution fields, and request-time access revalidation.
 - Do not present internal groundwork as public API.
 - If implementation changes affect public contract or reusable repo rules, update the linked docs in the same change.
 

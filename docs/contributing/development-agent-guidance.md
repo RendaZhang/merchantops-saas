@@ -1,6 +1,6 @@
 # Development Agent Guidance
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Purpose
 
@@ -36,9 +36,11 @@ Use it when changing code or development-facing documentation.
 - Service-layer public methods for tenant-scoped workflow writes should also accept `requestId` explicitly when request-level tracing or operation logs are persisted.
 - Controllers may resolve `tenantId` from request context, but lower layers must not rely on implicit thread-local access.
 - Controllers may resolve `operatorId` from request context for write flows, but lower layers must not fall back to implicit thread-local access for operator attribution.
+- Controllers may resolve `requestId` from request context for workflow writes, but lower layers must not fall back to implicit thread-local access for request-level tracing or workflow logging.
 - Query DTOs must describe read results only.
 - Command DTOs must describe allowed write inputs only.
 - Unimplemented business flows must throw unified business exceptions, not raw framework or JDK exceptions.
+- If a write can change effective access state such as user status, roles, or permissions, request-time authentication must revalidate that state and reject stale JWT claims instead of relying on login-time checks alone.
 
 ### Tenant Scope Rules
 
@@ -63,6 +65,11 @@ Operator-attribution note:
 
 - if a write flow persists `createdBy`, `updatedBy`, approver ids, or similar operator-owned fields, treat that attribution as an internal write concern rather than a public request field
 - keep operator attribution sourced from authenticated context, not from caller-provided DTO fields
+
+Request-tracing note:
+
+- if a workflow write persists `requestId`, operation-log rows, or similar request-scoped trace fields, treat them as internal write concerns rather than public request fields
+- keep request tracing sourced from request context headers or generated request scope, not from caller-provided DTO fields
 
 ### Query Model Rules
 
@@ -102,6 +109,13 @@ Current `/api/v1/tickets` contract is the baseline workflow-module example:
 - write entrypoints at `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
 - explicit `tenantId`, `operatorId`, and `requestId` forwarding from controller to write service
 - workflow-level log persistence without exposing raw `requestId` in the current public contract
+
+Workflow-module baseline for future slices:
+
+- start with a minimal state model and minimal permission model rather than jumping to a generic audit subsystem
+- keep state-transition rules, assignee validation, and other workflow invariants in the service layer, not scattered across controllers
+- persist workflow-level operation logs in the same transaction as the business write when the module already needs traceable lifecycle events
+- treat public workflow logs and internal trace fields as separate concerns; exposing one does not imply exposing the other
 
 ### Write Model Rules
 
@@ -159,6 +173,7 @@ For future repository additions:
 - not-yet-implemented business write flows should return `BizException`, not `UnsupportedOperationException`
 - permission enforcement stays at controller/interceptor level, not repository level
 - protected JWT requests that depend on current roles or permissions must reject stale claims after status, role, or permission changes
+- when access changes are supposed to take effect immediately, do not treat successful re-login alone as sufficient verification; the pre-change token must also be rejected on the next protected request
 
 ### Extension Checklist
 

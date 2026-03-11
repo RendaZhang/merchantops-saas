@@ -4,6 +4,8 @@ This section holds contributor and agent workflow guidance for documentation, de
 
 Keep [../../AGENTS.md](../../AGENTS.md) as the short repository entry point. Use the pages here for the detailed, reusable rules that sit behind it.
 
+If a rule starts turning into implementation detail, runbook nuance, or verification edge-case guidance, keep that detail here and leave [../../AGENTS.md](../../AGENTS.md) as the shorter repository-level summary.
+
 ## Pages
 
 - [documentation-maintenance.md](documentation-maintenance.md): routing rules for which docs must change when implementation, API, release, or architecture changes happen

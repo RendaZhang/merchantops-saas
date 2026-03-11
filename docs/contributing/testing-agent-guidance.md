@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Purpose
 
@@ -17,7 +17,8 @@ When you take over an in-flight change set, use this order:
 3. If the staged change touches controllers, security, repositories, entities, or a bug that only appears in real request flow, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`, and follow [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md).
 4. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
 5. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
-6. Report concrete findings first. Keep summaries and changelog-style recap secondary.
+6. If the staged change affects status, roles, permissions, or JWT-claim propagation, verify both the stale-token rejection path and the refreshed-login success path before signing off.
+7. Report concrete findings first. Keep summaries and changelog-style recap secondary.
 
 ## `TT staged` Expectations
 
@@ -95,6 +96,7 @@ Use the full reactor only when broader verification is needed:
 - Treat password formatting as a cross-flow regression point. Whenever create-user or login password handling changes, verify that both flows enforce the same rule.
 - Do not let smoke docs over-claim coverage. If a runbook executes only the happy path, keep negative-path expectations in automated-test notes or the regression checklist and label them that way.
 - When smoke docs use seeded IDs such as a demo assignee, say whether the value assumes a fresh local database or whether the tester should paste an ID from an earlier response.
+- Do not treat successful re-login as enough evidence for authz changes. If status, role, or permission data changed, also prove that a token issued before the change is rejected on the next protected request when the current design says claims should go stale immediately.
 
 ## Testing Role Rules
 
@@ -102,6 +104,7 @@ Use the full reactor only when broader verification is needed:
 - Use [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md) after the automated suite passes when manual validation is still required.
 - Use [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md) for broader validation after security, SQL, environment, or public API changes.
 - For `/api/v1/users` behavior, compare runtime and test expectations against [../reference/user-management.md](../reference/user-management.md) and [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md).
+- For access-change work such as status updates, role reassignment, permission-seed edits, or ticket-write promotion, compare runtime and test expectations against [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md) and the affected business reference page so stale-token versus re-login behavior stays documented and verified together.
 - If a public API contract changes, update the related automated tests, runbooks, and public reference docs in the same change.
 - If automated coverage meaningfully expands or narrows, update [../project-status.md](../project-status.md) so the current testing reality stays accurate.
 

@@ -116,7 +116,7 @@ Not yet implemented:
 - Week 10 delivery hardening, feature flag rollout control, and portfolio packaging
 - formal open-source release packaging such as license choice, contribution guide, security policy, and sanitized public demo assets
 - usage / ledger / invoice remains a stretch goal after the core workflow + AI path is stable
-- broader automated coverage beyond the current login + `/api/v1/roles` + `/api/v1/users` Week 2 surface
+- broader automated coverage beyond the current login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` surface
 - deployment-ready Docker or Kubernetes manifests
 - performance documentation and benchmark artifacts
 
@@ -144,10 +144,10 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - refresh token flow
 - logout or token revocation
 - fine-grained operator audit logs
-- broader multi-module automated coverage outside the current auth + user-management path
+- broader multi-module automated coverage outside the current auth + user-management + ticket workflow path
 - production-ready secret management
 - tenant admin UI or frontend
-- later-phase modules such as ticket workflow, async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
+- later Week 3 ticket slices such as richer queue filters, reopen semantics, priority or SLA handling, attachments, and notifications, plus later-phase modules such as async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
 
 ## Known Gaps
 
