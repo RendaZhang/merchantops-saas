@@ -1,6 +1,6 @@
 # Ticket Workflow
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 ## Public API Surface
 
@@ -48,13 +48,17 @@ Current behavior:
   - `page` with default `0`
   - `size` with default `10`
   - `status` as exact filter
+  - `assigneeId` as exact current assignee filter
+  - `keyword` fuzzy filter against `title` and `description`
+  - `unassignedOnly=true` to return only tickets with `assigneeId = null`
+- rejects `assigneeId` combined with `unassignedOnly=true` with `BAD_REQUEST`
 - response is a page object with `items`, `page`, `size`, `total`, and `totalPages`
 - items are ordered by `updatedAt DESC`, then `id DESC`
 
 Example request:
 
 ```text
-GET /api/v1/tickets?page=0&size=10&status=OPEN
+GET /api/v1/tickets?page=0&size=10&status=OPEN&keyword=printer&unassignedOnly=true
 ```
 
 Response example:

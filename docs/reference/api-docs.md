@@ -81,7 +81,7 @@ User Management tag note:
 Ticket Workflow tag note:
 
 - Swagger currently exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`.
-- `GET /api/v1/tickets` supports `page`, `size`, and `status`.
+- `GET /api/v1/tickets` supports `page`, `size`, `status`, `assigneeId`, `keyword` (title/description), and `unassignedOnly`.
 - `GET /api/v1/tickets/{id}` includes current comments and workflow-level operation logs.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.

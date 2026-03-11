@@ -50,9 +50,14 @@ public class TicketQueryService {
                 Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))
         );
 
-        Page<TicketEntity> resultPage = StringUtils.hasText(normalizedQuery.getStatus())
-                ? ticketRepository.findAllByTenantIdAndStatus(tenantId, normalizedQuery.getStatus(), pageable)
-                : ticketRepository.findAllByTenantId(tenantId, pageable);
+        Page<TicketEntity> resultPage = ticketRepository.pageByTenantAndFilters(
+                tenantId,
+                normalizedQuery.getStatus(),
+                normalizedQuery.getAssigneeId(),
+                normalizedQuery.getKeyword(),
+                Boolean.TRUE.equals(normalizedQuery.getUnassignedOnly()),
+                pageable
+        );
 
         Map<Long, String> usernamesById = loadUsernamesById(
                 tenantId,
@@ -126,6 +131,11 @@ public class TicketQueryService {
         normalized.setPage(normalizePage(query));
         normalized.setSize(normalizeSize(query));
         normalized.setStatus(normalizeFilter(normalized.getStatus()));
+        normalized.setKeyword(normalizeFilter(normalized.getKeyword()));
+        normalized.setUnassignedOnly(Boolean.TRUE.equals(normalized.getUnassignedOnly()));
+        if (normalized.getAssigneeId() != null && Boolean.TRUE.equals(normalized.getUnassignedOnly())) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "assigneeId cannot be combined with unassignedOnly=true");
+        }
         return normalized;
     }
 
@@ -151,12 +161,13 @@ public class TicketQueryService {
     }
 
     private TicketListItemResponse toListItemResponse(TicketEntity ticket, Map<Long, String> usernamesById) {
+        Long assigneeId = ticket.getAssigneeId();
         return new TicketListItemResponse(
                 ticket.getId(),
                 ticket.getTitle(),
                 ticket.getStatus(),
-                ticket.getAssigneeId(),
-                usernamesById.get(ticket.getAssigneeId()),
+                assigneeId,
+                assigneeId == null ? null : usernamesById.get(assigneeId),
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt()
         );

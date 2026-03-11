@@ -179,6 +179,18 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/tickets?page=0&size=10&status=OPEN
 Authorization: Bearer {{token}}
 
+### List tenant tickets - filter by assignee
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&assigneeId={{opsUserId}}
+Authorization: Bearer {{token}}
+
+### List tenant tickets - filter by keyword(title/description)
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&keyword=printer
+Authorization: Bearer {{token}}
+
+### List tenant tickets - unassigned queue
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&status=OPEN&unassignedOnly=true
+Authorization: Bearer {{token}}
+
 ### Create tenant ticket
 POST {{baseUrl}}/api/v1/tickets
 Authorization: Bearer {{token}}

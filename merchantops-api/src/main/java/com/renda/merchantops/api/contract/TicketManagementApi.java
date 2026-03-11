@@ -30,6 +30,7 @@ import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_TICKET_COMMENT_C
 import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_TICKET_CREATE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_TICKET_STATUS_UPDATE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_TICKET_ASSIGNEE;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_TICKET_LIST_FILTERS;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_TICKET_STATUS_TRANSITION;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FORBIDDEN;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_ASSIGNED;
@@ -51,7 +52,7 @@ public interface TicketManagementApi {
 
     @Operation(
             summary = "Page tickets in current tenant",
-            description = "Requires TICKET_READ permission. Supports page/size and optional status filtering. The tenant scope is derived from JWT, not request parameters."
+            description = "Requires TICKET_READ permission. Supports page/size plus optional status, assigneeId, keyword (title/description), and unassignedOnly filters. The tenant scope is derived from JWT, not request parameters. assigneeId cannot be combined with unassignedOnly=true."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -68,6 +69,11 @@ public interface TicketManagementApi {
                     responseCode = "403",
                     description = "Missing TICKET_READ permission",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid query filter combination",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_BAD_REQUEST_TICKET_LIST_FILTERS))
             )
     })
     @GetMapping

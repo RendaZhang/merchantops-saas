@@ -26,7 +26,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## What Is Covered Today
 
-Current automated coverage is focused on the completed Week 2 user-management loop plus Week 3 Slice A ticket workflow.
+Current automated coverage is focused on the completed Week 2 user-management loop plus Week 3 ticket workflow slices.
 
 ### `merchantops-api` tests
 
@@ -51,6 +51,9 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
 - `TicketWorkflowIntegrationTest`
   - real `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}` auth + tenant-isolation behavior
+  - `GET /api/v1/tickets` queue filters for `status + assigneeId`, `unassignedOnly`, and `keyword` (including title-only hit, description-only hit, and tenant isolation)
+  - `assigneeId` filtering does not leak cross-tenant assignee IDs
+  - `400` for `assigneeId` + `unassignedOnly=true` invalid query combination
   - `403` when `viewer` attempts ticket write operations
   - `400` when assignment tries to use an assignee outside the current tenant
   - `400` when ticket status transition rules are violated
@@ -95,7 +98,7 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - HTTP request binding for `POST /api/v1/tickets/{id}/comments`
   - request-scoped forwarding of `tenantId`, `operatorId`, and `requestId`
 - `TicketQueryServiceTest`
-  - page defaulting and max-size normalization for ticket list
+  - page defaulting, filter normalization, and invalid filter-combination rejection for ticket list
   - ticket detail mapping for assignee, comments, and workflow logs
   - ticket detail `NOT_FOUND` path
 - `TicketCommandServiceTest`

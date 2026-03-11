@@ -203,6 +203,89 @@ class TicketWorkflowIntegrationTest {
                 .andExpect(jsonPath("$.data.items[*].title", not(hasItem("Other tenant ticket"))));
     }
 
+
+    @Test
+    void listTicketsShouldSupportStatusAndAssigneeFilters() throws Exception {
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("status", "IN_PROGRESS")
+                        .queryParam("assigneeId", "102"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].id", contains(302)))
+                .andExpect(jsonPath("$.data.items[0].assigneeId").value(102));
+    }
+
+    @Test
+    void listTicketsAssigneeFilterShouldNotLeakCrossTenantAssigneeId() throws Exception {
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("assigneeId", "201"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void listTicketsShouldSupportUnassignedOnlyAndStatusWithStablePaging() throws Exception {
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("status", "OPEN")
+                        .queryParam("unassignedOnly", "true")
+                        .queryParam("page", "0")
+                        .queryParam("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.items[*].id", contains(301)));
+    }
+
+    @Test
+    void listTicketsKeywordShouldMatchTitleAndDescriptionWithinTenantOnly() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        Long titleKeywordTicketId = createTicketAndGetId(adminToken, "keyword-title-req-1", "TitleOnlyKeyword-ops", "normal description");
+        Long descriptionKeywordTicketId = createTicketAndGetId(adminToken, "keyword-description-req-1", "normal title", "DescOnlyKeyword-router");
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("keyword", "other tenant"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("keyword", "TitleOnlyKeyword-ops"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].id", contains(titleKeywordTicketId.intValue())));
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("keyword", "DescOnlyKeyword-router"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].id", contains(descriptionKeywordTicketId.intValue())));
+    }
+
+    @Test
+    void listTicketsShouldRejectAssigneeWithUnassignedOnly() throws Exception {
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(get("/api/v1/tickets")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("assigneeId", "102")
+                        .queryParam("unassignedOnly", "true"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
     @Test
     void getTicketDetailShouldReturnNotFoundWhenTicketIsOutsideCurrentTenant() throws Exception {
         String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");

@@ -19,4 +19,13 @@ public class TicketPageQuery {
 
     @Schema(description = "Exact ticket status filter", example = "OPEN")
     private String status;
+
+    @Schema(description = "Exact assignee user ID filter in current tenant", example = "102")
+    private Long assigneeId;
+
+    @Schema(description = "Keyword search against title and description", example = "printer")
+    private String keyword;
+
+    @Schema(description = "When true, only return unassigned tickets (assigneeId is null)", example = "true", defaultValue = "false")
+    private Boolean unassignedOnly;
 }

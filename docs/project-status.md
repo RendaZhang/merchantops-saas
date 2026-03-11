@@ -4,12 +4,12 @@ Last updated: 2026-03-11
 
 ## Overview
 
-MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management and has now landed Week 3 Slice A of the Ticket Workflow - System of Action on top of the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, and first workflow-loop flows, but it has not yet reached the later workflow and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
+MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management and has now landed Week 3 Slice B queue/query enrichment of the Ticket Workflow - System of Action on top of the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, and first workflow-loop flows, but it has not yet reached the later workflow and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
 
 ## Current Phase Summary
 
-- Current phase: Week 3 Ticket Workflow - System of Action (Slice A closeable loop is now public)
-- Next phase: Week 4 Audit Trail And Approval Patterns after the first ticket slice is standing
+- Current phase: Week 3 Ticket Workflow - System of Action (Slice B queue/query enrichment is now public)
+- Next phase: Week 4 Audit Trail And Approval Patterns after the current ticket slices are standing
 - Primary outcome: use the completed Week 2 tenant user-management loop as the stable platform baseline for the first real workflow module and a minimal closeable ticket loop
 - Current tagged milestone: `v0.1.1` on 2026-03-11, recorded as `Week 2 complete: tenant user management loop`
 - Previous tagged baseline: `v0.1.0` on 2026-03-09, recorded as `Week 1 complete: foundation phase`
@@ -101,12 +101,12 @@ Completed:
 - current-tenant ticket comments work with `TICKET_WRITE` and append workflow log entries
 - focused automated tests now cover auth security integration, current user-management paths, and the Week 3 ticket close-loop paths
 - Week 2 first-business-loop public HTTP contract now covers list, detail, create, profile update, status management, tenant role lookup, and role reassignment
-- Week 3 Slice A public HTTP contract now covers ticket list, detail, create, assignee change, status change, comment, and close-through-status
+- Week 3 Slice A/B public HTTP contract now covers ticket list, detail, create, assignee change, status change, comment, close-through-status, and queue filters (`assigneeId`, `keyword`, `unassignedOnly`)
 - manual and automated verification flows are documented
 
 Not yet implemented:
 
-- broader Week 3 ticket slices such as richer queue filters, reopen semantics, priority/SLA, attachments, or notifications
+- broader Week 3 ticket slices such as reopen semantics, priority/SLA, attachments, or notifications
 - Week 4 audit trail and approval patterns
 - Week 5 async import and data operations
 - Week 6 ticket AI Copilot
@@ -122,13 +122,13 @@ Not yet implemented:
 
 ## Current Limitations
 
-Current implementation is intentionally focused on the completed Week 1 foundation, the completed Week 2 user-management loop, and the first public Week 3 ticket slice, so the following are not yet implemented:
+Current implementation is intentionally focused on the completed Week 1 foundation, the completed Week 2 user-management loop, and the current public Week 3 ticket slices, so the following are not yet implemented:
 
 - Swagger-visible business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
 - `GET /api/v1/users` is a paged current-tenant query endpoint ordered by `id ASC`
 - `GET /api/v1/users/{id}` is the current tenant-scoped detail query endpoint and includes current `roleCodes`
 - `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` are the public user-management write endpoints today
-- `GET /api/v1/tickets` is the current paged ticket query endpoint and supports `status`
+- `GET /api/v1/tickets` is the current paged ticket query endpoint and supports `status`, `assigneeId`, `keyword` (title/description), and `unassignedOnly`
 - `GET /api/v1/tickets/{id}` is the current tenant-scoped ticket detail endpoint and includes comments and workflow logs
 - `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` are the current ticket write endpoints today
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
@@ -147,7 +147,7 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - broader multi-module automated coverage outside the current auth + user-management + ticket workflow path
 - production-ready secret management
 - tenant admin UI or frontend
-- later Week 3 ticket slices such as richer queue filters, reopen semantics, priority or SLA handling, attachments, and notifications, plus later-phase modules such as async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
+- later Week 3 ticket slices such as reopen semantics, priority or SLA handling, attachments, and notifications, plus later-phase modules such as async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
 
 ## Known Gaps
 

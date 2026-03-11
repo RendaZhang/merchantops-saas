@@ -6,7 +6,7 @@ Last updated: 2026-03-11
 
 - Week 1 Platform Foundation is complete
 - Week 2 First Business Loop - Tenant User Management is complete
-- Week 3 Ticket Workflow - System of Action is the active phase, and Slice A is now public
+- Week 3 Ticket Workflow - System of Action is the active phase, and Slice B queue/query enrichment is now public
 - Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
@@ -38,10 +38,10 @@ Complete the first business loop by turning the current user-management groundwo
 
 ## Recommended Next Step
 
-Continue Week 3 ticket workflow after Slice A:
+Continue Week 3 ticket workflow after Slice B:
 
 - enrich the ticket queue beyond the first closeable loop without expanding into Week 4 generic audit scope too early
-- keep remaining schema hardening tasks scoped so they do not destabilize the now-public Week 3 Slice A contract
+- keep remaining schema hardening tasks scoped so they do not destabilize the now-public Week 3 Slice B contract
 
 ## Planned Work By Phase
 
@@ -52,7 +52,7 @@ Week 2 completion:
 
 Week 3 target:
 
-- land the first closeable ticket loop, then extend queue/query and lifecycle behavior without jumping to a full audit subsystem
+- land the first closeable ticket loop, then extend queue/query behavior (status + assignee + keyword + unassigned) without jumping to a full audit subsystem
 
 Week 4 target:
 

@@ -140,7 +140,10 @@ class TicketManagementControllerTest {
                         .header(HEADER_AUTHORITIES, "TICKET_READ")
                         .queryParam("page", "1")
                         .queryParam("size", "5")
-                        .queryParam("status", "OPEN"))
+                        .queryParam("status", "OPEN")
+                        .queryParam("assigneeId", "102")
+                        .queryParam("keyword", "printer")
+                        .queryParam("unassignedOnly", "false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.page").value(1))
@@ -151,6 +154,9 @@ class TicketManagementControllerTest {
         assertThat(queryCaptor.getValue().getPage()).isEqualTo(1);
         assertThat(queryCaptor.getValue().getSize()).isEqualTo(5);
         assertThat(queryCaptor.getValue().getStatus()).isEqualTo("OPEN");
+        assertThat(queryCaptor.getValue().getAssigneeId()).isEqualTo(102L);
+        assertThat(queryCaptor.getValue().getKeyword()).isEqualTo("printer");
+        assertThat(queryCaptor.getValue().getUnassignedOnly()).isFalse();
     }
 
     @Test

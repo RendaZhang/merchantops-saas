@@ -53,11 +53,11 @@ class TicketQueryServiceTest {
     private TicketQueryService ticketQueryService;
 
     @Test
-    void pageTicketsShouldNormalizeStatusFilterAndMapAssigneeUsername() {
-        TicketPageQuery query = new TicketPageQuery(-1, 999, " OPEN ");
+    void pageTicketsShouldNormalizeFiltersAndMapAssigneeUsername() {
+        TicketPageQuery query = new TicketPageQuery(-1, 999, " OPEN ", 102L, "  printer  ", null);
         TicketEntity ticket = ticket(11L, 1L, "POS printer offline", "OPEN", 102L, 101L);
 
-        when(ticketRepository.findAllByTenantIdAndStatus(eq(1L), eq("OPEN"), any(Pageable.class)))
+        when(ticketRepository.pageByTenantAndFilters(eq(1L), eq("OPEN"), eq(102L), eq("printer"), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(ticket), PageRequest.of(0, 100), 1));
         when(userRepository.findAllByTenantIdAndIdIn(1L, java.util.Set.of(102L)))
                 .thenReturn(List.of(user(102L, 1L, "ops")));
@@ -65,7 +65,7 @@ class TicketQueryServiceTest {
         TicketPageResponse response = ticketQueryService.pageTickets(1L, query);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(ticketRepository).findAllByTenantIdAndStatus(eq(1L), eq("OPEN"), pageableCaptor.capture());
+        verify(ticketRepository).pageByTenantAndFilters(eq(1L), eq("OPEN"), eq(102L), eq("printer"), eq(false), pageableCaptor.capture());
 
         assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(0);
         assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(100);
@@ -74,6 +74,16 @@ class TicketQueryServiceTest {
         assertThat(response.getPage()).isEqualTo(0);
         assertThat(response.getSize()).isEqualTo(100);
         assertThat(response.getTotal()).isEqualTo(1);
+    }
+
+    @Test
+    void pageTicketsShouldRejectAssigneeAndUnassignedOnlyCombination() {
+        TicketPageQuery query = new TicketPageQuery(0, 10, null, 102L, null, true);
+
+        assertThatThrownBy(() -> ticketQueryService.pageTickets(1L, query))
+                .isInstanceOf(BizException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BAD_REQUEST);
     }
 
     @Test
@@ -128,9 +138,9 @@ class TicketQueryServiceTest {
         ticket.setStatus(status);
         ticket.setAssigneeId(assigneeId);
         ticket.setCreatedBy(createdBy);
-        ticket.setRequestId("req-" + id);
+        ticket.setRequestId("req-1");
         ticket.setCreatedAt(LocalDateTime.of(2026, 3, 11, 10, 0));
-        ticket.setUpdatedAt(LocalDateTime.of(2026, 3, 11, 10, 30));
+        ticket.setUpdatedAt(LocalDateTime.of(2026, 3, 11, 10, 5));
         return ticket;
     }
 
@@ -143,10 +153,10 @@ class TicketQueryServiceTest {
         comment.setId(id);
         comment.setTenantId(tenantId);
         comment.setTicketId(ticketId);
-        comment.setCreatedBy(createdBy);
         comment.setContent(content);
-        comment.setRequestId("comment-" + id);
-        comment.setCreatedAt(LocalDateTime.of(2026, 3, 11, 10, 15));
+        comment.setCreatedBy(createdBy);
+        comment.setRequestId("req-c");
+        comment.setCreatedAt(LocalDateTime.of(2026, 3, 11, 10, 10));
         return comment;
     }
 
@@ -160,11 +170,11 @@ class TicketQueryServiceTest {
         log.setId(id);
         log.setTenantId(tenantId);
         log.setTicketId(ticketId);
-        log.setOperatorId(operatorId);
         log.setOperationType(operationType);
         log.setDetail(detail);
-        log.setRequestId("log-" + id);
-        log.setCreatedAt(LocalDateTime.of(2026, 3, 11, 10, 20));
+        log.setOperatorId(operatorId);
+        log.setRequestId("req-l");
+        log.setCreatedAt(LocalDateTime.of(2026, 3, 11, 10, 0));
         return log;
     }
 
