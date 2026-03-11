@@ -6,18 +6,25 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+No release-level changes recorded after `v0.1.2` yet.
+
+## [v0.1.2] - 2026-03-11
+
+Tagged as `Week 3 complete: ticket workflow baseline`.
+
 ### Added
 
-- Added the first public Week 3 ticket workflow slice with tenant-scoped ticket list, detail, create, assignee change, status change, and comment endpoints.
-- Added workflow-level ticket operation logging plus focused automated coverage for the create -> assign -> comment -> close loop.
+- Completed the Week 3 ticket workflow baseline with tenant-scoped ticket list, detail, create, assignee change, status change, comment, queue filters, and reopen support.
+- Added workflow-level ticket operation logging plus focused automated coverage for queue/query behavior, reopen, and the closeable ticket lifecycle.
 
 ### Changed
 
-- Updated status and roadmap docs to treat Week 3 ticket workflow as the active phase instead of only the next planned phase.
+- Updated status, roadmap, and plan docs to treat Week 3 as complete and Week 4 audit/approval work as the active phase.
 
 ### Docs
 
-- Added ticket workflow reference, smoke flow, regression checklist entries, and API examples for the new `/api/v1/tickets` public contract.
+- Added a shared non-blocking backlog page for cross-phase follow-up items and folded the former standalone Week 1 tenant-integrity note into that backlog.
+- Expanded ticket workflow reference, smoke flow, regression checklist entries, and API examples to match the completed Week 3 public contract.
 
 ## [v0.1.1] - 2026-03-11
 

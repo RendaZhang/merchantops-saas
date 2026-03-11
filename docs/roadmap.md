@@ -6,20 +6,21 @@ Last updated: 2026-03-11
 
 - Week 1 Platform Foundation is complete
 - Week 2 First Business Loop - Tenant User Management is complete
-- Week 3 Ticket Workflow - System of Action is the active phase, and Slice C reopen semantics is now public
+- Week 3 Ticket Workflow - System of Action is complete
+- Week 4 Audit Trail And Approval Patterns is the active phase
 - Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
-## Week 2 Outcome
+## Week 2 Baseline
 
-Complete the first business loop by turning the current user-management groundwork into Swagger-visible business APIs on top of the Week 1 foundation.
+The first business loop is complete: Week 2 turned the user-management groundwork into Swagger-visible business APIs on top of the Week 1 foundation.
 
 ## Phase Sequence
 
 - Week 2: user management (complete)
-- Week 3: ticket workflow - system of action (active phase)
-- Week 4: audit trail and approval patterns
+- Week 3: ticket workflow - system of action (complete)
+- Week 4: audit trail and approval patterns (active phase)
 - Week 5: async import and data operations
 - Week 6: AI Copilot for ticket operations
 - Week 7: AI Copilot for import and data quality
@@ -30,18 +31,19 @@ Complete the first business loop by turning the current user-management groundwo
 
 ## Open-Source Track
 
-- Current tagged milestone: `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11
-- Previous tagged baseline: `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09
+- Current tagged milestone: `v0.1.2` marks the completed Week 3 ticket workflow baseline on 2026-03-11
+- Previous tagged milestone: `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11
+- Earlier tagged baseline: `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09
 - Week 5 target: prepare for a next-stage preview such as `v0.2.0-alpha` after the first workflow and async-operation backbone is credible
 - Week 6 or Week 7 target: make the first public open-source release that can honestly present the project as an AI-enhanced vertical SaaS, for example `v0.3.0-beta`
 - Week 10 target: reach a more stable open-source reference-implementation milestone and gather input for later commercial discovery
 
 ## Recommended Next Step
 
-Continue Week 3 ticket workflow after Slice C:
+Start Week 4 audit trail and approval patterns:
 
-- enrich the ticket queue beyond the first closeable loop without expanding into Week 4 generic audit scope too early
-- keep remaining schema hardening tasks scoped so they do not destabilize the now-public Week 3 Slice C contract
+- define a reusable audit-event and approval envelope that Week 2 user writes and Week 3 ticket workflow can both emit
+- keep the remaining Week 3 hardening items visible and narrow so they do not delay the Week 4 start
 
 ## Planned Work By Phase
 
@@ -52,7 +54,8 @@ Week 2 completion:
 
 Week 3 target:
 
-- land the first closeable ticket loop, then extend queue/query behavior (status + assignee + keyword + unassigned) without jumping to a full audit subsystem
+- complete the first real workflow module through closeable ticket loop, queue/query behavior, and reopen semantics without jumping to a full audit subsystem
+- Week 3 milestone recorded through the `v0.1.2` tag on 2026-03-11 before Week 4 governance work becomes the mainline story
 
 Week 4 target:
 
@@ -90,12 +93,12 @@ Stretch target after Week 10:
 ## Near-Term Priorities
 
 - move from RBAC demo endpoints to clearer business-oriented endpoints
-- continue the Week 3 ticket workflow slices now that the first closeable loop is public
-- keep Week 2 user-management docs aligned with the now-tagged public API baseline while Week 3 grows
-- keep Week 3 ticket work layered on top of the already-usable Week 2 user-management baseline
+- begin Week 4 audit and approval work from the now-completed Week 3 ticket baseline
+- keep Week 2 and Week 3 docs aligned with the now-public workflow baseline while Week 4 adds reusable governance patterns
+- keep Week 3 hardening follow-up narrow and separate from the Week 4 mainline
 - treat AI as an embedded workflow layer, not as a standalone chatbot detour
 - design audit, approval, and evaluation hooks before agentic automation is added
-- shape the architecture so later open-source packaging is straightforward, but do not front-run the active Week 3 delivery work with broader licensing or release chores
+- shape the architecture so later open-source packaging is straightforward, but do not front-run the active Week 4 delivery work with broader licensing or release chores
 - improve test coverage for authentication, permission checks, and tenant isolation
 - continue turning README-linked docs into a more complete developer handbook
 

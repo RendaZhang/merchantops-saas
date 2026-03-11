@@ -123,6 +123,6 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 
 - Current project status: [docs/project-status.md](docs/project-status.md)
 - Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
-- Current tagged milestone: `v0.1.1` on 2026-03-11 for Week 2 tenant user-management loop
+- Current tagged milestone: `v0.1.2` on 2026-03-11 for the completed Week 3 ticket workflow baseline
 - Project direction: portfolio first, open-source second, and potential commercial exploration after the workflow and AI layers are credible
-- Week 2 tenant user-management loop is complete and Week 3 ticket workflow is the active implementation phase, with the first public closeable ticket slice now landed
+- Week 2 tenant user-management loop is complete, Week 3 ticket workflow core loop is now complete, and Week 4 audit/approval patterns are the next mainline phase

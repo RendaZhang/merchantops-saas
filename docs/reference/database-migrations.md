@@ -44,7 +44,7 @@ WHERE tenant_id = 1
 ORDER BY id;
 ```
 
-To verify ticket tables and demo ticket permissions after Week 3 Slice C:
+To verify ticket tables and demo ticket permissions after the completed Week 3 ticket workflow baseline:
 
 ```sql
 SELECT permission_code
@@ -94,4 +94,4 @@ SELECT
 - Password hashes for seed users can be generated with `merchantops-api/src/main/java/com/renda/merchantops/api/tools/PasswordHashGenerator.java`
 - Do not edit an already-applied migration. Create a new version for follow-up changes instead.
 - `created_by` and `updated_by` are intentionally nullable so historical seed rows do not pretend to have a synthetic operator.
-- Known schema gap: [../architecture/tenant-rbac-integrity-gap.md](../architecture/tenant-rbac-integrity-gap.md)
+- Known schema gap: [../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity](../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity)

@@ -18,4 +18,4 @@ This section stores architecture notes, technical decisions, and recorded struct
 ## Other Pages
 
 - [../diagrams/target-architecture.md](../diagrams/target-architecture.md): visual target architecture for the modular-monolith-first path and later selective extraction
-- [tenant-rbac-integrity-gap.md](tenant-rbac-integrity-gap.md): database-level tenant isolation gap in `user_role`
+- [non-blocking-backlog.md](non-blocking-backlog.md): recorded follow-up items that stay visible without blocking the current phase

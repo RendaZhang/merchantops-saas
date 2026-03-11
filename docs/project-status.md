@@ -4,14 +4,15 @@ Last updated: 2026-03-11
 
 ## Overview
 
-MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management and has now landed Week 3 Slice C reopen semantics on top of the Slice B queue/query enrichment in the Ticket Workflow - System of Action, building on the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, and first workflow-loop flows, but it has not yet reached the later workflow and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
+MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management and the core Week 3 Ticket Workflow - System of Action on top of the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, and first workflow-loop flows, but it has not yet reached the later audit, async-operation, and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
 
 ## Current Phase Summary
 
-- Current phase: Week 3 Ticket Workflow - System of Action (Slice C reopen semantics is now public)
-- Next phase: Week 4 Audit Trail And Approval Patterns after the current ticket slices are standing
-- Primary outcome: use the completed Week 2 tenant user-management loop as the stable platform baseline for the first real workflow module and a minimal closeable ticket loop
-- Current tagged milestone: `v0.1.1` on 2026-03-11, recorded as `Week 2 complete: tenant user management loop`
+- Current phase: Week 4 Audit Trail And Approval Patterns (starting from a completed Week 3 ticket-workflow baseline)
+- Next phase: Week 5 Async Import And Data Operations after reusable audit and approval patterns are standing
+- Primary outcome: use the completed Week 2 tenant user-management loop and the completed Week 3 ticket workflow as the stable baseline for reusable governance patterns
+- Current tagged milestone: `v0.1.2` on 2026-03-11, recorded as `Week 3 complete: ticket workflow baseline`
+- Previous tagged milestone: `v0.1.1` on 2026-03-11, recorded as `Week 2 complete: tenant user management loop`
 - Previous tagged baseline: `v0.1.0` on 2026-03-09, recorded as `Week 1 complete: foundation phase`
 - Open-source timing expectation: an early preview becomes more realistic after Week 5, while a stronger public release should wait until at least the first AI Copilot milestone in Week 6 or Week 7
 
@@ -97,17 +98,18 @@ Completed:
 - current-tenant ticket detail works with `TICKET_READ` and returns current comments plus workflow logs
 - current-tenant ticket create works with `TICKET_WRITE` and default `OPEN` status
 - current-tenant ticket assignment works with `TICKET_WRITE` and rejects cross-tenant or inactive assignees
-- current-tenant ticket status management works with `TICKET_WRITE` and enforces the current `OPEN` / `IN_PROGRESS` / `CLOSED` transition rules
+- current-tenant ticket status management works with `TICKET_WRITE` and enforces the current `OPEN` / `IN_PROGRESS` / `CLOSED` transition rules, including reopen from `CLOSED -> OPEN`
 - current-tenant ticket comments work with `TICKET_WRITE` and append workflow log entries
-- focused automated tests now cover auth security integration, current user-management paths, and the Week 3 ticket close-loop paths
+- focused automated tests now cover auth security integration, current user-management paths, and the Week 3 ticket workflow paths including reopen behavior
 - Week 2 first-business-loop public HTTP contract now covers list, detail, create, profile update, status management, tenant role lookup, and role reassignment
-- Week 3 Slice A/B/C public HTTP contract now covers ticket list, detail, create, assignee change, status change, comment, close-through-status, queue filters (`assigneeId`, `keyword`, `unassignedOnly`), and reopen semantics (`CLOSED -> OPEN`)
+- Week 3 public HTTP contract now covers ticket list, detail, create, assignee change, status change, comment, close-through-status, queue filters (`assigneeId`, `keyword`, `unassignedOnly`), and reopen semantics (`CLOSED -> OPEN`)
+- Week 3 core acceptance criteria are now met, so remaining ticket enrichments are treated as post-Week-3 follow-up rather than blockers
 - manual and automated verification flows are documented
 
 Not yet implemented:
 
-- broader Week 3 ticket slices such as priority/SLA, attachments, or notifications
 - Week 4 audit trail and approval patterns
+- post-Week-3 ticket enrichments such as priority/SLA, attachments, or notifications
 - Week 5 async import and data operations
 - Week 6 ticket AI Copilot
 - Week 7 import AI Copilot
@@ -147,7 +149,7 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - broader multi-module automated coverage outside the current auth + user-management + ticket workflow path
 - production-ready secret management
 - tenant admin UI or frontend
-- later Week 3 ticket slices such as priority or SLA handling, attachments, and notifications, plus later-phase modules such as async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
+- post-Week-3 ticket enrichments such as priority or SLA handling, attachments, and notifications, plus later-phase modules such as async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
 
 ## Known Gaps
 
@@ -156,5 +158,5 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs
 - the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, and `PATCH`), operator attribution, stale-claim rejection, query/service behavior, and the ticket workflow-log path, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management + ticket flow
 
-See [architecture/tenant-rbac-integrity-gap.md](architecture/tenant-rbac-integrity-gap.md) for the current tenant-integrity design note.
+See [architecture/non-blocking-backlog.md](architecture/non-blocking-backlog.md) for the current non-blocking follow-up items, including the Week 1 `user_role` tenant-integrity gap and later ticket/productization carry-overs.
 See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.
