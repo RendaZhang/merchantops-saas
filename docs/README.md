@@ -25,6 +25,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Automated Test Runbook](runbooks/automated-tests.md): preferred Maven test commands, current automated coverage, and when to switch to manual verification
 - [AI Regression Checklist](runbooks/ai-regression-checklist.md): rollout checklist for future AI endpoints, audit logs, and eval changes
 - [Architecture](architecture/README.md): design notes and known structural gaps
+- [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md): why the project stays workflow-first and defers service extraction until workload boundaries are proven
 - [Diagrams](diagrams/README.md): placeholder for system and sequence diagrams
 - [Incidents](incidents/README.md): placeholder for incident records and postmortems
 - [Performance](performance/README.md): placeholder for benchmarks and tuning notes
@@ -52,3 +53,4 @@ This directory contains the detailed project documentation that sits behind the 
 19. [Automated Test Runbook](runbooks/automated-tests.md)
 20. [Regression Checklist](runbooks/regression-checklist.md)
 21. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
+22. [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md)

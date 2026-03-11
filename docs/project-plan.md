@@ -141,12 +141,13 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 ### 当前现实推进判断
 
 - Week 1 已完成
-- Week 2 正在进行，是当前最重要的主线
-- Week 3 之后的工作都应建立在 Week 2 先站稳的前提上
+- Week 2 已完成，并作为当前最稳定的业务闭环基线
+- Week 3 是下一个主线阶段，但应建立在已完成的 Week 2 用户管理闭环之上
 
 ### 与开源节奏的关系
 
-- 当前已经有 `v0.1.0` tag，对应 2026-03-09 的 Week 1 Platform Foundation 完成节点
+- 当前基线已经推进到 `v0.1.1`，对应 2026-03-11 的 Week 2 tenant user management loop 完成节点
+- `v0.1.0` 继续保留为 2026-03-09 的 Week 1 Platform Foundation 基线 tag
 - Week 1-4 主要目标是把 workflow 和治理骨架站稳，不急于过早对外包装
 - Week 5 更适合作为下一阶段预览版本，例如 `v0.2.0-alpha`，前提是用户、工单、导入链路已具备可信骨架
 - Week 6-7 适合作为第一次公开强调“AI-enhanced vertical SaaS”的开源版本，例如 `v0.3.0-beta`

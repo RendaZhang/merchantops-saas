@@ -13,6 +13,7 @@ This section stores architecture notes, technical decisions, and recorded struct
 - [adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md](adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md): place AI inside business workflows with approval, audit, and tenant boundaries
 - [adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md](adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md): require a minimum AI audit and regression baseline before public AI APIs are considered stable
 - [adr/0009-start-with-instance-level-ai-provider-keys-before-tenant-byok.md](adr/0009-start-with-instance-level-ai-provider-keys-before-tenant-byok.md): begin AI integration with deployment-owned provider keys and defer tenant BYOK until later
+- [adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md](adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md): keep the primary architecture as a workflow-first modular monolith and defer service extraction until workload boundaries are proven
 
 ## Other Pages
 
