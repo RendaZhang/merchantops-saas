@@ -47,6 +47,9 @@ class TicketCommandServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private AuditEventService auditEventService;
+
     @InjectMocks
     private TicketCommandService ticketCommandService;
 

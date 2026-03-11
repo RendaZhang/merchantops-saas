@@ -6,7 +6,19 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
-No release-level changes recorded after `v0.1.2` yet.
+### Added
+
+- Started the Week 4 audit-and-approval track with a generic `audit_event` backbone for current public user and ticket write flows.
+- Added a minimal tenant-scoped audit query endpoint: `GET /api/v1/audit-events?entityType=...&entityId=...`.
+
+### Changed
+
+- Kept workflow-level `ticket_operation_log` in place while adding reusable cross-entity audit records for governance follow-up work.
+- Strengthened the audit schema with DB-level same-tenant linkage for audit operator attribution.
+
+### Docs
+
+- Added audit/approval reference docs plus Swagger, smoke, regression, and API-example updates for the new audit query surface.
 
 ## [v0.1.2] - 2026-03-11
 

@@ -1,6 +1,7 @@
 package com.renda.merchantops.api.controller;
 
 import com.renda.merchantops.api.context.ContextAccess;
+import com.renda.merchantops.api.context.RequestIdAccess;
 import com.renda.merchantops.api.contract.UserManagementApi;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateRequest;
@@ -52,6 +53,7 @@ public class UserManagementController implements UserManagementApi {
     public ApiResponse<UserCreateResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
         Long tenantId = ContextAccess.requireTenantId();
         Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
         UserCreateCommand command = new UserCreateCommand(
                 request.getUsername(),
                 request.getPassword(),
@@ -59,7 +61,7 @@ public class UserManagementController implements UserManagementApi {
                 request.getEmail(),
                 request.getRoleCodes()
         );
-        return ApiResponse.success(userCommandService.createUser(tenantId, operatorId, command));
+        return ApiResponse.success(userCommandService.createUser(tenantId, operatorId, requestId, command));
     }
 
     @Override
@@ -68,11 +70,12 @@ public class UserManagementController implements UserManagementApi {
                                                      @Valid @RequestBody UserUpdateRequest request) {
         Long tenantId = ContextAccess.requireTenantId();
         Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
         UserUpdateCommand command = new UserUpdateCommand(
                 request.getDisplayName(),
                 request.getEmail()
         );
-        return ApiResponse.success(userCommandService.updateUser(tenantId, operatorId, id, command));
+        return ApiResponse.success(userCommandService.updateUser(tenantId, operatorId, requestId, id, command));
     }
 
     @Override
@@ -81,8 +84,9 @@ public class UserManagementController implements UserManagementApi {
                                                            @Valid @RequestBody UserStatusUpdateRequest request) {
         Long tenantId = ContextAccess.requireTenantId();
         Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
         UserStatusUpdateCommand command = new UserStatusUpdateCommand(request.getStatus());
-        return ApiResponse.success(userCommandService.updateStatus(tenantId, operatorId, id, command));
+        return ApiResponse.success(userCommandService.updateStatus(tenantId, operatorId, requestId, id, command));
     }
 
     @Override
@@ -91,7 +95,8 @@ public class UserManagementController implements UserManagementApi {
                                                                @Valid @RequestBody UserRoleAssignmentRequest request) {
         Long tenantId = ContextAccess.requireTenantId();
         Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
         UserRoleAssignmentCommand command = new UserRoleAssignmentCommand(request.getRoleCodes());
-        return ApiResponse.success(userCommandService.assignRoles(tenantId, operatorId, id, command));
+        return ApiResponse.success(userCommandService.assignRoles(tenantId, operatorId, requestId, id, command));
     }
 }

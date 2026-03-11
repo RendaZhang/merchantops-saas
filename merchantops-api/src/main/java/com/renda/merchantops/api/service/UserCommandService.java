@@ -27,8 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -50,6 +52,7 @@ public class UserCommandService {
     private final UserRoleRepository userRoleRepository;
     private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditEventService auditEventService;
 
     public void validateUsernameUnique(Long tenantId, String username) {
         if (userRepository.existsByTenantIdAndUsername(tenantId, username)) {
@@ -68,8 +71,9 @@ public class UserCommandService {
     }
 
     @Transactional
-    public UserCreateResponse createUser(Long tenantId, Long operatorId, UserCreateCommand command) {
+    public UserCreateResponse createUser(Long tenantId, Long operatorId, String requestId, UserCreateCommand command) {
         Long resolvedOperatorId = requireOperatorId(operatorId);
+        String resolvedRequestId = requireRequestId(requestId);
         String username = normalizeRequiredText(command == null ? null : command.getUsername(), "username");
         String displayName = normalizeRequiredText(command == null ? null : command.getDisplayName(), "displayName");
         String password = requireNonBlankPreserveValue(command == null ? null : command.getPassword(), "password");
@@ -113,6 +117,16 @@ public class UserCommandService {
                 })
                 .toList();
         userRoleRepository.saveAll(userRoles);
+        auditEventService.recordEvent(
+                tenantId,
+                "USER",
+                savedUser.getId(),
+                "USER_CREATED",
+                resolvedOperatorId,
+                resolvedRequestId,
+                null,
+                snapshotUser(savedUser, roleCodes)
+        );
 
         return new UserCreateResponse(
                 savedUser.getId(),
@@ -128,28 +142,43 @@ public class UserCommandService {
     }
 
     @Transactional
-    public UserWriteResponse updateUser(Long tenantId, Long operatorId, Long userId, UserUpdateCommand command) {
+    public UserWriteResponse updateUser(Long tenantId, Long operatorId, String requestId, Long userId, UserUpdateCommand command) {
         UserEntity user = requireTenantUser(tenantId, userId);
-        user.setUpdatedBy(requireOperatorId(operatorId));
+        Long resolvedOperatorId = requireOperatorId(operatorId);
+        String resolvedRequestId = requireRequestId(requestId);
+        Map<String, Object> before = snapshotUser(user, loadRoleCodes(tenantId, user.getId()));
+        user.setUpdatedBy(resolvedOperatorId);
         user.setDisplayName(normalizeRequiredText(command == null ? null : command.getDisplayName(), "displayName"));
         user.setEmail(normalizeOptionalText(command == null ? null : command.getEmail()));
         user.setUpdatedAt(LocalDateTime.now());
-        return toUserWriteResponse(userRepository.save(user));
+        UserEntity savedUser = userRepository.save(user);
+        auditEventService.recordEvent(tenantId, "USER", savedUser.getId(), "USER_UPDATED", resolvedOperatorId, resolvedRequestId, before,
+                snapshotUser(savedUser, loadRoleCodes(tenantId, savedUser.getId())));
+        return toUserWriteResponse(savedUser);
     }
 
     @Transactional
-    public UserWriteResponse updateStatus(Long tenantId, Long operatorId, Long userId, UserStatusUpdateCommand command) {
+    public UserWriteResponse updateStatus(Long tenantId, Long operatorId, String requestId, Long userId, UserStatusUpdateCommand command) {
         UserEntity user = requireTenantUser(tenantId, userId);
-        user.setUpdatedBy(requireOperatorId(operatorId));
+        Long resolvedOperatorId = requireOperatorId(operatorId);
+        String resolvedRequestId = requireRequestId(requestId);
+        Map<String, Object> before = snapshotUser(user, loadRoleCodes(tenantId, user.getId()));
+        user.setUpdatedBy(resolvedOperatorId);
         user.setStatus(normalizeAllowedStatus(command == null ? null : command.getStatus()));
         user.setUpdatedAt(LocalDateTime.now());
-        return toUserWriteResponse(userRepository.save(user));
+        UserEntity savedUser = userRepository.save(user);
+        auditEventService.recordEvent(tenantId, "USER", savedUser.getId(), "USER_STATUS_UPDATED", resolvedOperatorId, resolvedRequestId, before,
+                snapshotUser(savedUser, loadRoleCodes(tenantId, savedUser.getId())));
+        return toUserWriteResponse(savedUser);
     }
 
     @Transactional
-    public UserRoleAssignmentResponse assignRoles(Long tenantId, Long operatorId, Long userId, UserRoleAssignmentCommand command) {
+    public UserRoleAssignmentResponse assignRoles(Long tenantId, Long operatorId, String requestId, Long userId, UserRoleAssignmentCommand command) {
         UserEntity user = requireTenantUser(tenantId, userId);
-        user.setUpdatedBy(requireOperatorId(operatorId));
+        Long resolvedOperatorId = requireOperatorId(operatorId);
+        String resolvedRequestId = requireRequestId(requestId);
+        Map<String, Object> before = snapshotUser(user, loadRoleCodes(tenantId, user.getId()));
+        user.setUpdatedBy(resolvedOperatorId);
         List<String> roleCodes = normalizeRoleCodes(command == null ? null : command.getRoleCodes());
         List<RoleEntity> roles = roleRepository.findAllByTenantIdAndRoleCodeInOrderByIdAsc(tenantId, roleCodes);
         if (roles.size() != roleCodes.size()) {
@@ -176,6 +205,17 @@ public class UserCommandService {
                 .map(PermissionEntity::getPermissionCode)
                 .toList();
 
+        auditEventService.recordEvent(
+                tenantId,
+                "USER",
+                savedUser.getId(),
+                "USER_ROLES_UPDATED",
+                resolvedOperatorId,
+                resolvedRequestId,
+                before,
+                snapshotUser(savedUser, assignedRoleCodes)
+        );
+
         return new UserRoleAssignmentResponse(
                 savedUser.getId(),
                 savedUser.getTenantId(),
@@ -201,6 +241,13 @@ public class UserCommandService {
             throw new BizException(ErrorCode.UNAUTHORIZED, "user context missing");
         }
         return operatorId;
+    }
+
+    private String requireRequestId(String requestId) {
+        if (!StringUtils.hasText(requestId)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "request id missing");
+        }
+        return requestId;
     }
 
     private String normalizeRequiredText(String value, String fieldName) {
@@ -257,6 +304,25 @@ public class UserCommandService {
                 user.getStatus(),
                 user.getUpdatedAt()
         );
+    }
+
+    private List<String> loadRoleCodes(Long tenantId, Long userId) {
+        return roleRepository.findRolesByUserIdAndTenantId(userId, tenantId)
+                .stream()
+                .map(RoleEntity::getRoleCode)
+                .toList();
+    }
+
+    private Map<String, Object> snapshotUser(UserEntity user, List<String> roleCodes) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", user.getId());
+        snapshot.put("tenantId", user.getTenantId());
+        snapshot.put("username", user.getUsername());
+        snapshot.put("displayName", user.getDisplayName());
+        snapshot.put("email", user.getEmail());
+        snapshot.put("status", user.getStatus());
+        snapshot.put("roleCodes", roleCodes);
+        return snapshot;
     }
 
     private void throwFeatureNotReady(String action) {

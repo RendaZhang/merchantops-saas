@@ -251,6 +251,10 @@ Content-Type: {{contentType}}
   "status": "OPEN"
 }
 
+### Query tenant audit events by entity
+GET {{baseUrl}}/api/v1/audit-events?entityType=TICKET&entityId={{ticketId}}
+Authorization: Bearer {{token}}
+
 
 ### RBAC - read users
 GET {{baseUrl}}/api/v1/rbac/users

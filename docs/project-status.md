@@ -4,11 +4,12 @@ Last updated: 2026-03-11
 
 ## Overview
 
-MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management and the core Week 3 Ticket Workflow - System of Action on top of the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, and first workflow-loop flows, but it has not yet reached the later audit, async-operation, and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
+MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management and the core Week 3 Ticket Workflow - System of Action on top of the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, and first workflow-loop flows, and it has now entered the Week 4 audit/approval stage through a minimal generic audit backbone, but it has not yet reached the later approval orchestration, async-operation, and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
 
 ## Current Phase Summary
 
 - Current phase: Week 4 Audit Trail And Approval Patterns (starting from a completed Week 3 ticket-workflow baseline)
+- Week 4 Slice A status: in progress, with generic `audit_event` backbone now landed for existing public write operations
 - Next phase: Week 5 Async Import And Data Operations after reusable audit and approval patterns are standing
 - Primary outcome: use the completed Week 2 tenant user-management loop and the completed Week 3 ticket workflow as the stable baseline for reusable governance patterns
 - Current tagged milestone: `v0.1.2` on 2026-03-11, recorded as `Week 3 complete: ticket workflow baseline`
@@ -43,7 +44,9 @@ The current repository includes:
 - tenant-scoped ticket listing endpoint with `TICKET_READ`
 - tenant-scoped ticket detail endpoint with `TICKET_READ`
 - tenant-scoped ticket create, assignee, status, and comment endpoints with `TICKET_WRITE`
+- tenant-scoped audit-event query endpoint with `USER_READ` for entity-scoped current-tenant governance reads
 - workflow-level ticket operation logging for create, assign, status change, and comment events
+- generic `audit_event` backbone for existing user and ticket public write operations
 - tenant-aware user query scaffolding for detail lookup, status filtering, and page normalization
 - tenant-aware ticket query scaffolding for page reads, detail hydration, and workflow-log hydration
 - write-side user command service with tenant-scoped username uniqueness checks, transactional create/update/status/role-assignment flows, and lightweight operator attribution
@@ -100,15 +103,18 @@ Completed:
 - current-tenant ticket assignment works with `TICKET_WRITE` and rejects cross-tenant or inactive assignees
 - current-tenant ticket status management works with `TICKET_WRITE` and enforces the current `OPEN` / `IN_PROGRESS` / `CLOSED` transition rules, including reopen from `CLOSED -> OPEN`
 - current-tenant ticket comments work with `TICKET_WRITE` and append workflow log entries
-- focused automated tests now cover auth security integration, current user-management paths, and the Week 3 ticket workflow paths including reopen behavior
+- current-tenant audit query works with `USER_READ`, `entityType`, and `entityId`, returning only current-tenant audit rows
+- existing user and ticket public writes now emit generic `audit_event` rows with `operatorId` and `requestId` while ticket workflow logs remain in place
+- focused automated tests now cover auth security integration, current user-management paths, the current audit query path, and the Week 3 ticket workflow paths including reopen behavior
 - Week 2 first-business-loop public HTTP contract now covers list, detail, create, profile update, status management, tenant role lookup, and role reassignment
 - Week 3 public HTTP contract now covers ticket list, detail, create, assignee change, status change, comment, close-through-status, queue filters (`assigneeId`, `keyword`, `unassignedOnly`), and reopen semantics (`CLOSED -> OPEN`)
+- Week 4 Slice A public HTTP contract now adds `GET /api/v1/audit-events` for minimal tenant-scoped audit reads
 - Week 3 core acceptance criteria are now met, so remaining ticket enrichments are treated as post-Week-3 follow-up rather than blockers
 - manual and automated verification flows are documented
 
 Not yet implemented:
 
-- Week 4 audit trail and approval patterns
+- full Week 4 approval patterns and broader audit-read surface beyond the current minimal entity query
 - post-Week-3 ticket enrichments such as priority/SLA, attachments, or notifications
 - Week 5 async import and data operations
 - Week 6 ticket AI Copilot
@@ -124,23 +130,24 @@ Not yet implemented:
 
 ## Current Limitations
 
-Current implementation is intentionally focused on the completed Week 1 foundation, the completed Week 2 user-management loop, and the current public Week 3 ticket slices, so the following are not yet implemented:
+Current implementation is intentionally focused on the completed Week 1 foundation, the completed Week 2 user-management loop, the completed Week 3 ticket slices, and the current Week 4 Slice A audit read surface, so the following are not yet implemented:
 
-- Swagger-visible business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
+- Swagger-visible business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`
 - `GET /api/v1/users` is a paged current-tenant query endpoint ordered by `id ASC`
 - `GET /api/v1/users/{id}` is the current tenant-scoped detail query endpoint and includes current `roleCodes`
 - `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` are the public user-management write endpoints today
 - `GET /api/v1/tickets` is the current paged ticket query endpoint and supports `status`, `assigneeId`, `keyword` (title/description), and `unassignedOnly`
 - `GET /api/v1/tickets/{id}` is the current tenant-scoped ticket detail endpoint and includes comments and workflow logs
 - `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` are the current ticket write endpoints today
+- `GET /api/v1/audit-events` is the current minimal tenant-scoped audit query endpoint and requires both `entityType` and `entityId`
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` and `DISABLED`
 - `GET /api/v1/roles` returns only current-tenant roles that can be assigned by the current operator
 - `PUT /api/v1/users/{id}/roles` replaces the user's current role bindings within the current tenant
 - current ticket transition rules now include reopen: `OPEN -> IN_PROGRESS`, `OPEN -> CLOSED`, `IN_PROGRESS -> CLOSED`, and `CLOSED -> OPEN`
-- current ticket workflow logging is workflow-level only; there is no generic public audit log endpoint yet
+- current generic audit read surface is still minimal: `GET /api/v1/audit-events` only supports entity-scoped reads by `entityType + entityId`; there is no broader search, pagination, or approval queue API yet
 - when a user's current roles or effective permissions no longer match the JWT claims, the next protected request is rejected and the user must log in again
-- lightweight operator attribution is stored internally on `users.created_by` / `users.updated_by`, but no public audit endpoint or generic audit event model exists yet
+- lightweight operator attribution remains stored internally on `users.created_by` / `users.updated_by`, while reusable cross-entity audit records now live in `audit_event`; approval workflows and richer governance policy are still pending
 - `UserCommandService#updatePassword` still returns a unified business error until that write flow is implemented
 - no AI-assisted workflow endpoints, runtime AI audit trail, or code-backed evaluation datasets exist yet
 - refresh token flow
@@ -156,7 +163,7 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - `user_role` tenant consistency is not yet enforced at the database layer
 - ticket assignee / creator / operator tenant consistency is enforced in service logic today, not yet at the database-constraint level
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs
-- the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, and `PATCH`), operator attribution, stale-claim rejection, query/service behavior, and the ticket workflow-log path, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management + ticket flow
+- the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, and `PATCH`), `GET /api/v1/audit-events`, operator attribution, stale-claim rejection, query/service behavior, generic audit emission, and the ticket workflow-log path, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management + ticket + audit path
 
 See [architecture/non-blocking-backlog.md](architecture/non-blocking-backlog.md) for the current non-blocking follow-up items, including the Week 1 `user_role` tenant-integrity gap and later ticket/productization carry-overs.
 See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.

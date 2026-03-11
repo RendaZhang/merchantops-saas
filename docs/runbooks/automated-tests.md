@@ -26,7 +26,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## What Is Covered Today
 
-Current automated coverage is focused on the completed Week 2 user-management loop plus Week 3 ticket workflow slices.
+Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, and the current Week 4 Slice A audit backbone.
 
 ### `merchantops-api` tests
 
@@ -48,6 +48,7 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
   - rejection of a pre-change token after role or permission claims become stale
   - successful re-login after role reassignment with new RBAC access
+  - user writes emit `audit_event` rows when `X-Request-Id` is present
   - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
 - `TicketWorkflowIntegrationTest`
   - real `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}` auth + tenant-isolation behavior
@@ -59,6 +60,8 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - `400` when ticket status transition rules are violated (including no-op transitions)
   - `200` for `CLOSED -> OPEN` reopen with status/detail verification, `updated_at` refresh, and appended `STATUS_CHANGED` log
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
+  - ticket writes emit `audit_event` rows while preserving workflow-level `ticket_operation_log`
+  - `GET /api/v1/audit-events` returns only current-tenant rows and accepts case-insensitive `entityType`
   - ticket write access changing only after role reassignment plus re-login
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
@@ -124,7 +127,7 @@ Current automated coverage is focused on the completed Week 2 user-management lo
 
 These areas are not replaced by the current unit tests:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/audit-events` path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
@@ -151,3 +154,13 @@ Use [local-smoke-test.md](local-smoke-test.md) and [regression-checklist.md](reg
 - If `spring-boot:run` fails after module-signature changes, install the reactor modules first with `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`
 - If automated `/api/v1/users` coverage passes but live verification fails, focus next on runtime config differences such as real JWT secrets, external infra, or deployment-only filters
 - If the page contract changes, update both the tests and the user-management docs in the same change
+
+
+## Week 4 Slice A Coverage Additions
+
+Current automated suite also covers:
+
+- user writes generate `audit_event` rows
+- ticket writes generate `audit_event` rows
+- ticket workflow keeps `ticket_operation_log` in parallel with generic audit events
+- tenant-scoped audit query endpoint does not leak cross-tenant data

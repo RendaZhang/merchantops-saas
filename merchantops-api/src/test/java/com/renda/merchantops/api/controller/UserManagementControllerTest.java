@@ -45,6 +45,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -296,7 +297,7 @@ class UserManagementControllerTest {
                 LocalDateTime.of(2026, 3, 10, 12, 0)
         );
 
-        when(userCommandService.createUser(eq(9L), eq(9001L), any(UserCreateCommand.class))).thenReturn(response);
+        when(userCommandService.createUser(eq(9L), eq(9001L), anyString(), any(UserCreateCommand.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/users")
                         .header(HEADER_AUTH, "true")
@@ -314,7 +315,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.roleCodes[0]").value("READ_ONLY"));
 
         ArgumentCaptor<UserCreateCommand> commandCaptor = ArgumentCaptor.forClass(UserCreateCommand.class);
-        verify(userCommandService).createUser(eq(9L), eq(9001L), commandCaptor.capture());
+        verify(userCommandService).createUser(eq(9L), eq(9001L), anyString(), commandCaptor.capture());
 
         assertThat(commandCaptor.getValue().getUsername()).isEqualTo("cashier");
         assertThat(commandCaptor.getValue().getDisplayName()).isEqualTo("Cashier User");
@@ -353,7 +354,7 @@ class UserManagementControllerTest {
                 "ACTIVE",
                 LocalDateTime.of(2026, 3, 10, 13, 0)
         );
-        when(userCommandService.updateUser(eq(9L), eq(9001L), eq(8L), any(UserUpdateCommand.class))).thenReturn(response);
+        when(userCommandService.updateUser(eq(9L), eq(9001L), anyString(), eq(8L), any(UserUpdateCommand.class))).thenReturn(response);
 
         mockMvc.perform(put("/api/v1/users/8")
                         .header(HEADER_AUTH, "true")
@@ -371,7 +372,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
 
         ArgumentCaptor<UserUpdateCommand> commandCaptor = ArgumentCaptor.forClass(UserUpdateCommand.class);
-        verify(userCommandService).updateUser(eq(9L), eq(9001L), eq(8L), commandCaptor.capture());
+        verify(userCommandService).updateUser(eq(9L), eq(9001L), anyString(), eq(8L), commandCaptor.capture());
         assertThat(commandCaptor.getValue().getDisplayName()).isEqualTo("Updated Cashier");
         assertThat(commandCaptor.getValue().getEmail()).isEqualTo("updated@demo-shop.local");
     }
@@ -405,7 +406,7 @@ class UserManagementControllerTest {
                 "DISABLED",
                 LocalDateTime.of(2026, 3, 10, 14, 0)
         );
-        when(userCommandService.updateStatus(eq(9L), eq(9001L), eq(8L), any(UserStatusUpdateCommand.class))).thenReturn(response);
+        when(userCommandService.updateStatus(eq(9L), eq(9001L), anyString(), eq(8L), any(UserStatusUpdateCommand.class))).thenReturn(response);
 
         mockMvc.perform(patch("/api/v1/users/8/status")
                         .header(HEADER_AUTH, "true")
@@ -421,7 +422,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.status").value("DISABLED"));
 
         ArgumentCaptor<UserStatusUpdateCommand> commandCaptor = ArgumentCaptor.forClass(UserStatusUpdateCommand.class);
-        verify(userCommandService).updateStatus(eq(9L), eq(9001L), eq(8L), commandCaptor.capture());
+        verify(userCommandService).updateStatus(eq(9L), eq(9001L), anyString(), eq(8L), commandCaptor.capture());
         assertThat(commandCaptor.getValue().getStatus()).isEqualTo("DISABLED");
     }
 
@@ -453,7 +454,7 @@ class UserManagementControllerTest {
                 List.of("USER_READ", "USER_WRITE"),
                 LocalDateTime.of(2026, 3, 10, 18, 0)
         );
-        when(userCommandService.assignRoles(eq(9L), eq(9001L), eq(8L), any(UserRoleAssignmentCommand.class))).thenReturn(response);
+        when(userCommandService.assignRoles(eq(9L), eq(9001L), anyString(), eq(8L), any(UserRoleAssignmentCommand.class))).thenReturn(response);
 
         mockMvc.perform(put("/api/v1/users/8/roles")
                         .header(HEADER_AUTH, "true")
@@ -470,7 +471,7 @@ class UserManagementControllerTest {
                 .andExpect(jsonPath("$.data.permissionCodes[0]").value("USER_READ"));
 
         ArgumentCaptor<UserRoleAssignmentCommand> commandCaptor = ArgumentCaptor.forClass(UserRoleAssignmentCommand.class);
-        verify(userCommandService).assignRoles(eq(9L), eq(9001L), eq(8L), commandCaptor.capture());
+        verify(userCommandService).assignRoles(eq(9L), eq(9001L), anyString(), eq(8L), commandCaptor.capture());
         assertThat(commandCaptor.getValue().getRoleCodes()).containsExactly("TENANT_ADMIN");
     }
 

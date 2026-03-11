@@ -8,7 +8,7 @@ Last updated: 2026-03-11
 - Week 2 First Business Loop - Tenant User Management is complete
 - Week 3 Ticket Workflow - System of Action is complete
 - Week 4 Audit Trail And Approval Patterns is the active phase
-- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
+- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
@@ -40,10 +40,10 @@ The first business loop is complete: Week 2 turned the user-management groundwor
 
 ## Recommended Next Step
 
-Start Week 4 audit trail and approval patterns:
+Continue Week 4 audit trail and approval patterns:
 
-- define a reusable audit-event and approval envelope that Week 2 user writes and Week 3 ticket workflow can both emit
-- keep the remaining Week 3 hardening items visible and narrow so they do not delay the Week 4 start
+- keep the landed Slice A audit backbone aligned across Swagger, reference docs, runbooks, and examples
+- extend the current audit backbone toward the approval envelope that later AI and agent flows can reuse
 
 ## Planned Work By Phase
 
@@ -59,7 +59,7 @@ Week 3 target:
 
 Week 4 target:
 
-- add audit trail and approval patterns that later AI and agent flows can reuse
+- extend the current audit backbone into approval patterns that later AI and agent flows can reuse
 
 Week 5 target:
 
@@ -106,3 +106,13 @@ Stretch target after Week 10:
 
 - This document tracks intended next-phase work, not committed delivery dates.
 - Implemented features and known current limitations are recorded in [project-status.md](project-status.md).
+
+
+## Week 4 Progress Notes (2026-03-11)
+
+- Slice A (generic audit backbone) has started:
+  - `audit_event` migration/entity/repository/service added
+  - user and ticket public write flows now emit generic audit rows
+  - workflow-level `ticket_operation_log` remains separate by design
+  - minimal tenant-scoped query endpoint added: `GET /api/v1/audit-events`
+- Slice B (approval pattern) remains pending.

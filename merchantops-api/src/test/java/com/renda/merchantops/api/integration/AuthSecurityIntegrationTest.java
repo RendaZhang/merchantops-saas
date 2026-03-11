@@ -101,7 +101,8 @@ class AuthSecurityIntegrationTest {
                     created_at TIMESTAMP NOT NULL,
                     updated_at TIMESTAMP NOT NULL,
                     created_by BIGINT,
-                    updated_by BIGINT
+                    updated_by BIGINT,
+                    CONSTRAINT uk_users_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
 
@@ -141,6 +142,25 @@ class AuthSecurityIntegrationTest {
                     permission_id BIGINT NOT NULL
                 )
                 """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE audit_event (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    entity_type VARCHAR(64) NOT NULL,
+                    entity_id BIGINT NOT NULL,
+                    action_type VARCHAR(64) NOT NULL,
+                    operator_id BIGINT NOT NULL,
+                    request_id VARCHAR(128) NOT NULL,
+                    before_value CLOB,
+                    after_value CLOB,
+                    approval_status VARCHAR(32) NOT NULL,
+                    created_at TIMESTAMP NOT NULL,
+                    CONSTRAINT fk_audit_event_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id),
+                    CONSTRAINT fk_audit_event_operator_tenant FOREIGN KEY (operator_id, tenant_id) REFERENCES users(id, tenant_id)
+                )
+                """);
+
 
         seedTenants();
         seedPermissions();
@@ -183,6 +203,28 @@ class AuthSecurityIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.message").value("password: password must not start or end with whitespace"));
+    }
+
+
+    @Test
+    void userWriteShouldCreateAuditEvent() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .header("X-Request-Id", "audit-user-create-req-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createUserRequest("audit-user", "Audit User", "audit-user@demo-shop.local", "123456", "[\"READ_ONLY\"]")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("audit-user"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM audit_event WHERE tenant_id = ? AND entity_type = ? AND action_type = ?",
+                Integer.class,
+                1L,
+                "USER",
+                "USER_CREATED"
+        )).isEqualTo(1);
     }
 
     @Test

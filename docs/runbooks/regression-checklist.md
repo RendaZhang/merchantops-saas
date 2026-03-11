@@ -2,7 +2,7 @@
 
 Last updated: 2026-03-11
 
-Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, or ticket-workflow API changes.
+Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, ticket-workflow API changes, or audit/approval API changes.
 
 ## Automated
 
@@ -114,6 +114,14 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `POST /api/v1/tickets/{id}/comments` appends a comment that appears in ticket detail
 - [ ] create, assign, status, comment, and close flows write `ticket_operation_log` rows
 - [ ] after promoting `viewer` to a role with `TICKET_WRITE`, the old token is rejected as stale and the refreshed token can write tickets
+
+## Audit And Approval
+
+- [ ] Swagger `Audit Events` tag shows `GET /api/v1/audit-events`
+- [ ] `GET /api/v1/audit-events?entityType=TICKET&entityId=<ticketId>` returns only current-tenant rows
+- [ ] `GET /api/v1/audit-events?entityType=ticket&entityId=<ticketId>` also works because the current implementation normalizes `entityType`
+- [ ] recent user-management writes generate `audit_event` rows if you inspect the database directly
+- [ ] recent ticket writes generate `audit_event` rows without replacing `ticket_operation_log`
 
 ## Tools
 

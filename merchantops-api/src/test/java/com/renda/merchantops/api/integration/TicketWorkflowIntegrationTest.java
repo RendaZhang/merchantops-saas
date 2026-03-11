@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,6 +24,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -98,7 +100,8 @@ class TicketWorkflowIntegrationTest {
                     created_at TIMESTAMP NOT NULL,
                     updated_at TIMESTAMP NOT NULL,
                     created_by BIGINT,
-                    updated_by BIGINT
+                    updated_by BIGINT,
+                    CONSTRAINT uk_users_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
 
@@ -138,6 +141,25 @@ class TicketWorkflowIntegrationTest {
                     permission_id BIGINT NOT NULL
                 )
                 """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE audit_event (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    entity_type VARCHAR(64) NOT NULL,
+                    entity_id BIGINT NOT NULL,
+                    action_type VARCHAR(64) NOT NULL,
+                    operator_id BIGINT NOT NULL,
+                    request_id VARCHAR(128) NOT NULL,
+                    before_value CLOB,
+                    after_value CLOB,
+                    approval_status VARCHAR(32) NOT NULL,
+                    created_at TIMESTAMP NOT NULL,
+                    CONSTRAINT fk_audit_event_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id),
+                    CONSTRAINT fk_audit_event_operator_tenant FOREIGN KEY (operator_id, tenant_id) REFERENCES users(id, tenant_id)
+                )
+                """);
+
 
         jdbcTemplate.execute("""
                 CREATE TABLE ticket (
@@ -489,6 +511,80 @@ class TicketWorkflowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.status").value("OPEN"));
+    }
+
+
+    @Test
+    void ticketWriteShouldCreateAuditEventAndKeepWorkflowLog() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        Long ticketId = createTicketAndGetId(adminToken, "audit-ticket-create-req-1", "Audit Trail Ticket", "audit desc");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM audit_event WHERE tenant_id = ? AND entity_type = ? AND entity_id = ? AND action_type = ?",
+                Integer.class,
+                1L,
+                "TICKET",
+                ticketId,
+                "TICKET_CREATED"
+        )).isEqualTo(1);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM ticket_operation_log WHERE tenant_id = ? AND ticket_id = ?",
+                Integer.class,
+                1L,
+                ticketId
+        )).isEqualTo(1);
+    }
+
+    @Test
+    void auditEventQueryShouldBeTenantScoped() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        jdbcTemplate.update(
+                "INSERT INTO audit_event (tenant_id, entity_type, entity_id, action_type, operator_id, request_id, before_value, after_value, approval_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                1L, "TICKET", 301L, "SEEDED_LOCAL", 101L, "seed-req-1", null, "{\"status\":\"OPEN\"}", "NOT_REQUIRED"
+        );
+        jdbcTemplate.update(
+                "INSERT INTO audit_event (tenant_id, entity_type, entity_id, action_type, operator_id, request_id, before_value, after_value, approval_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                2L, "TICKET", 301L, "SEEDED_OTHER", 201L, "seed-req-2", null, "{\"status\":\"OPEN\"}", "NOT_REQUIRED"
+        );
+
+        mockMvc.perform(get("/api/v1/audit-events")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("entityType", "TICKET")
+                        .queryParam("entityId", "301"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items", hasSize(1)))
+                .andExpect(jsonPath("$.data.items[0].actionType").value("SEEDED_LOCAL"))
+                .andExpect(jsonPath("$.data.items[0].requestId").value("seed-req-1"));
+    }
+
+    @Test
+    void auditEventQueryShouldAcceptCaseInsensitiveEntityType() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        jdbcTemplate.update(
+                "INSERT INTO audit_event (tenant_id, entity_type, entity_id, action_type, operator_id, request_id, before_value, after_value, approval_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                1L, "TICKET", 302L, "SEEDED_LOCAL", 101L, "seed-req-3", null, "{\"status\":\"IN_PROGRESS\"}", "NOT_REQUIRED"
+        );
+
+        mockMvc.perform(get("/api/v1/audit-events")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("entityType", "ticket")
+                        .queryParam("entityId", "302"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items", hasSize(1)))
+                .andExpect(jsonPath("$.data.items[0].entityType").value("TICKET"))
+                .andExpect(jsonPath("$.data.items[0].requestId").value("seed-req-3"));
+    }
+
+    @Test
+    void auditEventTableShouldRejectCrossTenantOperatorLinkage() {
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "INSERT INTO audit_event (tenant_id, entity_type, entity_id, action_type, operator_id, request_id, before_value, after_value, approval_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                1L, "TICKET", 301L, "ILLEGAL_OPERATOR_LINK", 201L, "seed-bad-req-1", null, "{\"status\":\"OPEN\"}", "NOT_REQUIRED"
+        )).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private void seedTenants() {

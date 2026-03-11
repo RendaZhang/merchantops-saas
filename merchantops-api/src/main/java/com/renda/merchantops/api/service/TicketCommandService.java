@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -34,6 +36,7 @@ public class TicketCommandService {
     private final TicketCommentRepository ticketCommentRepository;
     private final TicketOperationLogRepository ticketOperationLogRepository;
     private final UserRepository userRepository;
+    private final AuditEventService auditEventService;
 
     @Transactional
     public TicketWriteResponse createTicket(Long tenantId, Long operatorId, String requestId, TicketCreateCommand command) {
@@ -53,6 +56,7 @@ public class TicketCommandService {
 
         TicketEntity savedTicket = ticketRepository.save(ticket);
         appendOperationLog(savedTicket.getId(), tenantId, resolvedOperatorId, resolvedRequestId, "CREATED", "ticket created", now);
+        auditEventService.recordEvent(tenantId, "TICKET", savedTicket.getId(), "TICKET_CREATED", resolvedOperatorId, resolvedRequestId, null, snapshotTicket(savedTicket));
 
         return toWriteResponse(savedTicket, null);
     }
@@ -69,11 +73,13 @@ public class TicketCommandService {
         UserEntity assignee = requireActiveTenantUser(tenantId, command == null ? null : command.getAssigneeId());
 
         LocalDateTime now = LocalDateTime.now();
+        Map<String, Object> before = snapshotTicket(ticket);
         ticket.setAssigneeId(assignee.getId());
         ticket.setUpdatedAt(now);
         TicketEntity savedTicket = ticketRepository.save(ticket);
 
         appendOperationLog(savedTicket.getId(), tenantId, resolvedOperatorId, resolvedRequestId, "ASSIGNED", "assigned to " + assignee.getUsername(), now);
+        auditEventService.recordEvent(tenantId, "TICKET", savedTicket.getId(), "TICKET_ASSIGNED", resolvedOperatorId, resolvedRequestId, before, snapshotTicket(savedTicket));
         return toWriteResponse(savedTicket, assignee.getUsername());
     }
 
@@ -91,6 +97,7 @@ public class TicketCommandService {
 
         LocalDateTime now = LocalDateTime.now();
         String previousStatus = ticket.getStatus();
+        Map<String, Object> before = snapshotTicket(ticket);
         ticket.setStatus(nextStatus);
         ticket.setUpdatedAt(now);
         TicketEntity savedTicket = ticketRepository.save(ticket);
@@ -104,6 +111,7 @@ public class TicketCommandService {
                 "status changed from " + previousStatus + " to " + nextStatus,
                 now
         );
+        auditEventService.recordEvent(tenantId, "TICKET", savedTicket.getId(), "TICKET_STATUS_UPDATED", resolvedOperatorId, resolvedRequestId, before, snapshotTicket(savedTicket));
         return toWriteResponse(savedTicket, loadUsername(tenantId, savedTicket.getAssigneeId()));
     }
 
@@ -132,6 +140,19 @@ public class TicketCommandService {
         ticketRepository.save(ticket);
 
         appendOperationLog(ticket.getId(), tenantId, resolvedOperatorId, resolvedRequestId, "COMMENTED", "comment added", now);
+        auditEventService.recordEvent(
+                tenantId,
+                "TICKET",
+                ticket.getId(),
+                "TICKET_COMMENT_ADDED",
+                resolvedOperatorId,
+                resolvedRequestId,
+                null,
+                Map.of(
+                        "commentId", savedComment.getId(),
+                        "content", savedComment.getContent()
+                )
+        );
 
         return new TicketCommentResponse(
                 savedComment.getId(),
@@ -248,6 +269,18 @@ public class TicketCommandService {
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt()
         );
+    }
+
+
+    private Map<String, Object> snapshotTicket(TicketEntity ticket) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("id", ticket.getId());
+        snapshot.put("tenantId", ticket.getTenantId());
+        snapshot.put("title", ticket.getTitle());
+        snapshot.put("description", ticket.getDescription());
+        snapshot.put("status", ticket.getStatus());
+        snapshot.put("assigneeId", ticket.getAssigneeId());
+        return snapshot;
     }
 
     private String loadUsername(Long tenantId, Long userId) {

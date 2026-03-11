@@ -150,3 +150,23 @@ Recommended follow-up:
 - start the current phase without waiting for every item here to be fixed
 - keep these items visible in architecture notes instead of losing them in chat history
 - implement them as narrow follow-up slices that do not silently reopen already-completed public contracts unless necessary
+
+
+### NB-004: Generic Audit Backbone Hardening Follow-ups
+
+- State: In Progress
+- Category: Governance Hardening
+- Discovered in: Week 4 Slice A
+- Not blocking: Week 4 Slice A completion
+- Priority: Medium
+
+Current state:
+
+- generic `audit_event` backbone is now implemented for current public write paths
+- current before/after snapshots intentionally capture minimal key fields, not full domain diffs
+
+Recommended follow-up:
+
+1. define per-entity key-field snapshot policy and redaction policy
+2. add pagination/sorting/filter extensions for audit queries when needed
+3. add approval tables/flow in Slice B without weakening explicit context propagation

@@ -57,6 +57,9 @@ class UserCommandServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AuditEventService auditEventService;
+
     @InjectMocks
     private UserCommandService userCommandService;
 
@@ -72,7 +75,7 @@ class UserCommandServiceTest {
         when(userRepository.existsByTenantIdAndUsername(1L, "admin")).thenReturn(true);
 
         assertBizException(
-                () -> userCommandService.createUser(1L, 101L, command),
+                () -> userCommandService.createUser(1L, 101L, "req-1", command),
                 ErrorCode.BAD_REQUEST,
                 "username already exists in tenant"
         );
@@ -96,7 +99,7 @@ class UserCommandServiceTest {
                 .thenReturn(List.of(role));
 
         assertBizException(
-                () -> userCommandService.createUser(1L, 101L, command),
+                () -> userCommandService.createUser(1L, 101L, "req-1", command),
                 ErrorCode.BAD_REQUEST,
                 "roleCodes must exist in current tenant"
         );
@@ -123,7 +126,7 @@ class UserCommandServiceTest {
             return user;
         });
 
-        UserCreateResponse response = userCommandService.createUser(1L, 101L, command);
+        UserCreateResponse response = userCommandService.createUser(1L, 101L, "req-1", command);
 
         assertThat(response.getId()).isEqualTo(205L);
         assertThat(response.getTenantId()).isEqualTo(1L);
@@ -169,7 +172,7 @@ class UserCommandServiceTest {
         );
 
         assertBizException(
-                () -> userCommandService.createUser(1L, 101L, command),
+                () -> userCommandService.createUser(1L, 101L, "req-1", command),
                 ErrorCode.BAD_REQUEST,
                 "password must not start or end with whitespace"
         );
@@ -191,7 +194,7 @@ class UserCommandServiceTest {
         when(userRepository.findByIdAndTenantId(8L, 1L)).thenReturn(Optional.empty());
 
         assertBizException(
-                () -> userCommandService.updateUser(1L, 101L, 8L, new UserUpdateCommand("Ops", "ops@demo.local")),
+                () -> userCommandService.updateUser(1L, 101L, "req-1", 8L, new UserUpdateCommand("Ops", "ops@demo.local")),
                 ErrorCode.NOT_FOUND,
                 "user not found"
         );
@@ -206,6 +209,7 @@ class UserCommandServiceTest {
         UserWriteResponse response = userCommandService.updateUser(
                 1L,
                 101L,
+                "req-1",
                 1L,
                 new UserUpdateCommand("Updated Cashier", "updated@demo.local")
         );
@@ -231,7 +235,7 @@ class UserCommandServiceTest {
         when(userRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(userEntity(1L, 1L, "cashier", "ACTIVE")));
 
         assertBizException(
-                () -> userCommandService.updateStatus(1L, 101L, 1L, new UserStatusUpdateCommand("ARCHIVED")),
+                () -> userCommandService.updateStatus(1L, 101L, "req-1", 1L, new UserStatusUpdateCommand("ARCHIVED")),
                 ErrorCode.BAD_REQUEST,
                 "status must be one of ACTIVE, DISABLED"
         );
@@ -246,6 +250,7 @@ class UserCommandServiceTest {
         UserWriteResponse response = userCommandService.updateStatus(
                 1L,
                 101L,
+                "req-1",
                 1L,
                 new UserStatusUpdateCommand("DISABLED")
         );
@@ -264,7 +269,7 @@ class UserCommandServiceTest {
                 .thenReturn(List.of(roleEntity(11L, 1L, "TENANT_ADMIN")));
 
         assertBizException(
-                () -> userCommandService.assignRoles(1L, 101L, 1L, new UserRoleAssignmentCommand(List.of("TENANT_ADMIN", "OTHER_ONLY"))),
+                () -> userCommandService.assignRoles(1L, 101L, "req-1", 1L, new UserRoleAssignmentCommand(List.of("TENANT_ADMIN", "OTHER_ONLY"))),
                 ErrorCode.BAD_REQUEST,
                 "roleCodes must exist in current tenant"
         );
@@ -289,6 +294,7 @@ class UserCommandServiceTest {
         UserRoleAssignmentResponse response = userCommandService.assignRoles(
                 1L,
                 101L,
+                "req-1",
                 1L,
                 new UserRoleAssignmentCommand(List.of("TENANT_ADMIN"))
         );

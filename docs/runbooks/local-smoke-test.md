@@ -110,6 +110,7 @@ curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application
   -d '{"status":"OPEN"}' \
   http://localhost:8080/api/v1/tickets/$TICKET_ID/status
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tickets/$TICKET_ID
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/audit-events?entityType=ticket&entityId=$TICKET_ID"
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"status\":\"DISABLED\"}" \
   http://localhost:8080/api/v1/users/$NEW_USER_ID/status
@@ -117,6 +118,7 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
 curl -i -H "Authorization: Bearer $REFRESHED_TOKEN" http://localhost:8080/api/v1/context
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/audit-events?entityType=USER&entityId=$NEW_USER_ID"
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"username\":\"$SMOKE_USERNAME-bad-role\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_USERNAME-bad-role@demo-shop.local\",\"password\":\"123456\",\"roleCodes\":[\"OTHER_ONLY\"]}" \
   http://localhost:8080/api/v1/users
@@ -167,10 +169,12 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/ticke
 $ticketReopenBody = @{ status = "OPEN" } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketReopenBody http://localhost:8080/api/v1/tickets/$ticketId/status
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/tickets/$ticketId
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=ticket&entityId=$ticketId"
 $statusBody = @{ status = "DISABLED" } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $statusBody http://localhost:8080/api/v1/users/$newUserId/status
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
 curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/context
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=USER&entityId=$newUserId"
 $badRoleBody = @{ username = "$smokeUsername-bad-role"; displayName = "Cashier User"; email = "$smokeUsername-bad-role@demo-shop.local"; password = "123456"; roleCodes = @("OTHER_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $badRoleBody http://localhost:8080/api/v1/users
 ```
@@ -188,6 +192,7 @@ Expected results:
 - `PATCH /api/v1/tickets/{id}/status` enforces the current lifecycle including reopen (`OPEN -> IN_PROGRESS`, `OPEN -> CLOSED`, `IN_PROGRESS -> CLOSED`, and `CLOSED -> OPEN`)
 - the second ticket detail read shows the reopened `OPEN` state after the `CLOSED -> OPEN` request
 - `POST /api/v1/tickets/{id}/comments` appends a comment and the detail view shows it
+- `GET /api/v1/audit-events?entityType=ticket&entityId=<ticketId>` returns current-tenant audit rows for the ticket workflow writes and accepts lower-case `entityType`
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` or `DISABLED`
 - `PUT /api/v1/users/{id}/roles` clears old roles and writes the new role set
@@ -196,6 +201,7 @@ Expected results:
 - after role reassignment, logging in again should return a new token whose RBAC access matches the new roles
 - logging in after the disable call returns `403` because the user is no longer `ACTIVE`
 - if you captured a token for that user before disabling it, reusing that old token on a protected endpoint should now return `403` with `user is not active`
+- `GET /api/v1/audit-events?entityType=USER&entityId=<newUserId>` returns current-tenant audit rows for create, profile update, role reassignment, and disable
 - `POST /api/v1/users` with a role code outside the current tenant returns `400`
 
 Use a fresh generated username on each run so the smoke flow stays repeatable against a persistent local database.

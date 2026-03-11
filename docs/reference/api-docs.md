@@ -57,6 +57,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Yes + `TICKET_WRITE` | Assign the ticket to an active user in current tenant |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Yes + `TICKET_WRITE` | Transition the ticket status |
 | `POST` | `/api/v1/tickets/{id}/comments` | Yes + `TICKET_WRITE` | Add a comment and workflow log entry |
+| `GET` | `/api/v1/audit-events` | Yes + `USER_READ` | List current-tenant audit rows for one entity |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -88,6 +89,16 @@ Ticket Workflow tag note:
 - `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`, including reopen (`CLOSED -> OPEN`).
 - `POST /api/v1/tickets/{id}/comments` exposes comment content only; operator and request tracing are derived server-side.
 - See [ticket-workflow.md](ticket-workflow.md) for the current public contract and workflow notes.
+
+Audit Events tag note:
+
+- Swagger currently exposes `GET /api/v1/audit-events`.
+- the endpoint requires `USER_READ`.
+- query params are `entityType` and `entityId`.
+- `entityType` is case-insensitive in the current implementation and is normalized internally before lookup.
+- the current read shape is minimal: entity-scoped lookup only, ordered by insert id ascending, with no pagination or approval queue semantics yet.
+- current public write flows emit audit rows for `USER` and `TICKET` entities.
+- See [audit-approval.md](audit-approval.md) for the current governance baseline and non-goals.
 
 ## Core Endpoint Examples
 
@@ -476,6 +487,40 @@ Response:
   }
 }
 ```
+
+### 15. Audit Event Query (`GET /api/v1/audit-events`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 701,
+        "entityType": "TICKET",
+        "entityId": 402,
+        "actionType": "TICKET_STATUS_UPDATED",
+        "operatorId": 1,
+        "requestId": "req-demo-402-status",
+        "beforeValue": "{\"status\":\"IN_PROGRESS\"}",
+        "afterValue": "{\"status\":\"CLOSED\"}",
+        "approvalStatus": "NOT_REQUIRED",
+        "createdAt": "2026-03-11T11:15:00"
+      }
+    ]
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- current query is entity-scoped only: `entityType + entityId`
+- current public entity types are `USER` and `TICKET`
+- `approvalStatus` is currently always `NOT_REQUIRED` in Week 4 Slice A
 
 ## Stale Swagger Troubleshooting
 
