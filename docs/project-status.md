@@ -1,17 +1,18 @@
 # Project Status
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Overview
 
-MerchantOps SaaS has completed Week 1 Platform Foundation and is now in Week 2 First Business Loop - Tenant User Management within the new 10-week market-aligned plan. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but it has not yet reached the later workflow and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
+MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management on top of the Week 1 Platform Foundation and is ready to begin Week 3 Ticket Workflow - System of Action within the new 10-week market-aligned plan. The repository already demonstrates the main authentication, authorization, tenant-isolation, and local development flows, but it has not yet reached the later workflow and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
 
 ## Current Phase Summary
 
-- Current phase: Week 2 First Business Loop - Tenant User Management
-- Next phase: begin Week 3 Ticket Workflow - System of Action while keeping remaining Week 2 schema hardening tasks scoped
-- Primary outcome: the backend foundation is being validated by the first real tenant-scoped business loop before broader workflow and AI delivery begins
-- Current tagged milestone: `v0.1.0` on 2026-03-09, recorded as `Week 1 complete: foundation phase`
+- Current phase: Week 3 Ticket Workflow - System of Action (starting from a completed Week 2 user-management baseline)
+- Next phase: Week 4 Audit Trail And Approval Patterns after the first ticket slice is standing
+- Primary outcome: use the completed Week 2 tenant user-management loop as the stable platform baseline for the first real workflow module
+- Current tagged milestone: `v0.1.1` on 2026-03-11, recorded as `Week 2 complete: tenant user management loop`
+- Previous tagged baseline: `v0.1.0` on 2026-03-09, recorded as `Week 1 complete: foundation phase`
 - Open-source timing expectation: an early preview becomes more realistic after Week 5, while a stronger public release should wait until at least the first AI Copilot milestone in Week 6 or Week 7
 
 ## Project Direction
@@ -87,7 +88,7 @@ Completed:
 - lightweight operator attribution now records `created_by` / `updated_by` on `users` for create, profile update, status update, and role reassignment writes
 - role or permission changes now invalidate previously issued JWTs on the next protected request, forcing re-login before new privileges apply
 - focused automated tests now cover auth security integration, current user-management controller/service paths, and repository query behavior
-- Week 2 first-business-loop public HTTP contract now covers list, create, profile update, status management, tenant role lookup, and role reassignment
+- Week 2 first-business-loop public HTTP contract now covers list, detail, create, profile update, status management, tenant role lookup, and role reassignment
 - manual and automated verification flows are documented
 
 Not yet implemented:
@@ -108,7 +109,7 @@ Not yet implemented:
 
 ## Current Limitations
 
-Current implementation is intentionally focused on the Week 1 foundation plus the in-progress Week 2 user-management loop, so the following are not yet implemented:
+Current implementation is intentionally focused on the completed Week 1 foundation plus the completed Week 2 user-management loop, so the following are not yet implemented:
 
 - Swagger-visible Week 2 business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles`
 - `GET /api/v1/users` is a paged current-tenant query endpoint ordered by `id ASC`

@@ -1,18 +1,26 @@
 # Release Versioning
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Purpose
 
 This page defines how MerchantOps SaaS should record versions, tags, and release milestones as it moves from portfolio build to open-source release.
 
-## Current Tagged Baseline
+## Current Tagged Milestone
 
-- current tag: `v0.1.0`
+- current tag: `v0.1.1`
+- tag date: 2026-03-11
+- tag message: `Week 2 complete: tenant user management loop`
+
+This tag records the completion of the first tenant-scoped business loop before Week 3 ticket workflow meaningfully broadens the project story.
+
+## Previous Tagged Baseline
+
+- previous tag: `v0.1.0`
 - tag date: 2026-03-09
 - tag message: `Week 1 complete: foundation phase`
 
-This tag represents the completion of Week 1 Platform Foundation. It is the first explicit repository milestone and should be treated as the baseline for all later version planning.
+This tag remains the explicit Week 1 baseline for later version planning.
 
 ## Source Of Truth
 
@@ -51,6 +59,7 @@ The exact tag names can change, but the next milestones should not reuse `v0.1.0
 Recommended direction:
 
 - `v0.1.0`: Week 1 Platform Foundation complete
+- `v0.1.1`: Week 2 tenant user management loop complete milestone
 - `v0.2.0-alpha`: first open-source preview after Week 5 workflow and async-operation backbone
 - `v0.3.0-beta`: first public AI-enhanced release after Week 6 or Week 7
 - later `v0.x` releases: governance, usage tracking, hardening, and packaging milestones
@@ -59,7 +68,8 @@ Recommended direction:
 
 - create a tag only when the repository state is intentionally presentable
 - every new tag should have a matching changelog note
-- if the milestone changes the public API or delivery story meaningfully, bump the minor version
+- while the project is still stabilizing inside the early `v0.1.x` line, a patch bump may still represent a real milestone if the scope is explicitly documented
+- use the next minor version when the project opens a broader release line, such as the first open-source preview or another clearly wider public story
 - if the change is a small correction inside the same release line, bump the patch version
 - avoid creating too many tags for half-finished internal checkpoints
 

@@ -1,11 +1,12 @@
 # Roadmap
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Current Phase
 
 - Week 1 Platform Foundation is complete
-- Week 2 First Business Loop - Tenant User Management is in progress
+- Week 2 First Business Loop - Tenant User Management is complete
+- Week 3 Ticket Workflow - System of Action is the next active phase
 - Public Week 2 HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
@@ -16,8 +17,8 @@ Complete the first business loop by turning the current user-management groundwo
 
 ## Phase Sequence
 
-- Week 2: user management (active)
-- Week 3: ticket workflow - system of action
+- Week 2: user management (complete)
+- Week 3: ticket workflow - system of action (next active phase)
 - Week 4: audit trail and approval patterns
 - Week 5: async import and data operations
 - Week 6: AI Copilot for ticket operations
@@ -29,7 +30,8 @@ Complete the first business loop by turning the current user-management groundwo
 
 ## Open-Source Track
 
-- Current tagged baseline: `v0.1.0` already marks Week 1 Platform Foundation on 2026-03-09
+- Current tagged milestone: `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11
+- Previous tagged baseline: `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09
 - Week 5 target: prepare for a next-stage preview such as `v0.2.0-alpha` after the first workflow and async-operation backbone is credible
 - Week 6 or Week 7 target: make the first public open-source release that can honestly present the project as an AI-enhanced vertical SaaS, for example `v0.3.0-beta`
 - Week 10 target: reach a more stable open-source reference-implementation milestone and gather input for later commercial discovery
@@ -46,6 +48,7 @@ Start Week 3 ticket workflow - system of action:
 Week 2 completion:
 
 - keep Swagger, `api-demo.http`, and reference docs aligned
+- Week 2 milestone recorded through the `v0.1.1` tag on 2026-03-11 before the Week 3 delivery story broadens
 
 Week 3 target:
 

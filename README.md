@@ -122,6 +122,6 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 
 - Current project status: [docs/project-status.md](docs/project-status.md)
 - Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
-- Current tagged milestone: `v0.1.0` on 2026-03-09 for Week 1 Platform Foundation
+- Current tagged milestone: `v0.1.1` on 2026-03-11 for Week 2 tenant user-management loop
 - Project direction: portfolio first, open-source second, and potential commercial exploration after the workflow and AI layers are credible
-- Week 1 foundation is complete and Week 2 first business loop (tenant user management) is underway
+- Week 2 tenant user-management loop is complete and Week 3 ticket workflow is the next implementation phase

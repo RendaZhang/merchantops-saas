@@ -6,14 +6,25 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+No entries yet.
+
+## [v0.1.1] - 2026-03-11
+
+Tagged as `Week 2 complete: tenant user management loop`.
+
 ### Changed
 
+- Expanded the public API from the Week 1 foundation into a complete Week 2 tenant-scoped user-management loop with list, detail, create, profile update, status management, role lookup, and role reassignment flows.
+- Enforced re-login after role or permission changes by rejecting stale JWT claims on the next protected request.
 - Reframed the project plan as a 10-week workflow-first, AI-enhanced vertical SaaS roadmap.
 - Clarified the project progression as portfolio first, open-source second, and potential commercial exploration later.
 - Aligned version planning with the existing `v0.1.0` tag instead of reusing that version number for later milestones.
+- Updated status and roadmap docs to mark Week 2 complete and Week 3 as the next active phase.
 
 ### Added
 
+- Added lightweight operator attribution through `users.created_by` / `users.updated_by` for create, profile update, status update, and role reassignment writes.
+- Added focused automated coverage for user detail, user writes, role reassignment, stale-claim rejection, and operator attribution.
 - Added AI reference docs for workflow integration, provider configuration, prompt versioning, eval datasets, and candidate workflow rollout.
 - Added AI governance ADRs for workflow placement, audit and evaluation baseline, and instance-level provider-key ownership.
 - Added an explicit release-versioning reference page to define tag ownership and future version progression.
@@ -21,7 +32,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 ### Docs
 
 - Expanded README and docs navigation so project plan, release versioning, AI docs, and AI runbooks are easier to discover.
-- Updated status and roadmap docs to reflect the current Week 2 position and the open-source release track.
+- Recorded the Week 2 milestone and Week 3 handoff in the release, status, and roadmap docs.
 
 ## [v0.1.0] - 2026-03-09
 
