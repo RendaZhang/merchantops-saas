@@ -28,6 +28,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Architecture](architecture/README.md): design notes and known structural gaps
 - [Non-Blocking Backlog](architecture/non-blocking-backlog.md): recorded follow-up items that stay visible without blocking the current phase
 - [Target Architecture Diagram](diagrams/target-architecture.md): visual runtime shape for the modular-monolith-first architecture and later selective extraction
+- [Architecture Decision: Workflow Logs vs Generic Audit Events](architecture/adr/0011-keep-workflow-logs-separate-from-generic-audit-events.md): why ticket workflow history stays separate from the Week 4 reusable audit layer
 - [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md): why the project stays workflow-first and defers service extraction until workload boundaries are proven
 - [Diagrams](diagrams/README.md): architecture, request-flow, and sequence diagrams
 - [Incidents](incidents/README.md): placeholder for incident records and postmortems
@@ -58,5 +59,6 @@ This directory contains the detailed project documentation that sits behind the 
 21. [Regression Checklist](runbooks/regression-checklist.md)
 22. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
 23. [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md)
-24. [Target Architecture Diagram](diagrams/target-architecture.md)
-25. [Non-Blocking Backlog](architecture/non-blocking-backlog.md)
+24. [Architecture Decision: Workflow Logs vs Generic Audit Events](architecture/adr/0011-keep-workflow-logs-separate-from-generic-audit-events.md)
+25. [Target Architecture Diagram](diagrams/target-architecture.md)
+26. [Non-Blocking Backlog](architecture/non-blocking-backlog.md)
