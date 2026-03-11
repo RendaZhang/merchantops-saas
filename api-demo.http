@@ -11,6 +11,8 @@
 @targetUserId = replace-with-created-user-id
 @targetUserToken = replace-with-pre-change-user-access-token
 @refreshedTargetUserToken = replace-with-post-role-change-user-access-token
+@opsUserId = 2
+@ticketId = replace-with-created-ticket-id
 
 # See docs/runbooks/regression-checklist.md for the broader regression checklist.
 # See docs/reference/user-management.md for the current /api/v1/users contract and expected demo response.
@@ -168,6 +170,65 @@ Content-Type: {{contentType}}
 ### Verify refreshed token can use new permissions
 GET {{baseUrl}}/api/v1/rbac/users/manage
 Authorization: Bearer {{refreshedTargetUserToken}}
+
+### List tenant tickets
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List tenant tickets - filter by status
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&status=OPEN
+Authorization: Bearer {{token}}
+
+### Create tenant ticket
+POST {{baseUrl}}/api/v1/tickets
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "POS register frozen",
+  "description": "Register screen froze during checkout."
+}
+
+### Get tenant ticket detail
+GET {{baseUrl}}/api/v1/tickets/{{ticketId}}
+Authorization: Bearer {{token}}
+
+### Assign tenant ticket
+# Use opsUserId=2 for the seeded ops handler in a fresh local database.
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/assignee
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "assigneeId": {{opsUserId}}
+}
+
+### Start tenant ticket
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### Comment on tenant ticket
+POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/comments
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "content": "Investigating store terminal logs."
+}
+
+### Close tenant ticket
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "CLOSED"
+}
 
 ### RBAC - read users
 GET {{baseUrl}}/api/v1/rbac/users

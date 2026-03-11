@@ -1,12 +1,12 @@
 # Automated Tests
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
 ## Recommended Commands
 
-Preferred command for the current user-management work:
+Preferred command for the current user-management + ticket-workflow work:
 
 ```powershell
 .\mvnw.cmd -pl merchantops-api -am test
@@ -26,7 +26,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## What Is Covered Today
 
-Current automated coverage is focused on the Week 2 tenant user-management loop.
+Current automated coverage is focused on the completed Week 2 user-management loop plus Week 3 Slice A ticket workflow.
 
 ### `merchantops-api` tests
 
@@ -48,6 +48,14 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
   - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
   - rejection of a pre-change token after role or permission claims become stale
   - successful re-login after role reassignment with new RBAC access
+  - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
+- `TicketWorkflowIntegrationTest`
+  - real `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}` auth + tenant-isolation behavior
+  - `403` when `viewer` attempts ticket write operations
+  - `400` when assignment tries to use an assignee outside the current tenant
+  - `400` when ticket status transition rules are violated
+  - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
+  - ticket write access changing only after role reassignment plus re-login
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -80,6 +88,22 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
   - tenant resolution through request-scoped context and forwarding to `UserQueryService`
   - tenant resolution through request-scoped context and forwarding to `UserCommandService`
   - wrapping successful responses with `ApiResponse.success(...)`
+- `TicketManagementControllerTest`
+  - HTTP request binding for `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}`
+  - HTTP request binding for `POST /api/v1/tickets`
+  - HTTP request binding for `PATCH /api/v1/tickets/{id}/assignee` and `PATCH /api/v1/tickets/{id}/status`
+  - HTTP request binding for `POST /api/v1/tickets/{id}/comments`
+  - request-scoped forwarding of `tenantId`, `operatorId`, and `requestId`
+- `TicketQueryServiceTest`
+  - page defaulting and max-size normalization for ticket list
+  - ticket detail mapping for assignee, comments, and workflow logs
+  - ticket detail `NOT_FOUND` path
+- `TicketCommandServiceTest`
+  - create-ticket persistence with `OPEN` default status and `CREATED` log
+  - cross-tenant assignee rejection
+  - assignment persistence with `ASSIGNED` log
+  - invalid status-transition rejection
+  - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
 - `RoleControllerTest`
   - `GET /api/v1/roles` unauthorized / forbidden / success paths
   - tenant resolution through request-scoped context and forwarding to `RoleQueryService`
@@ -96,7 +120,7 @@ Current automated coverage is focused on the Week 2 tenant user-management loop.
 
 These areas are not replaced by the current unit tests:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`) path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

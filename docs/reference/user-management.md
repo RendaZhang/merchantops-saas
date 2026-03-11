@@ -1,6 +1,6 @@
 # User Management
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Public API Surface
 
@@ -270,7 +270,7 @@ Response example:
     "tenantId": 1,
     "username": "viewer",
     "roleCodes": ["TENANT_ADMIN"],
-    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"],
+    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE"],
     "updatedAt": "2026-03-10T18:00:00"
   }
 }
@@ -344,7 +344,7 @@ Current automated tests for user management focus on:
 
 Current automated tests do not replace:
 
-- authenticated verification for endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` flow
+- authenticated verification for endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` flow
 - Swagger rendering validation
 
 Use [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md) after the automated suite passes.

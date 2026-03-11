@@ -33,24 +33,27 @@ When handling `TT staged`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the Week 2 tenant user-management loop.
+The current automated baseline is centered on the completed Week 2 tenant user-management loop plus the first public Week 3 ticket-workflow slice.
 
 Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
 - `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles` authentication and permission behavior
+- `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` authentication and permission behavior
 - controller request binding and tenant-context forwarding
 - user-management query and command service behavior
+- ticket query and command service behavior
 - repository-backed tenant-scoped page query behavior
 - operator attribution persistence on `users.created_by` and `users.updated_by`
+- workflow-log persistence on `ticket_operation_log`
 - stale-token rejection after user status, role, or permission changes
 
 It does not replace manual checks for:
 
 - Swagger/OpenAPI rendering
 - real infra health such as `MySQL`, `Redis`, and `RabbitMQ`
-- authenticated endpoints outside the covered login + `/api/v1/users` + `/api/v1/roles` Week 2 path
+- authenticated endpoints outside the covered login + `/api/v1/users` + `/api/v1/roles` + `/api/v1/tickets` path
 
 ## Default Test Entry Point
 

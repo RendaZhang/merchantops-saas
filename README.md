@@ -22,6 +22,7 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 - JWT login and Bearer-token authentication
 - Current-user and current-context endpoints
 - Current-tenant user-management read and write flows protected by `USER_READ` / `USER_WRITE`
+- Current-tenant ticket workflow read and write flows protected by `TICKET_READ` / `TICKET_WRITE`
 - RBAC demo endpoints and permission interception
 - Flyway migrations, enriched Swagger / OpenAPI docs, health checks, and request tracing
 
@@ -124,4 +125,4 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 - Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
 - Current tagged milestone: `v0.1.1` on 2026-03-11 for Week 2 tenant user-management loop
 - Project direction: portfolio first, open-source second, and potential commercial exploration after the workflow and AI layers are credible
-- Week 2 tenant user-management loop is complete and Week 3 ticket workflow is the next implementation phase
+- Week 2 tenant user-management loop is complete and Week 3 ticket workflow is the active implementation phase, with the first public closeable ticket slice now landed

@@ -17,6 +17,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Review And Release Agent Guidance](contributing/review-release-agent-guidance.md): staged review, commit, and release guidance for review-focused work
 - [Execution Planning Agent Guidance](contributing/execution-planning-agent-guidance.md): current-phase assessment, next-step planning, and plan-adjustment guidance
 - [User Management Reference](reference/user-management.md): the current `/api/v1/users` contract, validation path, and current Week 2 delivery boundary
+- [Ticket Workflow Reference](reference/ticket-workflow.md): the current `/api/v1/tickets` contract, status rules, and workflow-log behavior
 - [AI Integration Reference](reference/ai-integration.md): workflow-first AI design, guardrails, and planned endpoint direction
 - [AI Provider Configuration](reference/ai-provider-configuration.md): who should own model-provider keys, how cost should be understood, and why the project starts with instance-level configuration
 - [AI Docs](ai/README.md): prompt versioning and eval dataset guidance for future AI workflow rollout
@@ -47,12 +48,13 @@ This directory contains the detailed project documentation that sits behind the 
 12. [Review And Release Agent Guidance](contributing/review-release-agent-guidance.md)
 13. [Execution Planning Agent Guidance](contributing/execution-planning-agent-guidance.md)
 14. [User Management Reference](reference/user-management.md)
-15. [AI Integration Reference](reference/ai-integration.md)
-16. [AI Provider Configuration](reference/ai-provider-configuration.md)
-17. [AI Docs](ai/README.md)
-18. [AI Workflow Candidates](ai/workflow-candidates.md)
-19. [Automated Test Runbook](runbooks/automated-tests.md)
-20. [Regression Checklist](runbooks/regression-checklist.md)
-21. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
-22. [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md)
-23. [Target Architecture Diagram](diagrams/target-architecture.md)
+15. [Ticket Workflow Reference](reference/ticket-workflow.md)
+16. [AI Integration Reference](reference/ai-integration.md)
+17. [AI Provider Configuration](reference/ai-provider-configuration.md)
+18. [AI Docs](ai/README.md)
+19. [AI Workflow Candidates](ai/workflow-candidates.md)
+20. [Automated Test Runbook](runbooks/automated-tests.md)
+21. [Regression Checklist](runbooks/regression-checklist.md)
+22. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
+23. [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md)
+24. [Target Architecture Diagram](diagrams/target-architecture.md)

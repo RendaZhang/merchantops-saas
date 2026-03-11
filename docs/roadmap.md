@@ -6,8 +6,8 @@ Last updated: 2026-03-11
 
 - Week 1 Platform Foundation is complete
 - Week 2 First Business Loop - Tenant User Management is complete
-- Week 3 Ticket Workflow - System of Action is the next active phase
-- Public Week 2 HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, and `PUT /api/v1/users/{id}/roles`
+- Week 3 Ticket Workflow - System of Action is the active phase, and Slice A is now public
+- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
@@ -38,10 +38,10 @@ Complete the first business loop by turning the current user-management groundwo
 
 ## Recommended Next Step
 
-Start Week 3 ticket workflow - system of action:
+Continue Week 3 ticket workflow after Slice A:
 
-- define the first ticket domain slice and public HTTP contract
-- keep remaining schema hardening tasks scoped so they do not reopen the Week 2 public API loop
+- enrich the ticket queue beyond the first closeable loop without expanding into Week 4 generic audit scope too early
+- keep remaining schema hardening tasks scoped so they do not destabilize the now-public Week 3 Slice A contract
 
 ## Planned Work By Phase
 
@@ -52,7 +52,7 @@ Week 2 completion:
 
 Week 3 target:
 
-- build the ticket workflow module as the first real system-of-action surface
+- land the first closeable ticket loop, then extend queue/query and lifecycle behavior without jumping to a full audit subsystem
 
 Week 4 target:
 
@@ -90,7 +90,7 @@ Stretch target after Week 10:
 ## Near-Term Priorities
 
 - move from RBAC demo endpoints to clearer business-oriented endpoints
-- begin the Week 3 ticket workflow slice without expanding Week 2 user-management surface again
+- continue the Week 3 ticket workflow slices now that the first closeable loop is public
 - keep Week 2 documentation aligned with the public API as endpoints are exposed
 - sequence Week 3 ticket work only after Week 2 user management is usable end to end
 - treat AI as an embedded workflow layer, not as a standalone chatbot detour

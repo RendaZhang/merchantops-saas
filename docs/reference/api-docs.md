@@ -51,6 +51,12 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `PUT` | `/api/v1/users/{id}` | Yes + `USER_WRITE` | Update user profile fields |
 | `PATCH` | `/api/v1/users/{id}/status` | Yes + `USER_WRITE` | Enable or disable a user |
 | `PUT` | `/api/v1/users/{id}/roles` | Yes + `USER_WRITE` | Replace all tenant-local roles for a user |
+| `GET` | `/api/v1/tickets` | Yes + `TICKET_READ` | Page tickets in current tenant |
+| `GET` | `/api/v1/tickets/{id}` | Yes + `TICKET_READ` | Get one tenant-scoped ticket detail with comments and workflow logs |
+| `POST` | `/api/v1/tickets` | Yes + `TICKET_WRITE` | Create a new `OPEN` ticket |
+| `PATCH` | `/api/v1/tickets/{id}/assignee` | Yes + `TICKET_WRITE` | Assign the ticket to an active user in current tenant |
+| `PATCH` | `/api/v1/tickets/{id}/status` | Yes + `TICKET_WRITE` | Transition the ticket status |
+| `POST` | `/api/v1/tickets/{id}/comments` | Yes + `TICKET_WRITE` | Add a comment and workflow log entry |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -71,6 +77,17 @@ User Management tag note:
 - `PUT /api/v1/users/{id}/roles` exposes `roleCodes` only and documents the forced re-login requirement after claim changes.
 - Swagger exposes a separate `Role Management` tag for `GET /api/v1/roles`.
 - See [user-management.md](user-management.md) for the current public contract and validation path.
+
+Ticket Workflow tag note:
+
+- Swagger currently exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`.
+- `GET /api/v1/tickets` supports `page`, `size`, and `status`.
+- `GET /api/v1/tickets/{id}` includes current comments and workflow-level operation logs.
+- `POST /api/v1/tickets` always creates an `OPEN` ticket.
+- `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.
+- `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`.
+- `POST /api/v1/tickets/{id}/comments` exposes comment content only; operator and request tracing are derived server-side.
+- See [ticket-workflow.md](ticket-workflow.md) for the current public contract and workflow notes.
 
 ## Core Endpoint Examples
 
@@ -114,7 +131,7 @@ Response:
     "tenantCode": "demo-shop",
     "username": "admin",
     "roles": ["TENANT_ADMIN"],
-    "permissions": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"]
+    "permissions": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE"]
   }
 }
 ```
@@ -317,7 +334,7 @@ Response:
     "tenantId": 1,
     "username": "viewer",
     "roleCodes": ["TENANT_ADMIN"],
-    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"],
+    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE"],
     "updatedAt": "2026-03-10T18:00:00"
   }
 }
@@ -347,6 +364,116 @@ Response:
 {
   "status": "UP",
   "service": "merchantops-saas"
+}
+```
+
+### 12. Ticket List (`GET /api/v1/tickets`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 302,
+        "title": "Printer cable replacement",
+        "status": "IN_PROGRESS",
+        "assigneeId": 2,
+        "assigneeUsername": "ops",
+        "createdAt": "2026-03-11T09:30:00",
+        "updatedAt": "2026-03-11T10:15:00"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Current notes:
+
+- requires `TICKET_READ`
+- list uses a page object, not a bare array
+- current filter set is `page`, `size`, and `status`
+- see [ticket-workflow.md](ticket-workflow.md) for the closeable-loop behavior
+
+### 13. Create Ticket (`POST /api/v1/tickets`)
+
+Request:
+
+```json
+{
+  "title": "POS register frozen",
+  "description": "Register screen froze during checkout."
+}
+```
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 402,
+    "tenantId": 1,
+    "title": "POS register frozen",
+    "description": "Register screen froze during checkout.",
+    "status": "OPEN",
+    "assigneeId": null,
+    "assigneeUsername": null,
+    "createdAt": "2026-03-11T11:00:00",
+    "updatedAt": "2026-03-11T11:00:00"
+  }
+}
+```
+
+### 14. Ticket Detail (`GET /api/v1/tickets/{id}`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 402,
+    "tenantId": 1,
+    "title": "POS register frozen",
+    "description": "Register screen froze during checkout.",
+    "status": "CLOSED",
+    "assigneeId": 2,
+    "assigneeUsername": "ops",
+    "createdBy": 1,
+    "createdByUsername": "admin",
+    "createdAt": "2026-03-11T11:00:00",
+    "updatedAt": "2026-03-11T11:15:00",
+    "comments": [
+      {
+        "id": 51,
+        "ticketId": 402,
+        "content": "Investigating store terminal logs.",
+        "createdBy": 2,
+        "createdByUsername": "ops",
+        "createdAt": "2026-03-11T11:10:00"
+      }
+    ],
+    "operationLogs": [
+      {
+        "id": 61,
+        "operationType": "CREATED",
+        "detail": "ticket created",
+        "operatorId": 1,
+        "operatorUsername": "admin",
+        "createdAt": "2026-03-11T11:00:00"
+      }
+    ]
+  }
 }
 ```
 

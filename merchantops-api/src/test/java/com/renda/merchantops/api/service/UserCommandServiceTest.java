@@ -281,7 +281,9 @@ class UserCommandServiceTest {
                 .thenReturn(List.of(
                         permissionEntity(1L, "USER_READ"),
                         permissionEntity(2L, "USER_WRITE"),
-                        permissionEntity(3L, "FEATURE_FLAG_MANAGE")
+                        permissionEntity(3L, "FEATURE_FLAG_MANAGE"),
+                        permissionEntity(4L, "TICKET_READ"),
+                        permissionEntity(5L, "TICKET_WRITE")
                 ));
 
         UserRoleAssignmentResponse response = userCommandService.assignRoles(
@@ -295,7 +297,7 @@ class UserCommandServiceTest {
         assertThat(response.getTenantId()).isEqualTo(1L);
         assertThat(response.getUsername()).isEqualTo("viewer");
         assertThat(response.getRoleCodes()).containsExactly("TENANT_ADMIN");
-        assertThat(response.getPermissionCodes()).containsExactly("USER_READ", "USER_WRITE", "FEATURE_FLAG_MANAGE");
+        assertThat(response.getPermissionCodes()).containsExactly("USER_READ", "USER_WRITE", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE");
         assertThat(response.getUpdatedAt()).isNotNull();
 
         inOrder(userRoleRepository, userRepository).verify(userRoleRepository).deleteByUserId(1L);

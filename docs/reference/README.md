@@ -11,6 +11,7 @@ Contributor and agent workflow guidance now lives under [../contributing/README.
 - [api-conventions.md](api-conventions.md): response wrapper and error handling rules
 - [authentication-and-rbac.md](authentication-and-rbac.md): login flow, JWT usage, context propagation, and RBAC demo endpoints
 - [user-management.md](user-management.md): current `/api/v1/users` behavior, Swagger verification, and the current Week 2 delivery boundary
+- [ticket-workflow.md](ticket-workflow.md): current `/api/v1/tickets` workflow loop, state rules, and workflow-log behavior
 - [ai-integration.md](ai-integration.md): AI workflow placement, permission boundaries, audit expectations, and planned endpoint shape
 - [ai-provider-configuration.md](ai-provider-configuration.md): planned provider-key ownership, token or usage cost model, and the initial instance-level rollout strategy
 - [api-docs.md](api-docs.md): OpenAPI and Swagger access details

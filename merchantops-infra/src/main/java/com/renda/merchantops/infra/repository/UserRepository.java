@@ -9,12 +9,15 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     Optional<UserEntity> findByIdAndTenantId(Long id, Long tenantId);
 
     Optional<UserEntity> findByTenantIdAndUsername(Long tenantId, String username);
+
+    List<UserEntity> findAllByTenantIdAndIdIn(Long tenantId, Collection<Long> ids);
 
     boolean existsByTenantIdAndUsername(Long tenantId, String username);
 

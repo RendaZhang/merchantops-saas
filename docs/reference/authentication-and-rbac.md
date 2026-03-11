@@ -12,6 +12,12 @@
 - `PUT /api/v1/users/{id}` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PATCH /api/v1/users/{id}/status` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PUT /api/v1/users/{id}/roles` (requires `USER_WRITE`; see [user-management.md](user-management.md))
+- `GET /api/v1/tickets` (requires `TICKET_READ`; see [ticket-workflow.md](ticket-workflow.md))
+- `GET /api/v1/tickets/{id}` (requires `TICKET_READ`; see [ticket-workflow.md](ticket-workflow.md))
+- `POST /api/v1/tickets` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
+- `PATCH /api/v1/tickets/{id}/assignee` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
+- `PATCH /api/v1/tickets/{id}/status` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
+- `POST /api/v1/tickets/{id}/comments` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
 - `GET /api/v1/rbac/users` (requires `USER_READ`)
 - `GET /api/v1/rbac/users/manage` (requires `USER_WRITE`)
 - `GET /api/v1/rbac/feature-flags` (requires `FEATURE_FLAG_MANAGE`)
@@ -111,6 +117,7 @@ curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/roles
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/tickets?page=0&size=10"
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"username\":\"$SMOKE_USERNAME\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" \
   http://localhost:8080/api/v1/users
@@ -135,6 +142,9 @@ curl -i -H "Authorization: Bearer $REFRESHED_TOKEN" http://localhost:8080/api/v1
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"status":"DISABLED"}' \
   http://localhost:8080/api/v1/users/$NEW_USER_ID/status
+curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"title":"POS register frozen","description":"Register screen froze during checkout."}' \
+  http://localhost:8080/api/v1/tickets
 curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
@@ -151,6 +161,7 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/roles
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/users
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/tickets?page=0&size=10"
 $createBody = @{ username = $smokeUsername; displayName = "Cashier User"; email = $smokeEmail; password = "123456"; roleCodes = @("READ_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $createBody http://localhost:8080/api/v1/users
 $newUserId = "<paste-id-from-create-response>"
@@ -165,6 +176,8 @@ curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: ap
 $refreshedToken = "<paste-accessToken-from-role-refresh-login-response>"
 curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/rbac/users/manage
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d "{\"status\":\"DISABLED\"}" http://localhost:8080/api/v1/users/$newUserId/status
+$ticketBody = @{ title = "POS register frozen"; description = "Register screen froze during checkout." } | ConvertTo-Json -Compress
+curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketBody http://localhost:8080/api/v1/tickets
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
 curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/context
 ```
@@ -183,7 +196,7 @@ curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api
     "tenantCode": "demo-shop",
     "username": "admin",
     "roles": ["TENANT_ADMIN"],
-    "permissions": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"]
+    "permissions": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE"]
   }
 }
 ```
@@ -378,7 +391,7 @@ Current notes:
     "tenantId": 1,
     "username": "viewer",
     "roleCodes": ["TENANT_ADMIN"],
-    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE"],
+    "permissionCodes": ["USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE"],
     "updatedAt": "2026-03-10T18:00:00"
   }
 }
@@ -402,6 +415,38 @@ Current notes:
 }
 ```
 
+### `GET /api/v1/tickets`
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 302,
+        "title": "Printer cable replacement",
+        "status": "IN_PROGRESS",
+        "assigneeId": 2,
+        "assigneeUsername": "ops",
+        "createdAt": "2026-03-11T09:30:00",
+        "updatedAt": "2026-03-11T10:15:00"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Current notes:
+
+- requires `TICKET_READ`
+- seeded `admin`, `ops`, and `viewer` can read ticket queues in their own tenant
+- use [ticket-workflow.md](ticket-workflow.md) for the current list/detail and close-loop rules
+
 ## Context Propagation
 
 - `JwtAuthenticationFilter` parses JWT, re-checks the current user status, roles, and permissions from the database, and writes `TenantContext` and `CurrentUserContext`
@@ -410,25 +455,29 @@ Current notes:
 
 ## Expected RBAC Behavior
 
-- `admin` can access `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
-- `ops` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, and `/api/v1/rbac/users`
-- `viewer` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, and `/api/v1/rbac/users`
+- `admin` can access `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, `/api/v1/rbac/users`, `/api/v1/rbac/users/manage`, and `/api/v1/rbac/feature-flags`
+- `ops` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `/api/v1/rbac/users`
+- `viewer` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, and `/api/v1/rbac/users`
 - `ops` and `viewer` are denied on `GET /api/v1/roles`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
+- `viewer` is denied on `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
-- after `viewer` is promoted and logs in again, the refreshed token can access `/api/v1/rbac/users/manage` and `/api/v1/rbac/feature-flags`
+- after `viewer` is promoted and logs in again, the refreshed token can access `/api/v1/rbac/users/manage`, `/api/v1/rbac/feature-flags`, and ticket write endpoints
 
-The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`) permission path end to end, including disabled-user rejection, stale-claim rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
+The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`) and `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, and `POST /comments`) permission paths end to end, including disabled-user rejection, stale-claim rejection, ticket status-transition rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
 
 ## Current User Management Boundary
 
 - Swagger currently exposes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` under the `User Management` tag
 - Swagger exposes `GET /api/v1/roles` under the `Role Management` tag
+- Swagger exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` under the `Ticket Workflow` tag
 - `GET /api/v1/users` is the formal paged tenant query endpoint
 - `GET /api/v1/users/{id}` is the formal tenant-scoped detail endpoint
 - `POST /api/v1/users` is the current public create endpoint
 - `PUT /api/v1/users/{id}` is the current public profile update endpoint
 - `PATCH /api/v1/users/{id}/status` is the current public status-management endpoint
 - `PUT /api/v1/users/{id}/roles` is the current public role-assignment endpoint
+- `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}` are the current ticket read endpoints
+- `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` are the current ticket write endpoints
 - Treat the Swagger-visible endpoints in this document as the only public API surface
 
 ## Tenant Isolation Note

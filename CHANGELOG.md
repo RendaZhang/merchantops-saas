@@ -6,7 +6,18 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
-No entries yet.
+### Added
+
+- Added the first public Week 3 ticket workflow slice with tenant-scoped ticket list, detail, create, assignee change, status change, and comment endpoints.
+- Added workflow-level ticket operation logging plus focused automated coverage for the create -> assign -> comment -> close loop.
+
+### Changed
+
+- Updated status and roadmap docs to treat Week 3 ticket workflow as the active phase instead of only the next planned phase.
+
+### Docs
+
+- Added ticket workflow reference, smoke flow, regression checklist entries, and API examples for the new `/api/v1/tickets` public contract.
 
 ## [v0.1.1] - 2026-03-11
 

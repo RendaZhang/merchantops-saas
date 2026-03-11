@@ -14,6 +14,7 @@
 - `V3__seed_rbac_roles_and_users.sql`: adds demo RBAC roles and the `ops` / `viewer` users
 - `V4__ensure_demo_accounts_consistency.sql`: idempotently enforces demo tenant/users/roles/permissions consistency
 - `V5__add_user_operator_tracking.sql`: adds nullable `created_by` and `updated_by` columns to `users` for lightweight operator attribution
+- `V6__add_ticket_workflow.sql`: adds `ticket`, `ticket_comment`, and `ticket_operation_log`, plus `TICKET_READ` / `TICKET_WRITE` permission seed data
 
 ## Demo Accounts
 
@@ -43,6 +44,28 @@ WHERE tenant_id = 1
 ORDER BY id;
 ```
 
+To verify ticket tables and demo ticket permissions after Week 3 Slice A:
+
+```sql
+SELECT permission_code
+FROM permission
+WHERE permission_code IN ('TICKET_READ', 'TICKET_WRITE')
+ORDER BY permission_code;
+
+SELECT r.role_code, p.permission_code
+FROM role_permission rp
+JOIN `role` r ON r.id = rp.role_id
+JOIN permission p ON p.id = rp.permission_id
+JOIN tenant t ON t.id = r.tenant_id
+WHERE t.tenant_code = 'demo-shop'
+  AND p.permission_code IN ('TICKET_READ', 'TICKET_WRITE')
+ORDER BY r.role_code, p.permission_code;
+
+SELECT COUNT(*) AS ticket_cnt FROM ticket;
+SELECT COUNT(*) AS ticket_comment_cnt FROM ticket_comment;
+SELECT COUNT(*) AS ticket_operation_log_cnt FROM ticket_operation_log;
+```
+
 ## Verify Migration History
 
 ```sql
@@ -60,7 +83,10 @@ SELECT
   (SELECT COUNT(*) FROM permission) AS perm_cnt,
   (SELECT COUNT(*) FROM users) AS user_cnt,
   (SELECT COUNT(*) FROM user_role) AS user_role_cnt,
-  (SELECT COUNT(*) FROM role_permission) AS role_perm_cnt;
+  (SELECT COUNT(*) FROM role_permission) AS role_perm_cnt,
+  (SELECT COUNT(*) FROM ticket) AS ticket_cnt,
+  (SELECT COUNT(*) FROM ticket_comment) AS ticket_comment_cnt,
+  (SELECT COUNT(*) FROM ticket_operation_log) AS ticket_operation_log_cnt;
 ```
 
 ## Related Notes

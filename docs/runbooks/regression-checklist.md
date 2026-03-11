@@ -1,8 +1,8 @@
 # Regression Checklist
 
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
-Use this checklist after foundation-level changes, security changes, environment changes, or current user-management API changes.
+Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, or ticket-workflow API changes.
 
 ## Automated
 
@@ -64,6 +64,8 @@ Use this checklist after foundation-level changes, security changes, environment
 ## Tenant Isolation
 
 - [ ] `/api/v1/users` returns only current-tenant users
+- [ ] `/api/v1/tickets` returns only current-tenant tickets
+- [ ] `/api/v1/tickets/{id}` returns `404` for a ticket outside the current tenant
 
 ## User Management
 
@@ -96,6 +98,22 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] after role reassignment, the affected user can log in again and the new token reflects the new RBAC access
 - [ ] password edge cases, especially leading and trailing whitespace, behave consistently between create and login
 - [ ] manual smoke users were cleaned from the local database after verification
+
+## Ticket Workflow
+
+- [ ] Swagger `Ticket Workflow` tag shows `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
+- [ ] `GET /api/v1/tickets?page=0&size=10` returns a page object rather than a bare array
+- [ ] `GET /api/v1/tickets?status=OPEN` filters by ticket status
+- [ ] `GET /api/v1/tickets/{id}` returns comments and workflow-level `operationLogs`
+- [ ] `POST /api/v1/tickets` succeeds with an `admin` or `ops` token and returns status `OPEN`
+- [ ] `POST /api/v1/tickets` with a `viewer` token returns `403`
+- [ ] `PATCH /api/v1/tickets/{id}/assignee` rejects assignees outside the current tenant
+- [ ] `PATCH /api/v1/tickets/{id}/assignee` rejects disabled assignees
+- [ ] `PATCH /api/v1/tickets/{id}/status` accepts `OPEN`, `IN_PROGRESS`, and `CLOSED`
+- [ ] `PATCH /api/v1/tickets/{id}/status` rejects illegal transitions such as `CLOSED -> OPEN`
+- [ ] `POST /api/v1/tickets/{id}/comments` appends a comment that appears in ticket detail
+- [ ] create, assign, status, comment, and close flows write `ticket_operation_log` rows
+- [ ] after promoting `viewer` to a role with `TICKET_WRITE`, the old token is rejected as stale and the refreshed token can write tickets
 
 ## Tools
 

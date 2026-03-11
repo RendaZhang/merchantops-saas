@@ -162,7 +162,7 @@ class AuthSecurityIntegrationTest {
         assertThat(currentUser.getUsername()).isEqualTo("admin");
         assertThat(currentUser.getRoles()).containsExactly("TENANT_ADMIN");
         assertThat(currentUser.getPermissions())
-                .containsExactly("USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE");
+                .containsExactly("USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE");
     }
 
     @Test
@@ -464,7 +464,7 @@ class AuthSecurityIntegrationTest {
         CurrentUser refreshedViewer = jwtTokenService.parseCurrentUser(refreshedViewerToken);
         assertThat(refreshedViewer.getRoles()).containsExactly("TENANT_ADMIN");
         assertThat(refreshedViewer.getPermissions())
-                .containsExactly("USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE");
+                .containsExactly("USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE");
 
         mockMvc.perform(get("/api/v1/rbac/users/manage")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(refreshedViewerToken)))
@@ -566,7 +566,7 @@ class AuthSecurityIntegrationTest {
         assertThat(currentUser.getTenantId()).isEqualTo(1L);
         assertThat(currentUser.getUsername()).isEqualTo("cashier");
         assertThat(currentUser.getRoles()).containsExactly("READ_ONLY");
-        assertThat(currentUser.getPermissions()).containsExactly("USER_READ");
+        assertThat(currentUser.getPermissions()).containsExactly("USER_READ", "TICKET_READ");
     }
 
     private void seedTenants() {
@@ -586,6 +586,8 @@ class AuthSecurityIntegrationTest {
         insertPermission(3L, "ORDER_READ", "Read order");
         insertPermission(4L, "BILLING_READ", "Read billing");
         insertPermission(5L, "FEATURE_FLAG_MANAGE", "Manage feature flag");
+        insertPermission(6L, "TICKET_READ", "Read ticket");
+        insertPermission(7L, "TICKET_WRITE", "Write ticket");
     }
 
     private void seedRoles() {
@@ -621,11 +623,16 @@ class AuthSecurityIntegrationTest {
         insertRolePermission(2003L, 11L, 3L);
         insertRolePermission(2004L, 11L, 4L);
         insertRolePermission(2005L, 11L, 5L);
-        insertRolePermission(2006L, 12L, 1L);
-        insertRolePermission(2007L, 12L, 3L);
-        insertRolePermission(2008L, 13L, 1L);
-        insertRolePermission(2009L, 14L, 4L);
-        insertRolePermission(2010L, 21L, 1L);
+        insertRolePermission(2006L, 11L, 6L);
+        insertRolePermission(2007L, 11L, 7L);
+        insertRolePermission(2008L, 12L, 1L);
+        insertRolePermission(2009L, 12L, 3L);
+        insertRolePermission(2010L, 12L, 6L);
+        insertRolePermission(2011L, 12L, 7L);
+        insertRolePermission(2012L, 13L, 1L);
+        insertRolePermission(2013L, 13L, 6L);
+        insertRolePermission(2014L, 14L, 4L);
+        insertRolePermission(2015L, 21L, 1L);
     }
 
     private void insertPermission(Long id, String permissionCode, String permissionName) {

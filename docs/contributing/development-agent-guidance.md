@@ -32,6 +32,7 @@ Use it when changing code or development-facing documentation.
 - Repository methods for tenant business data must always include `tenantId`.
 - Service-layer public methods for tenant business data must always accept `tenantId` explicitly.
 - Service-layer public methods for tenant-scoped write operations should also accept `operatorId` explicitly when operator attribution matters.
+- Service-layer public methods for tenant-scoped workflow writes should also accept `requestId` explicitly when request-level tracing or operation logs are persisted.
 - Controllers may resolve `tenantId` from request context, but lower layers must not rely on implicit thread-local access.
 - Query DTOs must describe read results only.
 - Command DTOs must describe allowed write inputs only.
@@ -86,6 +87,14 @@ Current `/api/v1/users` contract is the baseline example:
 - response object with `items`, `page`, `size`, `total`, `totalPages`
 - companion role lookup at `GET /api/v1/roles`
 - companion write entrypoints at `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` with explicit command DTO mapping
+
+Current `/api/v1/tickets` contract is the baseline workflow-module example:
+
+- tenant-scoped page query at `GET /api/v1/tickets`
+- companion detail query at `GET /api/v1/tickets/{id}` with comments and workflow logs
+- write entrypoints at `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
+- explicit `tenantId`, `operatorId`, and `requestId` forwarding from controller to write service
+- workflow-level log persistence without exposing raw `requestId` in the current public contract
 
 ### Write Model Rules
 

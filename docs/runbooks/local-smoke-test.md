@@ -62,6 +62,7 @@ curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/user/me
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/context
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/roles
 curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/users?page=0&size=10"
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/tickets?page=0&size=10"
 curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/users?page=0&size=10&username=ad&status=ACTIVE&roleCode=TENANT_ADMIN"
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"username\":\"$SMOKE_USERNAME\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_EMAIL\",\"password\":\"123456\",\"roleCodes\":[\"READ_ONLY\"]}" \
@@ -84,6 +85,24 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
 REFRESHED_TOKEN=<paste-accessToken-from-role-refresh-login-response>
 curl -i -H "Authorization: Bearer $REFRESHED_TOKEN" http://localhost:8080/api/v1/rbac/users/manage
+curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"title\":\"$SMOKE_USERNAME POS register frozen\",\"description\":\"Register screen froze during checkout.\"}" \
+  http://localhost:8080/api/v1/tickets
+TICKET_ID=<paste-id-from-ticket-create-response>
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tickets/$TICKET_ID
+curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"assigneeId":2}' \
+  http://localhost:8080/api/v1/tickets/$TICKET_ID/assignee
+curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"IN_PROGRESS"}' \
+  http://localhost:8080/api/v1/tickets/$TICKET_ID/status
+curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"content":"Investigating store terminal logs."}' \
+  http://localhost:8080/api/v1/tickets/$TICKET_ID/comments
+curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"CLOSED"}' \
+  http://localhost:8080/api/v1/tickets/$TICKET_ID/status
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tickets/$TICKET_ID
 curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"status\":\"DISABLED\"}" \
   http://localhost:8080/api/v1/users/$NEW_USER_ID/status
@@ -106,6 +125,7 @@ curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/user/
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/context
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/roles
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/users?page=0&size=10"
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/tickets?page=0&size=10"
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/users?page=0&size=10&username=ad&status=ACTIVE&roleCode=TENANT_ADMIN"
 $createBody = @{ username = $smokeUsername; displayName = "Cashier User"; email = $smokeEmail; password = "123456"; roleCodes = @("READ_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $createBody http://localhost:8080/api/v1/users
@@ -121,6 +141,19 @@ curl.exe -i -H "Authorization: Bearer $smokeToken" http://localhost:8080/api/v1/
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
 $refreshedToken = "<paste-accessToken-from-role-refresh-login-response>"
 curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/rbac/users/manage
+$ticketBody = @{ title = "$smokeUsername POS register frozen"; description = "Register screen froze during checkout." } | ConvertTo-Json -Compress
+curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketBody http://localhost:8080/api/v1/tickets
+$ticketId = "<paste-id-from-ticket-create-response>"
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/tickets/$ticketId
+$ticketAssignBody = @{ assigneeId = 2 } | ConvertTo-Json -Compress
+curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketAssignBody http://localhost:8080/api/v1/tickets/$ticketId/assignee
+$ticketStatusBody = @{ status = "IN_PROGRESS" } | ConvertTo-Json -Compress
+curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketStatusBody http://localhost:8080/api/v1/tickets/$ticketId/status
+$ticketCommentBody = @{ content = "Investigating store terminal logs." } | ConvertTo-Json -Compress
+curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketCommentBody http://localhost:8080/api/v1/tickets/$ticketId/comments
+$ticketCloseBody = @{ status = "CLOSED" } | ConvertTo-Json -Compress
+curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketCloseBody http://localhost:8080/api/v1/tickets/$ticketId/status
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/tickets/$ticketId
 $statusBody = @{ status = "DISABLED" } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $statusBody http://localhost:8080/api/v1/users/$newUserId/status
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
@@ -133,8 +166,14 @@ Expected results:
 
 - `GET /api/v1/roles` returns only current-tenant role options
 - `GET /api/v1/users` returns a page object for the current tenant only
+- `GET /api/v1/tickets` returns a page object for the current tenant only
 - `GET /api/v1/users/{id}` returns one current-tenant user and includes current `roleCodes`
+- `GET /api/v1/tickets/{id}` returns one current-tenant ticket with comments and workflow logs
 - `POST /api/v1/users` with the admin token creates an `ACTIVE` user whose password works immediately for login
+- `POST /api/v1/tickets` creates an `OPEN` ticket in the current tenant
+- `PATCH /api/v1/tickets/{id}/assignee` assigns the ticket to the seeded `ops` handler
+- `PATCH /api/v1/tickets/{id}/status` enforces the current `OPEN -> IN_PROGRESS -> CLOSED` loop
+- `POST /api/v1/tickets/{id}/comments` appends a comment and the detail view shows it
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` or `DISABLED`
 - `PUT /api/v1/users/{id}/roles` clears old roles and writes the new role set
@@ -146,6 +185,11 @@ Expected results:
 - `POST /api/v1/users` with a role code outside the current tenant returns `400`
 
 Use a fresh generated username on each run so the smoke flow stays repeatable against a persistent local database.
+
+Ticket negative-path note:
+
+- This smoke flow keeps ticket verification to the happy path.
+- Cross-tenant assignee rejection, illegal status-transition rejection, and viewer write denial are covered in automated tests and should be checked manually through [regression-checklist.md](regression-checklist.md) when needed.
 
 Password regression note:
 
@@ -175,6 +219,19 @@ Use `ops` or `viewer` to confirm permission-denied behavior on endpoints they sh
 If you created local smoke users against the persistent development database, remove them after the check. Delete `user_role` rows first, then `users` rows.
 
 ```sql
+DELETE tol
+FROM ticket_operation_log tol
+JOIN ticket t ON t.id = tol.ticket_id
+WHERE t.title LIKE 'cashier-% POS register frozen';
+
+DELETE tc
+FROM ticket_comment tc
+JOIN ticket t ON t.id = tc.ticket_id
+WHERE t.title LIKE 'cashier-% POS register frozen';
+
+DELETE FROM ticket
+WHERE title LIKE 'cashier-% POS register frozen';
+
 DELETE ur
 FROM user_role ur
 JOIN users u ON u.id = ur.user_id
