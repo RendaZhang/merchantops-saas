@@ -16,6 +16,7 @@
 - `V5__add_user_operator_tracking.sql`: adds nullable `created_by` and `updated_by` columns to `users` for lightweight operator attribution
 - `V6__add_ticket_workflow.sql`: adds `ticket`, `ticket_comment`, and `ticket_operation_log`, plus `TICKET_READ` / `TICKET_WRITE` permission seed data
 - `V7__add_audit_event_backbone.sql`: adds tenant-scoped `audit_event` for reusable governance audit snapshots across existing public write flows, with DB-level same-tenant linkage between `audit_event.operator_id` and `audit_event.tenant_id`
+- `V8__add_minimal_approval_request.sql`: adds tenant-scoped `approval_request` for the first minimal approval flow (`USER_STATUS_DISABLE`), including same-tenant requester/reviewer foreign-key linkage
 
 ## Demo Accounts
 
@@ -66,6 +67,7 @@ SELECT COUNT(*) AS ticket_cnt FROM ticket;
 SELECT COUNT(*) AS ticket_comment_cnt FROM ticket_comment;
 SELECT COUNT(*) AS ticket_operation_log_cnt FROM ticket_operation_log;
 SELECT COUNT(*) AS audit_event_cnt FROM audit_event;
+SELECT COUNT(*) AS approval_request_cnt FROM approval_request;
 ```
 
 ## Verify Migration History

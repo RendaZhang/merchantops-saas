@@ -161,6 +161,27 @@ class AuthSecurityIntegrationTest {
                 )
                 """);
 
+        jdbcTemplate.execute("""
+                CREATE TABLE approval_request (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    action_type VARCHAR(64) NOT NULL,
+                    entity_type VARCHAR(64) NOT NULL,
+                    entity_id BIGINT NOT NULL,
+                    requested_by BIGINT NOT NULL,
+                    reviewed_by BIGINT,
+                    status VARCHAR(32) NOT NULL,
+                    payload_json CLOB NOT NULL,
+                    request_id VARCHAR(128) NOT NULL,
+                    created_at TIMESTAMP NOT NULL,
+                    reviewed_at TIMESTAMP,
+                    executed_at TIMESTAMP,
+                    CONSTRAINT fk_approval_request_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id),
+                    CONSTRAINT fk_approval_request_requested_by_tenant FOREIGN KEY (requested_by, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_approval_request_reviewed_by_tenant FOREIGN KEY (reviewed_by, tenant_id) REFERENCES users(id, tenant_id)
+                )
+                """);
+
 
         seedTenants();
         seedPermissions();
@@ -225,6 +246,143 @@ class AuthSecurityIntegrationTest {
                 "USER",
                 "USER_CREATED"
         )).isEqualTo(1);
+    }
+
+    @Test
+    void disableApprovalFlowShouldKeepUserActiveUntilApprovedThenDisable() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        createApprovalReviewerUser();
+        String reviewerToken = loginAndGetToken("demo-shop", "approver", "123456");
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/users/103/disable-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "disable-req-create-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andReturn();
+
+        JsonNode createNode = objectMapper.readTree(createResult.getResponse().getContentAsByteArray());
+        Long approvalRequestId = createNode.path("data").path("id").asLong();
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM users WHERE id = 103", String.class)).isEqualTo("ACTIVE");
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "disable-req-approve-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM users WHERE id = 103", String.class)).isEqualTo("DISABLED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM audit_event WHERE tenant_id = ? AND entity_type = ? AND entity_id = ? AND action_type = ?",
+                Integer.class,
+                1L,
+                "APPROVAL_REQUEST",
+                approvalRequestId,
+                "APPROVAL_REQUEST_CREATED"
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM audit_event WHERE tenant_id = ? AND entity_type = ? AND entity_id = ? AND action_type = ?",
+                Integer.class,
+                1L,
+                "APPROVAL_REQUEST",
+                approvalRequestId,
+                "APPROVAL_REQUEST_APPROVED"
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM audit_event WHERE tenant_id = ? AND entity_type = ? AND entity_id = ? AND action_type = ?",
+                Integer.class,
+                1L,
+                "APPROVAL_REQUEST",
+                approvalRequestId,
+                "APPROVAL_ACTION_EXECUTED"
+        )).isEqualTo(1);
+    }
+
+
+    @Test
+    void createDisableRequestShouldRejectWhenPendingRequestAlreadyExists() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(post("/api/v1/users/103/disable-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "disable-req-create-dup-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"));
+
+        mockMvc.perform(post("/api/v1/users/103/disable-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "disable-req-create-dup-2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("pending disable request already exists for user"));
+    }
+
+    @Test
+    void rejectDisableRequestShouldKeepUserStatusUnchanged() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        createApprovalReviewerUser();
+        String reviewerToken = loginAndGetToken("demo-shop", "approver", "123456");
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/users/103/disable-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "disable-req-create-2"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long approvalRequestId = objectMapper.readTree(createResult.getResponse().getContentAsByteArray())
+                .path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "disable-req-reject-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM users WHERE id = 103", String.class)).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void requesterShouldNotApproveOwnDisableRequest() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        MvcResult createResult = mockMvc.perform(post("/api/v1/users/103/disable-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "disable-req-create-3"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long approvalRequestId = objectMapper.readTree(createResult.getResponse().getContentAsByteArray())
+                .path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "disable-req-approve-2"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("requester cannot approve or reject own request"));
+    }
+
+    @Test
+    void crossTenantShouldNotQueryOrApproveApprovalRequest() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String outsiderToken = loginAndGetToken("other-shop", "outsider", "123456");
+
+        jdbcTemplate.update("""
+                INSERT INTO approval_request (id, tenant_id, action_type, entity_type, entity_id, requested_by, status, payload_json, request_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, 9001L, 2L, "USER_STATUS_DISABLE", "USER", 201L, 201L, "PENDING", "{\"status\":\"DISABLED\"}", "tenant2-req-1");
+
+        mockMvc.perform(get("/api/v1/approval-requests/9001")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("approval request not found"));
+
+        mockMvc.perform(post("/api/v1/approval-requests/9001/approve")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "cross-tenant-approve"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("approval request not found"));
+
+        mockMvc.perform(get("/api/v1/approval-requests/9001")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(outsiderToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.tenantId").value(2));
     }
 
     @Test
@@ -609,6 +767,19 @@ class AuthSecurityIntegrationTest {
         assertThat(currentUser.getUsername()).isEqualTo("cashier");
         assertThat(currentUser.getRoles()).containsExactly("READ_ONLY");
         assertThat(currentUser.getPermissions()).containsExactly("USER_READ", "TICKET_READ");
+    }
+
+
+    private void createApprovalReviewerUser() {
+        String encodedPassword = passwordEncoder.encode("123456");
+        jdbcTemplate.update("""
+                INSERT INTO users (id, tenant_id, username, password_hash, display_name, email, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, 105L, 1L, "approver", encodedPassword, "Approver User", "approver@demo-shop.local", "ACTIVE");
+        jdbcTemplate.update("""
+                INSERT INTO user_role (id, user_id, role_id)
+                VALUES (?, ?, ?)
+                """, 1006L, 105L, 11L);
     }
 
     private void seedTenants() {

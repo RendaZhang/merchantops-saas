@@ -26,7 +26,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## What Is Covered Today
 
-Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, and the current Week 4 Slice A audit backbone.
+Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, Week 4 Slice A audit backbone, and Week 4 Slice B minimal approval flow (`USER_STATUS_DISABLE`).
 
 ### `merchantops-api` tests
 
@@ -44,6 +44,7 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - successful create-user flow with BCrypt password persistence, immediate login, and `created_by` / `updated_by` attribution
   - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence and refreshed `updated_by`
   - successful disable-user flow for `PATCH /api/v1/users/{id}/status` with refreshed `updated_by`, followed by login rejection for `DISABLED`
+  - minimal approval flow coverage for disable requests, including duplicate-pending-request rejection
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
   - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
   - rejection of a pre-change token after role or permission claims become stale

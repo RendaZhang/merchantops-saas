@@ -69,7 +69,8 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## User Management
 
-- [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
+- [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `POST /api/v1/users/{id}/disable-requests`
+- [ ] Swagger `Approval Requests` tag shows `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`
 - [ ] Swagger `Role Management` tag shows `GET /api/v1/roles`
 - [ ] `GET /api/v1/users` returns a page object rather than a bare array
 - [ ] `GET /api/v1/users/{id}` returns one current-tenant user and includes `roleCodes`
@@ -90,6 +91,11 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `PUT /api/v1/users/{id}` with an `ops` or `viewer` token returns `403`
 - [ ] `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` and `DISABLED`
 - [ ] `PATCH /api/v1/users/{id}/status` with an `ops` or `viewer` token returns `403`
+- [ ] `POST /api/v1/users/{id}/disable-requests` creates a `PENDING` request and leaves user status unchanged
+- [ ] duplicate pending disable request creation for same user returns `400`
+- [ ] requester cannot approve/reject own disable request (`403`)
+- [ ] cross-tenant token cannot read or approve another tenant approval request (`404`)
+- [ ] approve path writes approval audit events and executes user disable (`USER_STATUS_UPDATED`)
 - [ ] a `DISABLED` user is rejected by `POST /api/v1/auth/login`
 - [ ] a token issued before a user was disabled is rejected on protected endpoints with `403` / `user is not active`
 - [ ] `PUT /api/v1/users/{id}/roles` replaces the old role set rather than appending to it

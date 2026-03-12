@@ -88,6 +88,11 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
 REFRESHED_TOKEN=<paste-accessToken-from-role-refresh-login-response>
 curl -i -H "Authorization: Bearer $REFRESHED_TOKEN" http://localhost:8080/api/v1/rbac/users/manage
+curl -i -X POST -H "Authorization: Bearer $REFRESHED_TOKEN" \
+  http://localhost:8080/api/v1/users/$NEW_USER_ID/disable-requests
+APPROVAL_REQUEST_ID=<paste-id-from-disable-request-response>
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/approval-requests/$APPROVAL_REQUEST_ID
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId=$APPROVAL_REQUEST_ID"
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"title\":\"$SMOKE_USERNAME POS register frozen\",\"description\":\"Register screen froze during checkout.\"}" \
   http://localhost:8080/api/v1/tickets
@@ -111,9 +116,8 @@ curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application
   http://localhost:8080/api/v1/tickets/$TICKET_ID/status
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tickets/$TICKET_ID
 curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/audit-events?entityType=ticket&entityId=$TICKET_ID"
-curl -i -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d "{\"status\":\"DISABLED\"}" \
-  http://localhost:8080/api/v1/users/$NEW_USER_ID/status
+curl -i -X POST -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/approval-requests/$APPROVAL_REQUEST_ID/approve
 curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$SMOKE_USERNAME\",\"password\":\"123456\"}"
@@ -153,6 +157,10 @@ curl.exe -i -H "Authorization: Bearer $smokeToken" http://localhost:8080/api/v1/
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
 $refreshedToken = "<paste-accessToken-from-role-refresh-login-response>"
 curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/rbac/users/manage
+curl.exe -i -X POST -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/users/$newUserId/disable-requests
+$approvalRequestId = "<paste-id-from-disable-request-response>"
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/approval-requests/$approvalRequestId
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId=$approvalRequestId"
 $ticketBody = @{ title = "$smokeUsername POS register frozen"; description = "Register screen froze during checkout." } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketBody http://localhost:8080/api/v1/tickets
 $ticketId = "<paste-id-from-ticket-create-response>"
@@ -170,8 +178,7 @@ $ticketReopenBody = @{ status = "OPEN" } | ConvertTo-Json -Compress
 curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $ticketReopenBody http://localhost:8080/api/v1/tickets/$ticketId/status
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/tickets/$ticketId
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=ticket&entityId=$ticketId"
-$statusBody = @{ status = "DISABLED" } | ConvertTo-Json -Compress
-curl.exe -i -X PATCH -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $statusBody http://localhost:8080/api/v1/users/$newUserId/status
+curl.exe -i -X POST -H "Authorization: Bearer $token" http://localhost:8080/api/v1/approval-requests/$approvalRequestId/approve
 curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"tenantCode\":\"demo-shop\",\"username\":\"$smokeUsername\",\"password\":\"123456\"}"
 curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/context
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=USER&entityId=$newUserId"
@@ -196,11 +203,15 @@ Expected results:
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` or `DISABLED`
 - `PUT /api/v1/users/{id}/roles` clears old roles and writes the new role set
+- `POST /api/v1/users/{id}/disable-requests` creates a `PENDING` request and leaves the target user `ACTIVE` before review
+- `GET /api/v1/approval-requests/{id}` returns the tenant-scoped approval request detail
+- `GET /api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId=<approvalRequestId>` returns approval-request audit rows such as `APPROVAL_REQUEST_CREATED`
+- `POST /api/v1/approval-requests/{id}/approve` transitions the request to `APPROVED` and then disables the target user
 - logging in with the new smoke user succeeds before the disable call
 - if you captured a token for that user before changing roles, reusing that old token on a protected endpoint should now return `403` with `token claims are stale, please login again`
 - after role reassignment, logging in again should return a new token whose RBAC access matches the new roles
-- logging in after the disable call returns `403` because the user is no longer `ACTIVE`
-- if you captured a token for that user before disabling it, reusing that old token on a protected endpoint should now return `403` with `user is not active`
+- logging in after approval returns `403` because the user is no longer `ACTIVE`
+- if you captured a token for that user before approval, reusing that old token on a protected endpoint should now return `403` with `user is not active`
 - `GET /api/v1/audit-events?entityType=USER&entityId=<newUserId>` returns current-tenant audit rows for create, profile update, role reassignment, and disable
 - `POST /api/v1/users` with a role code outside the current tenant returns `400`
 

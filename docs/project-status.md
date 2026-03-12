@@ -9,7 +9,8 @@ MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Manageme
 ## Current Phase Summary
 
 - Current phase: Week 4 Audit Trail And Approval Patterns (starting from a completed Week 3 ticket-workflow baseline)
-- Week 4 Slice A status: in progress, with generic `audit_event` backbone now landed for existing public write operations
+- Week 4 Slice A status: completed (generic `audit_event` backbone landed)
+- Week 4 Slice B status: in progress with minimal approval pattern (`USER_STATUS_DISABLE`) now public
 - Next phase: Week 5 Async Import And Data Operations after reusable audit and approval patterns are standing
 - Primary outcome: use the completed Week 2 tenant user-management loop and the completed Week 3 ticket workflow as the stable baseline for reusable governance patterns
 - Current tagged milestone: `v0.1.2` on 2026-03-11, recorded as `Week 3 complete: ticket workflow baseline`
@@ -108,13 +109,13 @@ Completed:
 - focused automated tests now cover auth security integration, current user-management paths, the current audit query path, and the Week 3 ticket workflow paths including reopen behavior
 - Week 2 first-business-loop public HTTP contract now covers list, detail, create, profile update, status management, tenant role lookup, and role reassignment
 - Week 3 public HTTP contract now covers ticket list, detail, create, assignee change, status change, comment, close-through-status, queue filters (`assigneeId`, `keyword`, `unassignedOnly`), and reopen semantics (`CLOSED -> OPEN`)
-- Week 4 Slice A public HTTP contract now adds `GET /api/v1/audit-events` for minimal tenant-scoped audit reads
+- Week 4 public HTTP contract now includes `GET /api/v1/audit-events` plus minimal approval endpoints for user-disable requests
 - Week 3 core acceptance criteria are now met, so remaining ticket enrichments are treated as post-Week-3 follow-up rather than blockers
 - manual and automated verification flows are documented
 
 Not yet implemented:
 
-- full Week 4 approval patterns and broader audit-read surface beyond the current minimal entity query
+- broader multi-action approval patterns and richer audit-read surface beyond current minimal entity/query-by-id endpoints
 - post-Week-3 ticket enrichments such as priority/SLA, attachments, or notifications
 - Week 5 async import and data operations
 - Week 6 ticket AI Copilot
@@ -130,9 +131,9 @@ Not yet implemented:
 
 ## Current Limitations
 
-Current implementation is intentionally focused on the completed Week 1 foundation, the completed Week 2 user-management loop, the completed Week 3 ticket slices, and the current Week 4 Slice A audit read surface, so the following are not yet implemented:
+Current implementation is intentionally focused on the completed Week 1 foundation, the completed Week 2 user-management loop, the completed Week 3 ticket slices, and the current minimal Week 4 audit/approval surface, so the following are not yet implemented:
 
-- Swagger-visible business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`
+- Swagger-visible business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
 - `GET /api/v1/users` is a paged current-tenant query endpoint ordered by `id ASC`
 - `GET /api/v1/users/{id}` is the current tenant-scoped detail query endpoint and includes current `roleCodes`
 - `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` are the public user-management write endpoints today
@@ -140,6 +141,8 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - `GET /api/v1/tickets/{id}` is the current tenant-scoped ticket detail endpoint and includes comments and workflow logs
 - `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` are the current ticket write endpoints today
 - `GET /api/v1/audit-events` is the current minimal tenant-scoped audit query endpoint and requires both `entityType` and `entityId`
+- `POST /api/v1/users/{id}/disable-requests` only creates a `PENDING` approval request; it does not change user status by itself
+- `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject` currently support only `USER_STATUS_DISABLE`
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` and `DISABLED`
 - `GET /api/v1/roles` returns only current-tenant roles that can be assigned by the current operator

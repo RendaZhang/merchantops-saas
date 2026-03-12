@@ -4,7 +4,7 @@ Last updated: 2026-03-11
 
 ## Public API Surface
 
-Swagger currently exposes six user-management endpoints plus one companion role-query endpoint:
+Swagger currently exposes seven user-management endpoints plus one companion role-query endpoint:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -14,6 +14,7 @@ Swagger currently exposes six user-management endpoints plus one companion role-
 | `PUT` | `/api/v1/users/{id}` | Bearer JWT | `USER_WRITE` | Updates mutable profile fields only |
 | `PATCH` | `/api/v1/users/{id}/status` | Bearer JWT | `USER_WRITE` | Enables or disables a user in the current tenant |
 | `PUT` | `/api/v1/users/{id}/roles` | Bearer JWT | `USER_WRITE` | Replaces all roles for a tenant user |
+| `POST` | `/api/v1/users/{id}/disable-requests` | Bearer JWT | `USER_WRITE` | Creates a minimal approval request for disabling a user (status stays unchanged until approved) |
 
 Companion role endpoint:
 
@@ -237,6 +238,50 @@ Example request:
   "status": "DISABLED"
 }
 ```
+
+
+## `POST /api/v1/users/{id}/disable-requests`
+
+Current behavior:
+
+- tenant scope is derived from JWT and request context
+- requires `USER_WRITE`
+- creates `approval_request` with action `USER_STATUS_DISABLE` and initial status `PENDING`
+- target user status is not changed when request is created
+- rejects duplicate pending disable requests for the same user
+- requester cannot later self-approve or self-reject this same request
+
+Related approval endpoints:
+
+- `GET /api/v1/approval-requests/{id}` (`USER_READ`)
+- `POST /api/v1/approval-requests/{id}/approve` (`USER_WRITE`)
+- `POST /api/v1/approval-requests/{id}/reject` (`USER_WRITE`)
+
+Example response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 901,
+    "tenantId": 1,
+    "actionType": "USER_STATUS_DISABLE",
+    "entityType": "USER",
+    "entityId": 5,
+    "requestedBy": 5,
+    "reviewedBy": null,
+    "status": "PENDING",
+    "payloadJson": "{\"status\":\"DISABLED\"}",
+    "requestId": "disable-req-create-1",
+    "createdAt": "2026-03-12T10:10:00",
+    "reviewedAt": null,
+    "executedAt": null
+  }
+}
+```
+
+Approve path reuses existing `PATCH /api/v1/users/{id}/status` write chain internally to set `DISABLED`, so tenant/operator/requestId/audit governance remains aligned with existing user status writes.
 
 ## `PUT /api/v1/users/{id}/roles`
 

@@ -1,19 +1,25 @@
 package com.renda.merchantops.infra.repository;
 
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Collection;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     Optional<UserEntity> findByIdAndTenantId(Long id, Long tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from UserEntity u where u.id = :id and u.tenantId = :tenantId")
+    Optional<UserEntity> findByIdAndTenantIdForUpdate(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     Optional<UserEntity> findByTenantIdAndUsername(Long tenantId, String username);
 

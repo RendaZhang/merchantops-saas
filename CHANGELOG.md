@@ -10,15 +10,17 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 - Started the Week 4 audit-and-approval track with a generic `audit_event` backbone for current public user and ticket write flows.
 - Added a minimal tenant-scoped audit query endpoint: `GET /api/v1/audit-events?entityType=...&entityId=...`.
+- Added the first minimal approval pattern for `USER_STATUS_DISABLE` through `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`.
 
 ### Changed
 
 - Kept workflow-level `ticket_operation_log` in place while adding reusable cross-entity audit records for governance follow-up work.
 - Strengthened the audit schema with DB-level same-tenant linkage for audit operator attribution.
+- Kept direct user-status writes available while adding a separate approval-backed disable flow that executes through the existing user-status write chain after approval.
 
 ### Docs
 
-- Added audit/approval reference docs plus Swagger, smoke, regression, and API-example updates for the new audit query surface.
+- Added audit/approval reference docs plus Swagger, smoke, regression, and API-example updates for the new audit query and minimal approval surface.
 
 ## [v0.1.2] - 2026-03-11
 

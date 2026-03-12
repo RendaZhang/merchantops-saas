@@ -9,6 +9,7 @@
 @createUsername = cashier-demo
 @createUserEmail = cashier-demo@demo-shop.local
 @targetUserId = replace-with-created-user-id
+@approvalRequestId = replace-with-created-approval-request-id
 @targetUserToken = replace-with-pre-change-user-access-token
 @refreshedTargetUserToken = replace-with-post-role-change-user-access-token
 @opsUserId = 2
@@ -250,6 +251,28 @@ Content-Type: {{contentType}}
 {
   "status": "OPEN"
 }
+
+### Create user disable approval request
+POST {{baseUrl}}/api/v1/users/{{targetUserId}}/disable-requests
+Authorization: Bearer {{token}}
+
+### Get approval request detail
+GET {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}
+Authorization: Bearer {{token}}
+
+### Query approval-request audit events
+GET {{baseUrl}}/api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId={{approvalRequestId}}
+Authorization: Bearer {{token}}
+
+### Approve approval request
+# Use a token from a different tenant-local reviewer than the requester.
+POST {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}/approve
+Authorization: Bearer {{token}}
+
+### Reject approval request
+# Use a token from a different tenant-local reviewer than the requester.
+POST {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}/reject
+Authorization: Bearer {{token}}
 
 ### Query tenant audit events by entity
 GET {{baseUrl}}/api/v1/audit-events?entityType=TICKET&entityId={{ticketId}}

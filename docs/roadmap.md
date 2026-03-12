@@ -8,7 +8,7 @@ Last updated: 2026-03-11
 - Week 2 First Business Loop - Tenant User Management is complete
 - Week 3 Ticket Workflow - System of Action is complete
 - Week 4 Audit Trail And Approval Patterns is the active phase
-- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`
+- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
@@ -115,4 +115,4 @@ Stretch target after Week 10:
   - user and ticket public write flows now emit generic audit rows
   - workflow-level `ticket_operation_log` remains separate by design
   - minimal tenant-scoped query endpoint added: `GET /api/v1/audit-events`
-- Slice B (approval pattern) remains pending.
+- Slice B (minimal approval pattern) is now started with `USER_STATUS_DISABLE`; next step is expanding to additional action types and broader read surfaces.
