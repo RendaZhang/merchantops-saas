@@ -9,7 +9,7 @@ Last updated: 2026-03-12
 - Week 3 Ticket Workflow - System of Action is complete
 - Week 4 Audit Trail And Approval Patterns is complete
 - Week 5 Async Import And Data Operations is the active phase
-- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
+- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
@@ -121,3 +121,13 @@ Stretch target after Week 10:
 - Slice C (approval queue read surface) is complete with tenant-scoped paging and filters (`status`, `actionType`, `requestedBy`) at `GET /api/v1/approval-requests`.
 - Week 4 milestone is now recorded through `v0.1.3`.
 - Next step is expanding to additional action types after queue operations are stable, while Week 5 async import becomes the active delivery stream.
+
+
+## Week 5 Progress Notes (2026-03-12)
+
+- Slice A (import submission backbone) is now landed:
+  - `import_job` and `import_job_item_error` schema/entities/repositories added
+  - public API now includes create/list/detail for import jobs
+  - create flow persists files locally, writes `QUEUED` jobs, and publishes RabbitMQ messages
+  - worker now consumes jobs and advances `QUEUED -> PROCESSING -> SUCCEEDED/FAILED` with parse-level errors
+  - import create/process actions now emit reusable `audit_event` records

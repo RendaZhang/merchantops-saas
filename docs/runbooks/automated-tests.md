@@ -166,3 +166,11 @@ Current automated suite also covers:
 - ticket writes generate `audit_event` rows
 - ticket workflow keeps `ticket_operation_log` in parallel with generic audit events
 - tenant-scoped audit query endpoint does not leak cross-tenant data
+
+
+## Week 5 Import Backbone Checks
+
+- Verify `POST /api/v1/import-jobs` with multipart request returns `QUEUED` and a `jobId`.
+- Verify `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` are tenant-scoped.
+- Verify worker processing advances status to `SUCCEEDED` or `FAILED` and writes parse errors to `import_job_item_error` when CSV shape is invalid.
+- Verify audit events include `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action.

@@ -35,6 +35,11 @@ jwt:
   secret: ${JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
   expire-seconds: ${JWT_EXPIRE_SECONDS:7200}
 
+merchantops:
+  import:
+    storage:
+      local-dir: ${IMPORT_STORAGE_LOCAL_DIR:data/imports}
+
 logging:
   level:
     org.springframework.amqp: INFO

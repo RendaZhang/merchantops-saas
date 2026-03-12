@@ -283,3 +283,11 @@ WHERE username LIKE 'smoke%'
 If you use a different prefix for generated test users, update the cleanup filter accordingly.
 
 You can also run the same requests from [../../api-demo.http](../../api-demo.http) in an IDE that supports `.http` request files.
+
+
+## Week 5 Import Backbone Checks
+
+- Verify `POST /api/v1/import-jobs` with multipart request returns `QUEUED` and a `jobId`.
+- Verify `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` are tenant-scoped.
+- Verify worker processing advances status to `SUCCEEDED` or `FAILED` and writes parse errors to `import_job_item_error` when CSV shape is invalid.
+- Verify audit events include `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action.
