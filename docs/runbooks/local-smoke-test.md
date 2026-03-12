@@ -395,6 +395,16 @@ $importList = Invoke-RestMethod `
   -Uri "$baseUrl/api/v1/import-jobs?page=0&size=10" `
   -Headers $adminHeaders
 
+$importListByType = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$baseUrl/api/v1/import-jobs?page=0&size=10&importType=USER_CSV" `
+  -Headers $adminHeaders
+
+$importListByRequester = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$baseUrl/api/v1/import-jobs?page=0&size=10&requestedBy=$($me.data.userId)" `
+  -Headers $adminHeaders
+
 $importDetailBefore = Invoke-RestMethod `
   -Method Get `
   -Uri "$baseUrl/api/v1/import-jobs/$importJobId" `
@@ -417,6 +427,7 @@ Expected results:
 
 - `POST /api/v1/import-jobs` returns a tenant-scoped `QUEUED` job
 - list and detail are tenant-scoped and include the created job
+- `importType=USER_CSV` and `requestedBy=<current admin id>` filters both keep the created job visible
 - if local RabbitMQ and worker processing are healthy, the job later moves to `SUCCEEDED` or `FAILED`
 - import audit includes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action
 

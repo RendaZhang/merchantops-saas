@@ -38,26 +38,37 @@ class ImportJobQueryServiceTest {
     private ImportJobQueryService importJobQueryService;
 
     @Test
-    void pageJobsShouldNormalizeQueryAndUseStableSort() {
+    void pageJobsShouldNormalizeQueryFiltersMapListFieldsAndUseStableSort() {
         ImportJobEntity entity = new ImportJobEntity();
         entity.setId(1L);
         entity.setTenantId(1L);
         entity.setImportType("USER_CSV");
         entity.setSourceType("CSV");
         entity.setSourceFilename("users.csv");
-        entity.setStatus("QUEUED");
-        entity.setTotalCount(0);
-        entity.setSuccessCount(0);
-        entity.setFailureCount(0);
+        entity.setStatus("FAILED");
+        entity.setRequestedBy(101L);
+        entity.setTotalCount(3);
+        entity.setSuccessCount(1);
+        entity.setFailureCount(2);
+        entity.setErrorSummary("completed with some row errors");
         entity.setCreatedAt(LocalDateTime.now());
-        when(importJobRepository.findAllByTenantId(eq(1L), any())).thenReturn(new PageImpl<>(List.of(entity)));
+        when(importJobRepository.searchPageByTenantId(eq(1L), eq("FAILED"), eq("USER_CSV"), eq(101L), eq(true), any()))
+                .thenReturn(new PageImpl<>(List.of(entity)));
 
-        ImportJobPageResponse response = importJobQueryService.pageJobs(1L, new ImportJobPageQuery());
+        ImportJobPageQuery query = new ImportJobPageQuery(-1, 500, " FAILED ", " USER_CSV ", 101L, true);
+        ImportJobPageResponse response = importJobQueryService.pageJobs(1L, query);
 
         assertThat(response.total()).isEqualTo(1);
+        assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.requestedBy()).isEqualTo(101L);
+            assertThat(item.hasFailures()).isTrue();
+            assertThat(item.errorSummary()).isEqualTo("completed with some row errors");
+        });
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(importJobRepository).findAllByTenantId(eq(1L), pageableCaptor.capture());
+        verify(importJobRepository).searchPageByTenantId(eq(1L), eq("FAILED"), eq("USER_CSV"), eq(101L), eq(true), pageableCaptor.capture());
         Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(100);
         assertThat(pageable.getSort().getOrderFor("createdAt")).extracting(Sort.Order::getDirection).isEqualTo(Sort.Direction.DESC);
         assertThat(pageable.getSort().getOrderFor("id")).extracting(Sort.Order::getDirection).isEqualTo(Sort.Direction.DESC);
     }

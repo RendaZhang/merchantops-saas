@@ -27,7 +27,7 @@ public interface ImportJobApi {
     ApiResponse<ImportJobDetailResponse> createImportJob(@Valid @RequestPart("request") ImportJobCreateRequest request,
                                                          @RequestPart("file") MultipartFile file);
 
-    @Operation(summary = "Page import jobs in current tenant")
+    @Operation(summary = "Page import jobs in current tenant with optional queue filters")
     @GetMapping
     ApiResponse<ImportJobPageResponse> listImportJobs(@ParameterObject ImportJobPageQuery query);
 

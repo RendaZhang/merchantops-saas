@@ -64,7 +64,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/approval-requests/{id}/approve` | Yes + `USER_WRITE` | Approve a pending request and execute the action |
 | `POST` | `/api/v1/approval-requests/{id}/reject` | Yes + `USER_WRITE` | Reject a pending request |
 | `POST` | `/api/v1/import-jobs` | Yes + `USER_WRITE` | Create an async import job from multipart request + CSV file |
-| `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant |
+| `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job detail with item errors |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
@@ -124,8 +124,9 @@ Import Jobs tag note:
 - Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}`.
 - `POST /api/v1/import-jobs` requires `USER_WRITE` and accepts multipart `request` + `file`.
 - `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` require `USER_READ`.
-- the current list filter set is minimal: `page` and `size` only.
+- `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
 - list ordering is currently `createdAt DESC, id DESC`.
+- list items expose `requestedBy` and derived `hasFailures`; row-level `itemErrors` remain detail-only.
 - detail returns row-level `itemErrors` that now include both parse failures and business-row execution failures for `USER_CSV`.
 - See [import-jobs.md](import-jobs.md) for the current async-import contract and non-goals.
 
@@ -670,6 +671,8 @@ Response:
         "sourceType": "CSV",
         "sourceFilename": "users.csv",
         "status": "SUCCEEDED",
+        "requestedBy": 1,
+        "hasFailures": false,
         "totalCount": 1,
         "successCount": 1,
         "failureCount": 0,
@@ -690,8 +693,9 @@ Response:
 Current notes:
 
 - requires `USER_READ`
-- the current query shape exposes `page` and `size` only
+- the current query shape exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`
 - current list ordering is `createdAt DESC, id DESC`
+- `hasFailuresOnly=true` returns both partial-success jobs (`SUCCEEDED` with `failureCount > 0`) and terminal `FAILED` jobs
 - detail response also exposes `itemErrors` for both parse/header failures and business-row execution failures in the current `USER_CSV` path
 
 ## Stale Swagger Troubleshooting

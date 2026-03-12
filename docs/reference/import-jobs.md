@@ -9,7 +9,7 @@ Week 5 exposes three async import endpoints:
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
 | `POST` | `/api/v1/import-jobs` | Bearer JWT | `USER_WRITE` | Accepts multipart request + CSV file, creates a `QUEUED` job, and schedules the MQ publish after transaction commit |
-| `GET` | `/api/v1/import-jobs` | Bearer JWT | `USER_READ` | Pages current-tenant import jobs |
+| `GET` | `/api/v1/import-jobs` | Bearer JWT | `USER_READ` | Pages current-tenant import jobs with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Bearer JWT | `USER_READ` | Returns one current-tenant import job with item errors |
 
 ## Current Week 5 Slice B Contract (`USER_CSV`)
@@ -42,6 +42,16 @@ Worker behavior (Slice B):
 4. executes one row in one independent transaction via the existing user-create service chain
 5. records row errors in `import_job_item_error` for both parse-level and business-level failures
 6. writes terminal status + audit events (`IMPORT_JOB_COMPLETED` / `IMPORT_JOB_FAILED`)
+
+Current list query surface:
+
+- `page` and `size`
+- exact `status`
+- exact `importType`
+- exact `requestedBy`
+- `hasFailuresOnly=true` for queue triage across partial-success and failed jobs
+
+List filtering remains tenant-scoped and keeps stable ordering `createdAt DESC, id DESC`.
 
 Current error-code examples in `itemErrors`:
 
@@ -119,6 +129,39 @@ Example detail response after partial success:
 }
 ```
 
+Example list response item:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 1201,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "users.csv",
+        "status": "SUCCEEDED",
+        "requestedBy": 1,
+        "hasFailures": true,
+        "totalCount": 4,
+        "successCount": 2,
+        "failureCount": 2,
+        "errorSummary": "completed with some row errors",
+        "createdAt": "2026-03-12T18:20:00",
+        "startedAt": "2026-03-12T18:20:02",
+        "finishedAt": "2026-03-12T18:20:05"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
 ## Job Counter Semantics
 
 After Slice B:
@@ -126,8 +169,9 @@ After Slice B:
 - `totalCount`: total data rows read (excluding header)
 - `successCount`: rows that really created tenant users
 - `failureCount`: rows that failed parse validation or business execution
-- terminal `SUCCEEDED`: job finished with at least one success (partial success allowed)
-- terminal `FAILED`: all rows failed, or pre-row fatal validation failed (for example empty file/header)
+- clean success: `status=SUCCEEDED`, `failureCount=0`, `errorSummary=null`
+- partial success: `status=SUCCEEDED`, `failureCount>0`, `errorSummary="completed with some row errors"`
+- full failure: `status=FAILED`
 
 ## Governance Behavior
 
@@ -141,6 +185,7 @@ After Slice B:
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.
-- list paging currently supports `page` and `size` only; default size is `10` and max size is `100`.
-- current list ordering is `createdAt DESC, id DESC`.
+- list paging now supports `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`; default size is `10` and max size is `100`.
+- list items expose `requestedBy` and derived `hasFailures`, but detailed `itemErrors` remain detail-only.
+- current list ordering remains `createdAt DESC, id DESC`.
 - see [../../api-demo.http](../../api-demo.http) for runnable request examples.

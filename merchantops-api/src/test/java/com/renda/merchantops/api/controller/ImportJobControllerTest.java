@@ -18,6 +18,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -121,15 +123,50 @@ class ImportJobControllerTest {
     @Test
     void listShouldReturnTenantScopedPage() throws Exception {
         when(importJobQueryService.pageJobs(eq(9L), any()))
-                .thenReturn(new ImportJobPageResponse(List.of(), 0, 10, 0, 0));
+                .thenReturn(new ImportJobPageResponse(List.of(
+                        new com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse(
+                                1L,
+                                "USER_CSV",
+                                "CSV",
+                                "users.csv",
+                                "FAILED",
+                                9001L,
+                                true,
+                                3,
+                                1,
+                                2,
+                                "completed with some row errors",
+                                null,
+                                null,
+                                null
+                        )
+                ), 1, 20, 1, 1));
 
         mockMvc.perform(get("/api/v1/import-jobs")
+                        .queryParam("page", "1")
+                        .queryParam("size", "20")
+                        .queryParam("status", "FAILED")
+                        .queryParam("importType", "USER_CSV")
+                        .queryParam("requestedBy", "9001")
+                        .queryParam("hasFailuresOnly", "true")
                         .header(HEADER_AUTH, "true")
                         .header(HEADER_TENANT_ID, "9")
                         .header(HEADER_TENANT_CODE, "demo-shop")
                         .header(HEADER_AUTHORITIES, "USER_READ"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("SUCCESS"));
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items[0].requestedBy").value(9001))
+                .andExpect(jsonPath("$.data.items[0].hasFailures").value(true));
+
+        ArgumentCaptor<com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery> queryCaptor =
+                ArgumentCaptor.forClass(com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery.class);
+        verify(importJobQueryService).pageJobs(eq(9L), queryCaptor.capture());
+        assertThat(queryCaptor.getValue().getPage()).isEqualTo(1);
+        assertThat(queryCaptor.getValue().getSize()).isEqualTo(20);
+        assertThat(queryCaptor.getValue().getStatus()).isEqualTo("FAILED");
+        assertThat(queryCaptor.getValue().getImportType()).isEqualTo("USER_CSV");
+        assertThat(queryCaptor.getValue().getRequestedBy()).isEqualTo(9001L);
+        assertThat(queryCaptor.getValue().getHasFailuresOnly()).isTrue();
     }
 
     private static class TestAuthenticationFilter extends OncePerRequestFilter {

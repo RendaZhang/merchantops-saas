@@ -16,6 +16,7 @@
 @opsUserId = 2
 @ticketId = replace-with-created-ticket-id
 @importJobId = replace-with-created-import-job-id
+@importRequestedBy = replace-with-import-requester-id
 
 # See docs/runbooks/regression-checklist.md for the broader regression checklist.
 # See docs/reference/user-management.md for the current /api/v1/users contract and expected demo response.
@@ -323,6 +324,23 @@ import_user_1,"Import User, Tier 1",import_user_1@demo-shop.local,123456,READ_ON
 
 ### List import jobs
 GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List import jobs - failed only
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&status=FAILED
+Authorization: Bearer {{token}}
+
+### List import jobs - rows with any failures
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&hasFailuresOnly=true
+Authorization: Bearer {{token}}
+
+### List import jobs - filter by requester
+# Set importRequestedBy from a create/detail response in the current tenant.
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&requestedBy={{importRequestedBy}}
+Authorization: Bearer {{token}}
+
+### List import jobs - filter by import type
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&importType=USER_CSV
 Authorization: Bearer {{token}}
 
 ### Get import job detail

@@ -13,7 +13,7 @@ MerchantOps SaaS currently sits on a completed Week 1-4 baseline and an active W
 - Current phase: Week 5 Async Import And Data Operations.
 - Stable completed baselines: Week 2 tenant user management, Week 3 ticket workflow, and Week 4 audit/approval.
 - Week 5 Slice A is complete with import submission/list/detail plus queue backbone.
-- Week 5 Slice B is in progress with narrow `USER_CSV` business-row execution and row-level failure isolation.
+- Week 5 Slice B is in progress with narrow `USER_CSV` business-row execution, row-level failure isolation, and filtered import queue reads.
 - Exact endpoint contracts live in [reference/README.md](reference/README.md); this page keeps the phase-level truth and current limits.
 
 ## Release Baseline
@@ -31,7 +31,7 @@ MerchantOps SaaS currently sits on a completed Week 1-4 baseline and an active W
 - User management: tenant-scoped list/detail/create/update/status/role-assignment plus role lookup and disable-request initiation.
 - Ticket workflow: tenant-scoped list/detail/create/assignee/status/comment flow with queue filters and reopen support.
 - Governance: entity-scoped `GET /api/v1/audit-events` plus minimal approval request queue/detail/approve/reject flow for `USER_STATUS_DISABLE`.
-- Import jobs: tenant-scoped create/list/detail flow with `USER_CSV` processing, quoted CSV record parsing, and row-level item errors.
+- Import jobs: tenant-scoped create/list/detail flow with `USER_CSV` processing, filtered queue reads, quoted CSV record parsing, and row-level item errors.
 
 ### Shared runtime and internal baseline
 
@@ -39,11 +39,12 @@ MerchantOps SaaS currently sits on a completed Week 1-4 baseline and an active W
 - Tenant-aware query and command services for users, tickets, approvals, and import jobs.
 - JWT claim revalidation against current user status, roles, and permissions on protected requests.
 - Local import file storage abstraction with after-commit queue publish and worker consumption.
+- Tenant-scoped import queue reporting with stable ordering plus `requestedBy` / `hasFailures` list hints.
 - Focused automated coverage for auth, user management, ticket workflow, import jobs, audit, and approval behavior.
 
 ## Active Week 5 Work
 
-- Keep the landed `USER_CSV` schema and examples aligned across Swagger, `api-demo.http`, reference docs, and runbooks.
+- Keep the landed `USER_CSV` schema, filtered queue read surface, and examples aligned across Swagger, `api-demo.http`, reference docs, and runbooks.
 - Stabilize job-summary semantics, row-level error codes, and partial-success behavior before adding more import breadth.
 - Continue Week 5 with narrow import follow-ups such as retry/chunk controls or richer reporting without pulling Week 6 AI scope forward too early.
 
@@ -51,7 +52,7 @@ MerchantOps SaaS currently sits on a completed Week 1-4 baseline and an active W
 
 - Import jobs currently support one business import type only: `USER_CSV`.
 - The `USER_CSV` schema is fixed to `username,displayName,email,password,roleCodes`.
-- Import job list currently supports `page` and `size` only, with `createdAt DESC, id DESC` ordering.
+- Import job list now supports `status`, `importType`, `requestedBy`, and `hasFailuresOnly`, but retry/chunk controls and richer reporting are still pending.
 - Import job detail exposes row-level errors, but broader import types, richer reporting, and AI-assisted remediation are still deferred.
 - Approval flow currently covers one action type only: `USER_STATUS_DISABLE`.
 - Audit reads are still minimal and entity-scoped by `entityType + entityId`.

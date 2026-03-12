@@ -12,7 +12,7 @@ Last updated: 2026-03-12
 - Week 4 Audit Trail And Approval Patterns is complete.
 - Week 5 Async Import And Data Operations is the active phase.
 - Week 5 Slice A is complete with import submission/list/detail plus queue backbone.
-- Week 5 Slice B is in progress with narrow `USER_CSV` business-row execution and row-level failure isolation.
+- Week 5 Slice B is in progress with narrow `USER_CSV` business-row execution, row-level failure isolation, and filtered import queue reads.
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 
 ## Current Focus
@@ -20,14 +20,14 @@ Last updated: 2026-03-12
 Week 5 should stay narrow and workflow-oriented:
 
 - keep the landed `USER_CSV` schema and example files aligned across Swagger, `api-demo.http`, reference docs, and runbooks
-- stabilize row-level success/failure semantics before adding more import breadth
+- keep the filtered import queue read surface operationally useful before adding more import breadth
 - continue using import jobs as an async operations backbone, not as a generic bulk-admin shortcut
 - keep audit and approval groundwork reusable for later Week 6-9 AI flows
 
 ## Recommended Next Steps
 
-- finish the current Week 5 Slice B hardening around `USER_CSV` row execution, error codes, and job-summary semantics
-- add narrow follow-up slices such as retry/chunk controls or richer import reporting without expanding to unrelated modules
+- keep the landed queue filters and job-summary semantics aligned across tests, Swagger, and reference docs
+- add the next narrow follow-up slice such as retry/chunk controls or richer import reporting without expanding to unrelated modules
 - keep Week 2-4 docs aligned only where Week 5 changes shared workflow or governance expectations
 - avoid pulling Week 6 AI scope forward until the import execution model and failure reporting are stable
 
@@ -53,6 +53,7 @@ Week 5 currently has two clear slices:
   - valid rows create tenant users through the existing user command service path
   - row failures are isolated in `import_job_item_error` with parse and business codes such as `DUPLICATE_USERNAME`, `UNKNOWN_ROLE`, `INVALID_EMAIL`, and `INVALID_PASSWORD`
   - import job counters now reflect real create success/failure counts, with partial-success terminal `SUCCEEDED`
+  - import queue reads now support `status`, `importType`, `requestedBy`, and `hasFailuresOnly` while keeping `createdAt DESC, id DESC`
 
 ## Open-Source Track
 

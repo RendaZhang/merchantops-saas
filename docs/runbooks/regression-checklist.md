@@ -143,11 +143,16 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `POST /api/v1/import-jobs` accepts multipart `request` + `file` and returns an initial `QUEUED` job
 - [ ] `POST /api/v1/import-jobs` with a `viewer` token returns `403`
 - [ ] `GET /api/v1/import-jobs?page=0&size=10` returns a page object ordered by `createdAt DESC, id DESC`
+- [ ] `GET /api/v1/import-jobs?status=FAILED` filters by exact status
+- [ ] `GET /api/v1/import-jobs?importType=USER_CSV` filters by exact import type
+- [ ] `GET /api/v1/import-jobs?requestedBy=<userId>` filters by requester within the current tenant only
+- [ ] `GET /api/v1/import-jobs?hasFailuresOnly=true` returns only jobs whose `failureCount > 0`, including partial-success `SUCCEEDED` jobs
 - [ ] `GET /api/v1/import-jobs/{id}` returns only a current-tenant job and includes `itemErrors`
-- [ ] current import list supports `page` and `size` only
+- [ ] import list items expose `requestedBy` and derived `hasFailures`
 - [ ] worker processing advances jobs through `QUEUED -> PROCESSING -> SUCCEEDED/FAILED`
 - [ ] invalid CSV row shapes create `import_job_item_error` rows and surface them through job detail
 - [ ] business-row failures such as duplicate username, unknown role, invalid email, or invalid password also surface through `itemErrors` without blocking valid rows in the same job
+- [ ] successful jobs keep `errorSummary = null`, partial-success jobs keep `status=SUCCEEDED` with `errorSummary = "completed with some row errors"`, and full failures keep `status=FAILED`
 - [ ] import create/process flow writes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal `IMPORT_JOB_COMPLETED` or `IMPORT_JOB_FAILED` audit event
 
 ## Tools

@@ -13,7 +13,20 @@ import java.util.Optional;
 
 public interface ImportJobRepository extends JpaRepository<ImportJobEntity, Long> {
 
-    Page<ImportJobEntity> findAllByTenantId(Long tenantId, Pageable pageable);
+    @Query("""
+            select j from ImportJobEntity j
+            where j.tenantId = :tenantId
+              and (:status is null or j.status = :status)
+              and (:importType is null or j.importType = :importType)
+              and (:requestedBy is null or j.requestedBy = :requestedBy)
+              and (:hasFailuresOnly = false or j.failureCount > 0)
+            """)
+    Page<ImportJobEntity> searchPageByTenantId(@Param("tenantId") Long tenantId,
+                                                @Param("status") String status,
+                                                @Param("importType") String importType,
+                                                @Param("requestedBy") Long requestedBy,
+                                                @Param("hasFailuresOnly") boolean hasFailuresOnly,
+                                                Pageable pageable);
 
     Optional<ImportJobEntity> findByIdAndTenantId(Long id, Long tenantId);
 

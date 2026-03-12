@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -28,9 +29,17 @@ public class ImportJobQueryService {
     private final ImportJobItemErrorRepository importJobItemErrorRepository;
 
     public ImportJobPageResponse pageJobs(Long tenantId, ImportJobPageQuery query) {
-        PageRequest pageable = PageRequest.of(normalizePage(query), normalizeSize(query),
+        ImportJobPageQuery normalizedQuery = normalizeQuery(query);
+        PageRequest pageable = PageRequest.of(normalizedQuery.getPage(), normalizedQuery.getSize(),
                 Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
-        Page<ImportJobEntity> page = importJobRepository.findAllByTenantId(tenantId, pageable);
+        Page<ImportJobEntity> page = importJobRepository.searchPageByTenantId(
+                tenantId,
+                normalizedQuery.getStatus(),
+                normalizedQuery.getImportType(),
+                normalizedQuery.getRequestedBy(),
+                Boolean.TRUE.equals(normalizedQuery.getHasFailuresOnly()),
+                pageable
+        );
         return new ImportJobPageResponse(
                 page.getContent().stream().map(this::toListItem).toList(),
                 page.getNumber(),
@@ -79,12 +88,15 @@ public class ImportJobQueryService {
     }
 
     private ImportJobListItemResponse toListItem(ImportJobEntity job) {
+        boolean hasFailures = job.getFailureCount() != null && job.getFailureCount() > 0;
         return new ImportJobListItemResponse(
                 job.getId(),
                 job.getImportType(),
                 job.getSourceType(),
                 job.getSourceFilename(),
                 job.getStatus(),
+                job.getRequestedBy(),
+                hasFailures,
                 job.getTotalCount(),
                 job.getSuccessCount(),
                 job.getFailureCount(),
@@ -93,6 +105,16 @@ public class ImportJobQueryService {
                 job.getStartedAt(),
                 job.getFinishedAt()
         );
+    }
+
+    private ImportJobPageQuery normalizeQuery(ImportJobPageQuery query) {
+        ImportJobPageQuery normalized = query == null ? new ImportJobPageQuery() : query;
+        normalized.setPage(normalizePage(query));
+        normalized.setSize(normalizeSize(query));
+        normalized.setStatus(normalizeFilter(normalized.getStatus()));
+        normalized.setImportType(normalizeFilter(normalized.getImportType()));
+        normalized.setHasFailuresOnly(Boolean.TRUE.equals(normalized.getHasFailuresOnly()));
+        return normalized;
     }
 
     private int normalizePage(ImportJobPageQuery query) {
@@ -107,5 +129,12 @@ public class ImportJobQueryService {
             return DEFAULT_SIZE;
         }
         return Math.min(query.getSize(), MAX_SIZE);
+    }
+
+    private String normalizeFilter(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 }

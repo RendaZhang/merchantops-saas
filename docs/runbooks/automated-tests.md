@@ -34,7 +34,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface
 - tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import queue publication, worker processing, row-level failure isolation, and import-specific migration protection
+- import queue publication, filtered queue reads, worker processing, row-level failure isolation, and import-specific migration protection
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -125,7 +125,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - invalid status-transition rejection
   - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
 - `ImportJobControllerTest`
-  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}` request binding, auth failure, permission failure, and tenant-context forwarding
+  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}` request binding, auth failure, permission failure, tenant-context forwarding, and import-list filter binding for `status`, `importType`, `requestedBy`, and `hasFailuresOnly`
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
   - duplicate pending disable requests are rejected
@@ -136,9 +136,9 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - queued import-job persistence and after-commit import event publication
   - invalid `importType` rejection
 - `ImportJobQueryServiceTest`
-  - import-job page normalization, item-error hydration, and detail `NOT_FOUND` behavior
+  - import-job page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, item-error hydration, and detail `NOT_FOUND` behavior
 - `ImportJobIntegrationTest`
-  - create/list/detail worker flow with tenant isolation, business-row user creation, quoted CSV field persistence, row-level failure isolation, and import audit events
+  - create/list/detail worker flow with tenant isolation, queue filters, stable ordering, `requestedBy` / `hasFailures` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, summary semantics, and import audit events
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation

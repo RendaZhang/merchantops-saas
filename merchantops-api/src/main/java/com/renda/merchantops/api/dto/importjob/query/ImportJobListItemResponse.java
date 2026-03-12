@@ -8,6 +8,8 @@ public record ImportJobListItemResponse(
         String sourceType,
         String sourceFilename,
         String status,
+        Long requestedBy,
+        boolean hasFailures,
         Integer totalCount,
         Integer successCount,
         Integer failureCount,

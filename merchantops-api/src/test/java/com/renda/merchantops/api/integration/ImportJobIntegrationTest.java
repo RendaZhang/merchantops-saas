@@ -3,6 +3,8 @@ package com.renda.merchantops.api.integration;
 import com.renda.merchantops.api.MerchantOpsApplication;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
 import com.renda.merchantops.api.messaging.ImportJobMessage;
 import com.renda.merchantops.api.messaging.ImportJobPublisher;
 import com.renda.merchantops.api.messaging.ImportJobWorker;
@@ -205,6 +207,7 @@ class ImportJobIntegrationTest {
         assertThat(processed.totalCount()).isEqualTo(4);
         assertThat(processed.successCount()).isEqualTo(2);
         assertThat(processed.failureCount()).isEqualTo(2);
+        assertThat(processed.errorSummary()).isEqualTo("completed with some row errors");
         assertThat(processed.itemErrors()).hasSize(2);
         assertThat(processed.itemErrors().stream().map(item -> item.errorCode()).collect(java.util.stream.Collectors.toSet()))
                 .containsExactlyInAnyOrder("DUPLICATE_USERNAME", "UNKNOWN_ROLE");
@@ -249,6 +252,7 @@ class ImportJobIntegrationTest {
         assertThat(processed.status()).isEqualTo("FAILED");
         assertThat(processed.successCount()).isZero();
         assertThat(processed.failureCount()).isEqualTo(3);
+        assertThat(processed.errorSummary()).isEqualTo("all rows failed validation");
         assertThat(processed.itemErrors()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse::errorCode)
                 .containsExactlyInAnyOrder("DUPLICATE_USERNAME", "INVALID_EMAIL", "INVALID_PASSWORD");
     }
@@ -270,6 +274,7 @@ class ImportJobIntegrationTest {
         assertThat(processed.totalCount()).isEqualTo(1);
         assertThat(processed.successCount()).isEqualTo(1);
         assertThat(processed.failureCount()).isZero();
+        assertThat(processed.errorSummary()).isNull();
 
         String displayName = jdbcTemplate.queryForObject(
                 "SELECT display_name FROM users WHERE tenant_id = 1 AND username = 'quoted'", String.class);
@@ -299,6 +304,7 @@ class ImportJobIntegrationTest {
         assertThat(processed.totalCount()).isEqualTo(1);
         assertThat(processed.successCount()).isEqualTo(1);
         assertThat(processed.failureCount()).isZero();
+        assertThat(processed.errorSummary()).isNull();
 
         String persistedJobRequestId = jdbcTemplate.queryForObject(
                 "SELECT request_id FROM import_job WHERE id = ?",
@@ -361,6 +367,40 @@ class ImportJobIntegrationTest {
         assertThat(jobCount).isZero();
     }
 
+    @Test
+    void pageJobsShouldApplyTenantScopedFiltersAndStableOrdering() {
+        insertImportJob(5101L, 1L, "USER_CSV", "SUCCEEDED", 101L, 2, 2, 0, null, "2026-03-12 10:00:00");
+        insertImportJob(5102L, 1L, "USER_CSV", "FAILED", 101L, 2, 0, 2, "all rows failed validation", "2026-03-12 10:05:00");
+        insertImportJob(5103L, 1L, "USER_CSV", "SUCCEEDED", 102L, 3, 2, 1, "completed with some row errors", "2026-03-12 10:05:00");
+        insertImportJob(5104L, 1L, "ORDER_CSV", "FAILED", 101L, 1, 0, 1, "all rows failed validation", "2026-03-12 09:00:00");
+        insertImportJob(5201L, 2L, "USER_CSV", "FAILED", 101L, 4, 0, 4, "all rows failed validation", "2026-03-12 11:00:00");
+
+        ImportJobPageResponse allJobs = importJobQueryService.pageJobs(1L, new ImportJobPageQuery(0, 10, null, null, null, false));
+        assertThat(allJobs.items()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse::id)
+                .containsExactly(5103L, 5102L, 5101L, 5104L);
+        assertThat(allJobs.items()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse::requestedBy)
+                .containsExactly(102L, 101L, 101L, 101L);
+        assertThat(allJobs.items()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse::hasFailures)
+                .containsExactly(true, true, false, true);
+
+        ImportJobPageResponse failedJobs = importJobQueryService.pageJobs(1L, new ImportJobPageQuery(0, 10, "FAILED", null, null, false));
+        assertThat(failedJobs.items()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse::id)
+                .containsExactly(5102L, 5104L);
+
+        ImportJobPageResponse requestedByJobs = importJobQueryService.pageJobs(1L, new ImportJobPageQuery(0, 10, null, null, 101L, false));
+        assertThat(requestedByJobs.items()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse::id)
+                .containsExactly(5102L, 5101L, 5104L);
+
+        ImportJobPageResponse failuresOnlyJobs = importJobQueryService.pageJobs(1L, new ImportJobPageQuery(0, 10, null, null, null, true));
+        assertThat(failuresOnlyJobs.items()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse::id)
+                .containsExactly(5103L, 5102L, 5104L);
+        assertThat(failuresOnlyJobs.items()).allSatisfy(item -> assertThat(item.hasFailures()).isTrue());
+
+        ImportJobPageResponse userCsvJobs = importJobQueryService.pageJobs(1L, new ImportJobPageQuery(0, 10, null, "USER_CSV", null, false));
+        assertThat(userCsvJobs.items()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse::id)
+                .containsExactly(5103L, 5102L, 5101L);
+    }
+
     private long countStoredFiles() {
         if (!Files.exists(STORAGE_ROOT)) {
             return 0;
@@ -370,5 +410,40 @@ class ImportJobIntegrationTest {
         } catch (Exception ex) {
             throw new IllegalStateException("failed to inspect import storage", ex);
         }
+    }
+
+    private void insertImportJob(Long id,
+                                 Long tenantId,
+                                 String importType,
+                                 String status,
+                                 Long requestedBy,
+                                 int totalCount,
+                                 int successCount,
+                                 int failureCount,
+                                 String errorSummary,
+                                 String createdAt) {
+        jdbcTemplate.update("""
+                INSERT INTO import_job (
+                    id, tenant_id, import_type, source_type, source_filename, storage_key, status,
+                    requested_by, request_id, total_count, success_count, failure_count, error_summary,
+                    created_at, started_at, finished_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, PARSEDATETIME(?, 'yyyy-MM-dd HH:mm:ss'), NULL, NULL)
+                """,
+                id,
+                tenantId,
+                importType,
+                "CSV",
+                "users-" + id + ".csv",
+                tenantId + "/" + id + ".csv",
+                status,
+                requestedBy,
+                "req-" + id,
+                totalCount,
+                successCount,
+                failureCount,
+                errorSummary,
+                createdAt
+        );
     }
 }

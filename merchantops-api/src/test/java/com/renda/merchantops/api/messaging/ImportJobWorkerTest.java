@@ -64,6 +64,7 @@ class ImportJobWorkerTest {
         assertThat(job.getStatus()).isEqualTo("SUCCEEDED");
         assertThat(job.getSuccessCount()).isEqualTo(1);
         assertThat(job.getFailureCount()).isEqualTo(1);
+        assertThat(job.getErrorSummary()).isEqualTo("completed with some row errors");
     }
 
     @Test
@@ -87,6 +88,7 @@ class ImportJobWorkerTest {
         verify(userCsvImportProcessor, never()).processRow(any(), any(Integer.class), any());
         assertThat(job.getStatus()).isEqualTo("FAILED");
         assertThat(job.getFailureCount()).isEqualTo(1);
+        assertThat(job.getErrorSummary()).isEqualTo("unsupported import type");
     }
 
     @Test
@@ -129,6 +131,7 @@ class ImportJobWorkerTest {
         assertThat(job.getStatus()).isEqualTo("SUCCEEDED");
         assertThat(job.getSuccessCount()).isEqualTo(2);
         assertThat(job.getFailureCount()).isZero();
+        assertThat(job.getErrorSummary()).isNull();
     }
 
     @Test
@@ -160,5 +163,6 @@ class ImportJobWorkerTest {
         assertThat(job.getStatus()).isEqualTo("SUCCEEDED");
         assertThat(job.getSuccessCount()).isEqualTo(1);
         assertThat(job.getFailureCount()).isZero();
+        assertThat(job.getErrorSummary()).isNull();
     }
 }
