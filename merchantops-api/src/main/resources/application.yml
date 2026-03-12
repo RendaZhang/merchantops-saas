@@ -27,3 +27,9 @@ management:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{requestId}] %logger{36} - %msg%n"
+
+merchantops:
+  import:
+    processing:
+      chunk-size: ${IMPORT_PROCESSING_CHUNK_SIZE:100}
+      max-rows-per-job: ${IMPORT_PROCESSING_MAX_ROWS_PER_JOB:1000}

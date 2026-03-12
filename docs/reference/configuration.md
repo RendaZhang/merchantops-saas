@@ -32,6 +32,9 @@ Shared application configuration currently includes:
 - Swagger UI tag sorting: alphabetical
 - Swagger authorization persistence enabled
 - Swagger try-it-out enabled by default
+- import processing defaults:
+  - `merchantops.import.processing.chunk-size=100`
+  - `merchantops.import.processing.max-rows-per-job=1000`
 
 ## Supported Environment Variable Overrides
 
@@ -49,6 +52,16 @@ Shared application configuration currently includes:
 - `RABBITMQ_VHOST`
 - `JWT_SECRET`
 - `JWT_EXPIRE_SECONDS`
+- `IMPORT_STORAGE_LOCAL_DIR`
+- `IMPORT_PROCESSING_CHUNK_SIZE`
+- `IMPORT_PROCESSING_MAX_ROWS_PER_JOB`
+
+## Import Processing Controls
+
+- `merchantops.import.storage.local-dir` controls the local filesystem root used by the current storage implementation.
+- `merchantops.import.processing.chunk-size` controls how many parsed data rows the worker processes before it persists progress back to `import_job`.
+- `merchantops.import.processing.max-rows-per-job` is a hard guardrail; when a file exceeds the configured data-row limit, the worker fails the job with `MAX_ROWS_EXCEEDED`.
+- Current defaults are intentionally conservative for Week 5: `chunk-size=100` and `max-rows-per-job=1000`.
 
 ## Logging
 

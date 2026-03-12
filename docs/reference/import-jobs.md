@@ -36,14 +36,23 @@ username,displayName,email,password,roleCodes
 `roleCodes` uses `|` as an in-cell delimiter, for example: `READ_ONLY|TENANT_ADMIN`.
 CSV parsing follows standard quoted-record behavior: quote any field that contains commas, double quotes, or embedded newlines, and escape inner quotes as `""`.
 
-Worker behavior (Slice B):
+Worker behavior (Week 5 Slice E runtime):
 
 1. consumes `jobId` and transitions `QUEUED -> PROCESSING`
 2. parses the file through the current CSV parser, strips a UTF-8 BOM on the first header cell when present, and validates fixed header + row shape
-3. parses each row and performs field-level checks (`username`, `displayName`, `email`, `password`, `roleCodes`)
-4. executes one row in one independent transaction via the existing user-create service chain
+3. keeps one worker per job and processes the file in internal sequential chunks; chunking is not a public API concept and does not change the current status model
+4. executes each row in one independent transaction via the existing user-create service chain, so row-level partial success still holds across chunk boundaries
 5. records row errors in `import_job_item_error` for both parse-level and business-level failures
-6. writes terminal status + audit events (`IMPORT_JOB_COMPLETED` / `IMPORT_JOB_FAILED`)
+6. flushes `totalCount`, `successCount`, and `failureCount` back to `import_job` after each chunk so `GET /api/v1/import-jobs/{id}` can show real progress during `PROCESSING`
+7. fails files that exceed the configured row guardrail with `MAX_ROWS_EXCEEDED`
+8. writes terminal status + audit events (`IMPORT_JOB_COMPLETED` / `IMPORT_JOB_FAILED`)
+
+Current internal processing controls:
+
+- one import job is still consumed by one worker
+- default `merchantops.import.processing.chunk-size=100`
+- default `merchantops.import.processing.max-rows-per-job=1000`
+- current implementation is intentionally sequential; parallel chunk workers, sub-jobs, and shard tables are still out of scope
 
 Current list query surface:
 
@@ -67,6 +76,7 @@ Detail semantics for reporting:
 - detail now includes `errorCodeCounts` for quick triage
 - detail now includes nullable `sourceJobId`; original jobs keep `null`, replay-derived jobs point back to the source job
 - detail still returns backward-compatible `itemErrors`
+- detail counters now update during `PROCESSING` after each committed chunk
 - `GET /api/v1/import-jobs/{id}/errors` is the paged failure-item read surface for larger jobs
 
 ## Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures`)
@@ -100,10 +110,11 @@ Still out of scope in this slice:
 - replaying only selected `errorCode` values
 - editing failed rows before replay
 - automatic dedupe or idempotency ledger behavior beyond current business validation
+- parallel chunk execution, sub-job / shard tables, and retry orchestration
 
 Current error-code examples in `itemErrors`:
 
-- parse/header: `EMPTY_FILE`, `INVALID_HEADER`, `INVALID_ROW_SHAPE`, `FILE_READ_ERROR`, `UNSUPPORTED_IMPORT_TYPE`
+- parse/header/runtime: `EMPTY_FILE`, `INVALID_HEADER`, `INVALID_ROW_SHAPE`, `FILE_READ_ERROR`, `MAX_ROWS_EXCEEDED`, `UNSUPPORTED_IMPORT_TYPE`
 - business-row: `DUPLICATE_USERNAME`, `UNKNOWN_ROLE`, `INVALID_EMAIL`, `INVALID_PASSWORD`, `MISSING_ROLE_CODES`
 
 The list above is illustrative rather than exhaustive. A fallback code such as `BUSINESS_VALIDATION_FAILED` can still appear if the user-create path rejects a row for a business rule that has not yet been split into a narrower import-specific code.
@@ -287,7 +298,7 @@ Example list response item:
 
 Current semantics:
 
-- `totalCount`: total data rows read (excluding header)
+- `totalCount`: total data rows read, including the over-limit row when `MAX_ROWS_EXCEEDED` terminates the job
 - `successCount`: rows that really created tenant users
 - `failureCount`: rows that failed parse validation or business execution
 - `errorCodeCounts`: aggregated counts by `errorCode` for quick triage
@@ -295,6 +306,7 @@ Current semantics:
 - clean success: `status=SUCCEEDED`, `failureCount=0`, `errorSummary=null`
 - partial success: `status=SUCCEEDED`, `failureCount>0`, `errorSummary="completed with some row errors"`
 - full failure: `status=FAILED`
+- throughput-guardrail failure: `status=FAILED`, `errorSummary="import job exceeded max row limit"`, and a queryable `MAX_ROWS_EXCEEDED` error row
 
 ## Governance Behavior
 
@@ -310,9 +322,11 @@ Current semantics:
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.
 - replay uses the same storage abstraction as uploaded files so system-generated replay CSVs and user uploads follow one storage path.
+- chunking is an internal execution boundary only; the public API still exposes one job, one status, and one set of counters.
 - list paging now supports `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`; default size is `10` and max size is `100`.
 - error paging now supports `page`, `size`, and `errorCode`; default size is `10` and max size is `100`.
 - list items expose `requestedBy` and derived `hasFailures`; detail exposes `sourceJobId`, `errorCodeCounts`, and backward-compatible `itemErrors`; `/errors` pages the same failure rows for larger jobs.
 - current list ordering remains `createdAt DESC, id DESC`.
 - current failure-item ordering remains stable: null `rowNumber` first, then `rowNumber ASC, id ASC`.
+- see [configuration.md](configuration.md) for the current import chunk-size and row-limit settings.
 - see [../../api-demo.http](../../api-demo.http) for runnable request examples.

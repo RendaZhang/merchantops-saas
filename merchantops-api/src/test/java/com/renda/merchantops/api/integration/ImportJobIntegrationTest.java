@@ -1,6 +1,7 @@
 package com.renda.merchantops.api.integration;
 
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.config.ImportProcessingProperties;
 import com.renda.merchantops.api.dto.audit.query.AuditEventListResponse;
 import com.renda.merchantops.api.dto.audit.query.AuditEventResponse;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
@@ -12,6 +13,7 @@ import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
 import com.renda.merchantops.api.messaging.ImportJobMessage;
 import com.renda.merchantops.api.messaging.ImportJobPublisher;
+import com.renda.merchantops.api.messaging.ImportJobExecutionService;
 import com.renda.merchantops.api.messaging.ImportJobWorker;
 import com.renda.merchantops.api.service.AuditEventService;
 import com.renda.merchantops.api.service.ImportJobCommandService;
@@ -25,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -34,7 +37,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -55,7 +60,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
                 "spring.sql.init.mode=never",
                 "spring.flyway.enabled=false",
                 "spring.rabbitmq.listener.simple.auto-startup=false",
-                "merchantops.import.storage.local-dir=target/test-imports"
+                "merchantops.import.storage.local-dir=target/test-imports",
+                "merchantops.import.processing.chunk-size=2",
+                "merchantops.import.processing.max-rows-per-job=1000"
         }
 )
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -75,9 +82,13 @@ class ImportJobIntegrationTest {
     private AuditEventService auditEventService;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private ImportProcessingProperties importProcessingProperties;
 
     @MockBean
     private ImportJobPublisher importJobPublisher;
+    @SpyBean
+    private ImportJobExecutionService importJobExecutionService;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -199,7 +210,9 @@ class ImportJobIntegrationTest {
                 });
             }
         }
-        Mockito.reset(importJobPublisher);
+        Mockito.reset(importJobPublisher, importJobExecutionService);
+        importProcessingProperties.setChunkSize(2);
+        importProcessingProperties.setMaxRowsPerJob(1000);
     }
 
     @Test
@@ -262,6 +275,44 @@ class ImportJobIntegrationTest {
         Integer importAudit = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB'", Integer.class);
         assertThat(importAudit).isNotNull().isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void workerShouldExposeIncrementingCountersWhileStillProcessing() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-progress.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                alpha,Alpha User,alpha@example.com,abc123,READ_ONLY
+                beta,Beta User,beta@example.com,abc123,READ_ONLY
+                gamma,Gamma User,gamma@example.com,abc123,READ_ONLY
+                delta,Delta User,delta@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-progress", request, file);
+        AtomicInteger chunkCalls = new AtomicInteger();
+        AtomicReference<ImportJobDetailResponse> progressSnapshot = new AtomicReference<>();
+        Mockito.doAnswer(invocation -> {
+            if (chunkCalls.incrementAndGet() == 2) {
+                progressSnapshot.set(importJobQueryService.getJobDetail(1L, created.id()));
+            }
+            return invocation.callRealMethod();
+        }).when(importJobExecutionService).processChunk(Mockito.any(), Mockito.anyList());
+
+        importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
+
+        assertThat(progressSnapshot.get()).isNotNull();
+        assertThat(progressSnapshot.get().status()).isEqualTo("PROCESSING");
+        assertThat(progressSnapshot.get().totalCount()).isEqualTo(2);
+        assertThat(progressSnapshot.get().successCount()).isEqualTo(2);
+        assertThat(progressSnapshot.get().failureCount()).isZero();
+        assertThat(progressSnapshot.get().finishedAt()).isNull();
+
+        ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
+        assertThat(processed.status()).isEqualTo("SUCCEEDED");
+        assertThat(processed.totalCount()).isEqualTo(4);
+        assertThat(processed.successCount()).isEqualTo(4);
+        assertThat(processed.failureCount()).isZero();
     }
 
     @Test
@@ -418,6 +469,51 @@ class ImportJobIntegrationTest {
         );
         assertThat(processed.itemErrors()).extracting(com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse::errorCode)
                 .containsExactlyInAnyOrder("DUPLICATE_USERNAME", "INVALID_EMAIL", "INVALID_PASSWORD");
+    }
+
+    @Test
+    void workerShouldFailWhenMaxRowsPerJobIsExceededAndKeepErrorQueryable() {
+        importProcessingProperties.setMaxRowsPerJob(5);
+
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-limit.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                u1,User One,u1@example.com,abc123,READ_ONLY
+                u2,User Two,u2@example.com,abc123,READ_ONLY
+                u3,User Three,u3@example.com,abc123,READ_ONLY
+                u4,User Four,u4@example.com,abc123,READ_ONLY
+                u5,User Five,u5@example.com,abc123,READ_ONLY
+                u6,User Six,u6@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-limit", request, file);
+        importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
+
+        ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
+        assertThat(processed.status()).isEqualTo("FAILED");
+        assertThat(processed.totalCount()).isEqualTo(6);
+        assertThat(processed.successCount()).isEqualTo(5);
+        assertThat(processed.failureCount()).isEqualTo(1);
+        assertThat(processed.errorSummary()).isEqualTo("import job exceeded max row limit");
+        assertThat(processed.errorCodeCounts()).containsExactly(new ImportJobErrorCodeCountResponse("MAX_ROWS_EXCEEDED", 1));
+        assertThat(processed.itemErrors()).singleElement().satisfies(item -> {
+            assertThat(item.rowNumber()).isNull();
+            assertThat(item.errorCode()).isEqualTo("MAX_ROWS_EXCEEDED");
+            assertThat(item.rawPayload()).isEqualTo("u6,User Six,u6@example.com,abc123,READ_ONLY");
+        });
+
+        Integer createdUsers = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username IN ('u1','u2','u3','u4','u5','u6')",
+                Integer.class
+        );
+        assertThat(createdUsers).isEqualTo(5);
+
+        ImportJobErrorPageResponse errorPage = importJobQueryService.pageJobErrors(1L, created.id(), new ImportJobErrorPageQuery(0, 10, "MAX_ROWS_EXCEEDED"));
+        assertThat(errorPage.items()).singleElement().satisfies(item -> {
+            assertThat(item.errorCode()).isEqualTo("MAX_ROWS_EXCEEDED");
+            assertThat(item.rawPayload()).isEqualTo("u6,User Six,u6@example.com,abc123,READ_ONLY");
+        });
     }
 
     @Test

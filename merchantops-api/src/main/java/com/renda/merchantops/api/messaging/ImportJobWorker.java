@@ -1,13 +1,9 @@
 package com.renda.merchantops.api.messaging;
 
 import com.renda.merchantops.api.config.ImportJobMessagingConfig;
-import com.renda.merchantops.api.service.AuditEventService;
+import com.renda.merchantops.api.config.ImportProcessingProperties;
 import com.renda.merchantops.api.service.ImportCsvSupport;
 import com.renda.merchantops.api.service.ImportFileStorageService;
-import com.renda.merchantops.infra.persistence.entity.ImportJobEntity;
-import com.renda.merchantops.infra.persistence.entity.ImportJobItemErrorEntity;
-import com.renda.merchantops.infra.repository.ImportJobItemErrorRepository;
-import com.renda.merchantops.infra.repository.ImportJobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVParser;
@@ -15,7 +11,6 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,9 +18,8 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.StreamSupport;
 
 @Component
@@ -34,115 +28,152 @@ import java.util.stream.StreamSupport;
 public class ImportJobWorker {
 
     private static final String UTF8_BOM = "\uFEFF";
-    private final ImportJobRepository importJobRepository;
-    private final ImportJobItemErrorRepository importJobItemErrorRepository;
+    private static final String IMPORT_TYPE_USER_CSV = "USER_CSV";
+
     private final ImportFileStorageService importFileStorageService;
-    private final AuditEventService auditEventService;
-    private final UserCsvImportProcessor userCsvImportProcessor;
+    private final ImportJobExecutionService importJobExecutionService;
+    private final ImportProcessingProperties importProcessingProperties;
 
     @RabbitListener(queues = ImportJobMessagingConfig.IMPORT_JOB_QUEUE)
-    @Transactional
     public void consume(ImportJobMessage message) {
         if (message == null || message.jobId() == null || message.tenantId() == null) {
             return;
         }
-        ImportJobEntity job = importJobRepository.findByIdAndTenantIdForUpdate(message.jobId(), message.tenantId()).orElse(null);
-        if (job == null || !"QUEUED".equals(job.getStatus())) {
+        ImportJobExecutionService.ImportJobExecutionContext context =
+                importJobExecutionService.startProcessing(message.jobId(), message.tenantId());
+        if (context == null) {
             return;
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        job.setStatus("PROCESSING");
-        job.setStartedAt(now);
-        importJobRepository.save(job);
-        auditEventService.recordEvent(job.getTenantId(), "IMPORT_JOB", job.getId(), "IMPORT_JOB_PROCESSING_STARTED",
-                job.getRequestedBy(), job.getRequestId(), null, Map.of("status", "PROCESSING"));
-
-        int total = 0;
-        int success = 0;
-        int failure = 0;
-        String summary = null;
+        List<ImportJobExecutionService.ImportJobChunkRow> chunk =
+                new ArrayList<>(importProcessingProperties.getChunkSize());
+        int flushedDataRows = 0;
+        int rowNumber = 1;
 
         try {
             try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(importFileStorageService.openStream(job.getStorageKey()), StandardCharsets.UTF_8));
+                    new InputStreamReader(importFileStorageService.openStream(context.storageKey()), StandardCharsets.UTF_8));
                  CSVParser parser = ImportCsvSupport.IMPORT_CSV_FORMAT.parse(reader)) {
                 var records = parser.iterator();
                 if (!records.hasNext()) {
-                    saveError(job, null, "EMPTY_FILE", "csv file is empty", null);
-                    summary = "csv file is empty";
-                    failure = 1;
-                } else {
-                    CSVRecord headerRecord = records.next();
-                    String headerRawPayload = toRawPayload(headerRecord);
-                    if (!"USER_CSV".equals(job.getImportType())) {
-                        saveError(job, 0, "UNSUPPORTED_IMPORT_TYPE", "unsupported import type: " + job.getImportType(), headerRawPayload);
-                        summary = "unsupported import type";
-                        failure = 1;
-                    } else {
-                        List<String> headerColumns = normalizeHeaderColumns(headerRecord);
-                        if (!ImportCsvSupport.USER_CSV_HEADERS.equals(headerColumns)) {
-                            saveError(job, 0, "INVALID_HEADER", "header must be: " + String.join(",", ImportCsvSupport.USER_CSV_HEADERS), headerRawPayload);
-                            summary = "invalid header";
-                            failure++;
-                        } else {
-                            int rowNumber = 1;
-                            while (records.hasNext()) {
-                                CSVRecord record = records.next();
-                                rowNumber++;
-                                total++;
-                                List<String> columns = parseColumns(record);
-                                String rawPayload = toRawPayload(record);
-                                if (columns.size() != ImportCsvSupport.USER_CSV_HEADERS.size()) {
-                                    failure++;
-                                    saveError(job, rowNumber, "INVALID_ROW_SHAPE", "column count mismatch", rawPayload);
-                                    continue;
-                                }
-                                try {
-                                    userCsvImportProcessor.processRow(job, rowNumber, columns);
-                                    success++;
-                                } catch (ImportRowProcessingException ex) {
-                                    failure++;
-                                    saveError(job, rowNumber, ex.code(), ex.getMessage(), rawPayload);
-                                }
-                            }
-                        }
+                    importJobExecutionService.failJob(context, new ImportJobExecutionService.ImportJobFailure(
+                            null,
+                            "EMPTY_FILE",
+                            "csv file is empty",
+                            null,
+                            "csv file is empty",
+                            0,
+                            1
+                    ));
+                    return;
+                }
+
+                CSVRecord headerRecord = records.next();
+                String headerRawPayload = toRawPayload(headerRecord);
+                if (!IMPORT_TYPE_USER_CSV.equals(context.importType())) {
+                    importJobExecutionService.failJob(context, new ImportJobExecutionService.ImportJobFailure(
+                            null,
+                            "UNSUPPORTED_IMPORT_TYPE",
+                            "unsupported import type: " + context.importType(),
+                            headerRawPayload,
+                            "unsupported import type",
+                            0,
+                            1
+                    ));
+                    return;
+                }
+
+                List<String> headerColumns = normalizeHeaderColumns(headerRecord);
+                if (!ImportCsvSupport.USER_CSV_HEADERS.equals(headerColumns)) {
+                    importJobExecutionService.failJob(context, new ImportJobExecutionService.ImportJobFailure(
+                            null,
+                            "INVALID_HEADER",
+                            "header must be: " + String.join(",", ImportCsvSupport.USER_CSV_HEADERS),
+                            headerRawPayload,
+                            "invalid header",
+                            0,
+                            1
+                    ));
+                    return;
+                }
+
+                while (records.hasNext()) {
+                    CSVRecord record = records.next();
+                    rowNumber++;
+                    int nextDataRowCount = flushedDataRows + chunk.size() + 1;
+                    if (nextDataRowCount > importProcessingProperties.getMaxRowsPerJob()) {
+                        flushChunk(context, chunk);
+                        importJobExecutionService.failJob(context, new ImportJobExecutionService.ImportJobFailure(
+                                null,
+                                "MAX_ROWS_EXCEEDED",
+                                "data row limit exceeded at row " + rowNumber
+                                        + "; max allowed is " + importProcessingProperties.getMaxRowsPerJob(),
+                                toRawPayload(record),
+                                "import job exceeded max row limit",
+                                1,
+                                1
+                        ));
+                        return;
+                    }
+                    chunk.add(new ImportJobExecutionService.ImportJobChunkRow(
+                            rowNumber,
+                            parseColumns(record),
+                            toRawPayload(record)
+                    ));
+                    if (chunk.size() >= importProcessingProperties.getChunkSize()) {
+                        flushedDataRows += chunk.size();
+                        flushChunk(context, chunk);
                     }
                 }
             }
 
-            job.setTotalCount(total);
-            job.setSuccessCount(success);
-            job.setFailureCount(failure);
-            job.setFinishedAt(LocalDateTime.now());
-            if (failure > 0 && success == 0) {
-                job.setStatus("FAILED");
-                job.setErrorSummary(summary == null ? "all rows failed validation" : summary);
-                auditEventService.recordEvent(job.getTenantId(), "IMPORT_JOB", job.getId(), "IMPORT_JOB_FAILED",
-                        job.getRequestedBy(), job.getRequestId(), null,
-                        Map.of("status", "FAILED", "failureCount", failure, "totalCount", total));
-            } else {
-                job.setStatus("SUCCEEDED");
-                if (failure > 0) {
-                    job.setErrorSummary("completed with some row errors");
-                }
-                auditEventService.recordEvent(job.getTenantId(), "IMPORT_JOB", job.getId(), "IMPORT_JOB_COMPLETED",
-                        job.getRequestedBy(), job.getRequestId(), null,
-                        Map.of("status", "SUCCEEDED", "successCount", success, "failureCount", failure, "totalCount", total));
-            }
-            importJobRepository.save(job);
+            flushChunk(context, chunk);
+            importJobExecutionService.completeJob(context);
         } catch (IOException | UncheckedIOException ex) {
+            flushChunkQuietly(context, chunk);
             Throwable cause = ex instanceof UncheckedIOException uncheckedIOException ? uncheckedIOException.getCause() : ex;
-            log.error("failed to process import job {}", job.getId(), ex);
-            saveError(job, null, "FILE_READ_ERROR", "failed to read import file", cause == null ? ex.getMessage() : cause.getMessage());
-            job.setStatus("FAILED");
-            job.setFinishedAt(LocalDateTime.now());
-            job.setErrorSummary("failed to read import file");
-            job.setFailureCount(Math.max(failure, 1));
-            importJobRepository.save(job);
-            auditEventService.recordEvent(job.getTenantId(), "IMPORT_JOB", job.getId(), "IMPORT_JOB_FAILED",
-                    job.getRequestedBy(), job.getRequestId(), null,
-                    Map.of("status", "FAILED", "error", "FILE_READ_ERROR"));
+            log.error("failed to process import job {}", context.jobId(), ex);
+            importJobExecutionService.failJob(context, new ImportJobExecutionService.ImportJobFailure(
+                    null,
+                    "FILE_READ_ERROR",
+                    "failed to read import file",
+                    cause == null ? ex.getMessage() : cause.getMessage(),
+                    "failed to read import file",
+                    0,
+                    1
+            ));
+        } catch (RuntimeException ex) {
+            log.error("failed to execute import job {}", context.jobId(), ex);
+            importJobExecutionService.failJob(context, new ImportJobExecutionService.ImportJobFailure(
+                    null,
+                    "PROCESSING_ERROR",
+                    "import job processing failed",
+                    ex.getMessage(),
+                    "import job processing failed",
+                    0,
+                    1
+            ));
+        }
+    }
+
+    private void flushChunk(ImportJobExecutionService.ImportJobExecutionContext context,
+                            List<ImportJobExecutionService.ImportJobChunkRow> chunk) {
+        if (chunk.isEmpty()) {
+            return;
+        }
+        importJobExecutionService.processChunk(context, List.copyOf(chunk));
+        chunk.clear();
+    }
+
+    private void flushChunkQuietly(ImportJobExecutionService.ImportJobExecutionContext context,
+                                   List<ImportJobExecutionService.ImportJobChunkRow> chunk) {
+        if (chunk.isEmpty()) {
+            return;
+        }
+        try {
+            flushChunk(context, chunk);
+        } catch (RuntimeException flushEx) {
+            log.error("failed to flush pending chunk for import job {}", context.jobId(), flushEx);
         }
     }
 
@@ -178,17 +209,5 @@ public class ImportJobWorker {
         } catch (IOException ex) {
             throw new UncheckedIOException("failed to serialize csv row", ex);
         }
-    }
-
-    private void saveError(ImportJobEntity job, Integer rowNumber, String code, String message, String rawPayload) {
-        ImportJobItemErrorEntity error = new ImportJobItemErrorEntity();
-        error.setTenantId(job.getTenantId());
-        error.setImportJobId(job.getId());
-        error.setRowNumber(rowNumber);
-        error.setErrorCode(code);
-        error.setErrorMessage(message);
-        error.setRawPayload(rawPayload);
-        error.setCreatedAt(LocalDateTime.now());
-        importJobItemErrorRepository.save(error);
     }
 }

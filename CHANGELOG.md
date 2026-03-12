@@ -18,13 +18,14 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - `GET /api/v1/import-jobs` now supports queue filters for `status`, `importType`, `requestedBy`, and `hasFailuresOnly`, plus derived list fields `requestedBy` and `hasFailures`.
 - `GET /api/v1/import-jobs/{id}` now exposes `errorCodeCounts`, and Week 5 reporting now also includes `GET /api/v1/import-jobs/{id}/errors` for paged failure-item reads with optional `errorCode` filtering.
 - Replay-derived jobs now persist `sourceJobId` lineage, emit `IMPORT_JOB_REPLAY_REQUESTED` on the source job, and reuse the same worker path as standard `USER_CSV` imports.
+- Import execution now runs in internal sequential chunks, flushes counters during `PROCESSING`, and enforces configurable `chunk-size` / `max-rows-per-job` guardrails with `MAX_ROWS_EXCEEDED` on oversized files.
 - Import worker now enforces the fixed `username,displayName,email,password,roleCodes` header, rejects unsupported import types, and records both parse/header and business-row failures through `itemErrors`.
 - Import create and processing flows now write reusable `audit_event` rows for `IMPORT_JOB` entities.
 - Request tracing now normalizes client-supplied `X-Request-Id` values before echoing and persisting them, and import-row request ids derive from that normalized base.
 
 ### Docs
 
-- Updated import-job reference docs, runbooks, API examples, architecture notes, and status/roadmap notes to match the current `USER_CSV` execution path, paged error reporting, and failed-row replay behavior.
+- Updated import-job reference docs, configuration notes, runbooks, API examples, architecture notes, and status/roadmap notes to match the current `USER_CSV` execution path, sequential chunk runtime, paged error reporting, and failed-row replay behavior.
 
 ## [v0.1.3] - 2026-03-12
 

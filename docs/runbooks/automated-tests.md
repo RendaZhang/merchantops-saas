@@ -34,7 +34,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface
 - tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import queue publication, failed-row replay, derived-job lineage, filtered queue reads, paged error reporting, worker processing, row-level failure isolation, error-code summary reporting, and import-specific migration protection
+- import queue publication, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -138,13 +138,13 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
 - `ImportJobQueryServiceTest`
   - import-job page normalization, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `sourceJobId`, `errorCodeCounts`, and item-error hydration
 - `ImportJobIntegrationTest`
-  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, failed-row replay as a derived job, replay rejection cases, summary semantics, and import audit events
+  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay as a derived job, replay rejection cases, summary semantics, and import audit events
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
-  - replay-derived jobs still run through the same normal worker path
-  - quoted commas, escaped quotes, and embedded newlines stay within one CSV record before row processing
-  - mixed valid/invalid rows produce partial success counts with persisted parse-level and business-level row errors
+  - internal sequential chunk boundaries follow the configured chunk size without changing public contract shape
+  - quoted commas, escaped quotes, embedded newlines, and UTF-8 BOM headers still normalize into correct row payloads before chunk execution
+  - the worker flushes pending rows before failing `MAX_ROWS_EXCEEDED`
 - `UserCsvImportProcessorTest`
   - row-level import validation for duplicate usernames, invalid email/password rules, missing role codes, and row-suffixed request-id propagation
 - `RequestIdFilterTest`

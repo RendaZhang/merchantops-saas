@@ -24,7 +24,10 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/import-jobs")
 public interface ImportJobApi {
 
-    @Operation(summary = "Create async import job")
+    @Operation(
+            summary = "Create async import job",
+            description = "Creates a QUEUED import job. Runtime processing stays internal to the worker, runs sequential chunks for USER_CSV, and fails oversized files with MAX_ROWS_EXCEEDED."
+    )
     @PostMapping(consumes = {"multipart/form-data"})
     ApiResponse<ImportJobDetailResponse> createImportJob(@Valid @RequestPart("request") ImportJobCreateRequest request,
                                                          @RequestPart("file") MultipartFile file);
@@ -33,11 +36,17 @@ public interface ImportJobApi {
     @GetMapping
     ApiResponse<ImportJobPageResponse> listImportJobs(@ParameterObject ImportJobPageQuery query);
 
-    @Operation(summary = "Get import job detail in current tenant")
+    @Operation(
+            summary = "Get import job detail in current tenant",
+            description = "Detail shape stays stable while totalCount, successCount, and failureCount now advance during PROCESSING after each internal chunk."
+    )
     @GetMapping("/{id}")
     ApiResponse<ImportJobDetailResponse> getImportJob(@PathVariable("id") Long id);
 
-    @Operation(summary = "Replay failed rows from one terminal import job as a new derived job")
+    @Operation(
+            summary = "Replay failed rows from one terminal import job as a new derived job",
+            description = "Creates a derived QUEUED job from replayable failed rows only. Replay jobs use the same standard sequential chunk worker path as any other USER_CSV import."
+    )
     @PostMapping("/{id}/replay-failures")
     ApiResponse<ImportJobDetailResponse> replayFailedRows(@PathVariable("id") Long id);
 
