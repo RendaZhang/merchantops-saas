@@ -63,6 +63,9 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/approval-requests/{id}` | Yes + `USER_READ` | Get one tenant-scoped approval request |
 | `POST` | `/api/v1/approval-requests/{id}/approve` | Yes + `USER_WRITE` | Approve a pending request and execute the action |
 | `POST` | `/api/v1/approval-requests/{id}/reject` | Yes + `USER_WRITE` | Reject a pending request |
+| `POST` | `/api/v1/import-jobs` | Yes + `USER_WRITE` | Create an async import job from multipart request + CSV file |
+| `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant |
+| `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job detail with item errors |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -115,6 +118,16 @@ Approval Requests tag note:
 - the current public approval surface supports one action type only: `USER_STATUS_DISABLE`.
 - requester cannot approve or reject the same request they created.
 - approval is synchronous in the current implementation and reuses the existing user status write flow.
+
+Import Jobs tag note:
+
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}`.
+- `POST /api/v1/import-jobs` requires `USER_WRITE` and accepts multipart `request` + `file`.
+- `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` require `USER_READ`.
+- the current list filter set is minimal: `page` and `size` only.
+- list ordering is currently `createdAt DESC, id DESC`.
+- detail currently returns parse-level `itemErrors`; business-row write results are not public yet.
+- See [import-jobs.md](import-jobs.md) for the current async-import contract and non-goals.
 
 ## Core Endpoint Examples
 
@@ -640,6 +653,46 @@ Current notes:
 - queue supports `page`, `size`, `status`, `actionType`, and `requestedBy`
 - current ordering is stable: `createdAt DESC, id DESC`
 - the same request variants are available in [../../api-demo.http](../../api-demo.http)
+
+### 19. Import Job List (`GET /api/v1/import-jobs`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 1201,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "users.csv",
+        "status": "SUCCEEDED",
+        "totalCount": 1,
+        "successCount": 1,
+        "failureCount": 0,
+        "errorSummary": null,
+        "createdAt": "2026-03-12T16:20:00",
+        "startedAt": "2026-03-12T16:20:02",
+        "finishedAt": "2026-03-12T16:20:03"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- the current query shape exposes `page` and `size` only
+- current list ordering is `createdAt DESC, id DESC`
+- detail response also exposes `itemErrors` for parse-level failures
 
 ## Stale Swagger Troubleshooting
 

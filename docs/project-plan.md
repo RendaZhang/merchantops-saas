@@ -2,6 +2,8 @@
 
 > 一个面向跨境卖家团队的 AI-enhanced vertical SaaS 项目。  
 > 目标不是只做一个能跑的 Demo，而是做出一个**符合 2025-2026 市场预期**、**可以支撑简历与面试表达**、并且**能展示 SaaS + AI 工作流整合能力**，还能按“作品集 -> 开源 -> 潜在商业化”路径推进的真实后端项目。
+>
+> 维护提示：本页只保留长期里程碑、阶段目标和版本节奏；当前实现状态、当前公开接口与当前限制统一以 [project-status.md](project-status.md) 为准，避免把 slice 级现实状态重复写入本页。
 
 ---
 
@@ -146,6 +148,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - Week 4 已完成，并形成了 audit-event + approval-request 的治理基线
 - 当前主线已进入 Week 5 Async Import And Data Operations
 - Week 5 之后的工作应建立在 Week 2 用户管理闭环、已完成的 Week 3 ticket workflow 基线，以及已完成的 Week 4 治理基线之上
+- 当前实现状态、公开接口和当前限制以 [project-status.md](project-status.md) 为准
 
 ### 与开源节奏的关系
 
@@ -154,7 +157,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - `v0.1.1` 继续保留为 2026-03-11 的 Week 2 tenant user management loop 里程碑 tag
 - `v0.1.0` 继续保留为 2026-03-09 的 Week 1 Platform Foundation 基线 tag
 - Week 1-4 主要目标已经完成：先把 workflow 和治理骨架站稳，不急于过早对外包装
-- Week 5 更适合作为下一阶段预览版本，例如 `v0.2.0-alpha`，前提是用户、工单、导入链路已具备可信骨架
+- Week 5 当前仍在 `v0.1.3` 基线上继续推进；待更完整的 async-operation story 站稳后，再考虑下一阶段预览版本，例如 `v0.2.0-alpha`
 - Week 6-7 适合作为第一次公开强调“AI-enhanced vertical SaaS”的开源版本，例如 `v0.3.0-beta`
 - Week 10 适合作为稳定开源参考实现的里程碑，并开始验证潜在商业合作或产品化方向
 

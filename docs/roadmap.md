@@ -2,6 +2,8 @@
 
 Last updated: 2026-03-12
 
+> Maintenance note: keep this page focused on the active phase, next recommended work, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
+
 ## Current Phase
 
 - Week 1 Platform Foundation is complete
@@ -9,7 +11,9 @@ Last updated: 2026-03-12
 - Week 3 Ticket Workflow - System of Action is complete
 - Week 4 Audit Trail And Approval Patterns is complete
 - Week 5 Async Import And Data Operations is the active phase
-- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
+- Week 5 Slice A is already public with import submission/list/detail plus parse-level queue processing
+- Current public baseline now spans Week 2 user management, Week 3 ticket workflow, Week 4 audit/approval, and Week 5 import jobs
+- Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md)
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
@@ -22,7 +26,7 @@ The first business loop is complete: Week 2 turned the user-management groundwor
 - Week 2: user management (complete)
 - Week 3: ticket workflow - system of action (complete)
 - Week 4: audit trail and approval patterns (complete)
-- Week 5: async import and data operations
+- Week 5: async import and data operations (active phase)
 - Week 6: AI Copilot for ticket operations
 - Week 7: AI Copilot for import and data quality
 - Week 8: agentic workflows with human oversight
@@ -43,8 +47,8 @@ The first business loop is complete: Week 2 turned the user-management groundwor
 
 Begin Week 5 async import and data operations from the completed Week 4 governance baseline:
 
-- keep the landed Week 4 audit/approval baseline aligned across Swagger, reference docs, runbooks, and examples while import-related code starts landing
-- introduce `import_job` and `import_job_item_error` as tenant-scoped async-operation primitives without breaking the existing Week 2-4 public baseline
+- keep the landed Week 5 Slice A import backbone aligned across Swagger, reference docs, runbooks, and examples while the surface is still changing
+- extend the current parse-level worker toward business-row writes, chunk/retry control, and richer error reporting without widening scope into AI or unrelated workflow work too early
 
 ## Planned Work By Phase
 
@@ -121,3 +125,13 @@ Stretch target after Week 10:
 - Slice C (approval queue read surface) is complete with tenant-scoped paging and filters (`status`, `actionType`, `requestedBy`) at `GET /api/v1/approval-requests`.
 - Week 4 milestone is now recorded through `v0.1.3`.
 - Next step is expanding to additional action types after queue operations are stable, while Week 5 async import becomes the active delivery stream.
+
+
+## Week 5 Progress Notes (2026-03-12)
+
+- Slice A (import submission backbone) is now landed:
+  - public API now includes create/list/detail for import jobs
+  - create flow persists files locally, writes `QUEUED` jobs, and publishes RabbitMQ messages
+  - worker now consumes jobs and advances `QUEUED -> PROCESSING -> SUCCEEDED/FAILED` with parse-level errors
+  - import create/process actions now emit reusable `audit_event` records
+  - detailed current contract, storage behavior, and limitations are tracked in [project-status.md](project-status.md) and [reference/import-jobs.md](reference/import-jobs.md)

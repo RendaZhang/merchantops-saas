@@ -2,13 +2,16 @@
 
 Last updated: 2026-03-12
 
+> Maintenance note: keep this page as the source of truth for current implementation reality, current public baseline, and known gaps. If the active phase, public endpoints, automated coverage, or current limitations change, update this page before mirroring the change into [roadmap.md](roadmap.md) or [project-plan.md](project-plan.md).
+
 ## Overview
 
-MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management, the core Week 3 Ticket Workflow - System of Action, and the initial Week 4 Audit Trail And Approval Patterns baseline on top of the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, first workflow-loop flows, and a reusable governance baseline through audit events plus approval requests, but it has not yet reached the later async-operation and AI-enhanced stages of the roadmap. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
+MerchantOps SaaS has completed Week 2 First Business Loop - Tenant User Management, the core Week 3 Ticket Workflow - System of Action, and the initial Week 4 Audit Trail And Approval Patterns baseline on top of the Week 1 Platform Foundation. The repository already demonstrates the main authentication, authorization, tenant-isolation, local development, first workflow-loop flows, and a reusable governance baseline through audit events plus approval requests, and has now started Week 5 with a minimal async import backbone while AI-enhanced stages remain pending. The intended progression is portfolio first, then open-source reference implementation, and only later potential commercial exploration if the workflow and AI layers become credible.
 
 ## Current Phase Summary
 
 - Current phase: Week 5 Async Import And Data Operations (starting from a completed Week 4 audit/approval baseline)
+- Week 5 Slice A status: in progress with import submission/list/detail backbone public
 - Week 4 Slice A status: completed (generic `audit_event` backbone landed)
 - Week 4 Slice B status: completed with minimal approval pattern (`USER_STATUS_DISABLE`) public
 - Week 4 Slice C status: completed with approval queue read surface (`GET /api/v1/approval-requests`)
@@ -47,6 +50,9 @@ The current repository includes:
 - tenant-scoped ticket create, assignee, status, and comment endpoints with `TICKET_WRITE`
 - tenant-scoped audit-event query endpoint with `USER_READ` for entity-scoped current-tenant governance reads
 - tenant-scoped approval-request create/queue/detail/approve/reject endpoints for minimal user-disable approval flow
+- tenant-scoped import job submission/list/detail endpoints (`POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`)
+- RabbitMQ-backed import job queue publish/consume path with CSV parse-level processing and import status transitions
+- local import file storage abstraction for replaceable file persistence (`data/imports` by default)
 - workflow-level ticket operation logging for create, assign, status change, and comment events
 - generic `audit_event` backbone for existing user and ticket public write operations
 - generic `approval_request` backbone for `USER_STATUS_DISABLE`
@@ -55,7 +61,7 @@ The current repository includes:
 - write-side user command service with tenant-scoped username uniqueness checks, transactional create/update/status/role-assignment flows, and lightweight operator attribution
 - write-side ticket command service with explicit `tenantId`, `operatorId`, and `requestId`
 - request-time JWT claim revalidation against current user status, roles, and permissions
-- focused automated coverage for auth security integration, user-management controller/service behavior, approval behavior, repository query behavior, and the Week 3 ticket loop
+- focused automated coverage for auth security integration, user-management controller/service behavior, approval behavior, import-job controller/service/query/worker behavior, after-commit queue dispatch, migration-level tenant integrity, repository query behavior, and the Week 3 ticket loop
 - permission checks through `@RequirePermission`
 - RBAC demo endpoints for permission verification
 - unified API response and exception handling model
@@ -112,6 +118,7 @@ Completed:
 - Week 2 first-business-loop public HTTP contract now covers list, detail, create, profile update, status management, tenant role lookup, and role reassignment
 - Week 3 public HTTP contract now covers ticket list, detail, create, assignee change, status change, comment, close-through-status, queue filters (`assigneeId`, `keyword`, `unassignedOnly`), and reopen semantics (`CLOSED -> OPEN`)
 - Week 4 public HTTP contract now includes `GET /api/v1/audit-events` plus minimal approval create, queue, review, and execution endpoints for user-disable requests
+- Week 5 Slice A public HTTP contract now includes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}` with local file storage plus RabbitMQ-backed queue processing
 - Week 3 core acceptance criteria are now met, so remaining ticket enrichments are treated as post-Week-3 follow-up rather than blockers
 - manual and automated verification flows are documented
 
@@ -119,7 +126,7 @@ Not yet implemented:
 
 - broader multi-action approval patterns and richer audit-read surface beyond current minimal entity/query-by-id endpoints
 - post-Week-3 ticket enrichments such as priority/SLA, attachments, or notifications
-- Week 5 async import and data operations
+- Week 5 async import business-row writes beyond the current import-job backbone
 - Week 6 ticket AI Copilot
 - Week 7 import AI Copilot
 - Week 8 agentic workflows with human oversight
@@ -127,7 +134,7 @@ Not yet implemented:
 - Week 10 delivery hardening, feature flag rollout control, and portfolio packaging
 - formal open-source release packaging such as license choice, contribution guide, security policy, and sanitized public demo assets
 - usage / ledger / invoice remains a stretch goal after the core workflow + AI path is stable
-- broader automated coverage beyond the current login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` surface
+- broader automated coverage beyond the current login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/import-jobs` + audit + approval surface
 - deployment-ready Docker or Kubernetes manifests
 - performance documentation and benchmark artifacts
 
@@ -135,7 +142,7 @@ Not yet implemented:
 
 Current implementation is intentionally focused on the completed Week 1 foundation, the completed Week 2 user-management loop, the completed Week 3 ticket slices, and the completed Week 4 audit/approval baseline, so the following are not yet implemented:
 
-- Swagger-visible business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
+- Swagger-visible business endpoints are currently `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
 - `GET /api/v1/users` is a paged current-tenant query endpoint ordered by `id ASC`
 - `GET /api/v1/users/{id}` is the current tenant-scoped detail query endpoint and includes current `roleCodes`
 - `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` are the public user-management write endpoints today
@@ -145,6 +152,8 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - `GET /api/v1/audit-events` is the current minimal tenant-scoped audit query endpoint and requires both `entityType` and `entityId`
 - `POST /api/v1/users/{id}/disable-requests` only creates a `PENDING` approval request; it does not change user status by itself
 - `GET /api/v1/approval-requests` now provides a tenant-scoped queue with `page`, `size`, `status`, `actionType`, and `requestedBy` filters
+- `GET /api/v1/import-jobs` is the current paged import-job query endpoint and returns tenant-scoped job summaries ordered by `createdAt DESC, id DESC`
+- `GET /api/v1/import-jobs/{id}` returns tenant-scoped import-job detail plus current parse-level item errors
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` and `DISABLED`
 - `GET /api/v1/roles` returns only current-tenant roles that can be assigned by the current operator
@@ -153,6 +162,7 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - current generic audit read surface remains minimal: `GET /api/v1/audit-events` still supports only entity-scoped reads by `entityType + entityId`; approval queue pagination is now available at `GET /api/v1/approval-requests`
 - when a user's current roles or effective permissions no longer match the JWT claims, the next protected request is rejected and the user must log in again
 - lightweight operator attribution remains stored internally on `users.created_by` / `users.updated_by`, while reusable cross-entity audit records now live in `audit_event`; approval workflows and richer governance policy are still pending
+- import worker currently performs CSV header/row-shape validation only; business data writes (users/tickets) are intentionally deferred
 - `UserCommandService#updatePassword` still returns a unified business error until that write flow is implemented
 - no AI-assisted workflow endpoints, runtime AI audit trail, or code-backed evaluation datasets exist yet
 - refresh token flow
@@ -161,14 +171,14 @@ Current implementation is intentionally focused on the completed Week 1 foundati
 - broader multi-module automated coverage outside the current auth + user-management + ticket workflow path
 - production-ready secret management
 - tenant admin UI or frontend
-- post-Week-3 ticket enrichments such as priority or SLA handling, attachments, and notifications, plus later-phase modules such as async import, AI copilots, agent workflows, feature flag support, and billing-related capabilities
+- post-Week-3 ticket enrichments such as priority or SLA handling, attachments, and notifications, plus later-phase modules such as AI copilots, agent workflows, feature flag support, and billing-related capabilities
 
 ## Known Gaps
 
 - `user_role` tenant consistency is not yet enforced at the database layer
 - ticket assignee / creator / operator tenant consistency is enforced in service logic today, not yet at the database-constraint level
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs
-- the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, and `PATCH`), `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`, operator attribution, stale-claim rejection, query/service behavior, generic audit emission, and the ticket workflow-log path, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management + ticket + audit + approval path
+- the project now has focused automated coverage for login, `GET /api/v1/roles`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, and `PATCH`), `PUT /api/v1/users/{id}/roles`, `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, and `PATCH`), `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`, operator attribution, stale-claim rejection, query/service behavior, generic audit emission, import queue publish/consume behavior, after-commit enqueue timing, migration-level tenant integrity for import errors, and the ticket workflow-log path, but still relies on manual and smoke verification for Swagger rendering, real infra health, and endpoints outside the covered auth + user-management + ticket + import + audit + approval path
 
 See [architecture/non-blocking-backlog.md](architecture/non-blocking-backlog.md) for the current non-blocking follow-up items, including the Week 1 `user_role` tenant-integrity gap and later ticket/productization carry-overs.
 See [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current baseline regression checklist.

@@ -6,7 +6,19 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
-No release-level changes recorded yet.
+### Added
+
+- Added the first Week 5 async-import backbone with tenant-scoped `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}`.
+- Added RabbitMQ-backed import queue publish/consume flow with local file storage, import status transitions, and parse-level CSV validation.
+
+### Changed
+
+- Started the Week 5 delivery story from the completed Week 4 audit-and-approval baseline without widening the public contract into business-row writes yet.
+- Import create and processing flows now write reusable `audit_event` rows for `IMPORT_JOB` entities.
+
+### Docs
+
+- Added import-job reference docs plus Swagger, smoke, regression, and API-example updates for the new import surface and current Week 5 Slice A limitations.
 
 ## [v0.1.3] - 2026-03-12
 

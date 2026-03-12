@@ -1,13 +1,14 @@
 # Regression Checklist
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
-Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, ticket-workflow API changes, or audit/approval API changes.
+Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, ticket-workflow API changes, audit/approval API changes, or import-job API changes.
 
 ## Automated
 
 - [ ] `.\mvnw.cmd -pl merchantops-api -am test` passes
 - [ ] `AuthSecurityIntegrationTest`, `UserQueryServiceTest`, `UserCommandServiceTest`, and `UserManagementControllerTest` cover the code path you changed
+- [ ] for import-job changes, `ImportJobControllerTest`, `ImportJobCommandServiceTest`, `ImportJobQueryServiceTest`, `ImportJobWorkerTest`, `ImportJobIntegrationTest`, and `ImportJobMigrationTest` cover the staged path
 - [ ] if repository signatures changed, tests were run with `-am` rather than `-pl merchantops-api test` only
 - [ ] if H2 native SQL tests changed, `@AutoConfigureTestDatabase(replace = NONE)` is still preserved and MySQL-mode assertions still verify the runtime mode
 
@@ -133,6 +134,18 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `GET /api/v1/audit-events?entityType=ticket&entityId=<ticketId>` also works because the current implementation normalizes `entityType`
 - [ ] recent user-management writes generate `audit_event` rows if you inspect the database directly
 - [ ] recent ticket writes generate `audit_event` rows without replacing `ticket_operation_log`
+
+## Import Jobs
+
+- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}`
+- [ ] `POST /api/v1/import-jobs` accepts multipart `request` + `file` and returns an initial `QUEUED` job
+- [ ] `POST /api/v1/import-jobs` with a `viewer` token returns `403`
+- [ ] `GET /api/v1/import-jobs?page=0&size=10` returns a page object ordered by `createdAt DESC, id DESC`
+- [ ] `GET /api/v1/import-jobs/{id}` returns only a current-tenant job and includes `itemErrors`
+- [ ] current import list supports `page` and `size` only
+- [ ] worker processing advances jobs through `QUEUED -> PROCESSING -> SUCCEEDED/FAILED`
+- [ ] invalid CSV row shapes create `import_job_item_error` rows and surface them through job detail
+- [ ] import create/process flow writes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal `IMPORT_JOB_COMPLETED` or `IMPORT_JOB_FAILED` audit event
 
 ## Tools
 

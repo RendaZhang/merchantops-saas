@@ -15,6 +15,8 @@ Use it as the routing table for answering two questions:
 
 - `README.md` stays high-level. Do not move detailed implementation notes into it.
 - `docs/README.md` is the documentation entry page and should link to important new pages.
+- `docs/project-plan.md` should stay milestone-level; do not mirror slice-level current implementation notes there when `docs/project-status.md` already records repository reality.
+- `docs/roadmap.md` should stay focused on the active phase, next steps, and near-term sequencing; exact current endpoint inventories belong in `docs/project-status.md` and `docs/reference/`.
 - Public API documentation must match what is actually exposed in controllers and visible in Swagger.
 - Internal groundwork that is not public yet must not be documented as a callable API.
 - Real paths, ports, demo accounts, and seeded data must match code and database state.

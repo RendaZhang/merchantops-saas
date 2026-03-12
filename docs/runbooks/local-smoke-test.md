@@ -128,6 +128,17 @@ curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/audit-ev
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"username\":\"$SMOKE_USERNAME-bad-role\",\"displayName\":\"Cashier User\",\"email\":\"$SMOKE_USERNAME-bad-role@demo-shop.local\",\"password\":\"123456\",\"roleCodes\":[\"OTHER_ONLY\"]}" \
   http://localhost:8080/api/v1/users
+IMPORT_CSV=$(mktemp)
+printf 'username,email\n%s-import,%s-import@demo-shop.local\n' "$SMOKE_USERNAME" "$SMOKE_USERNAME" > "$IMPORT_CSV"
+curl -i -X POST -H "Authorization: Bearer $TOKEN" \
+  -F 'request={"importType":"USER_CSV"};type=application/json' \
+  -F "file=@$IMPORT_CSV;type=text/csv" \
+  http://localhost:8080/api/v1/import-jobs
+IMPORT_JOB_ID=<paste-id-from-import-create-response>
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/import-jobs?page=0&size=10"
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/import-jobs/$IMPORT_JOB_ID
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/audit-events?entityType=IMPORT_JOB&entityId=$IMPORT_JOB_ID"
+rm -f "$IMPORT_CSV"
 ```
 
 PowerShell:
@@ -188,6 +199,17 @@ curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=USER&entityId=$newUserId"
 $badRoleBody = @{ username = "$smokeUsername-bad-role"; displayName = "Cashier User"; email = "$smokeUsername-bad-role@demo-shop.local"; password = "123456"; roleCodes = @("OTHER_ONLY") } | ConvertTo-Json -Compress
 curl.exe -i -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d $badRoleBody http://localhost:8080/api/v1/users
+$importCsvPath = Join-Path $env:TEMP "$smokeUsername-import.csv"
+Set-Content -Path $importCsvPath -Value "username,email`n$smokeUsername-import,$smokeUsername-import@demo-shop.local"
+curl.exe -i -X POST -H "Authorization: Bearer $token" `
+  -F "request={\"importType\":\"USER_CSV\"};type=application/json" `
+  -F "file=@$importCsvPath;type=text/csv" `
+  http://localhost:8080/api/v1/import-jobs
+$importJobId = "<paste-id-from-import-create-response>"
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/import-jobs?page=0&size=10"
+curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/import-jobs/$importJobId
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=IMPORT_JOB&entityId=$importJobId"
+Remove-Item $importCsvPath
 ```
 
 Expected results:
@@ -220,6 +242,9 @@ Expected results:
 - if you captured a token for that user before approval, reusing that old token on a protected endpoint should now return `403` with `user is not active`
 - `GET /api/v1/audit-events?entityType=USER&entityId=<newUserId>` returns current-tenant audit rows for create, profile update, role reassignment, and disable
 - `POST /api/v1/users` with a role code outside the current tenant returns `400`
+- `POST /api/v1/import-jobs` returns a tenant-scoped `QUEUED` job and `GET /api/v1/import-jobs?page=0&size=10` includes it
+- `GET /api/v1/import-jobs/{id}` returns current parse-level counters and any current item errors for the created job
+- after the worker runs, the import job transitions to `SUCCEEDED` or `FAILED` and `GET /api/v1/audit-events?entityType=IMPORT_JOB&entityId=<importJobId>` should show `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action
 
 Use a fresh generated username on each run so the smoke flow stays repeatable against a persistent local database.
 

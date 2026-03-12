@@ -18,6 +18,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Execution Planning Agent Guidance](contributing/execution-planning-agent-guidance.md): current-phase assessment, next-step planning, and plan-adjustment guidance
 - [User Management Reference](reference/user-management.md): the current `/api/v1/users` contract, validation path, and current Week 2 delivery boundary
 - [Ticket Workflow Reference](reference/ticket-workflow.md): the current `/api/v1/tickets` contract, status rules, and workflow-log behavior
+- [Import Jobs Reference](reference/import-jobs.md): the current `/api/v1/import-jobs` async submission and status-query contract
 - [AI Integration Reference](reference/ai-integration.md): workflow-first AI design, guardrails, and planned endpoint direction
 - [AI Provider Configuration](reference/ai-provider-configuration.md): who should own model-provider keys, how cost should be understood, and why the project starts with instance-level configuration
 - [AI Docs](ai/README.md): prompt versioning and eval dataset guidance for future AI workflow rollout
@@ -52,14 +53,15 @@ This directory contains the detailed project documentation that sits behind the 
 13. [Execution Planning Agent Guidance](contributing/execution-planning-agent-guidance.md)
 14. [User Management Reference](reference/user-management.md)
 15. [Ticket Workflow Reference](reference/ticket-workflow.md)
-16. [AI Integration Reference](reference/ai-integration.md)
-17. [AI Provider Configuration](reference/ai-provider-configuration.md)
-18. [AI Docs](ai/README.md)
-19. [AI Workflow Candidates](ai/workflow-candidates.md)
-20. [Automated Test Runbook](runbooks/automated-tests.md)
-21. [Regression Checklist](runbooks/regression-checklist.md)
-22. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
-23. [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md)
-24. [Architecture Decision: Workflow Logs vs Generic Audit Events](architecture/adr/0011-keep-workflow-logs-separate-from-generic-audit-events.md)
-25. [Target Architecture Diagram](diagrams/target-architecture.md)
-26. [Non-Blocking Backlog](architecture/non-blocking-backlog.md)
+16. [Import Jobs Reference](reference/import-jobs.md)
+17. [AI Integration Reference](reference/ai-integration.md)
+18. [AI Provider Configuration](reference/ai-provider-configuration.md)
+19. [AI Docs](ai/README.md)
+20. [AI Workflow Candidates](ai/workflow-candidates.md)
+21. [Automated Test Runbook](runbooks/automated-tests.md)
+22. [Regression Checklist](runbooks/regression-checklist.md)
+23. [AI Regression Checklist](runbooks/ai-regression-checklist.md)
+24. [Architecture Decision: Modular Monolith Before Microservices](architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md)
+25. [Architecture Decision: Workflow Logs vs Generic Audit Events](architecture/adr/0011-keep-workflow-logs-separate-from-generic-audit-events.md)
+26. [Target Architecture Diagram](diagrams/target-architecture.md)
+27. [Non-Blocking Backlog](architecture/non-blocking-backlog.md)

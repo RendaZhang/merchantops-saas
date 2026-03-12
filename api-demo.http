@@ -15,6 +15,7 @@
 @refreshedTargetUserToken = replace-with-post-role-change-user-access-token
 @opsUserId = 2
 @ticketId = replace-with-created-ticket-id
+@importJobId = replace-with-created-import-job-id
 
 # See docs/runbooks/regression-checklist.md for the broader regression checklist.
 # See docs/reference/user-management.md for the current /api/v1/users contract and expected demo response.
@@ -299,4 +300,30 @@ Authorization: Bearer {{token}}
 
 ### RBAC - feature flags
 GET {{baseUrl}}/api/v1/rbac/feature-flags
+Authorization: Bearer {{token}}
+
+### Create import job (multipart)
+POST {{baseUrl}}/api/v1/import-jobs
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="request"
+Content-Type: application/json
+
+{"importType":"USER_CSV"}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="users.csv"
+Content-Type: text/csv
+
+username,email
+import_user_1,import_user_1@demo-shop.local
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### List import jobs
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10
+Authorization: Bearer {{token}}
+
+### Get import job detail
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}
 Authorization: Bearer {{token}}

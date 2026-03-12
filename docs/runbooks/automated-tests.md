@@ -6,7 +6,7 @@ Use this runbook when you want a fast regression signal before doing manual API 
 
 ## Recommended Commands
 
-Preferred command for the current user-management + ticket-workflow work:
+Preferred command for the current workflow + governance + import-backbone work:
 
 ```powershell
 .\mvnw.cmd -pl merchantops-api -am test
@@ -26,7 +26,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## What Is Covered Today
 
-Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, Week 4 Slice A audit backbone, Week 4 Slice B minimal approval flow (`USER_STATUS_DISABLE`), and Week 4 Slice C approval queue read surface.
+Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, the completed Week 4 audit/approval baseline, and Week 5 Slice A import-job backbone behavior.
 
 ### `merchantops-api` tests
 
@@ -113,6 +113,21 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - assignment persistence with `ASSIGNED` log
   - invalid status-transition rejection
   - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
+- `ImportJobControllerTest`
+  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}` request binding, auth failure, permission failure, and tenant-context forwarding
+- `ImportJobCommandServiceTest`
+  - queued import-job persistence and after-commit import event publication
+  - invalid `importType` rejection
+- `ImportJobQueryServiceTest`
+  - import-job page normalization, item-error hydration, and detail `NOT_FOUND` behavior
+- `ImportJobIntegrationTest`
+  - create/list/detail worker flow with tenant isolation, terminal status updates, and import audit events
+  - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
+- `ImportJobWorkerTest`
+  - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
+  - mixed valid/invalid CSV rows produce partial success counts plus persisted parse-level errors
+- `ImportJobMigrationTest`
+  - `V9__add_import_job_backbone.sql` rejects `import_job_item_error` rows whose `tenant_id` does not match the parent import job
 - `RoleControllerTest`
   - `GET /api/v1/roles` unauthorized / forbidden / success paths
   - tenant resolution through request-scoped context and forwarding to `RoleQueryService`
@@ -129,7 +144,7 @@ Current automated coverage is focused on the completed Week 2 user-management lo
 
 These areas are not replaced by the current unit tests:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/audit-events` path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
@@ -166,3 +181,13 @@ Current automated suite also covers:
 - ticket writes generate `audit_event` rows
 - ticket workflow keeps `ticket_operation_log` in parallel with generic audit events
 - tenant-scoped audit query endpoint does not leak cross-tenant data
+
+
+## Week 5 Import Backbone Checks
+
+- Verify `POST /api/v1/import-jobs` with multipart request returns `QUEUED` and a `jobId`.
+- Verify `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` are tenant-scoped.
+- Verify worker processing advances status to `SUCCEEDED` or `FAILED` and writes parse errors to `import_job_item_error` when CSV shape is invalid.
+- Verify queue publish happens only after the import-job transaction commits.
+- Verify the database rejects `import_job_item_error` rows whose `tenant_id` does not match the parent job.
+- Verify audit events include `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action.
