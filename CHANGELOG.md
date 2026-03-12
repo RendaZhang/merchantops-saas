@@ -10,19 +10,21 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 - Added Week 5 Slice B import-row execution through `USER_CSV`, including tenant-scoped user creation from valid rows.
 - Added a dedicated `UserCsvImportProcessor` so import-row execution stays isolated from the generic worker loop.
+- Added Week 5 Slice D failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, creating a new derived `QUEUED` job instead of mutating the source job.
 
 ### Changed
 
 - Widened the Week 5 import story from queue backbone only into narrow business-row execution for `USER_CSV`.
 - `GET /api/v1/import-jobs` now supports queue filters for `status`, `importType`, `requestedBy`, and `hasFailuresOnly`, plus derived list fields `requestedBy` and `hasFailures`.
 - `GET /api/v1/import-jobs/{id}` now exposes `errorCodeCounts`, and Week 5 reporting now also includes `GET /api/v1/import-jobs/{id}/errors` for paged failure-item reads with optional `errorCode` filtering.
+- Replay-derived jobs now persist `sourceJobId` lineage, emit `IMPORT_JOB_REPLAY_REQUESTED` on the source job, and reuse the same worker path as standard `USER_CSV` imports.
 - Import worker now enforces the fixed `username,displayName,email,password,roleCodes` header, rejects unsupported import types, and records both parse/header and business-row failures through `itemErrors`.
 - Import create and processing flows now write reusable `audit_event` rows for `IMPORT_JOB` entities.
 - Request tracing now normalizes client-supplied `X-Request-Id` values before echoing and persisting them, and import-row request ids derive from that normalized base.
 
 ### Docs
 
-- Updated import-job reference docs, runbooks, API examples, and status/roadmap notes to match the current `USER_CSV` business-row execution path and its row-level error behavior.
+- Updated import-job reference docs, runbooks, API examples, architecture notes, and status/roadmap notes to match the current `USER_CSV` execution path, paged error reporting, and failed-row replay behavior.
 
 ## [v0.1.3] - 2026-03-12
 

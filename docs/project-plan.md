@@ -143,7 +143,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 ### 当前计划锚点
 
 - 当前执行已经推进到 Week 5 Async Import And Data Operations。
-- Week 1-4 已构成当前稳定基线，Week 5 之后的计划应建立在用户管理、ticket workflow 和 audit/approval 治理骨架之上。
+- Week 1-4 已构成当前稳定基线，Week 5 当前公开基线已经覆盖导入提交、执行、错误分页与失败行 replay，后续计划应建立在用户管理、ticket workflow 和 audit/approval 治理骨架之上。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -302,6 +302,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - `import_job_item_error`
 - 上传文件并创建 job
 - MQ 投递与 worker 消费
+- 失败行 replay / derived-job lineage
 - chunk 分片处理
 - 失败明细与错误报告
 - 幂等控制、重试与并发限制
@@ -318,6 +319,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - 上传后立刻返回
 - 后台任务独立推进
 - 可查看进度、失败原因和错误报告
+- 可基于失败行创建新的派生 replay job，而不重置原 job
 
 ---
 

@@ -71,4 +71,62 @@ class ImportJobMigrationTest {
                         """, 2L, jobId, 2, "INVALID_ROW_SHAPE", "column count mismatch"))
                 .isInstanceOf(DataAccessException.class);
     }
+
+    @Test
+    void v10ShouldKeepReplayLineageTenantScoped() throws Exception {
+        String url = "jdbc:h2:mem:importjob-replay-migration-" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1";
+        SimpleDriverDataSource dataSource = new SimpleDriverDataSource(new Driver(), url, "sa", "");
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE tenant (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT
+                )
+                """);
+        jdbcTemplate.execute("""
+                CREATE TABLE users (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    tenant_id BIGINT NOT NULL,
+                    CONSTRAINT uk_users_id_tenant UNIQUE (id, tenant_id),
+                    CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id)
+                )
+                """);
+
+        try (Connection connection = dataSource.getConnection()) {
+            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V9__add_import_job_backbone.sql"));
+            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V10__add_import_job_replay_lineage.sql"));
+        }
+
+        jdbcTemplate.update("INSERT INTO tenant (id) VALUES (?)", 1L);
+        jdbcTemplate.update("INSERT INTO tenant (id) VALUES (?)", 2L);
+        jdbcTemplate.update("INSERT INTO users (id, tenant_id) VALUES (?, ?)", 101L, 1L);
+        jdbcTemplate.update("INSERT INTO users (id, tenant_id) VALUES (?, ?)", 201L, 2L);
+
+        jdbcTemplate.update("""
+                INSERT INTO import_job (
+                    tenant_id, import_type, source_type, source_filename, storage_key, status,
+                    requested_by, request_id, total_count, success_count, failure_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, 1L, "USER_CSV", "CSV", "users.csv", "1/source.csv", "FAILED", 101L, "req-source", 1, 0, 1);
+        Long sourceJobId = jdbcTemplate.queryForObject("""
+                SELECT id FROM import_job WHERE tenant_id = ? AND request_id = ?
+                """, Long.class, 1L, "req-source");
+
+        jdbcTemplate.update("""
+                INSERT INTO import_job (
+                    tenant_id, import_type, source_type, source_filename, storage_key, source_job_id, status,
+                    requested_by, request_id, total_count, success_count, failure_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, 1L, "USER_CSV", "CSV", "replay.csv", "1/replay.csv", sourceJobId, "QUEUED", 101L, "req-replay", 0, 0, 0);
+        Integer validRowCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM import_job", Integer.class);
+        assertThat(validRowCount).isEqualTo(2);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO import_job (
+                            tenant_id, import_type, source_type, source_filename, storage_key, source_job_id, status,
+                            requested_by, request_id, total_count, success_count, failure_count
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, 2L, "USER_CSV", "CSV", "cross-tenant.csv", "2/replay.csv", sourceJobId, "QUEUED", 201L, "req-cross-tenant", 0, 0, 0))
+                .isInstanceOf(DataAccessException.class);
+    }
 }

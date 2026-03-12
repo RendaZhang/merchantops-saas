@@ -139,7 +139,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## Import Jobs
 
-- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors`
+- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, and `GET /api/v1/import-jobs/{id}/errors`
 - [ ] `POST /api/v1/import-jobs` accepts multipart `request` + `file` and returns an initial `QUEUED` job
 - [ ] `POST /api/v1/import-jobs` with a `viewer` token returns `403`
 - [ ] `GET /api/v1/import-jobs?page=0&size=10` returns a page object ordered by `createdAt DESC, id DESC`
@@ -147,16 +147,20 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `GET /api/v1/import-jobs?importType=USER_CSV` filters by exact import type
 - [ ] `GET /api/v1/import-jobs?requestedBy=<userId>` filters by requester within the current tenant only
 - [ ] `GET /api/v1/import-jobs?hasFailuresOnly=true` returns only jobs whose `failureCount > 0`, including partial-success `SUCCEEDED` jobs
-- [ ] `GET /api/v1/import-jobs/{id}` returns only a current-tenant job and includes `errorCodeCounts` plus backward-compatible `itemErrors`
+- [ ] `GET /api/v1/import-jobs/{id}` returns only a current-tenant job and includes nullable `sourceJobId`, `errorCodeCounts`, and backward-compatible `itemErrors`
+- [ ] `POST /api/v1/import-jobs/{id}/replay-failures` rejects clean-success, non-terminal, cross-tenant, and unsupported-import-type source jobs
+- [ ] `POST /api/v1/import-jobs/{id}/replay-failures` returns a new `QUEUED` derived job whose detail keeps `sourceJobId=<source job id>`
 - [ ] `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` returns a page object ordered by null `rowNumber` first, then `rowNumber ASC, id ASC`
 - [ ] `GET /api/v1/import-jobs/{id}/errors?errorCode=<code>` filters failure items by exact error code within the current tenant job only
 - [ ] import list items expose `requestedBy` and derived `hasFailures`
 - [ ] detail `errorCodeCounts` and `/errors` results stay consistent for partial-success and full-failure jobs
 - [ ] worker processing advances jobs through `QUEUED -> PROCESSING -> SUCCEEDED/FAILED`
+- [ ] replay-derived jobs go through the same worker path and only include the source job's failed rows, not the rows that already succeeded
 - [ ] invalid CSV row shapes create `import_job_item_error` rows and surface them through job detail
 - [ ] business-row failures such as duplicate username, unknown role, invalid email, or invalid password also surface through `itemErrors` without blocking valid rows in the same job
 - [ ] successful jobs keep `errorSummary = null`, partial-success jobs keep `status=SUCCEEDED` with `errorSummary = "completed with some row errors"`, and full failures keep `status=FAILED`
 - [ ] import create/process flow writes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal `IMPORT_JOB_COMPLETED` or `IMPORT_JOB_FAILED` audit event
+- [ ] failed-row replay also writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `sourceJobId` in the replay job's `IMPORT_JOB_CREATED` audit snapshot
 
 ## Tools
 

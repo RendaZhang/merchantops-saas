@@ -10,6 +10,7 @@ public record ImportJobDetailResponse(
         String sourceType,
         String sourceFilename,
         String storageKey,
+        Long sourceJobId,
         String status,
         Long requestedBy,
         String requestId,

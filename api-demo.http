@@ -347,6 +347,11 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}
 Authorization: Bearer {{token}}
 
+### Replay failed rows from import job
+# Set importJobId to a terminal source job that has failed rows; the response returns a new derived replay job id.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures
+Authorization: Bearer {{token}}
+
 ### List import job errors
 # Clean success jobs return an empty page here.
 GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/errors?page=0&size=10

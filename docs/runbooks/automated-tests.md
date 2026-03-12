@@ -34,7 +34,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface
 - tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import queue publication, filtered queue reads, paged error reporting, worker processing, row-level failure isolation, error-code summary reporting, and import-specific migration protection
+- import queue publication, failed-row replay, derived-job lineage, filtered queue reads, paged error reporting, worker processing, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -125,7 +125,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - invalid status-transition rejection
   - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
 - `ImportJobControllerTest`
-  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
+  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
   - duplicate pending disable requests are rejected
@@ -133,15 +133,16 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - approval queue query normalization with stable `createdAt DESC, id DESC` ordering
   - approval execution delegates to the existing tenant-scoped user status update flow
 - `ImportJobCommandServiceTest`
-  - queued import-job persistence and after-commit import event publication
+  - queued import-job persistence, failed-row replay as a new derived job, replay lineage/audit emission, and after-commit import event publication
   - invalid `importType` rejection
 - `ImportJobQueryServiceTest`
-  - import-job page normalization, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `errorCodeCounts`, and item-error hydration
+  - import-job page normalization, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `sourceJobId`, `errorCodeCounts`, and item-error hydration
 - `ImportJobIntegrationTest`
-  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, summary semantics, and import audit events
+  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, failed-row replay as a derived job, replay rejection cases, summary semantics, and import audit events
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
+  - replay-derived jobs still run through the same normal worker path
   - quoted commas, escaped quotes, and embedded newlines stay within one CSV record before row processing
   - mixed valid/invalid rows produce partial success counts with persisted parse-level and business-level row errors
 - `UserCsvImportProcessorTest`
@@ -150,6 +151,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - oversized `X-Request-Id` headers are normalized before the value is echoed back to the response and placed in MDC
 - `ImportJobMigrationTest`
   - `V9__add_import_job_backbone.sql` rejects `import_job_item_error` rows whose `tenant_id` does not match the parent import job
+  - `V10__add_import_job_replay_lineage.sql` rejects cross-tenant `source_job_id` lineage on replay-derived jobs
 - `RoleControllerTest`
   - `GET /api/v1/roles` unauthorized / forbidden / success paths
   - tenant resolution through request-scoped context and forwarding to `RoleQueryService`

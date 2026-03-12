@@ -66,6 +66,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/import-jobs` | Yes + `USER_WRITE` | Create an async import job from multipart request + CSV file |
 | `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job overview with `errorCodeCounts` plus `itemErrors` |
+| `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
@@ -122,10 +123,12 @@ Approval Requests tag note:
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors`.
-- `POST /api/v1/import-jobs` requires `USER_WRITE` and accepts multipart `request` + `file`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, and `GET /api/v1/import-jobs/{id}/errors`.
+- `POST /api/v1/import-jobs` and `POST /api/v1/import-jobs/{id}/replay-failures` require `USER_WRITE`.
 - `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
+- `GET /api/v1/import-jobs/{id}` detail now exposes nullable `sourceJobId` for replay-derived jobs.
+- `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.
 - detail returns `errorCodeCounts` for quick triage plus backward-compatible row-level `itemErrors`.
@@ -701,7 +704,32 @@ Current notes:
 - `hasFailuresOnly=true` returns both partial-success jobs (`SUCCEEDED` with `failureCount > 0`) and terminal `FAILED` jobs
 - detail response also exposes `errorCodeCounts` plus `itemErrors` for both parse/header failures and business-row execution failures in the current `USER_CSV` path
 
-### 20. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
+### 20. Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 1202,
+    "importType": "USER_CSV",
+    "sourceFilename": "replay-failures-job-1201.csv",
+    "sourceJobId": 1201,
+    "status": "QUEUED"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- source job must be current-tenant, terminal, `USER_CSV`, and contain replayable failed rows
+- replay creates a new derived job instead of mutating the source job in place
+- the new job's detail now exposes `sourceJobId`
+
+### 21. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
 
 Response:
 

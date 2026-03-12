@@ -18,6 +18,7 @@
 - `V7__add_audit_event_backbone.sql`: adds tenant-scoped `audit_event` for reusable governance audit snapshots across existing public write flows, with DB-level same-tenant linkage between `audit_event.operator_id` and `audit_event.tenant_id`
 - `V8__add_minimal_approval_request.sql`: adds tenant-scoped `approval_request` for the first minimal approval flow (`USER_STATUS_DISABLE`), including same-tenant requester/reviewer foreign-key linkage
 - `V9__add_import_job_backbone.sql`: adds tenant-scoped `import_job` and `import_job_item_error` for Week 5 async import submission, queue processing, and row-level error tracking, including DB-level same-tenant linkage from item errors back to the parent import job
+- `V10__add_import_job_replay_lineage.sql`: adds nullable `import_job.source_job_id` so replay-derived jobs can point back to the source job, including DB-level same-tenant lineage protection through `(tenant_id, source_job_id) -> import_job(tenant_id, id)`
 
 ## Demo Accounts
 
@@ -71,6 +72,10 @@ SELECT COUNT(*) AS audit_event_cnt FROM audit_event;
 SELECT COUNT(*) AS approval_request_cnt FROM approval_request;
 SELECT COUNT(*) AS import_job_cnt FROM import_job;
 SELECT COUNT(*) AS import_job_item_error_cnt FROM import_job_item_error;
+
+SELECT id, tenant_id, source_job_id, source_filename, status
+FROM import_job
+ORDER BY id DESC;
 ```
 
 ## Verify Migration History

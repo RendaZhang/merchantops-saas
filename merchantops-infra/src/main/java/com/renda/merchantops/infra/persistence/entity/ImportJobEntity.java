@@ -36,6 +36,9 @@ public class ImportJobEntity {
     @Column(name = "storage_key", nullable = false, length = 512)
     private String storageKey;
 
+    @Column(name = "source_job_id")
+    private Long sourceJobId;
+
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 

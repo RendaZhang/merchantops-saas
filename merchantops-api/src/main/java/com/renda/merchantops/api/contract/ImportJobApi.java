@@ -37,6 +37,10 @@ public interface ImportJobApi {
     @GetMapping("/{id}")
     ApiResponse<ImportJobDetailResponse> getImportJob(@PathVariable("id") Long id);
 
+    @Operation(summary = "Replay failed rows from one terminal import job as a new derived job")
+    @PostMapping("/{id}/replay-failures")
+    ApiResponse<ImportJobDetailResponse> replayFailedRows(@PathVariable("id") Long id);
+
     @Operation(summary = "Page import job errors in current tenant")
     @GetMapping("/{id}/errors")
     ApiResponse<ImportJobErrorPageResponse> listImportJobErrors(@PathVariable("id") Long id,

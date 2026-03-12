@@ -46,6 +46,7 @@ class ImportJobWorkerTest {
         job.setId(7001L);
         job.setTenantId(1L);
         job.setImportType("USER_CSV");
+        job.setSourceJobId(6999L);
         job.setStatus("QUEUED");
         job.setStorageKey("1/key.csv");
         job.setRequestedBy(101L);
@@ -65,6 +66,39 @@ class ImportJobWorkerTest {
         assertThat(job.getSuccessCount()).isEqualTo(1);
         assertThat(job.getFailureCount()).isEqualTo(1);
         assertThat(job.getErrorSummary()).isEqualTo("completed with some row errors");
+    }
+
+    @Test
+    void consumeShouldProcessReplayDerivedJobThroughNormalWorkerPath() throws Exception {
+        ImportJobEntity job = new ImportJobEntity();
+        job.setId(7005L);
+        job.setTenantId(1L);
+        job.setImportType("USER_CSV");
+        job.setSourceJobId(7001L);
+        job.setStatus("QUEUED");
+        job.setStorageKey("1/replay.csv");
+        job.setRequestedBy(101L);
+        job.setRequestId("req-replay");
+        when(importJobRepository.findByIdAndTenantIdForUpdate(7005L, 1L)).thenReturn(Optional.of(job));
+        when(importJobRepository.save(any(ImportJobEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(importFileStorageService.openStream("1/replay.csv")).thenReturn(new ByteArrayInputStream(
+                "username,displayName,email,password,roleCodes\nretry,Retry User,retry@example.com,123456,READ_ONLY"
+                        .getBytes(StandardCharsets.UTF_8)
+        ));
+
+        importJobWorker.consume(new ImportJobMessage(7005L, 1L));
+
+        verify(userCsvImportProcessor).processRow(any(), eq(2), eq(List.of(
+                "retry",
+                "Retry User",
+                "retry@example.com",
+                "123456",
+                "READ_ONLY"
+        )));
+        assertThat(job.getSourceJobId()).isEqualTo(7001L);
+        assertThat(job.getStatus()).isEqualTo("SUCCEEDED");
+        assertThat(job.getSuccessCount()).isEqualTo(1);
+        assertThat(job.getFailureCount()).isZero();
     }
 
     @Test

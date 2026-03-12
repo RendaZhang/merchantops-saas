@@ -34,6 +34,7 @@ public class ImportJobCommandService {
     private final ImportFileStorageService importFileStorageService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final ImportJobQueryService importJobQueryService;
+    private final ImportReplayFileBuilder importReplayFileBuilder;
     private final AuditEventService auditEventService;
     private final UserRepository userRepository;
 
@@ -44,12 +45,7 @@ public class ImportJobCommandService {
                                              ImportJobCreateRequest request,
                                              MultipartFile file) {
         String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
-        if (tenantId == null || operatorId == null) {
-            throw new BizException(ErrorCode.UNAUTHORIZED, "user context missing");
-        }
-        if (userRepository.findByIdAndTenantId(operatorId, tenantId).isEmpty()) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "operator does not belong to tenant");
-        }
+        requireOperatorInTenant(tenantId, operatorId);
         String importType = normalizeImportType(request == null ? null : request.getImportType());
         String storageKey = importFileStorageService.store(tenantId, file);
         registerRollbackCleanup(storageKey);
@@ -60,6 +56,7 @@ public class ImportJobCommandService {
         entity.setSourceType(IMPORT_SOURCE_TYPE_CSV);
         entity.setSourceFilename(resolveFilename(file));
         entity.setStorageKey(storageKey);
+        entity.setSourceJobId(null);
         entity.setStatus("QUEUED");
         entity.setRequestedBy(operatorId);
         entity.setRequestId(resolvedRequestId);
@@ -69,20 +66,88 @@ public class ImportJobCommandService {
         entity.setCreatedAt(LocalDateTime.now());
         ImportJobEntity saved = importJobRepository.save(entity);
 
-        auditEventService.recordEvent(
-                tenantId,
-                "IMPORT_JOB",
-                saved.getId(),
-                "IMPORT_JOB_CREATED",
-                operatorId,
-                resolvedRequestId,
-                null,
-                Map.of("status", saved.getStatus(), "importType", saved.getImportType(), "sourceFilename", saved.getSourceFilename())
-        );
+        recordImportJobCreatedEvent(saved, operatorId, resolvedRequestId);
 
         applicationEventPublisher.publishEvent(new ImportJobCreatedEvent(saved.getId(), tenantId));
 
         return importJobQueryService.toDetail(saved);
+    }
+
+    @Transactional
+    public ImportJobDetailResponse replayFailedRows(Long tenantId,
+                                                    Long operatorId,
+                                                    String requestId,
+                                                    Long sourceJobId) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
+        requireOperatorInTenant(tenantId, operatorId);
+
+        ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
+                .buildFailedRowReplay(tenantId, sourceJobId);
+        registerRollbackCleanup(replayFile.storageKey());
+
+        ImportJobEntity sourceJob = replayFile.sourceJob();
+        ImportJobEntity replayJob = new ImportJobEntity();
+        replayJob.setTenantId(tenantId);
+        replayJob.setImportType(sourceJob.getImportType());
+        replayJob.setSourceType(sourceJob.getSourceType());
+        replayJob.setSourceFilename(replayFile.sourceFilename());
+        replayJob.setStorageKey(replayFile.storageKey());
+        replayJob.setSourceJobId(sourceJob.getId());
+        replayJob.setStatus("QUEUED");
+        replayJob.setRequestedBy(operatorId);
+        replayJob.setRequestId(resolvedRequestId);
+        replayJob.setTotalCount(0);
+        replayJob.setSuccessCount(0);
+        replayJob.setFailureCount(0);
+        replayJob.setCreatedAt(LocalDateTime.now());
+        ImportJobEntity savedReplayJob = importJobRepository.save(replayJob);
+
+        auditEventService.recordEvent(
+                tenantId,
+                "IMPORT_JOB",
+                sourceJob.getId(),
+                "IMPORT_JOB_REPLAY_REQUESTED",
+                operatorId,
+                resolvedRequestId,
+                null,
+                Map.of(
+                        "replayJobId", savedReplayJob.getId(),
+                        "replayedFailureCount", replayFile.replayRowCount()
+                )
+        );
+        recordImportJobCreatedEvent(savedReplayJob, operatorId, resolvedRequestId);
+
+        applicationEventPublisher.publishEvent(new ImportJobCreatedEvent(savedReplayJob.getId(), tenantId));
+        return importJobQueryService.toDetail(savedReplayJob);
+    }
+
+    private void requireOperatorInTenant(Long tenantId, Long operatorId) {
+        if (tenantId == null || operatorId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED, "user context missing");
+        }
+        if (userRepository.findByIdAndTenantId(operatorId, tenantId).isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "operator does not belong to tenant");
+        }
+    }
+
+    private void recordImportJobCreatedEvent(ImportJobEntity job, Long operatorId, String requestId) {
+        Map<String, Object> afterValue = new java.util.LinkedHashMap<>();
+        afterValue.put("status", job.getStatus());
+        afterValue.put("importType", job.getImportType());
+        afterValue.put("sourceFilename", job.getSourceFilename());
+        if (job.getSourceJobId() != null) {
+            afterValue.put("sourceJobId", job.getSourceJobId());
+        }
+        auditEventService.recordEvent(
+                job.getTenantId(),
+                "IMPORT_JOB",
+                job.getId(),
+                "IMPORT_JOB_CREATED",
+                operatorId,
+                requestId,
+                null,
+                afterValue
+        );
     }
 
     private String normalizeImportType(String importType) {

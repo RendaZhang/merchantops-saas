@@ -52,6 +52,15 @@ public class ImportJobController implements ImportJobApi {
     }
 
     @Override
+    @RequirePermission("USER_WRITE")
+    public ApiResponse<ImportJobDetailResponse> replayFailedRows(@PathVariable("id") Long id) {
+        Long tenantId = ContextAccess.requireTenantId();
+        Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
+        return ApiResponse.success(importJobCommandService.replayFailedRows(tenantId, operatorId, requestId, id));
+    }
+
+    @Override
     @RequirePermission("USER_READ")
     public ApiResponse<ImportJobErrorPageResponse> listImportJobErrors(@PathVariable("id") Long id,
                                                                        ImportJobErrorPageQuery query) {

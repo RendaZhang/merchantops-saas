@@ -44,6 +44,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -91,7 +92,7 @@ class ImportJobControllerTest {
     @Test
     void createShouldBindMultipartAndForwardContext() throws Exception {
         when(importJobCommandService.createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any()))
-                .thenReturn(new ImportJobDetailResponse(1L, 9L, "USER_CSV", "CSV", "users.csv", "9/key.csv", "QUEUED", 9001L,
+                .thenReturn(new ImportJobDetailResponse(1L, 9L, "USER_CSV", "CSV", "users.csv", "9/key.csv", null, "QUEUED", 9001L,
                         "req-import-1", 0, 0, 0, null, null, null, null, List.of(), List.of()));
 
         MockMultipartFile requestPart = new MockMultipartFile("request", "", "application/json", "{\"importType\":\"USER_CSV\"}".getBytes());
@@ -110,6 +111,28 @@ class ImportJobControllerTest {
                 .andExpect(jsonPath("$.data.status").value("QUEUED"));
 
         verify(importJobCommandService).createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any());
+    }
+
+    @Test
+    void replayShouldForwardContextAndReturnDerivedJobDetail() throws Exception {
+        when(importJobCommandService.replayFailedRows(9L, 9001L, "req-replay-1", 88L))
+                .thenReturn(new ImportJobDetailResponse(
+                        89L, 9L, "USER_CSV", "CSV", "replay-failures-job-88.csv", "9/replay.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(89))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        verify(importJobCommandService).replayFailedRows(9L, 9001L, "req-replay-1", 88L);
     }
 
     @Test

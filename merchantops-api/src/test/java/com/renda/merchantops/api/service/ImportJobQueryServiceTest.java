@@ -118,6 +118,7 @@ class ImportJobQueryServiceTest {
         entity.setSourceType("CSV");
         entity.setSourceFilename("users.csv");
         entity.setStorageKey("1/key.csv");
+        entity.setSourceJobId(77L);
         entity.setStatus("FAILED");
         entity.setRequestedBy(101L);
         entity.setRequestId("req-1");
@@ -150,6 +151,7 @@ class ImportJobQueryServiceTest {
         when(importJobItemErrorRepository.findAllByTenantIdAndImportJobIdOrderByRowNumberAscIdAsc(1L, 1L)).thenReturn(List.of(error));
 
         var response = importJobQueryService.getJobDetail(1L, 1L);
+        assertThat(response.sourceJobId()).isEqualTo(77L);
         assertThat(response.itemErrors()).hasSize(1);
         assertThat(response.errorCodeCounts()).singleElement().satisfies(item -> {
             assertThat(item.errorCode()).isEqualTo("INVALID_ROW_SHAPE");

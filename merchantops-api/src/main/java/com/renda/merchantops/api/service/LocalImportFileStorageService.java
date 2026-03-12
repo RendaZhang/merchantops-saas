@@ -31,14 +31,21 @@ public class LocalImportFileStorageService implements ImportFileStorageService {
         }
         try {
             String filename = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename().trim() : "upload.csv";
-            String storageKey = tenantId + "/" + UUID.randomUUID() + "-" + filename.replaceAll("[^a-zA-Z0-9._-]", "_");
-            Path target = rootPath.resolve(storageKey).normalize();
-            if (!target.startsWith(rootPath)) {
-                throw new BizException(ErrorCode.BAD_REQUEST, "invalid file path");
+            try (InputStream inputStream = file.getInputStream()) {
+                return storeInternal(tenantId, filename, inputStream);
             }
-            Files.createDirectories(target.getParent());
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-            return storageKey;
+        } catch (IOException ex) {
+            throw new BizException(ErrorCode.BIZ_ERROR, "failed to store import file");
+        }
+    }
+
+    @Override
+    public String store(Long tenantId, String filename, InputStream inputStream) {
+        if (tenantId == null || inputStream == null || !StringUtils.hasText(filename)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "import file must not be empty");
+        }
+        try {
+            return storeInternal(tenantId, filename.trim(), inputStream);
         } catch (IOException ex) {
             throw new BizException(ErrorCode.BIZ_ERROR, "failed to store import file");
         }
@@ -52,6 +59,17 @@ public class LocalImportFileStorageService implements ImportFileStorageService {
     @Override
     public void delete(String storageKey) throws IOException {
         Files.deleteIfExists(resolveStoredPath(storageKey));
+    }
+
+    private String storeInternal(Long tenantId, String filename, InputStream inputStream) throws IOException {
+        String storageKey = tenantId + "/" + UUID.randomUUID() + "-" + filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        Path target = rootPath.resolve(storageKey).normalize();
+        if (!target.startsWith(rootPath)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "invalid file path");
+        }
+        Files.createDirectories(target.getParent());
+        Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+        return storageKey;
     }
 
     private Path resolveStoredPath(String storageKey) throws IOException {

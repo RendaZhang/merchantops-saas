@@ -20,4 +20,5 @@ This section stores architecture notes, technical decisions, and recorded struct
 
 - [../diagrams/target-architecture.md](../diagrams/target-architecture.md): visual target architecture for the modular-monolith-first path and later selective extraction
 - [import-file-storage-strategy.md](import-file-storage-strategy.md): keep Week 5 import files behind a replaceable storage abstraction while starting with local filesystem storage
+- [import-replay-derived-job-strategy.md](import-replay-derived-job-strategy.md): keep import replay as a new derived job instead of mutating an already-finished source job
 - [non-blocking-backlog.md](non-blocking-backlog.md): recorded follow-up items that stay visible without blocking the current phase

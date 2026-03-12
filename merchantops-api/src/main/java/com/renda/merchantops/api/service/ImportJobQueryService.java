@@ -85,6 +85,7 @@ public class ImportJobQueryService {
                 job.getSourceType(),
                 job.getSourceFilename(),
                 job.getStorageKey(),
+                job.getSourceJobId(),
                 job.getStatus(),
                 job.getRequestedBy(),
                 job.getRequestId(),

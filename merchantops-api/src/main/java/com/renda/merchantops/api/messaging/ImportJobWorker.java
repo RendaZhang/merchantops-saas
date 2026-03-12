@@ -2,6 +2,7 @@ package com.renda.merchantops.api.messaging;
 
 import com.renda.merchantops.api.config.ImportJobMessagingConfig;
 import com.renda.merchantops.api.service.AuditEventService;
+import com.renda.merchantops.api.service.ImportCsvSupport;
 import com.renda.merchantops.api.service.ImportFileStorageService;
 import com.renda.merchantops.infra.persistence.entity.ImportJobEntity;
 import com.renda.merchantops.infra.persistence.entity.ImportJobItemErrorEntity;
@@ -9,7 +10,6 @@ import com.renda.merchantops.infra.repository.ImportJobItemErrorRepository;
 import com.renda.merchantops.infra.repository.ImportJobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
@@ -34,14 +34,6 @@ import java.util.stream.StreamSupport;
 public class ImportJobWorker {
 
     private static final String UTF8_BOM = "\uFEFF";
-    private static final CSVFormat IMPORT_CSV_FORMAT = CSVFormat.DEFAULT.builder()
-            .setIgnoreEmptyLines(false)
-            .build();
-    private static final CSVFormat RAW_PAYLOAD_CSV_FORMAT = CSVFormat.DEFAULT.builder()
-            .setRecordSeparator("\n")
-            .build();
-    private static final List<String> USER_CSV_HEADERS = List.of("username", "displayName", "email", "password", "roleCodes");
-
     private final ImportJobRepository importJobRepository;
     private final ImportJobItemErrorRepository importJobItemErrorRepository;
     private final ImportFileStorageService importFileStorageService;
@@ -74,7 +66,7 @@ public class ImportJobWorker {
         try {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(importFileStorageService.openStream(job.getStorageKey()), StandardCharsets.UTF_8));
-                 CSVParser parser = IMPORT_CSV_FORMAT.parse(reader)) {
+                 CSVParser parser = ImportCsvSupport.IMPORT_CSV_FORMAT.parse(reader)) {
                 var records = parser.iterator();
                 if (!records.hasNext()) {
                     saveError(job, null, "EMPTY_FILE", "csv file is empty", null);
@@ -89,8 +81,8 @@ public class ImportJobWorker {
                         failure = 1;
                     } else {
                         List<String> headerColumns = normalizeHeaderColumns(headerRecord);
-                        if (!USER_CSV_HEADERS.equals(headerColumns)) {
-                            saveError(job, 0, "INVALID_HEADER", "header must be: " + String.join(",", USER_CSV_HEADERS), headerRawPayload);
+                        if (!ImportCsvSupport.USER_CSV_HEADERS.equals(headerColumns)) {
+                            saveError(job, 0, "INVALID_HEADER", "header must be: " + String.join(",", ImportCsvSupport.USER_CSV_HEADERS), headerRawPayload);
                             summary = "invalid header";
                             failure++;
                         } else {
@@ -101,7 +93,7 @@ public class ImportJobWorker {
                                 total++;
                                 List<String> columns = parseColumns(record);
                                 String rawPayload = toRawPayload(record);
-                                if (columns.size() != USER_CSV_HEADERS.size()) {
+                                if (columns.size() != ImportCsvSupport.USER_CSV_HEADERS.size()) {
                                     failure++;
                                     saveError(job, rowNumber, "INVALID_ROW_SHAPE", "column count mismatch", rawPayload);
                                     continue;
@@ -179,7 +171,7 @@ public class ImportJobWorker {
 
     private String toRawPayload(CSVRecord row) {
         try (StringWriter writer = new StringWriter();
-             CSVPrinter printer = new CSVPrinter(writer, RAW_PAYLOAD_CSV_FORMAT)) {
+             CSVPrinter printer = new CSVPrinter(writer, ImportCsvSupport.RAW_PAYLOAD_CSV_FORMAT)) {
             printer.printRecord(row);
             String rawPayload = writer.toString();
             return rawPayload.endsWith("\n") ? rawPayload.substring(0, rawPayload.length() - 1) : rawPayload;
