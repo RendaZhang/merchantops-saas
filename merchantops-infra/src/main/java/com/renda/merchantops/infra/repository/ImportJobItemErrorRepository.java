@@ -47,6 +47,18 @@ public interface ImportJobItemErrorRepository extends JpaRepository<ImportJobIte
                                                                                               @Param("importJobId") Long importJobId,
                                                                                               @Param("errorCodes") List<String> errorCodes);
 
+    @Query("""
+            select e
+            from ImportJobItemErrorEntity e
+            where e.tenantId = :tenantId
+              and e.importJobId = :importJobId
+              and e.id in :errorIds
+            order by case when e.rowNumber is null then 0 else 1 end asc, e.rowNumber asc, e.id asc
+            """)
+    List<ImportJobItemErrorEntity> findAllByTenantIdAndImportJobIdAndIdInOrderByRowNumberAscIdAsc(@Param("tenantId") Long tenantId,
+                                                                                                    @Param("importJobId") Long importJobId,
+                                                                                                    @Param("errorIds") List<Long> errorIds);
+
     @Query(
             value = """
                     select e

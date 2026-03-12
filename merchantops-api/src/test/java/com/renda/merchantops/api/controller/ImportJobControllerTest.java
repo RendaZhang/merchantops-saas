@@ -2,6 +2,7 @@ package com.renda.merchantops.api.controller;
 
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse;
@@ -179,6 +180,68 @@ class ImportJobControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.message").value("errorCodes: errorCodes must not be empty"));
+
+        verifyNoInteractions(importJobCommandService);
+    }
+
+    @Test
+    void replayEditedShouldBindRequestAndForwardContext() throws Exception {
+        when(importJobCommandService.replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), any()))
+                .thenReturn(new ImportJobDetailResponse(
+                        91L, 9L, "USER_CSV", "CSV", "replay-edited-job-88.csv", "9/replay-edited.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-edited-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/edited")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "items": [
+                                    {
+                                      "errorId": 701,
+                                      "username": "retry-user",
+                                      "displayName": "Retry User",
+                                      "email": "retry-user@demo-shop.local",
+                                      "password": "123456",
+                                      "roleCodes": ["READ_ONLY"]
+                                    }
+                                  ]
+                                }
+                                """)
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-edited-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(91))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        ArgumentCaptor<ImportJobEditedReplayRequest> requestCaptor =
+                ArgumentCaptor.forClass(ImportJobEditedReplayRequest.class);
+        verify(importJobCommandService).replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getItems()).singleElement().satisfies(item -> {
+            assertThat(item.getErrorId()).isEqualTo(701L);
+            assertThat(item.getUsername()).isEqualTo("retry-user");
+            assertThat(item.getRoleCodes()).containsExactly("READ_ONLY");
+        });
+    }
+
+    @Test
+    void replayEditedShouldRejectEmptyItems() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/edited")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[]}")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-edited-invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("items: items must not be empty"));
 
         verifyNoInteractions(importJobCommandService);
     }

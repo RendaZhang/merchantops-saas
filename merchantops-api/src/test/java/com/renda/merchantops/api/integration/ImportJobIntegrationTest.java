@@ -5,9 +5,12 @@ import com.renda.merchantops.api.config.ImportProcessingProperties;
 import com.renda.merchantops.api.dto.audit.query.AuditEventListResponse;
 import com.renda.merchantops.api.dto.audit.query.AuditEventResponse;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayItemRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorCodeCountResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
@@ -38,6 +41,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -532,6 +536,208 @@ class ImportJobIntegrationTest {
         ))
                 .isInstanceOf(BizException.class)
                 .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+    }
+
+    @Test
+    void replayFailedRowsEditedShouldCreateDerivedJobForEditedRowsAndKeepAuditScopeOnly() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-replay-edited.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                alpha,Alpha User,alpha@example.com,abc123,READ_ONLY
+                retry-role,Retry Role User,retry-role@example.com,abc123,RETRY_ROLE
+                retry-email,Retry Email User,bad-email,abc123,READ_ONLY
+                gamma,Gamma User,gamma@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-edited-source", request, file);
+        importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
+
+        ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
+        assertThat(sourceProcessed.status()).isEqualTo("SUCCEEDED");
+        assertThat(sourceProcessed.failureCount()).isEqualTo(2);
+        Map<String, ImportJobErrorItemResponse> errorsByCode = sourceProcessed.itemErrors().stream()
+                .collect(Collectors.toMap(ImportJobErrorItemResponse::errorCode, Function.identity()));
+        Long unknownRoleErrorId = errorsByCode.get("UNKNOWN_ROLE").id();
+        Long invalidEmailErrorId = errorsByCode.get("INVALID_EMAIL").id();
+
+        jdbcTemplate.update("""
+                INSERT INTO `role`(id, tenant_id, role_code, role_name, created_at, updated_at)
+                VALUES (12, 1, 'RETRY_ROLE', 'Retry Role', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """);
+
+        ImportJobEditedReplayRequest editedRequest = new ImportJobEditedReplayRequest(java.util.List.of(
+                new ImportJobEditedReplayItemRequest(
+                        unknownRoleErrorId,
+                        "retry-role",
+                        "Retry Role User Fixed",
+                        "retry-role@example.com",
+                        "new-pass-role",
+                        java.util.List.of("RETRY_ROLE")
+                ),
+                new ImportJobEditedReplayItemRequest(
+                        invalidEmailErrorId,
+                        "retry-email",
+                        "Retry Email User Fixed",
+                        "retry-email@example.com",
+                        "new-pass-email",
+                        java.util.List.of("READ_ONLY")
+                )
+        ));
+
+        ImportJobDetailResponse replayCreated = importJobCommandService.replayFailedRowsEdited(
+                1L,
+                101L,
+                "req-import-replay-edited-derived",
+                sourceCreated.id(),
+                editedRequest
+        );
+
+        assertThat(replayCreated.status()).isEqualTo("QUEUED");
+        assertThat(replayCreated.sourceJobId()).isEqualTo(sourceCreated.id());
+        assertThat(replayCreated.sourceFilename()).isEqualTo("replay-edited-job-" + sourceCreated.id() + ".csv");
+
+        importJobWorker.consume(new ImportJobMessage(replayCreated.id(), 1L));
+
+        ImportJobDetailResponse replayProcessed = importJobQueryService.getJobDetail(1L, replayCreated.id());
+        assertThat(replayProcessed.status()).isEqualTo("SUCCEEDED");
+        assertThat(replayProcessed.sourceJobId()).isEqualTo(sourceCreated.id());
+        assertThat(replayProcessed.totalCount()).isEqualTo(2);
+        assertThat(replayProcessed.successCount()).isEqualTo(2);
+        assertThat(replayProcessed.failureCount()).isZero();
+
+        String retryRoleDisplayName = jdbcTemplate.queryForObject(
+                "SELECT display_name FROM users WHERE tenant_id = 1 AND username = 'retry-role'",
+                String.class
+        );
+        String retryEmail = jdbcTemplate.queryForObject(
+                "SELECT email FROM users WHERE tenant_id = 1 AND username = 'retry-email'",
+                String.class
+        );
+        assertThat(retryRoleDisplayName).isEqualTo("Retry Role User Fixed");
+        assertThat(retryEmail).isEqualTo("retry-email@example.com");
+
+        AuditEventListResponse sourceAudit = auditEventService.listByEntity(1L, "IMPORT_JOB", sourceCreated.id());
+        AuditEventListResponse replayAudit = auditEventService.listByEntity(1L, "IMPORT_JOB", replayCreated.id());
+        AuditEventResponse replayRequested = sourceAudit.items().stream()
+                .filter(item -> "IMPORT_JOB_REPLAY_REQUESTED".equals(item.actionType()))
+                .findFirst()
+                .orElseThrow();
+        AuditEventResponse replayCreatedAudit = replayAudit.items().stream()
+                .filter(item -> "IMPORT_JOB_CREATED".equals(item.actionType()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(replayRequested.afterValue()).contains("\"replayJobId\":" + replayCreated.id());
+        assertThat(replayRequested.afterValue()).contains("\"editedErrorIds\":[" + unknownRoleErrorId + "," + invalidEmailErrorId + "]");
+        assertThat(replayRequested.afterValue()).contains("\"editedRowCount\":2");
+        assertThat(replayRequested.afterValue()).contains("\"editedFields\":[\"username\",\"displayName\",\"email\",\"password\",\"roleCodes\"]");
+        assertThat(replayRequested.afterValue()).doesNotContain("new-pass-role").doesNotContain("new-pass-email");
+        assertThat(replayRequested.afterValue()).doesNotContain("retry-email@example.com").doesNotContain("Retry Role User Fixed");
+        assertThat(replayCreatedAudit.afterValue()).contains("\"sourceJobId\":" + sourceCreated.id());
+        assertThat(replayCreatedAudit.afterValue()).contains("\"editedErrorIds\":[" + unknownRoleErrorId + "," + invalidEmailErrorId + "]");
+        assertThat(replayCreatedAudit.afterValue()).contains("\"editedRowCount\":2");
+        assertThat(replayCreatedAudit.afterValue()).doesNotContain("new-pass-role").doesNotContain("new-pass-email");
+        assertThat(replayCreatedAudit.afterValue()).doesNotContain("retry-email@example.com").doesNotContain("Retry Role User Fixed");
+    }
+
+    @Test
+    void replayFailedRowsEditedShouldProcessOnlyRequestedErrorIds() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-replay-edited-subset.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                alpha,Alpha User,alpha@example.com,abc123,READ_ONLY
+                retry-role,Retry Role User,retry-role@example.com,abc123,RETRY_ROLE
+                retry-email,Retry Email User,bad-email,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-edited-subset-source", request, file);
+        importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
+
+        ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
+        Long invalidEmailErrorId = sourceProcessed.itemErrors().stream()
+                .filter(item -> "INVALID_EMAIL".equals(item.errorCode()))
+                .findFirst()
+                .orElseThrow()
+                .id();
+
+        ImportJobEditedReplayRequest editedRequest = new ImportJobEditedReplayRequest(java.util.List.of(
+                new ImportJobEditedReplayItemRequest(
+                        invalidEmailErrorId,
+                        "retry-email",
+                        "Retry Email User Fixed",
+                        "retry-email@example.com",
+                        "new-pass-email",
+                        java.util.List.of("READ_ONLY")
+                )
+        ));
+
+        ImportJobDetailResponse replayCreated = importJobCommandService.replayFailedRowsEdited(
+                1L,
+                101L,
+                "req-import-replay-edited-subset-derived",
+                sourceCreated.id(),
+                editedRequest
+        );
+        importJobWorker.consume(new ImportJobMessage(replayCreated.id(), 1L));
+
+        ImportJobDetailResponse replayProcessed = importJobQueryService.getJobDetail(1L, replayCreated.id());
+        assertThat(replayProcessed.status()).isEqualTo("SUCCEEDED");
+        assertThat(replayProcessed.totalCount()).isEqualTo(1);
+        assertThat(replayProcessed.successCount()).isEqualTo(1);
+        assertThat(replayProcessed.failureCount()).isZero();
+
+        Integer retryRoleCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username = 'retry-role'",
+                Integer.class
+        );
+        Integer retryEmailCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username = 'retry-email'",
+                Integer.class
+        );
+        assertThat(retryRoleCount).isZero();
+        assertThat(retryEmailCount).isEqualTo(1);
+    }
+
+    @Test
+    void replayFailedRowsEditedShouldRejectHeaderOrGlobalErrors() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-replay-edited-invalid-header.csv", "text/csv", ("""
+                username,email,password,roleCodes
+                broken,Broken User,broken@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-edited-invalid-header-source", request, file);
+        importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
+
+        ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
+        Long invalidHeaderErrorId = sourceProcessed.itemErrors().get(0).id();
+
+        ImportJobEditedReplayRequest editedRequest = new ImportJobEditedReplayRequest(java.util.List.of(
+                new ImportJobEditedReplayItemRequest(
+                        invalidHeaderErrorId,
+                        "broken",
+                        "Broken User",
+                        "broken@example.com",
+                        "123456",
+                        java.util.List.of("READ_ONLY")
+                )
+        ));
+
+        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsEdited(
+                1L,
+                101L,
+                "req-import-replay-edited-invalid-header-derived",
+                sourceCreated.id(),
+                editedRequest
+        ))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException biz = (BizException) ex;
+                    assertThat(biz.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST);
+                    assertThat(biz.getMessage()).contains("row-level errors with raw payload");
+                });
     }
 
     @Test

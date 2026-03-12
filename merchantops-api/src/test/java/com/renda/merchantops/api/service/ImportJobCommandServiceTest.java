@@ -1,6 +1,8 @@
 package com.renda.merchantops.api.service;
 
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayItemRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.messaging.ImportJobCreatedEvent;
@@ -254,6 +256,130 @@ class ImportJobCommandServiceTest {
         assertThatThrownBy(() -> importJobCommandService.replayFailedRowsSelective(1L, 101L, "req-replay-selective-invalid", 7001L, request))
                 .isInstanceOf(BizException.class)
                 .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST));
+
+        verifyNoInteractions(importReplayFileBuilder);
+    }
+
+    @Test
+    void replayFailedRowsEditedShouldNormalizeRowsAndPersistScopeOnlyAuditMetadata() {
+        UserEntity user = new UserEntity();
+        user.setId(101L);
+        user.setTenantId(1L);
+        ImportJobEntity sourceJob = new ImportJobEntity();
+        sourceJob.setId(7001L);
+        sourceJob.setTenantId(1L);
+        sourceJob.setImportType("USER_CSV");
+        sourceJob.setSourceType("CSV");
+        sourceJob.setSourceFilename("users.csv");
+        sourceJob.setStorageKey("1/original.csv");
+        sourceJob.setStatus("SUCCEEDED");
+        sourceJob.setRequestedBy(101L);
+        sourceJob.setRequestId("req-source");
+        sourceJob.setFailureCount(1);
+        when(userRepository.findByIdAndTenantId(101L, 1L)).thenReturn(Optional.of(user));
+
+        List<ImportReplayFileBuilder.EditedReplayRowReplacement> normalizedRows = List.of(
+                new ImportReplayFileBuilder.EditedReplayRowReplacement(
+                        701L,
+                        "retry-user",
+                        "Retry User",
+                        "retry-user@demo-shop.local",
+                        " 123456 ",
+                        List.of("READ_ONLY", "TENANT_ADMIN")
+                )
+        );
+        when(importReplayFileBuilder.buildEditedFailedRowReplay(1L, 7001L, normalizedRows)).thenReturn(
+                new ImportReplayFileBuilder.ReplayFileBuildResult(
+                        sourceJob,
+                        "replay-edited-job-7001.csv",
+                        "1/replay-edited.csv",
+                        1
+                )
+        );
+        when(importJobRepository.save(any(ImportJobEntity.class))).thenAnswer(invocation -> {
+            ImportJobEntity entity = invocation.getArgument(0);
+            entity.setId(7004L);
+            return entity;
+        });
+        when(importJobQueryService.toDetail(any())).thenReturn(new ImportJobDetailResponse(
+                7004L, 1L, "USER_CSV", "CSV", "replay-edited-job-7001.csv", "1/replay-edited.csv", 7001L,
+                "QUEUED", 101L, "req-replay-edited-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+        ));
+
+        ImportJobEditedReplayRequest request = new ImportJobEditedReplayRequest(List.of(
+                new ImportJobEditedReplayItemRequest(
+                        701L,
+                        " retry-user ",
+                        " Retry User ",
+                        " retry-user@demo-shop.local ",
+                        " 123456 ",
+                        List.of(" READ_ONLY ", "TENANT_ADMIN", "READ_ONLY")
+                )
+        ));
+
+        ImportJobDetailResponse response = importJobCommandService.replayFailedRowsEdited(
+                1L,
+                101L,
+                "req-replay-edited-1",
+                7001L,
+                request
+        );
+
+        assertThat(response.id()).isEqualTo(7004L);
+        assertThat(response.sourceJobId()).isEqualTo(7001L);
+        verify(importReplayFileBuilder).buildEditedFailedRowReplay(1L, 7001L, normalizedRows);
+        verify(applicationEventPublisher).publishEvent(new ImportJobCreatedEvent(7004L, 1L));
+
+        ArgumentCaptor<Long> entityIdCaptor = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<String> actionCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Object> afterCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(auditEventService, times(2)).recordEvent(
+                eq(1L),
+                eq("IMPORT_JOB"),
+                entityIdCaptor.capture(),
+                actionCaptor.capture(),
+                eq(101L),
+                eq("req-replay-edited-1"),
+                isNull(),
+                afterCaptor.capture()
+        );
+        assertThat(actionCaptor.getAllValues()).containsExactly("IMPORT_JOB_REPLAY_REQUESTED", "IMPORT_JOB_CREATED");
+        assertThat(entityIdCaptor.getAllValues()).containsExactly(7001L, 7004L);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> replayRequestedAfter = (Map<String, Object>) afterCaptor.getAllValues().get(0);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> createdAfter = (Map<String, Object>) afterCaptor.getAllValues().get(1);
+        assertThat(replayRequestedAfter).containsEntry("replayJobId", 7004L);
+        assertThat(replayRequestedAfter).containsEntry("editedErrorIds", List.of(701L));
+        assertThat(replayRequestedAfter).containsEntry("editedRowCount", 1);
+        assertThat(replayRequestedAfter).containsEntry("editedFields", List.of("username", "displayName", "email", "password", "roleCodes"));
+        assertThat(createdAfter).containsEntry("sourceJobId", 7001L);
+        assertThat(createdAfter).containsEntry("editedErrorIds", List.of(701L));
+        assertThat(createdAfter).containsEntry("editedRowCount", 1);
+        assertThat(createdAfter).containsEntry("editedFields", List.of("username", "displayName", "email", "password", "roleCodes"));
+        assertThat(replayRequestedAfter.toString()).doesNotContain("retry-user@demo-shop.local").doesNotContain(" 123456 ");
+        assertThat(createdAfter.toString()).doesNotContain("retry-user@demo-shop.local").doesNotContain(" 123456 ");
+    }
+
+    @Test
+    void replayFailedRowsEditedShouldRejectDuplicateErrorIds() {
+        UserEntity user = new UserEntity();
+        user.setId(101L);
+        user.setTenantId(1L);
+        when(userRepository.findByIdAndTenantId(101L, 1L)).thenReturn(Optional.of(user));
+
+        ImportJobEditedReplayRequest request = new ImportJobEditedReplayRequest(List.of(
+                new ImportJobEditedReplayItemRequest(701L, "retry-a", "Retry A", "retry-a@demo-shop.local", "123456", List.of("READ_ONLY")),
+                new ImportJobEditedReplayItemRequest(701L, "retry-b", "Retry B", "retry-b@demo-shop.local", "123456", List.of("READ_ONLY"))
+        ));
+
+        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsEdited(1L, 101L, "req-replay-edited-dup", 7001L, request))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException biz = (BizException) ex;
+                    assertThat(biz.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST);
+                    assertThat(biz.getMessage()).contains("duplicate errorId");
+                });
 
         verifyNoInteractions(importReplayFileBuilder);
     }

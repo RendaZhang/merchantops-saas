@@ -1,6 +1,6 @@
 # MerchantOps SaaS
 
-MerchantOps SaaS is a multi-tenant backend project for merchant operations scenarios. The current repository focuses on a working Spring Boot skeleton with JWT authentication, RBAC demo endpoints, tenant/user context propagation, tenant-scoped user-management and ticket-workflow flows, a minimal tenant-scoped audit-event query backbone, a minimal approval flow and approval queue for user disable requests, and a narrow async `USER_CSV` import path with error reporting and failed-row replay on top of the import-job surface, plus Flyway migrations, health checks, request tracing, and OpenAPI support.
+MerchantOps SaaS is a multi-tenant backend project for merchant operations scenarios. The current repository focuses on a working Spring Boot skeleton with JWT authentication, RBAC demo endpoints, tenant/user context propagation, tenant-scoped user-management and ticket-workflow flows, a minimal tenant-scoped audit-event query backbone, a minimal approval flow and approval queue for user disable requests, and a narrow async `USER_CSV` import path with error reporting plus replay variants on top of the import-job surface, plus Flyway migrations, health checks, request tracing, and OpenAPI support.
 
 ## Target Users
 
@@ -25,7 +25,7 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 - Current-tenant ticket workflow read and write flows protected by `TICKET_READ` / `TICKET_WRITE`
 - Current-tenant audit-event query backbone protected by `USER_READ`
 - Minimal approval flow for `USER_STATUS_DISABLE` with request, queue, review, and execution endpoints
-- Current-tenant async import-job create/list/detail/error flows plus failed-row replay and exact error-code selective replay, with the narrow `USER_CSV` row-execution path now landed
+- Current-tenant async import-job create/list/detail/error flows plus failed-row replay, exact error-code selective replay, and edited failed-row replay, with the narrow `USER_CSV` row-execution path now landed
 - RBAC demo endpoints and permission interception
 - Flyway migrations, enriched Swagger / OpenAPI docs, health checks, and request tracing
 
@@ -128,4 +128,4 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 - Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
 - Current tagged milestone: `v0.1.3` on 2026-03-12 for the completed Week 4 audit and approval baseline
 - Project direction: portfolio first, open-source second, and potential commercial exploration after the workflow and AI layers are credible
-- Week 2 tenant user-management loop is complete, Week 3 ticket workflow core loop is complete, Week 4 audit/approval governance baseline is complete, and Week 5 async import is active with `USER_CSV` business-row import, error reporting, failed-row replay, and exact error-code selective replay now landed
+- Week 2 tenant user-management loop is complete, Week 3 ticket workflow core loop is complete, Week 4 audit/approval governance baseline is complete, and Week 5 async import is active with `USER_CSV` business-row import, error reporting, failed-row replay, exact error-code selective replay, and edited failed-row replay now landed

@@ -19,7 +19,9 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -27,6 +29,7 @@ import java.util.stream.StreamSupport;
 public class ImportReplayFileBuilder {
 
     private static final String REPLAY_FILENAME_PREFIX = "replay-failures-job-";
+    private static final String EDITED_REPLAY_FILENAME_PREFIX = "replay-edited-job-";
 
     private final ImportJobRepository importJobRepository;
     private final ImportJobItemErrorRepository importJobItemErrorRepository;
@@ -57,6 +60,30 @@ public class ImportReplayFileBuilder {
         return buildReplayFile(tenantId, sourceJob, failedRows);
     }
 
+    public ReplayFileBuildResult buildEditedFailedRowReplay(Long tenantId,
+                                                            Long sourceJobId,
+                                                            List<EditedReplayRowReplacement> editedRows) {
+        ImportJobEntity sourceJob = requireReplayableSourceJob(tenantId, sourceJobId);
+        List<EditedReplayRowReplacement> normalizedEditedRows = requireEditedRows(editedRows);
+        List<Long> errorIds = normalizedEditedRows.stream()
+                .map(EditedReplayRowReplacement::errorId)
+                .toList();
+        List<ImportJobItemErrorEntity> sourceErrors = importJobItemErrorRepository
+                .findAllByTenantIdAndImportJobIdAndIdInOrderByRowNumberAscIdAsc(tenantId, sourceJobId, errorIds);
+        if (sourceErrors.size() != normalizedEditedRows.size()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "edited replay items must belong to source import job");
+        }
+
+        Map<Long, EditedReplayRowReplacement> editedRowsByErrorId = new LinkedHashMap<>();
+        for (EditedReplayRowReplacement editedRow : normalizedEditedRows) {
+            editedRowsByErrorId.put(editedRow.errorId(), editedRow);
+        }
+
+        String filename = EDITED_REPLAY_FILENAME_PREFIX + sourceJob.getId() + ".csv";
+        String csvContent = buildEditedReplayCsv(sourceErrors, editedRowsByErrorId);
+        return storeReplayFile(tenantId, sourceJob, filename, csvContent, sourceErrors.size());
+    }
+
     private ImportJobEntity requireReplayableSourceJob(Long tenantId, Long sourceJobId) {
         ImportJobEntity sourceJob = importJobRepository.findByIdAndTenantId(sourceJobId, tenantId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
@@ -70,12 +97,20 @@ public class ImportReplayFileBuilder {
                                                   List<ImportJobItemErrorEntity> failedRows) {
         String filename = REPLAY_FILENAME_PREFIX + sourceJob.getId() + ".csv";
         String csvContent = buildReplayCsv(failedRows);
+        return storeReplayFile(tenantId, sourceJob, filename, csvContent, failedRows.size());
+    }
+
+    private ReplayFileBuildResult storeReplayFile(Long tenantId,
+                                                  ImportJobEntity sourceJob,
+                                                  String filename,
+                                                  String csvContent,
+                                                  int replayRowCount) {
         String storageKey = importFileStorageService.store(
                 tenantId,
                 filename,
                 new ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8))
         );
-        return new ReplayFileBuildResult(sourceJob, filename, storageKey, failedRows.size());
+        return new ReplayFileBuildResult(sourceJob, filename, storageKey, replayRowCount);
     }
 
     private List<String> normalizeSelectedErrorCodes(List<String> errorCodes) {
@@ -127,6 +162,31 @@ public class ImportReplayFileBuilder {
         }
     }
 
+    private String buildEditedReplayCsv(List<ImportJobItemErrorEntity> sourceErrors,
+                                        Map<Long, EditedReplayRowReplacement> editedRowsByErrorId) {
+        try (StringWriter writer = new StringWriter();
+             CSVPrinter printer = new CSVPrinter(writer, ImportCsvSupport.RAW_PAYLOAD_CSV_FORMAT)) {
+            printer.printRecord(ImportCsvSupport.USER_CSV_HEADERS);
+            for (ImportJobItemErrorEntity sourceError : sourceErrors) {
+                validateEditableSourceError(sourceError);
+                EditedReplayRowReplacement editedRow = editedRowsByErrorId.get(sourceError.getId());
+                if (editedRow == null) {
+                    throw new BizException(ErrorCode.BAD_REQUEST, "edited replay items must belong to source import job");
+                }
+                printer.printRecord(List.of(
+                        editedRow.username(),
+                        editedRow.displayName(),
+                        editedRow.email(),
+                        editedRow.password(),
+                        String.join("|", editedRow.roleCodes())
+                ));
+            }
+            return writer.toString();
+        } catch (IOException ex) {
+            throw new BizException(ErrorCode.BIZ_ERROR, "failed to build replay csv");
+        }
+    }
+
     private List<String> parseRawPayload(ImportJobItemErrorEntity failedRow) throws IOException {
         if (!StringUtils.hasText(failedRow.getRawPayload())) {
             throw new BizException(ErrorCode.BIZ_ERROR, "import job failed row payload is missing");
@@ -141,11 +201,35 @@ public class ImportReplayFileBuilder {
         }
     }
 
+    private List<EditedReplayRowReplacement> requireEditedRows(List<EditedReplayRowReplacement> editedRows) {
+        if (editedRows == null || editedRows.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "items must not be empty");
+        }
+        return editedRows;
+    }
+
+    private void validateEditableSourceError(ImportJobItemErrorEntity sourceError) {
+        if (sourceError.getRowNumber() == null || sourceError.getRowNumber() <= 1
+                || !StringUtils.hasText(sourceError.getRawPayload())) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "edited replay is only supported for row-level errors with raw payload");
+        }
+    }
+
     public record ReplayFileBuildResult(
             ImportJobEntity sourceJob,
             String sourceFilename,
             String storageKey,
             int replayRowCount
+    ) {
+    }
+
+    public record EditedReplayRowReplacement(
+            Long errorId,
+            String username,
+            String displayName,
+            String email,
+            String password,
+            List<String> roleCodes
     ) {
     }
 }

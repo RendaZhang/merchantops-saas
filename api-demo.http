@@ -16,6 +16,7 @@
 @opsUserId = 2
 @ticketId = replace-with-created-ticket-id
 @importJobId = replace-with-created-import-job-id
+@importErrorId = replace-with-row-error-id
 @importRequestedBy = replace-with-import-requester-id
 
 # See docs/runbooks/regression-checklist.md for the broader regression checklist.
@@ -361,6 +362,25 @@ Content-Type: application/json
 {
   "errorCodes": [
     "UNKNOWN_ROLE"
+  ]
+}
+
+### Replay edited failed rows from import job by exact error id
+# Use importErrorId from detail `itemErrors` or `/errors`, and send a full replacement row for each edited item.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/edited
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    {
+      "errorId": {{importErrorId}},
+      "username": "retry-user",
+      "displayName": "Retry User",
+      "email": "retry-user@demo-shop.local",
+      "password": "123456",
+      "roleCodes": ["READ_ONLY"]
+    }
   ]
 }
 

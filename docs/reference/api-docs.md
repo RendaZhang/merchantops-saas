@@ -68,6 +68,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job overview with `errorCodeCounts` plus `itemErrors` |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
+| `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Yes + `USER_WRITE` | Create a new derived import job from caller-provided full replacement rows keyed by replayable failed-row `errorId` |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
@@ -124,13 +125,14 @@ Approval Requests tag note:
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `GET /api/v1/import-jobs/{id}/errors`.
-- `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, and `POST /api/v1/import-jobs/{id}/replay-failures/selective` require `USER_WRITE`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
+- `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` require `USER_WRITE`.
 - `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
 - `GET /api/v1/import-jobs/{id}` detail now exposes nullable `sourceJobId` for replay-derived jobs.
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
+- `POST /api/v1/import-jobs/{id}/replay-failures/edited` creates a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.
 - detail returns `errorCodeCounts` for quick triage plus backward-compatible row-level `itemErrors`.
@@ -749,7 +751,34 @@ Current notes:
 - source and replay audit snapshots record `selectedErrorCodes` in this slice instead of adding a new import-job column
 - response shape stays the same as the standard replay response above because the selective criteria only live in audit snapshots for this slice
 
-### 22. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
+### 22. Edited Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
+
+Request:
+
+```json
+{
+  "items": [
+    {
+      "errorId": 32,
+      "username": "beta",
+      "displayName": "Beta User",
+      "email": "beta@example.com",
+      "password": "abc123",
+      "roleCodes": ["READ_ONLY"]
+    }
+  ]
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- matching is by exact replayable failed-row `errorId` from detail `itemErrors` or `/errors`
+- each item is a full replacement row, not a sparse patch
+- duplicate `errorId`, cross-job / cross-tenant `errorId`, and header/global error targets are rejected
+- source and replay audit snapshots record `editedErrorIds`, `editedRowCount`, and `editedFields` only; replacement values are intentionally excluded
+
+### 23. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
 
 Response:
 

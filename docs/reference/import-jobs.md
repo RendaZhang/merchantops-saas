@@ -4,7 +4,7 @@ Last updated: 2026-03-12
 
 ## Public API Surface
 
-Week 5 now exposes six async import endpoints:
+Week 5 now exposes seven async import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -13,6 +13,7 @@ Week 5 now exposes six async import endpoints:
 | `GET` | `/api/v1/import-jobs/{id}` | Bearer JWT | `USER_READ` | Returns one current-tenant import job overview with `errorCodeCounts` plus backward-compatible `itemErrors` |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows only |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
+| `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from caller-provided full replacement rows that target replayable failed-row `errorId` values only |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
 
 ## Current Week 5 Contract (`USER_CSV` + Reporting + Replay Surface)
@@ -108,7 +109,6 @@ Replay file generation rules:
 Still out of scope in this slice:
 
 - replaying the entire original file
-- editing failed rows before replay
 - broader import types beyond `USER_CSV`
 - automatic dedupe or idempotency ledger behavior beyond current business validation
 - parallel chunk execution, sub-job / shard tables, and retry orchestration
@@ -140,6 +140,39 @@ Current audit behavior:
 - the source job still writes `IMPORT_JOB_REPLAY_REQUESTED`
 - the replay job still writes `IMPORT_JOB_CREATED`
 - selective replay adds `selectedErrorCodes` to both audit snapshots instead of adding a new import-job column in this slice
+
+## Edited Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
+
+Edited replay keeps the same derived-job strategy while letting the caller replace the failed-row payload in full:
+
+- request body shape is:
+  - `{ "items": [{ "errorId": 701, "username": "...", "displayName": "...", "email": "...", "password": "...", "roleCodes": ["READ_ONLY"] }] }`
+- each item is a full replacement row, not a sparse patch, so missing-field semantics stay unambiguous
+- matching is by exact `errorId` from detail `itemErrors` or `GET /api/v1/import-jobs/{id}/errors`
+- edited replay still creates a new derived `import_job`; it does not reset or mutate the source job
+- edited replay keeps `sourceJobId=<source job id>` and starts in `QUEUED`
+- edited replay is currently supported for terminal `USER_CSV` source jobs only
+- the worker still consumes a standard generated `USER_CSV` file and does not need any edited-replay-specific branch
+
+Current rejection rules:
+
+- request body is missing or `items` is empty
+- `items` contains duplicate `errorId` values
+- any item is missing required fields or has empty `roleCodes`
+- source job is not found in the current tenant
+- source job is not in a terminal status (`SUCCEEDED` or `FAILED`)
+- source job has `failureCount = 0`
+- source job is not `USER_CSV`
+- any requested `errorId` does not belong to the source job in the current tenant
+- any requested `errorId` resolves to a header/global error instead of a replayable row-level error with raw payload
+
+Current file-generation and audit behavior:
+
+- the generated filename uses `replay-edited-job-<sourceJobId>.csv`
+- the generated file still uses the fixed header `username,displayName,email,password,roleCodes`
+- `roleCodes` are re-serialized as the standard `|`-delimited cell expected by the worker
+- source and replay audit snapshots keep lineage plus edit scope only through `editedErrorIds`, `editedRowCount`, and `editedFields`
+- replacement values such as `password`, `email`, or the full replacement row are intentionally not persisted in replay audit snapshots
 
 Current error-code examples in `itemErrors`:
 
@@ -244,6 +277,27 @@ Content-Type: application/json
 
 {
   "errorCodes": ["UNKNOWN_ROLE"]
+}
+```
+
+Example edited replay request:
+
+```http
+POST /api/v1/import-jobs/1201/replay-failures/edited
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "errorId": 32,
+      "username": "beta",
+      "displayName": "Beta User",
+      "email": "beta@example.com",
+      "password": "abc123",
+      "roleCodes": ["READ_ONLY"]
+    }
+  ]
 }
 ```
 
@@ -354,12 +408,13 @@ Current semantics:
 - job-level audit events remain `IMPORT_JOB_*`.
 - replay writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `IMPORT_JOB_CREATED` on the new replay job with `sourceJobId` in the created snapshot.
 - selective replay keeps the same event types and additionally records `selectedErrorCodes` in both source and replay audit snapshots.
+- edited replay keeps the same event types and additionally records `editedErrorIds`, `editedRowCount`, and `editedFields` in both source and replay audit snapshots without persisting replacement values.
 - each successful user creation still emits existing `USER_CREATED` audit events through `UserCommandService`.
 - created users still persist tenant/operator attribution (`tenantId`, `createdBy`, `updatedBy`) from the import request context.
 
 ## Notes
 
-- this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay and exact error-code selective replay are implemented.
+- this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay, exact error-code selective replay, and edited failed-row replay are implemented.
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.

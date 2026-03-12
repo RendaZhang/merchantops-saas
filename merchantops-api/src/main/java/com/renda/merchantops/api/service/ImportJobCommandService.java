@@ -2,6 +2,8 @@ package com.renda.merchantops.api.service;
 
 import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayItemRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.messaging.ImportJobCreatedEvent;
@@ -21,10 +23,13 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +37,13 @@ import java.util.Map;
 public class ImportJobCommandService {
 
     private static final String IMPORT_SOURCE_TYPE_CSV = "CSV";
+    private static final List<String> EDITED_REPLAY_AUDIT_FIELDS = List.of(
+            "username",
+            "displayName",
+            "email",
+            "password",
+            "roleCodes"
+    );
 
     private final ImportJobRepository importJobRepository;
     private final ImportFileStorageService importFileStorageService;
@@ -86,7 +98,7 @@ public class ImportJobCommandService {
 
         ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
                 .buildFailedRowReplay(tenantId, sourceJobId);
-        return createReplayJob(tenantId, operatorId, resolvedRequestId, replayFile, null);
+        return createReplayJob(tenantId, operatorId, resolvedRequestId, replayFile, Map.of());
     }
 
     @Transactional
@@ -101,14 +113,43 @@ public class ImportJobCommandService {
 
         ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
                 .buildSelectiveFailedRowReplay(tenantId, sourceJobId, selectedErrorCodes);
-        return createReplayJob(tenantId, operatorId, resolvedRequestId, replayFile, selectedErrorCodes);
+        return createReplayJob(
+                tenantId,
+                operatorId,
+                resolvedRequestId,
+                replayFile,
+                buildSelectiveReplayAuditMetadata(selectedErrorCodes)
+        );
+    }
+
+    @Transactional
+    public ImportJobDetailResponse replayFailedRowsEdited(Long tenantId,
+                                                          Long operatorId,
+                                                          String requestId,
+                                                          Long sourceJobId,
+                                                          ImportJobEditedReplayRequest request) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
+        requireOperatorInTenant(tenantId, operatorId);
+        List<ImportReplayFileBuilder.EditedReplayRowReplacement> editedRows = normalizeEditedReplayItems(
+                request == null ? null : request.getItems()
+        );
+
+        ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
+                .buildEditedFailedRowReplay(tenantId, sourceJobId, editedRows);
+        return createReplayJob(
+                tenantId,
+                operatorId,
+                resolvedRequestId,
+                replayFile,
+                buildEditedReplayAuditMetadata(editedRows)
+        );
     }
 
     private ImportJobDetailResponse createReplayJob(Long tenantId,
                                                     Long operatorId,
                                                     String requestId,
                                                     ImportReplayFileBuilder.ReplayFileBuildResult replayFile,
-                                                    List<String> selectedErrorCodes) {
+                                                    Map<String, Object> replayMetadata) {
         registerRollbackCleanup(replayFile.storageKey());
 
         ImportJobEntity sourceJob = replayFile.sourceJob();
@@ -135,9 +176,9 @@ public class ImportJobCommandService {
                 sourceJob.getId(),
                 savedReplayJob.getId(),
                 replayFile.replayRowCount(),
-                selectedErrorCodes
+                replayMetadata
         );
-        recordImportJobCreatedEvent(savedReplayJob, operatorId, requestId, selectedErrorCodes);
+        recordImportJobCreatedEvent(savedReplayJob, operatorId, requestId, replayMetadata);
 
         applicationEventPublisher.publishEvent(new ImportJobCreatedEvent(savedReplayJob.getId(), tenantId));
         return importJobQueryService.toDetail(savedReplayJob);
@@ -158,12 +199,12 @@ public class ImportJobCommandService {
                                             Long sourceJobId,
                                             Long replayJobId,
                                             int replayRowCount,
-                                            List<String> selectedErrorCodes) {
+                                            Map<String, Object> replayMetadata) {
         Map<String, Object> afterValue = new LinkedHashMap<>();
         afterValue.put("replayJobId", replayJobId);
         afterValue.put("replayedFailureCount", replayRowCount);
-        if (selectedErrorCodes != null && !selectedErrorCodes.isEmpty()) {
-            afterValue.put("selectedErrorCodes", selectedErrorCodes);
+        if (replayMetadata != null && !replayMetadata.isEmpty()) {
+            afterValue.putAll(replayMetadata);
         }
         auditEventService.recordEvent(
                 tenantId,
@@ -180,7 +221,7 @@ public class ImportJobCommandService {
     private void recordImportJobCreatedEvent(ImportJobEntity job,
                                              Long operatorId,
                                              String requestId,
-                                             List<String> selectedErrorCodes) {
+                                             Map<String, Object> replayMetadata) {
         Map<String, Object> afterValue = new LinkedHashMap<>();
         afterValue.put("status", job.getStatus());
         afterValue.put("importType", job.getImportType());
@@ -188,8 +229,8 @@ public class ImportJobCommandService {
         if (job.getSourceJobId() != null) {
             afterValue.put("sourceJobId", job.getSourceJobId());
         }
-        if (selectedErrorCodes != null && !selectedErrorCodes.isEmpty()) {
-            afterValue.put("selectedErrorCodes", selectedErrorCodes);
+        if (replayMetadata != null && !replayMetadata.isEmpty()) {
+            afterValue.putAll(replayMetadata);
         }
         auditEventService.recordEvent(
                 job.getTenantId(),
@@ -231,6 +272,85 @@ public class ImportJobCommandService {
             throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not be empty");
         }
         return normalized;
+    }
+
+    private List<ImportReplayFileBuilder.EditedReplayRowReplacement> normalizeEditedReplayItems(List<ImportJobEditedReplayItemRequest> items) {
+        if (items == null || items.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "items must not be empty");
+        }
+        List<ImportReplayFileBuilder.EditedReplayRowReplacement> normalized = new ArrayList<>();
+        Set<Long> seenErrorIds = new HashSet<>();
+        for (ImportJobEditedReplayItemRequest item : items) {
+            if (item == null) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "items must not contain null entries");
+            }
+            if (item.getErrorId() == null) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "errorId must not be null");
+            }
+            if (!seenErrorIds.add(item.getErrorId())) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "items must not contain duplicate errorId");
+            }
+            normalized.add(new ImportReplayFileBuilder.EditedReplayRowReplacement(
+                    item.getErrorId(),
+                    requireNonBlank(item.getUsername(), "username"),
+                    requireNonBlank(item.getDisplayName(), "displayName"),
+                    requireNonBlank(item.getEmail(), "email"),
+                    requireNonBlankPreserve(item.getPassword(), "password"),
+                    normalizeRoleCodes(item.getRoleCodes())
+            ));
+        }
+        return List.copyOf(normalized);
+    }
+
+    private List<String> normalizeRoleCodes(List<String> roleCodes) {
+        if (roleCodes == null || roleCodes.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must not be empty");
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String roleCode : roleCodes) {
+            if (!StringUtils.hasText(roleCode)) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must not contain blank values");
+            }
+            String trimmed = roleCode.trim();
+            if (!normalized.contains(trimmed)) {
+                normalized.add(trimmed);
+            }
+        }
+        if (normalized.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must not be empty");
+        }
+        return normalized;
+    }
+
+    private Map<String, Object> buildSelectiveReplayAuditMetadata(List<String> selectedErrorCodes) {
+        if (selectedErrorCodes == null || selectedErrorCodes.isEmpty()) {
+            return Map.of();
+        }
+        return Map.of("selectedErrorCodes", selectedErrorCodes);
+    }
+
+    private Map<String, Object> buildEditedReplayAuditMetadata(List<ImportReplayFileBuilder.EditedReplayRowReplacement> editedRows) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("editedErrorIds", editedRows.stream()
+                .map(ImportReplayFileBuilder.EditedReplayRowReplacement::errorId)
+                .toList());
+        metadata.put("editedRowCount", editedRows.size());
+        metadata.put("editedFields", EDITED_REPLAY_AUDIT_FIELDS);
+        return metadata;
+    }
+
+    private String requireNonBlank(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, fieldName + " must not be blank");
+        }
+        return value.trim();
+    }
+
+    private String requireNonBlankPreserve(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, fieldName + " must not be blank");
+        }
+        return value;
     }
 
     private String resolveFilename(MultipartFile file) {

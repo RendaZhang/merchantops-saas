@@ -4,6 +4,7 @@ import com.renda.merchantops.api.context.ContextAccess;
 import com.renda.merchantops.api.context.RequestIdAccess;
 import com.renda.merchantops.api.contract.ImportJobApi;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
@@ -69,6 +70,16 @@ public class ImportJobController implements ImportJobApi {
         Long operatorId = ContextAccess.requireUserId();
         String requestId = RequestIdAccess.currentRequestId();
         return ApiResponse.success(importJobCommandService.replayFailedRowsSelective(tenantId, operatorId, requestId, id, request));
+    }
+
+    @Override
+    @RequirePermission("USER_WRITE")
+    public ApiResponse<ImportJobDetailResponse> replayFailedRowsEdited(@PathVariable("id") Long id,
+                                                                       @Valid @org.springframework.web.bind.annotation.RequestBody ImportJobEditedReplayRequest request) {
+        Long tenantId = ContextAccess.requireTenantId();
+        Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
+        return ApiResponse.success(importJobCommandService.replayFailedRowsEdited(tenantId, operatorId, requestId, id, request));
     }
 
     @Override

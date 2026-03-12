@@ -139,7 +139,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## Import Jobs
 
-- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `GET /api/v1/import-jobs/{id}/errors`
+- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`
 - [ ] `POST /api/v1/import-jobs` accepts multipart `request` + `file` and returns an initial `QUEUED` job
 - [ ] `POST /api/v1/import-jobs` with a `viewer` token returns `403`
 - [ ] `GET /api/v1/import-jobs?page=0&size=10` returns a page object ordered by `createdAt DESC, id DESC`
@@ -153,6 +153,8 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures` returns a new `QUEUED` derived job whose detail keeps `sourceJobId=<source job id>`
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective` rejects empty `errorCodes`, unknown selected codes, non-terminal, cross-tenant, and unsupported-import-type source jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective` returns a new `QUEUED` derived job whose execution only replays rows whose `errorCode` exactly matches the request
+- [ ] `POST /api/v1/import-jobs/{id}/replay-failures/edited` rejects empty `items`, duplicate `errorId`, cross-job or cross-tenant `errorId`, header/global errors, and unsupported-import-type source jobs
+- [ ] `POST /api/v1/import-jobs/{id}/replay-failures/edited` returns a new `QUEUED` derived job whose execution uses only the caller-provided full replacement rows keyed by the requested replayable `errorId`
 - [ ] `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` returns a page object ordered by null `rowNumber` first, then `rowNumber ASC, id ASC`
 - [ ] `GET /api/v1/import-jobs/{id}/errors?errorCode=<code>` filters failure items by exact error code within the current tenant job only
 - [ ] import list items expose `requestedBy` and derived `hasFailures`
@@ -166,6 +168,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] import create/process flow writes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal `IMPORT_JOB_COMPLETED` or `IMPORT_JOB_FAILED` audit event
 - [ ] failed-row replay also writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `sourceJobId` in the replay job's `IMPORT_JOB_CREATED` audit snapshot
 - [ ] selective replay keeps the same audit event types and adds `selectedErrorCodes` to both the source-job replay-requested snapshot and the replay-job created snapshot
+- [ ] edited replay keeps the same audit event types and adds `editedErrorIds`, `editedRowCount`, and `editedFields` without persisting replacement row values
 
 ## Tools
 
