@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.filter;
 
+import com.renda.merchantops.api.context.RequestIdPolicy;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,11 +9,9 @@ import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.UUID;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -26,10 +25,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String requestId = request.getHeader(REQUEST_ID_HEADER);
-        if (!StringUtils.hasText(requestId)) {
-            requestId = UUID.randomUUID().toString();
-        }
+        String requestId = RequestIdPolicy.normalizeOrGenerate(request.getHeader(REQUEST_ID_HEADER));
 
         MDC.put(MDC_KEY, requestId);
         response.setHeader(REQUEST_ID_HEADER, requestId);

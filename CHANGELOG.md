@@ -8,17 +8,19 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ### Added
 
-- Added the first Week 5 async-import backbone with tenant-scoped `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}`.
-- Added RabbitMQ-backed import queue publish/consume flow with local file storage, import status transitions, and parse-level CSV validation.
+- Added Week 5 Slice B import-row execution through `USER_CSV`, including tenant-scoped user creation from valid rows.
+- Added a dedicated `UserCsvImportProcessor` so import-row execution stays isolated from the generic worker loop.
 
 ### Changed
 
-- Started the Week 5 delivery story from the completed Week 4 audit-and-approval baseline without widening the public contract into business-row writes yet.
+- Widened the Week 5 import story from queue backbone only into narrow business-row execution for `USER_CSV`.
+- Import worker now enforces the fixed `username,displayName,email,password,roleCodes` header, rejects unsupported import types, and records both parse/header and business-row failures through `itemErrors`.
 - Import create and processing flows now write reusable `audit_event` rows for `IMPORT_JOB` entities.
+- Request tracing now normalizes client-supplied `X-Request-Id` values before echoing and persisting them, and import-row request ids derive from that normalized base.
 
 ### Docs
 
-- Added import-job reference docs plus Swagger, smoke, regression, and API-example updates for the new import surface and current Week 5 Slice A limitations.
+- Updated import-job reference docs, runbooks, API examples, and status/roadmap notes to match the current `USER_CSV` business-row execution path and its row-level error behavior.
 
 ## [v0.1.3] - 2026-03-12
 

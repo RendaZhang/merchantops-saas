@@ -2,6 +2,8 @@
 
 Last updated: 2026-03-12
 
+> Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
+
 Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, ticket-workflow API changes, audit/approval API changes, or import-job API changes.
 
 ## Automated
@@ -145,6 +147,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] current import list supports `page` and `size` only
 - [ ] worker processing advances jobs through `QUEUED -> PROCESSING -> SUCCEEDED/FAILED`
 - [ ] invalid CSV row shapes create `import_job_item_error` rows and surface them through job detail
+- [ ] business-row failures such as duplicate username, unknown role, invalid email, or invalid password also surface through `itemErrors` without blocking valid rows in the same job
 - [ ] import create/process flow writes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal `IMPORT_JOB_COMPLETED` or `IMPORT_JOB_FAILED` audit event
 
 ## Tools

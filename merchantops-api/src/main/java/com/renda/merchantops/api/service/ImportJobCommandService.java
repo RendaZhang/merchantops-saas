@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.messaging.ImportJobCreatedEvent;
@@ -42,11 +43,9 @@ public class ImportJobCommandService {
                                              String requestId,
                                              ImportJobCreateRequest request,
                                              MultipartFile file) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         if (tenantId == null || operatorId == null) {
             throw new BizException(ErrorCode.UNAUTHORIZED, "user context missing");
-        }
-        if (!StringUtils.hasText(requestId)) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "request id missing");
         }
         if (userRepository.findByIdAndTenantId(operatorId, tenantId).isEmpty()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "operator does not belong to tenant");
@@ -63,7 +62,7 @@ public class ImportJobCommandService {
         entity.setStorageKey(storageKey);
         entity.setStatus("QUEUED");
         entity.setRequestedBy(operatorId);
-        entity.setRequestId(requestId);
+        entity.setRequestId(resolvedRequestId);
         entity.setTotalCount(0);
         entity.setSuccessCount(0);
         entity.setFailureCount(0);
@@ -76,7 +75,7 @@ public class ImportJobCommandService {
                 saved.getId(),
                 "IMPORT_JOB_CREATED",
                 operatorId,
-                requestId,
+                resolvedRequestId,
                 null,
                 Map.of("status", saved.getStatus(), "importType", saved.getImportType(), "sourceFilename", saved.getSourceFilename())
         );

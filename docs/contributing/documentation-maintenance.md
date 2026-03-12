@@ -1,6 +1,6 @@
 # Documentation Maintenance
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 ## Purpose
 
@@ -15,8 +15,11 @@ Use it as the routing table for answering two questions:
 
 - `README.md` stays high-level. Do not move detailed implementation notes into it.
 - `docs/README.md` is the documentation entry page and should link to important new pages.
+- `docs/README.md` should prefer section-level entry points plus a short list of high-value jump targets; do not duplicate every child page that already has its own section index.
 - `docs/project-plan.md` should stay milestone-level; do not mirror slice-level current implementation notes there when `docs/project-status.md` already records repository reality.
+- `docs/project-plan.md` may keep a short planning anchor for the current week, but detailed current status, near-term slice tracking, and detailed release history belong in `docs/project-status.md`, `docs/roadmap.md`, `CHANGELOG.md`, and `docs/contributing/release-versioning.md`.
 - `docs/roadmap.md` should stay focused on the active phase, next steps, and near-term sequencing; exact current endpoint inventories belong in `docs/project-status.md` and `docs/reference/`.
+- `docs/project-status.md` should stay phase-oriented and current-baseline-oriented; do not keep historical per-week completion checklists or long retrospective inventories there once they stop helping current iteration work.
 - Public API documentation must match what is actually exposed in controllers and visible in Swagger.
 - Internal groundwork that is not public yet must not be documented as a callable API.
 - Real paths, ports, demo accounts, and seeded data must match code and database state.
@@ -35,7 +38,7 @@ Use it as the routing table for answering two questions:
 
 - `README.md`: project overview, major capabilities, and top-level navigation
 - `docs/README.md`: documentation navigation and reading order
-- `docs/project-status.md`: current implemented reality, scope, and limitations
+- `docs/project-status.md`: current implemented reality, current baseline, and limitations
 - `docs/roadmap.md`: next-phase work and intended near-term sequence
 - `docs/project-plan.md`: longer-range milestone plan
 - `docs/reference/`: stable technical reference pages for the system itself

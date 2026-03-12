@@ -2,11 +2,13 @@
 
 Last updated: 2026-03-12
 
+> Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
+
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
 ## Recommended Commands
 
-Preferred command for the current workflow + governance + import-backbone work:
+Preferred command for the current workflow + governance + import-row execution work:
 
 ```powershell
 .\mvnw.cmd -pl merchantops-api -am test
@@ -24,9 +26,18 @@ Use the full reactor only when you want the broader baseline:
 .\mvnw.cmd test
 ```
 
-## What Is Covered Today
+## Coverage Baseline
 
-Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, the completed Week 4 audit/approval baseline, and Week 5 Slice A import-job backbone behavior.
+Current automated coverage is centered on the completed Week 2-4 public workflow baseline plus the active Week 5 import-job path. Today that means:
+
+- auth and permission checks for the current public user-management, ticket, audit, approval, and import-job endpoints
+- controller binding and request-scoped forwarding for the current public workflow surface
+- tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
+- repository-backed user list SQL behavior in `merchantops-infra`
+- import queue publication, worker processing, row-level failure isolation, and import-specific migration protection
+- stale-token rejection after status, role, or permission changes
+
+## Suite Map
 
 ### `merchantops-api` tests
 
@@ -115,17 +126,28 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
 - `ImportJobControllerTest`
   - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}` request binding, auth failure, permission failure, and tenant-context forwarding
+- `ApprovalRequestServiceTest`
+  - disable-request creation locks the target user before writing a pending request
+  - duplicate pending disable requests are rejected
+  - approve/reject paths lock the pending request before updating review state
+  - approval queue query normalization with stable `createdAt DESC, id DESC` ordering
+  - approval execution delegates to the existing tenant-scoped user status update flow
 - `ImportJobCommandServiceTest`
   - queued import-job persistence and after-commit import event publication
   - invalid `importType` rejection
 - `ImportJobQueryServiceTest`
   - import-job page normalization, item-error hydration, and detail `NOT_FOUND` behavior
 - `ImportJobIntegrationTest`
-  - create/list/detail worker flow with tenant isolation, terminal status updates, and import audit events
+  - create/list/detail worker flow with tenant isolation, business-row user creation, quoted CSV field persistence, row-level failure isolation, and import audit events
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
-  - mixed valid/invalid CSV rows produce partial success counts plus persisted parse-level errors
+  - quoted commas, escaped quotes, and embedded newlines stay within one CSV record before row processing
+  - mixed valid/invalid rows produce partial success counts with persisted parse-level and business-level row errors
+- `UserCsvImportProcessorTest`
+  - row-level import validation for duplicate usernames, invalid email/password rules, missing role codes, and row-suffixed request-id propagation
+- `RequestIdFilterTest`
+  - oversized `X-Request-Id` headers are normalized before the value is echoed back to the response and placed in MDC
 - `ImportJobMigrationTest`
   - `V9__add_import_job_backbone.sql` rejects `import_job_item_error` rows whose `tenant_id` does not match the parent import job
 - `RoleControllerTest`
@@ -142,7 +164,7 @@ Current automated coverage is focused on the completed Week 2 user-management lo
 
 ## What Still Needs Manual Verification
 
-These areas are not replaced by the current unit tests:
+These areas still need manual verification even when the automated suite passes:
 
 - authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, and the RBAC demo endpoints
 - Swagger/OpenAPI documentation rendering
@@ -153,8 +175,8 @@ Use [local-smoke-test.md](local-smoke-test.md) and [regression-checklist.md](reg
 ## Recommended Workflow
 
 1. Run `.\mvnw.cmd -pl merchantops-api -am test`
-2. If that passes, run the manual user-management smoke checks
-3. If controller, security, SQL, or docs changed, run the full regression checklist
+2. If that passes and the change touches public API flow, security wiring, SQL, or migrations, run the relevant path from [local-smoke-test.md](local-smoke-test.md)
+3. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
 
 ## Known Pitfalls
 
@@ -163,31 +185,14 @@ Use [local-smoke-test.md](local-smoke-test.md) and [regression-checklist.md](reg
 - Do not treat `merchantops-api/target/merchantops-api-0.0.1-SNAPSHOT.jar` as the default local smoke-test entry point. The current packaging does not produce a fat jar that is ready for `java -jar`.
 - For H2-based native SQL tests that rely on `MODE=MySQL`, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify the mode through `INFORMATION_SCHEMA.SETTINGS`. `DatabaseMetaData#getURL()` does not reliably echo the `MODE=...` parameter.
 - If a change adds or edits a Flyway migration, do at least one real MySQL verification pass after `spring-boot:run`. The current H2 and manually-created integration-test schemas do not prove that Flyway applied the new migration exactly as intended.
+- If Flyway reports a checksum mismatch in a real local run, do not edit an already-applied migration to make the error disappear. Create a new `Vx__...sql` migration instead.
 - Treat password edge cases as an explicit regression item. If create-user or login password handling changes, verify that leading and trailing whitespace behavior is consistent across both flows before documenting a final business rule.
 
 ## Troubleshooting
 
 - If `-pl merchantops-api test` fails with missing repository methods or stale signatures, rerun with `-am`
+- If internal SNAPSHOT dependencies are missing during local verification, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` from the repository root first
+- If Maven says `No plugin found for prefix 'spring-boot'`, run from the API module as documented in [local-smoke-test.md](local-smoke-test.md) or call the wrapper with `-f merchantops-api/pom.xml`
 - If `spring-boot:run` fails after module-signature changes, install the reactor modules first with `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`
 - If automated `/api/v1/users` coverage passes but live verification fails, focus next on runtime config differences such as real JWT secrets, external infra, or deployment-only filters
 - If the page contract changes, update both the tests and the user-management docs in the same change
-
-
-## Week 4 Slice A Coverage Additions
-
-Current automated suite also covers:
-
-- user writes generate `audit_event` rows
-- ticket writes generate `audit_event` rows
-- ticket workflow keeps `ticket_operation_log` in parallel with generic audit events
-- tenant-scoped audit query endpoint does not leak cross-tenant data
-
-
-## Week 5 Import Backbone Checks
-
-- Verify `POST /api/v1/import-jobs` with multipart request returns `QUEUED` and a `jobId`.
-- Verify `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` are tenant-scoped.
-- Verify worker processing advances status to `SUCCEEDED` or `FAILED` and writes parse errors to `import_job_item_error` when CSV shape is invalid.
-- Verify queue publish happens only after the import-job transaction commits.
-- Verify the database rejects `import_job_item_error` rows whose `tenant_id` does not match the parent job.
-- Verify audit events include `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action.

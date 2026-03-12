@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
 import com.renda.merchantops.api.dto.user.command.UserCreateResponse;
 import com.renda.merchantops.api.dto.user.command.UserPasswordUpdateCommand;
@@ -244,10 +245,7 @@ public class UserCommandService {
     }
 
     private String requireRequestId(String requestId) {
-        if (!StringUtils.hasText(requestId)) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "request id missing");
-        }
-        return requestId;
+        return RequestIdPolicy.requireNormalized(requestId);
     }
 
     private String normalizeRequiredText(String value, String fieldName) {

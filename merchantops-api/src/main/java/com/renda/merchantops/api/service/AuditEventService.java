@@ -2,6 +2,7 @@ package com.renda.merchantops.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.audit.query.AuditEventListResponse;
 import com.renda.merchantops.api.dto.audit.query.AuditEventResponse;
 import com.renda.merchantops.common.exception.BizException;
@@ -32,10 +33,11 @@ public class AuditEventService {
                             String requestId,
                             Object beforeValue,
                             Object afterValue) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         if (tenantId == null || entityId == null || operatorId == null) {
             throw new BizException(ErrorCode.BAD_REQUEST, "audit event context missing");
         }
-        if (!StringUtils.hasText(entityType) || !StringUtils.hasText(actionType) || !StringUtils.hasText(requestId)) {
+        if (!StringUtils.hasText(entityType) || !StringUtils.hasText(actionType)) {
             throw new BizException(ErrorCode.BAD_REQUEST, "audit event required fields missing");
         }
 
@@ -45,7 +47,7 @@ public class AuditEventService {
         event.setEntityId(entityId);
         event.setActionType(normalizeKey(actionType));
         event.setOperatorId(operatorId);
-        event.setRequestId(requestId);
+        event.setRequestId(resolvedRequestId);
         event.setBeforeValue(toJson(beforeValue));
         event.setAfterValue(toJson(afterValue));
         event.setApprovalStatus(APPROVAL_STATUS_NOT_REQUIRED);

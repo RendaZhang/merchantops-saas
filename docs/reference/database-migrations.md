@@ -17,7 +17,7 @@
 - `V6__add_ticket_workflow.sql`: adds `ticket`, `ticket_comment`, and `ticket_operation_log`, plus `TICKET_READ` / `TICKET_WRITE` permission seed data
 - `V7__add_audit_event_backbone.sql`: adds tenant-scoped `audit_event` for reusable governance audit snapshots across existing public write flows, with DB-level same-tenant linkage between `audit_event.operator_id` and `audit_event.tenant_id`
 - `V8__add_minimal_approval_request.sql`: adds tenant-scoped `approval_request` for the first minimal approval flow (`USER_STATUS_DISABLE`), including same-tenant requester/reviewer foreign-key linkage
-- `V9__add_import_job_backbone.sql`: adds tenant-scoped `import_job` and `import_job_item_error` for Week 5 async import submission, queue processing, and parse-level error tracking, including DB-level same-tenant linkage from item errors back to the parent import job
+- `V9__add_import_job_backbone.sql`: adds tenant-scoped `import_job` and `import_job_item_error` for Week 5 async import submission, queue processing, and row-level error tracking, including DB-level same-tenant linkage from item errors back to the parent import job
 
 ## Demo Accounts
 

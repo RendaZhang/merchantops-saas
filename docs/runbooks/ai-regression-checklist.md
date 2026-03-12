@@ -1,6 +1,8 @@
 # AI Regression Checklist
 
-Last updated: 2026-03-10
+Last updated: 2026-03-12
+
+> Maintenance note: keep this page as a future-facing specialized checklist for AI-assisted workflow rollout. Keep it focused on AI-specific safety, audit, eval, and provider behavior. Do not copy the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both AI and the current public business surface.
 
 Use this checklist when AI-assisted workflow endpoints are introduced or when any of the following change:
 
@@ -15,8 +17,8 @@ Use this checklist when AI-assisted workflow endpoints are introduced or when an
 As of today:
 
 - no AI endpoints are public in Swagger
-- no AI regression run is required for the current Week 2 user-management-only API surface
-- this checklist is the baseline to use once Week 6+ AI features begin landing
+- no AI regression run is required for the current Week 5 public workflow surface
+- this checklist becomes active once Week 6+ AI features begin landing or any AI-assisted flow becomes externally testable
 
 ## Environment and Control
 

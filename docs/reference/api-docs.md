@@ -126,7 +126,7 @@ Import Jobs tag note:
 - `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` require `USER_READ`.
 - the current list filter set is minimal: `page` and `size` only.
 - list ordering is currently `createdAt DESC, id DESC`.
-- detail currently returns parse-level `itemErrors`; business-row write results are not public yet.
+- detail returns row-level `itemErrors` that now include both parse failures and business-row execution failures for `USER_CSV`.
 - See [import-jobs.md](import-jobs.md) for the current async-import contract and non-goals.
 
 ## Core Endpoint Examples
@@ -692,7 +692,7 @@ Current notes:
 - requires `USER_READ`
 - the current query shape exposes `page` and `size` only
 - current list ordering is `createdAt DESC, id DESC`
-- detail response also exposes `itemErrors` for parse-level failures
+- detail response also exposes `itemErrors` for both parse/header failures and business-row execution failures in the current `USER_CSV` path
 
 ## Stale Swagger Troubleshooting
 

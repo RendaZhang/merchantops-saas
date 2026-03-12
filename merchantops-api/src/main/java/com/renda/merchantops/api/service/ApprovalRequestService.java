@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestListItemResponse;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageResponse;
@@ -230,10 +231,7 @@ public class ApprovalRequestService {
     }
 
     private String requireRequestId(String requestId) {
-        if (!StringUtils.hasText(requestId)) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "request id missing");
-        }
-        return requestId;
+        return RequestIdPolicy.requireNormalized(requestId);
     }
 
     private ApprovalRequestEntity requireTenantApprovalRequest(Long tenantId, Long approvalRequestId) {

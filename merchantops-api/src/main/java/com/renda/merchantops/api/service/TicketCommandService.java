@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.ticket.command.TicketAssigneeUpdateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketCommentCreateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketCreateCommand;
@@ -233,10 +234,7 @@ public class TicketCommandService {
     }
 
     private String requireRequestId(String requestId) {
-        if (!StringUtils.hasText(requestId)) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "request id missing");
-        }
-        return requestId;
+        return RequestIdPolicy.requireNormalized(requestId);
     }
 
     private void appendOperationLog(Long ticketId,
