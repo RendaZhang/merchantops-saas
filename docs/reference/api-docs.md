@@ -67,6 +67,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job overview with `errorCodeCounts` plus `itemErrors` |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows |
+| `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
@@ -123,12 +124,13 @@ Approval Requests tag note:
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, and `GET /api/v1/import-jobs/{id}/errors`.
-- `POST /api/v1/import-jobs` and `POST /api/v1/import-jobs/{id}/replay-failures` require `USER_WRITE`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `GET /api/v1/import-jobs/{id}/errors`.
+- `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, and `POST /api/v1/import-jobs/{id}/replay-failures/selective` require `USER_WRITE`.
 - `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
 - `GET /api/v1/import-jobs/{id}` detail now exposes nullable `sourceJobId` for replay-derived jobs.
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
+- `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.
 - detail returns `errorCodeCounts` for quick triage plus backward-compatible row-level `itemErrors`.
@@ -729,7 +731,25 @@ Current notes:
 - replay creates a new derived job instead of mutating the source job in place
 - the new job's detail now exposes `sourceJobId`
 
-### 21. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
+### 21. Selective Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/selective`)
+
+Request:
+
+```json
+{
+  "errorCodes": ["UNKNOWN_ROLE"]
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- matching is by exact `errorCode` value from the source job's replayable row failures
+- empty `errorCodes`, cross-tenant source jobs, and selections with no replayable matching rows are rejected
+- source and replay audit snapshots record `selectedErrorCodes` in this slice instead of adding a new import-job column
+- response shape stays the same as the standard replay response above because the selective criteria only live in audit snapshots for this slice
+
+### 22. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
 
 Response:
 

@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.StreamSupport;
 
@@ -32,16 +33,41 @@ public class ImportReplayFileBuilder {
     private final ImportFileStorageService importFileStorageService;
 
     public ReplayFileBuildResult buildFailedRowReplay(Long tenantId, Long sourceJobId) {
-        ImportJobEntity sourceJob = importJobRepository.findByIdAndTenantId(sourceJobId, tenantId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
-
-        validateReplayableSourceJob(sourceJob);
+        ImportJobEntity sourceJob = requireReplayableSourceJob(tenantId, sourceJobId);
         List<ImportJobItemErrorEntity> failedRows = importJobItemErrorRepository
                 .findReplayableRowsByTenantIdAndImportJobId(tenantId, sourceJobId);
         if (failedRows.isEmpty()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "import job has no replayable failed rows");
         }
 
+        return buildReplayFile(tenantId, sourceJob, failedRows);
+    }
+
+    public ReplayFileBuildResult buildSelectiveFailedRowReplay(Long tenantId,
+                                                               Long sourceJobId,
+                                                               List<String> errorCodes) {
+        ImportJobEntity sourceJob = requireReplayableSourceJob(tenantId, sourceJobId);
+        List<String> normalizedErrorCodes = normalizeSelectedErrorCodes(errorCodes);
+        List<ImportJobItemErrorEntity> failedRows = importJobItemErrorRepository
+                .findReplayableRowsByTenantIdAndImportJobIdAndErrorCodeIn(tenantId, sourceJobId, normalizedErrorCodes);
+        if (failedRows.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "import job has no replayable failed rows for selected errorCodes");
+        }
+
+        return buildReplayFile(tenantId, sourceJob, failedRows);
+    }
+
+    private ImportJobEntity requireReplayableSourceJob(Long tenantId, Long sourceJobId) {
+        ImportJobEntity sourceJob = importJobRepository.findByIdAndTenantId(sourceJobId, tenantId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
+
+        validateReplayableSourceJob(sourceJob);
+        return sourceJob;
+    }
+
+    private ReplayFileBuildResult buildReplayFile(Long tenantId,
+                                                  ImportJobEntity sourceJob,
+                                                  List<ImportJobItemErrorEntity> failedRows) {
         String filename = REPLAY_FILENAME_PREFIX + sourceJob.getId() + ".csv";
         String csvContent = buildReplayCsv(failedRows);
         String storageKey = importFileStorageService.store(
@@ -50,6 +76,26 @@ public class ImportReplayFileBuilder {
                 new ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8))
         );
         return new ReplayFileBuildResult(sourceJob, filename, storageKey, failedRows.size());
+    }
+
+    private List<String> normalizeSelectedErrorCodes(List<String> errorCodes) {
+        if (errorCodes == null || errorCodes.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not be empty");
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String errorCode : errorCodes) {
+            if (!StringUtils.hasText(errorCode)) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not contain blank values");
+            }
+            String trimmed = errorCode.trim();
+            if (!normalized.contains(trimmed)) {
+                normalized.add(trimmed);
+            }
+        }
+        if (normalized.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not be empty");
+        }
+        return normalized;
     }
 
     private void validateReplayableSourceJob(ImportJobEntity sourceJob) {

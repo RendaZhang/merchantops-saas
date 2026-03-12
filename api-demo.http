@@ -352,6 +352,18 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures
 Authorization: Bearer {{token}}
 
+### Replay failed rows from import job by exact error code
+# Use exact values returned by detail `errorCodeCounts` or `/errors?errorCode=...`.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/selective
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "errorCodes": [
+    "UNKNOWN_ROLE"
+  ]
+}
+
 ### List import job errors
 # Clean success jobs return an empty page here.
 GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/errors?page=0&size=10

@@ -2,6 +2,7 @@ package com.renda.merchantops.api.service;
 
 import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.messaging.ImportJobCreatedEvent;
 import com.renda.merchantops.common.exception.BizException;
@@ -20,6 +21,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -66,7 +69,7 @@ public class ImportJobCommandService {
         entity.setCreatedAt(LocalDateTime.now());
         ImportJobEntity saved = importJobRepository.save(entity);
 
-        recordImportJobCreatedEvent(saved, operatorId, resolvedRequestId);
+        recordImportJobCreatedEvent(saved, operatorId, resolvedRequestId, null);
 
         applicationEventPublisher.publishEvent(new ImportJobCreatedEvent(saved.getId(), tenantId));
 
@@ -83,6 +86,29 @@ public class ImportJobCommandService {
 
         ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
                 .buildFailedRowReplay(tenantId, sourceJobId);
+        return createReplayJob(tenantId, operatorId, resolvedRequestId, replayFile, null);
+    }
+
+    @Transactional
+    public ImportJobDetailResponse replayFailedRowsSelective(Long tenantId,
+                                                             Long operatorId,
+                                                             String requestId,
+                                                             Long sourceJobId,
+                                                             ImportJobSelectiveReplayRequest request) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
+        requireOperatorInTenant(tenantId, operatorId);
+        List<String> selectedErrorCodes = normalizeSelectedErrorCodes(request == null ? null : request.getErrorCodes());
+
+        ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
+                .buildSelectiveFailedRowReplay(tenantId, sourceJobId, selectedErrorCodes);
+        return createReplayJob(tenantId, operatorId, resolvedRequestId, replayFile, selectedErrorCodes);
+    }
+
+    private ImportJobDetailResponse createReplayJob(Long tenantId,
+                                                    Long operatorId,
+                                                    String requestId,
+                                                    ImportReplayFileBuilder.ReplayFileBuildResult replayFile,
+                                                    List<String> selectedErrorCodes) {
         registerRollbackCleanup(replayFile.storageKey());
 
         ImportJobEntity sourceJob = replayFile.sourceJob();
@@ -95,27 +121,23 @@ public class ImportJobCommandService {
         replayJob.setSourceJobId(sourceJob.getId());
         replayJob.setStatus("QUEUED");
         replayJob.setRequestedBy(operatorId);
-        replayJob.setRequestId(resolvedRequestId);
+        replayJob.setRequestId(requestId);
         replayJob.setTotalCount(0);
         replayJob.setSuccessCount(0);
         replayJob.setFailureCount(0);
         replayJob.setCreatedAt(LocalDateTime.now());
         ImportJobEntity savedReplayJob = importJobRepository.save(replayJob);
 
-        auditEventService.recordEvent(
+        recordReplayRequestedEvent(
                 tenantId,
-                "IMPORT_JOB",
-                sourceJob.getId(),
-                "IMPORT_JOB_REPLAY_REQUESTED",
                 operatorId,
-                resolvedRequestId,
-                null,
-                Map.of(
-                        "replayJobId", savedReplayJob.getId(),
-                        "replayedFailureCount", replayFile.replayRowCount()
-                )
+                requestId,
+                sourceJob.getId(),
+                savedReplayJob.getId(),
+                replayFile.replayRowCount(),
+                selectedErrorCodes
         );
-        recordImportJobCreatedEvent(savedReplayJob, operatorId, resolvedRequestId);
+        recordImportJobCreatedEvent(savedReplayJob, operatorId, requestId, selectedErrorCodes);
 
         applicationEventPublisher.publishEvent(new ImportJobCreatedEvent(savedReplayJob.getId(), tenantId));
         return importJobQueryService.toDetail(savedReplayJob);
@@ -130,13 +152,44 @@ public class ImportJobCommandService {
         }
     }
 
-    private void recordImportJobCreatedEvent(ImportJobEntity job, Long operatorId, String requestId) {
-        Map<String, Object> afterValue = new java.util.LinkedHashMap<>();
+    private void recordReplayRequestedEvent(Long tenantId,
+                                            Long operatorId,
+                                            String requestId,
+                                            Long sourceJobId,
+                                            Long replayJobId,
+                                            int replayRowCount,
+                                            List<String> selectedErrorCodes) {
+        Map<String, Object> afterValue = new LinkedHashMap<>();
+        afterValue.put("replayJobId", replayJobId);
+        afterValue.put("replayedFailureCount", replayRowCount);
+        if (selectedErrorCodes != null && !selectedErrorCodes.isEmpty()) {
+            afterValue.put("selectedErrorCodes", selectedErrorCodes);
+        }
+        auditEventService.recordEvent(
+                tenantId,
+                "IMPORT_JOB",
+                sourceJobId,
+                "IMPORT_JOB_REPLAY_REQUESTED",
+                operatorId,
+                requestId,
+                null,
+                afterValue
+        );
+    }
+
+    private void recordImportJobCreatedEvent(ImportJobEntity job,
+                                             Long operatorId,
+                                             String requestId,
+                                             List<String> selectedErrorCodes) {
+        Map<String, Object> afterValue = new LinkedHashMap<>();
         afterValue.put("status", job.getStatus());
         afterValue.put("importType", job.getImportType());
         afterValue.put("sourceFilename", job.getSourceFilename());
         if (job.getSourceJobId() != null) {
             afterValue.put("sourceJobId", job.getSourceJobId());
+        }
+        if (selectedErrorCodes != null && !selectedErrorCodes.isEmpty()) {
+            afterValue.put("selectedErrorCodes", selectedErrorCodes);
         }
         auditEventService.recordEvent(
                 job.getTenantId(),
@@ -157,6 +210,25 @@ public class ImportJobCommandService {
         String normalized = importType.trim().toUpperCase(Locale.ROOT);
         if (!"USER_CSV".equals(normalized)) {
             throw new BizException(ErrorCode.BAD_REQUEST, "importType must be USER_CSV");
+        }
+        return normalized;
+    }
+
+    private List<String> normalizeSelectedErrorCodes(List<String> errorCodes) {
+        if (errorCodes == null || errorCodes.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not be empty");
+        }
+        List<String> normalized = errorCodes.stream()
+                .map(errorCode -> {
+                    if (!StringUtils.hasText(errorCode)) {
+                        throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not contain blank values");
+                    }
+                    return errorCode.trim();
+                })
+                .distinct()
+                .toList();
+        if (normalized.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not be empty");
         }
         return normalized;
     }

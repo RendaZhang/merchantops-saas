@@ -5,6 +5,7 @@ import com.renda.merchantops.api.config.ImportProcessingProperties;
 import com.renda.merchantops.api.dto.audit.query.AuditEventListResponse;
 import com.renda.merchantops.api.dto.audit.query.AuditEventResponse;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorCodeCountResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
@@ -404,6 +405,133 @@ class ImportJobIntegrationTest {
                 .orElseThrow();
         assertThat(replayRequested.afterValue()).contains("\"replayJobId\":" + replayCreated.id());
         assertThat(replayCreatedAudit.afterValue()).contains("\"sourceJobId\":" + sourceCreated.id());
+    }
+
+    @Test
+    void replayFailedRowsSelectiveShouldCreateDerivedJobOnlyForRequestedErrorCodesAndPersistAuditSelection() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-replay-selective.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                alpha,Alpha User,alpha@example.com,abc123,READ_ONLY
+                retry,Retry User,retry@example.com,abc123,RETRY_ROLE
+                bad,Bad User,bad-email,abc123,READ_ONLY
+                gamma,Gamma User,gamma@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-selective-source", request, file);
+        importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
+
+        ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
+        assertThat(sourceProcessed.status()).isEqualTo("SUCCEEDED");
+        assertThat(sourceProcessed.totalCount()).isEqualTo(4);
+        assertThat(sourceProcessed.successCount()).isEqualTo(2);
+        assertThat(sourceProcessed.failureCount()).isEqualTo(2);
+        assertThat(toErrorCountMap(sourceProcessed.errorCodeCounts())).isEqualTo(Map.of(
+                "UNKNOWN_ROLE", 1L,
+                "INVALID_EMAIL", 1L
+        ));
+
+        jdbcTemplate.update("""
+                INSERT INTO `role`(id, tenant_id, role_code, role_name, created_at, updated_at)
+                VALUES (12, 1, 'RETRY_ROLE', 'Retry Role', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """);
+
+        ImportJobDetailResponse replayCreated = importJobCommandService.replayFailedRowsSelective(
+                1L,
+                101L,
+                "req-import-replay-selective-derived",
+                sourceCreated.id(),
+                new ImportJobSelectiveReplayRequest(java.util.List.of("UNKNOWN_ROLE"))
+        );
+
+        assertThat(replayCreated.status()).isEqualTo("QUEUED");
+        assertThat(replayCreated.sourceJobId()).isEqualTo(sourceCreated.id());
+
+        importJobWorker.consume(new ImportJobMessage(replayCreated.id(), 1L));
+
+        ImportJobDetailResponse replayProcessed = importJobQueryService.getJobDetail(1L, replayCreated.id());
+        assertThat(replayProcessed.status()).isEqualTo("SUCCEEDED");
+        assertThat(replayProcessed.sourceJobId()).isEqualTo(sourceCreated.id());
+        assertThat(replayProcessed.totalCount()).isEqualTo(1);
+        assertThat(replayProcessed.successCount()).isEqualTo(1);
+        assertThat(replayProcessed.failureCount()).isZero();
+
+        Integer retryCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username = 'retry'",
+                Integer.class
+        );
+        Integer badCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username = 'bad'",
+                Integer.class
+        );
+        assertThat(retryCount).isEqualTo(1);
+        assertThat(badCount).isZero();
+
+        AuditEventListResponse sourceAudit = auditEventService.listByEntity(1L, "IMPORT_JOB", sourceCreated.id());
+        AuditEventListResponse replayAudit = auditEventService.listByEntity(1L, "IMPORT_JOB", replayCreated.id());
+        AuditEventResponse replayRequested = sourceAudit.items().stream()
+                .filter(item -> "IMPORT_JOB_REPLAY_REQUESTED".equals(item.actionType()))
+                .findFirst()
+                .orElseThrow();
+        AuditEventResponse replayCreatedAudit = replayAudit.items().stream()
+                .filter(item -> "IMPORT_JOB_CREATED".equals(item.actionType()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(replayRequested.afterValue()).contains("\"replayJobId\":" + replayCreated.id());
+        assertThat(replayRequested.afterValue()).contains("\"selectedErrorCodes\":[\"UNKNOWN_ROLE\"]");
+        assertThat(replayCreatedAudit.afterValue()).contains("\"sourceJobId\":" + sourceCreated.id());
+        assertThat(replayCreatedAudit.afterValue()).contains("\"selectedErrorCodes\":[\"UNKNOWN_ROLE\"]");
+    }
+
+    @Test
+    void replayFailedRowsSelectiveShouldRejectUnknownRequestedErrorCodes() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-replay-selective-none.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                retry,Retry User,retry@example.com,abc123,RETRY_ROLE
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-selective-none-source", request, file);
+        importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
+
+        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsSelective(
+                1L,
+                101L,
+                "req-import-replay-selective-none-derived",
+                sourceCreated.id(),
+                new ImportJobSelectiveReplayRequest(java.util.List.of("INVALID_EMAIL"))
+        ))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException biz = (BizException) ex;
+                    assertThat(biz.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST);
+                    assertThat(biz.getMessage()).contains("selected errorCodes");
+                });
+    }
+
+    @Test
+    void replayFailedRowsSelectiveShouldRejectCrossTenantSourceJobs() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-replay-selective-cross-tenant.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                retry,Retry User,retry@example.com,abc123,RETRY_ROLE
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-selective-cross-tenant-source", request, file);
+        importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
+
+        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsSelective(
+                2L,
+                201L,
+                "req-import-replay-selective-cross-tenant-derived",
+                sourceCreated.id(),
+                new ImportJobSelectiveReplayRequest(java.util.List.of("UNKNOWN_ROLE"))
+        ))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
     }
 
     @Test

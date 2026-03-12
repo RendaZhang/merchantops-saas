@@ -1,6 +1,7 @@
 package com.renda.merchantops.api.contract;
 
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
@@ -49,6 +50,14 @@ public interface ImportJobApi {
     )
     @PostMapping("/{id}/replay-failures")
     ApiResponse<ImportJobDetailResponse> replayFailedRows(@PathVariable("id") Long id);
+
+    @Operation(
+            summary = "Replay failed rows by exact error code from one terminal import job as a new derived job",
+            description = "Creates a derived QUEUED job from replayable failed rows whose errorCode exactly matches one of the requested values. The worker still processes the generated USER_CSV file through the standard sequential chunk path."
+    )
+    @PostMapping("/{id}/replay-failures/selective")
+    ApiResponse<ImportJobDetailResponse> replayFailedRowsSelective(@PathVariable("id") Long id,
+                                                                   @Valid @org.springframework.web.bind.annotation.RequestBody ImportJobSelectiveReplayRequest request);
 
     @Operation(summary = "Page import job errors in current tenant")
     @GetMapping("/{id}/errors")

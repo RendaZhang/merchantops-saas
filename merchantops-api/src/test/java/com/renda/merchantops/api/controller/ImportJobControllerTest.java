@@ -2,6 +2,7 @@ package com.renda.merchantops.api.controller;
 
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
@@ -24,6 +25,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -41,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -133,6 +136,51 @@ class ImportJobControllerTest {
                 .andExpect(jsonPath("$.data.sourceJobId").value(88));
 
         verify(importJobCommandService).replayFailedRows(9L, 9001L, "req-replay-1", 88L);
+    }
+
+    @Test
+    void replaySelectiveShouldBindRequestAndForwardContext() throws Exception {
+        when(importJobCommandService.replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), any()))
+                .thenReturn(new ImportJobDetailResponse(
+                        90L, 9L, "USER_CSV", "CSV", "replay-failures-job-88.csv", "9/replay-selective.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-selective-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/selective")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"errorCodes\":[\"UNKNOWN_ROLE\",\"INVALID_EMAIL\"]}")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-selective-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(90))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        ArgumentCaptor<ImportJobSelectiveReplayRequest> requestCaptor =
+                ArgumentCaptor.forClass(ImportJobSelectiveReplayRequest.class);
+        verify(importJobCommandService).replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getErrorCodes()).containsExactly("UNKNOWN_ROLE", "INVALID_EMAIL");
+    }
+
+    @Test
+    void replaySelectiveShouldRejectEmptyErrorCodes() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/selective")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"errorCodes\":[]}")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-selective-invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("errorCodes: errorCodes must not be empty"));
+
+        verifyNoInteractions(importJobCommandService);
     }
 
     @Test

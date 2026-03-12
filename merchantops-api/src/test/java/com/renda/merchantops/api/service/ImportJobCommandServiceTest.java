@@ -1,6 +1,7 @@
 package com.renda.merchantops.api.service;
 
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.messaging.ImportJobCreatedEvent;
 import com.renda.merchantops.common.exception.BizException;
@@ -28,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 
@@ -163,5 +165,96 @@ class ImportJobCommandServiceTest {
         Map<String, Object> createdAfter = (Map<String, Object>) afterCaptor.getAllValues().get(1);
         assertThat(replayRequestedAfter).containsEntry("replayJobId", 7002L);
         assertThat(createdAfter).containsEntry("sourceJobId", 7001L);
+    }
+
+    @Test
+    void replayFailedRowsSelectiveShouldNormalizeCodesAndPersistAuditSelection() {
+        UserEntity user = new UserEntity();
+        user.setId(101L);
+        user.setTenantId(1L);
+        ImportJobEntity sourceJob = new ImportJobEntity();
+        sourceJob.setId(7001L);
+        sourceJob.setTenantId(1L);
+        sourceJob.setImportType("USER_CSV");
+        sourceJob.setSourceType("CSV");
+        sourceJob.setSourceFilename("users.csv");
+        sourceJob.setStorageKey("1/original.csv");
+        sourceJob.setStatus("SUCCEEDED");
+        sourceJob.setRequestedBy(101L);
+        sourceJob.setRequestId("req-source");
+        sourceJob.setFailureCount(2);
+        when(userRepository.findByIdAndTenantId(101L, 1L)).thenReturn(Optional.of(user));
+        when(importReplayFileBuilder.buildSelectiveFailedRowReplay(1L, 7001L, List.of("UNKNOWN_ROLE", "INVALID_EMAIL"))).thenReturn(
+                new ImportReplayFileBuilder.ReplayFileBuildResult(
+                        sourceJob,
+                        "replay-failures-job-7001.csv",
+                        "1/replay-selective.csv",
+                        1
+                )
+        );
+        when(importJobRepository.save(any(ImportJobEntity.class))).thenAnswer(invocation -> {
+            ImportJobEntity entity = invocation.getArgument(0);
+            entity.setId(7003L);
+            return entity;
+        });
+        when(importJobQueryService.toDetail(any())).thenReturn(new ImportJobDetailResponse(
+                7003L, 1L, "USER_CSV", "CSV", "replay-failures-job-7001.csv", "1/replay-selective.csv", 7001L,
+                "QUEUED", 101L, "req-replay-selective-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+        ));
+
+        ImportJobSelectiveReplayRequest request = new ImportJobSelectiveReplayRequest(List.of(" UNKNOWN_ROLE ", "INVALID_EMAIL", "UNKNOWN_ROLE"));
+
+        ImportJobDetailResponse response = importJobCommandService.replayFailedRowsSelective(
+                1L,
+                101L,
+                "req-replay-selective-1",
+                7001L,
+                request
+        );
+
+        assertThat(response.id()).isEqualTo(7003L);
+        assertThat(response.sourceJobId()).isEqualTo(7001L);
+        verify(importReplayFileBuilder).buildSelectiveFailedRowReplay(1L, 7001L, List.of("UNKNOWN_ROLE", "INVALID_EMAIL"));
+        verify(applicationEventPublisher).publishEvent(new ImportJobCreatedEvent(7003L, 1L));
+
+        ArgumentCaptor<Long> entityIdCaptor = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<String> actionCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Object> afterCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(auditEventService, times(2)).recordEvent(
+                eq(1L),
+                eq("IMPORT_JOB"),
+                entityIdCaptor.capture(),
+                actionCaptor.capture(),
+                eq(101L),
+                eq("req-replay-selective-1"),
+                isNull(),
+                afterCaptor.capture()
+        );
+        assertThat(actionCaptor.getAllValues()).containsExactly("IMPORT_JOB_REPLAY_REQUESTED", "IMPORT_JOB_CREATED");
+        assertThat(entityIdCaptor.getAllValues()).containsExactly(7001L, 7003L);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> replayRequestedAfter = (Map<String, Object>) afterCaptor.getAllValues().get(0);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> createdAfter = (Map<String, Object>) afterCaptor.getAllValues().get(1);
+        assertThat(replayRequestedAfter).containsEntry("replayJobId", 7003L);
+        assertThat(replayRequestedAfter).containsEntry("selectedErrorCodes", List.of("UNKNOWN_ROLE", "INVALID_EMAIL"));
+        assertThat(createdAfter).containsEntry("sourceJobId", 7001L);
+        assertThat(createdAfter).containsEntry("selectedErrorCodes", List.of("UNKNOWN_ROLE", "INVALID_EMAIL"));
+    }
+
+    @Test
+    void replayFailedRowsSelectiveShouldRejectEmptyErrorCodes() {
+        UserEntity user = new UserEntity();
+        user.setId(101L);
+        user.setTenantId(1L);
+        when(userRepository.findByIdAndTenantId(101L, 1L)).thenReturn(Optional.of(user));
+
+        ImportJobSelectiveReplayRequest request = new ImportJobSelectiveReplayRequest(List.of());
+
+        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsSelective(1L, 101L, "req-replay-selective-invalid", 7001L, request))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST));
+
+        verifyNoInteractions(importReplayFileBuilder);
     }
 }

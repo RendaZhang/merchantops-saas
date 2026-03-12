@@ -16,6 +16,7 @@ Last updated: 2026-03-12
 - Week 5 Slice C is complete with paged import error reporting and detail-level `errorCodeCounts`.
 - Week 5 Slice D is complete with failed-row replay as a derived import job plus `sourceJobId` lineage.
 - Week 5 Slice E is complete with sequential chunked execution, per-chunk counter visibility, and basic throughput guardrails.
+- Week 5 Slice F is complete with selective failed-row replay by exact `errorCode` plus `selectedErrorCodes` audit snapshots.
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 
 ## Current Focus
@@ -30,7 +31,7 @@ Week 5 should stay narrow and workflow-oriented:
 ## Recommended Next Steps
 
 - keep the landed queue filters, `/errors` surface, replay lineage, chunk semantics, and job-summary semantics aligned across tests, Swagger, and reference docs
-- add the next narrow follow-up slice such as whole-file replay, selective replay, or edited replay now that Week 5 chunk / throughput controls are in place
+- add the next narrow follow-up slice such as whole-file replay or edited replay now that Week 5 selective replay and chunk / throughput controls are in place
 - keep Week 2-4 docs aligned only where Week 5 changes shared workflow or governance expectations
 - avoid pulling Week 6 AI scope forward until the import execution model, failure reporting, replay semantics, and replay breadth are stable
 
@@ -46,7 +47,7 @@ Week 5 should stay narrow and workflow-oriented:
 
 ## Active Phase Notes
 
-Week 5 currently has five clear slices:
+Week 5 currently has six clear slices:
 
 - Slice A is complete:
   - public API includes create/list/detail for import jobs
@@ -72,6 +73,11 @@ Week 5 currently has five clear slices:
   - `totalCount`, `successCount`, and `failureCount` now flush after each chunk so detail reads show real progress during `PROCESSING`
   - configurable `chunk-size` and `max-rows-per-job` guardrails now bound Week 5 runtime behavior without adding new public endpoints
   - oversized files now fail with `MAX_ROWS_EXCEEDED` instead of running unbounded
+- Slice F is complete:
+  - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values
+  - selective replay keeps the same standard worker path and `sourceJobId` lineage as the existing replay endpoint
+  - empty `errorCodes`, cross-tenant source jobs, and selections with no replayable matching rows are rejected
+  - selective replay keeps the schema unchanged in this slice and records `selectedErrorCodes` only in source/replay audit snapshots
 
 ## Open-Source Track
 

@@ -33,6 +33,20 @@ public interface ImportJobItemErrorRepository extends JpaRepository<ImportJobIte
     List<ImportJobItemErrorEntity> findReplayableRowsByTenantIdAndImportJobId(@Param("tenantId") Long tenantId,
                                                                                @Param("importJobId") Long importJobId);
 
+    @Query("""
+            select e
+            from ImportJobItemErrorEntity e
+            where e.tenantId = :tenantId
+              and e.importJobId = :importJobId
+              and e.rowNumber is not null
+              and e.rowNumber > 1
+              and e.errorCode in :errorCodes
+            order by case when e.rowNumber is null then 0 else 1 end asc, e.rowNumber asc, e.id asc
+            """)
+    List<ImportJobItemErrorEntity> findReplayableRowsByTenantIdAndImportJobIdAndErrorCodeIn(@Param("tenantId") Long tenantId,
+                                                                                              @Param("importJobId") Long importJobId,
+                                                                                              @Param("errorCodes") List<String> errorCodes);
+
     @Query(
             value = """
                     select e

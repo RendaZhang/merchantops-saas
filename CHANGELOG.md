@@ -11,6 +11,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added Week 5 Slice B import-row execution through `USER_CSV`, including tenant-scoped user creation from valid rows.
 - Added a dedicated `UserCsvImportProcessor` so import-row execution stays isolated from the generic worker loop.
 - Added Week 5 Slice D failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, creating a new derived `QUEUED` job instead of mutating the source job.
+- Added Week 5 Slice F selective failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective`, creating a new derived `QUEUED` job from replayable row failures whose `errorCode` exactly matches the request.
 
 ### Changed
 
@@ -18,6 +19,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - `GET /api/v1/import-jobs` now supports queue filters for `status`, `importType`, `requestedBy`, and `hasFailuresOnly`, plus derived list fields `requestedBy` and `hasFailures`.
 - `GET /api/v1/import-jobs/{id}` now exposes `errorCodeCounts`, and Week 5 reporting now also includes `GET /api/v1/import-jobs/{id}/errors` for paged failure-item reads with optional `errorCode` filtering.
 - Replay-derived jobs now persist `sourceJobId` lineage, emit `IMPORT_JOB_REPLAY_REQUESTED` on the source job, and reuse the same worker path as standard `USER_CSV` imports.
+- Selective replay keeps the same replay-derived job model and adds `selectedErrorCodes` audit metadata to both the source-job replay-requested snapshot and the replay-job created snapshot without adding a new import-job column.
 - Import execution now runs in internal sequential chunks, flushes counters during `PROCESSING`, and enforces configurable `chunk-size` / `max-rows-per-job` guardrails with `MAX_ROWS_EXCEEDED` on oversized files.
 - Import worker now enforces the fixed `username,displayName,email,password,roleCodes` header, rejects unsupported import types, and records both parse/header and business-row failures through `itemErrors`.
 - Import create and processing flows now write reusable `audit_event` rows for `IMPORT_JOB` entities.
@@ -25,7 +27,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ### Docs
 
-- Updated import-job reference docs, configuration notes, runbooks, API examples, architecture notes, and status/roadmap notes to match the current `USER_CSV` execution path, sequential chunk runtime, paged error reporting, and failed-row replay behavior.
+- Updated import-job reference docs, configuration notes, runbooks, API examples, architecture notes, and status/roadmap notes to match the current `USER_CSV` execution path, sequential chunk runtime, paged error reporting, failed-row replay behavior, and exact error-code selective replay.
 
 ## [v0.1.3] - 2026-03-12
 

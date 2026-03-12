@@ -4,7 +4,7 @@ Last updated: 2026-03-12
 
 ## Public API Surface
 
-Week 5 now exposes five async import endpoints:
+Week 5 now exposes six async import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -12,6 +12,7 @@ Week 5 now exposes five async import endpoints:
 | `GET` | `/api/v1/import-jobs` | Bearer JWT | `USER_READ` | Pages current-tenant import jobs with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Bearer JWT | `USER_READ` | Returns one current-tenant import job overview with `errorCodeCounts` plus backward-compatible `itemErrors` |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows only |
+| `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
 
 ## Current Week 5 Contract (`USER_CSV` + Reporting + Replay Surface)
@@ -107,10 +108,38 @@ Replay file generation rules:
 Still out of scope in this slice:
 
 - replaying the entire original file
-- replaying only selected `errorCode` values
 - editing failed rows before replay
+- broader import types beyond `USER_CSV`
 - automatic dedupe or idempotency ledger behavior beyond current business validation
 - parallel chunk execution, sub-job / shard tables, and retry orchestration
+
+## Selective Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures/selective`)
+
+Selective replay stays additive and intentionally narrow:
+
+- request body shape is `{ "errorCodes": ["UNKNOWN_ROLE", "INVALID_EMAIL"] }`
+- matching is by exact `errorCode` value; use `/errors` or detail `errorCodeCounts` to choose the current source-job codes
+- selective replay still creates a new derived `import_job`; it does not reset or mutate the old job
+- selective replay copies only replayable row-level failures whose `errorCode` matches one of the requested values
+- the replay job keeps `sourceJobId=<source job id>` and starts in `QUEUED`
+- selective replay is currently supported for terminal `USER_CSV` source jobs only
+- the worker still consumes a standard generated `USER_CSV` file and does not need special selective-replay logic
+
+Current rejection rules:
+
+- request body is missing or `errorCodes` is empty
+- `errorCodes` contains blank values
+- source job is not found in the current tenant
+- source job is not in a terminal status (`SUCCEEDED` or `FAILED`)
+- source job has `failureCount = 0`
+- source job is not `USER_CSV`
+- none of the requested `errorCodes` resolve to replayable row-level failures in the source job
+
+Current audit behavior:
+
+- the source job still writes `IMPORT_JOB_REPLAY_REQUESTED`
+- the replay job still writes `IMPORT_JOB_CREATED`
+- selective replay adds `selectedErrorCodes` to both audit snapshots instead of adding a new import-job column in this slice
 
 Current error-code examples in `itemErrors`:
 
@@ -204,6 +233,18 @@ Example replay request:
 ```http
 POST /api/v1/import-jobs/1201/replay-failures
 Authorization: Bearer <admin-token>
+```
+
+Example selective replay request:
+
+```http
+POST /api/v1/import-jobs/1201/replay-failures/selective
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "errorCodes": ["UNKNOWN_ROLE"]
+}
 ```
 
 Example replay-job response:
@@ -312,12 +353,13 @@ Current semantics:
 
 - job-level audit events remain `IMPORT_JOB_*`.
 - replay writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `IMPORT_JOB_CREATED` on the new replay job with `sourceJobId` in the created snapshot.
+- selective replay keeps the same event types and additionally records `selectedErrorCodes` in both source and replay audit snapshots.
 - each successful user creation still emits existing `USER_CREATED` audit events through `UserCommandService`.
 - created users still persist tenant/operator attribution (`tenantId`, `createdBy`, `updatedBy`) from the import request context.
 
 ## Notes
 
-- this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay is implemented.
+- this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay and exact error-code selective replay are implemented.
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.

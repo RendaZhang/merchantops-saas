@@ -11,7 +11,7 @@ This note records the intended replay boundary for the current Week 5 import pat
 For the current Week 5 import slices:
 
 - replay should create a new derived `import_job`, not mutate or reset the old one
-- replay should target failed rows only in the first implementation
+- replay should stay row-level in Week 5, supporting whole failed-row replay plus exact error-code selective replay
 - the replay job should keep a lineage link back to the source job
 
 ## Why
@@ -33,8 +33,8 @@ For the current Week 5 import slices:
 The first replay slice should not require:
 
 - resetting the old job back to `QUEUED` or `PROCESSING`
-- replaying only selected error codes
 - editing failed rows before replay
+- replaying the entire original file
 - a generic retry engine for every import type
 - automatic dedupe or idempotency ledgers beyond current business validation rules
 
@@ -44,7 +44,8 @@ Those can be added later if replay becomes a larger product surface.
 
 Once replay is stable, later import slices can add more control around:
 
-- filtering which failed rows are replayed
+- replaying the entire original file without blurring already-succeeded-row semantics
+- editing failed rows before replay while keeping the derived-job model
 - supporting replay for additional import types
-- attaching richer lineage metadata between source jobs and replay jobs
+- attaching richer lineage metadata between source jobs and replay jobs beyond the current `sourceJobId` plus selective-replay audit snapshots
 - layering AI-assisted remediation on top of the same derived-job model

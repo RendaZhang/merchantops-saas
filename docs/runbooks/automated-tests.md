@@ -34,7 +34,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface
 - tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import queue publication, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
+- import queue publication, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, selective failed-row replay by exact `errorCode`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -125,7 +125,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - invalid status-transition rejection
   - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
 - `ImportJobControllerTest`
-  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
+  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, replay-selective validation, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
   - duplicate pending disable requests are rejected
@@ -133,12 +133,12 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - approval queue query normalization with stable `createdAt DESC, id DESC` ordering
   - approval execution delegates to the existing tenant-scoped user status update flow
 - `ImportJobCommandServiceTest`
-  - queued import-job persistence, failed-row replay as a new derived job, replay lineage/audit emission, and after-commit import event publication
+  - queued import-job persistence, failed-row replay as a new derived job, selective replay request normalization, replay lineage/audit emission including `selectedErrorCodes`, and after-commit import event publication
   - invalid `importType` rejection
 - `ImportJobQueryServiceTest`
   - import-job page normalization, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `sourceJobId`, `errorCodeCounts`, and item-error hydration
 - `ImportJobIntegrationTest`
-  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay as a derived job, replay rejection cases, summary semantics, and import audit events
+  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay as a derived job, selective replay by exact `errorCode`, replay rejection cases, summary semantics, and import audit events including `selectedErrorCodes`
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation

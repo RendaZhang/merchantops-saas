@@ -439,7 +439,7 @@ Expected results:
 
 If the job stays in `QUEUED` or `PROCESSING`, treat that as a live infra or worker-follow-up issue rather than silently marking the import smoke step complete.
 
-This smoke path intentionally stops at the clean-success import baseline. Failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures` is part of the broader import regression surface and should be checked through [regression-checklist.md](regression-checklist.md) when that path changes.
+This smoke path intentionally stops at the clean-success import baseline. Failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures` and exact-error-code selective replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective` are part of the broader import regression surface and should be checked through [regression-checklist.md](regression-checklist.md) when those paths change.
 
 ## 10. Optional RBAC Demo Checks
 
