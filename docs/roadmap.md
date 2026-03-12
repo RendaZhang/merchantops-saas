@@ -11,7 +11,8 @@ Last updated: 2026-03-12
 - Week 3 Ticket Workflow - System of Action is complete
 - Week 4 Audit Trail And Approval Patterns is complete
 - Week 5 Async Import And Data Operations is the active phase
-- Week 5 Slice A is already public with import submission/list/detail plus parse-level queue processing
+- Week 5 Slice A is complete (import submission/list/detail + queue backbone)
+- Week 5 Slice B has started with `USER_CSV` business-row execution and row-level failure isolation
 - Current public baseline now spans Week 2 user management, Week 3 ticket workflow, Week 4 audit/approval, and Week 5 import jobs
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md)
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
@@ -47,8 +48,8 @@ The first business loop is complete: Week 2 turned the user-management groundwor
 
 Begin Week 5 async import and data operations from the completed Week 4 governance baseline:
 
-- keep the landed Week 5 Slice A import backbone aligned across Swagger, reference docs, runbooks, and examples while the surface is still changing
-- extend the current parse-level worker toward business-row writes, chunk/retry control, and richer error reporting without widening scope into AI or unrelated workflow work too early
+- lock the Week 5 `USER_CSV` fixed schema and keep docs/examples aligned with the now-landed business-row execution semantics
+- continue Week 5 with narrow follow-up slices (retry/chunk controls, additional import types) without widening scope into AI or unrelated workflow work too early
 
 ## Planned Work By Phase
 
@@ -129,9 +130,13 @@ Stretch target after Week 10:
 
 ## Week 5 Progress Notes (2026-03-12)
 
-- Slice A (import submission backbone) is now landed:
-  - public API now includes create/list/detail for import jobs
-  - create flow persists files locally, writes `QUEUED` jobs, and publishes RabbitMQ messages
-  - worker now consumes jobs and advances `QUEUED -> PROCESSING -> SUCCEEDED/FAILED` with parse-level errors
-  - import create/process actions now emit reusable `audit_event` records
-  - detailed current contract, storage behavior, and limitations are tracked in [project-status.md](project-status.md) and [reference/import-jobs.md](reference/import-jobs.md)
+- Slice A (import submission backbone) is complete:
+  - public API includes create/list/detail for import jobs
+  - create flow persists files locally, writes `QUEUED` jobs, and publishes RabbitMQ messages after commit
+- Slice B (USER_CSV business-row execution) is now landed in narrow scope:
+  - worker enforces fixed `USER_CSV` header: `username,displayName,email,password,roleCodes`
+  - valid rows now create tenant users through the existing user command service path
+  - row failures are isolated and persisted to `import_job_item_error` with parse + business codes (`DUPLICATE_USERNAME`, `UNKNOWN_ROLE`, `INVALID_EMAIL`, `INVALID_PASSWORD`)
+  - import job counters now reflect real create success/failure counts, with partial-success terminal `SUCCEEDED`
+  - import create/process and user-create audit events continue through the existing governance chain
+  - detailed current contract and limitations are tracked in [project-status.md](project-status.md) and [reference/import-jobs.md](reference/import-jobs.md)

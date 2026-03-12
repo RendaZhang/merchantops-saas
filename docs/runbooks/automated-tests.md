@@ -6,7 +6,7 @@ Use this runbook when you want a fast regression signal before doing manual API 
 
 ## Recommended Commands
 
-Preferred command for the current workflow + governance + import-backbone work:
+Preferred command for the current workflow + governance + import-row execution work:
 
 ```powershell
 .\mvnw.cmd -pl merchantops-api -am test
@@ -26,7 +26,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## What Is Covered Today
 
-Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, the completed Week 4 audit/approval baseline, and Week 5 Slice A import-job backbone behavior.
+Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, the completed Week 4 audit/approval baseline, and Week 5 Slice B import-job business-row execution behavior.
 
 ### `merchantops-api` tests
 
@@ -121,11 +121,11 @@ Current automated coverage is focused on the completed Week 2 user-management lo
 - `ImportJobQueryServiceTest`
   - import-job page normalization, item-error hydration, and detail `NOT_FOUND` behavior
 - `ImportJobIntegrationTest`
-  - create/list/detail worker flow with tenant isolation, terminal status updates, and import audit events
+  - create/list/detail worker flow with tenant isolation, business-row user creation, row-level failure isolation, and import audit events
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
-  - mixed valid/invalid CSV rows produce partial success counts plus persisted parse-level errors
+  - mixed valid/invalid rows produce partial success counts with persisted parse-level and business-level row errors
 - `ImportJobMigrationTest`
   - `V9__add_import_job_backbone.sql` rejects `import_job_item_error` rows whose `tenant_id` does not match the parent import job
 - `RoleControllerTest`
@@ -183,11 +183,11 @@ Current automated suite also covers:
 - tenant-scoped audit query endpoint does not leak cross-tenant data
 
 
-## Week 5 Import Backbone Checks
+## Week 5 Import Business-Row Checks
 
 - Verify `POST /api/v1/import-jobs` with multipart request returns `QUEUED` and a `jobId`.
 - Verify `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` are tenant-scoped.
-- Verify worker processing advances status to `SUCCEEDED` or `FAILED` and writes parse errors to `import_job_item_error` when CSV shape is invalid.
+- Verify worker processing advances status to `SUCCEEDED` or `FAILED` and writes parse-level and business-level row errors to `import_job_item_error` and creates users for valid `USER_CSV` rows.
 - Verify queue publish happens only after the import-job transaction commits.
 - Verify the database rejects `import_job_item_error` rows whose `tenant_id` does not match the parent job.
 - Verify audit events include `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action.

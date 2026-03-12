@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -25,10 +27,13 @@ import java.util.Map;
 @Slf4j
 public class ImportJobWorker {
 
+    private static final List<String> USER_CSV_HEADERS = List.of("username", "displayName", "email", "password", "roleCodes");
+
     private final ImportJobRepository importJobRepository;
     private final ImportJobItemErrorRepository importJobItemErrorRepository;
     private final ImportFileStorageService importFileStorageService;
     private final AuditEventService auditEventService;
+    private final UserCsvImportProcessor userCsvImportProcessor;
 
     @RabbitListener(queues = ImportJobMessagingConfig.IMPORT_JOB_QUEUE)
     @Transactional
@@ -61,10 +66,14 @@ public class ImportJobWorker {
                     saveError(job, null, "EMPTY_FILE", "csv file is empty", null);
                     summary = "csv file is empty";
                     failure = 1;
+                } else if (!"USER_CSV".equals(job.getImportType())) {
+                    saveError(job, 0, "UNSUPPORTED_IMPORT_TYPE", "unsupported import type: " + job.getImportType(), header);
+                    summary = "unsupported import type";
+                    failure = 1;
                 } else {
-                    String[] headerColumns = header.split(",", -1);
-                    if (headerColumns.length < 2) {
-                        saveError(job, 0, "INVALID_HEADER", "header requires at least 2 columns", header);
+                    List<String> headerColumns = parseColumns(header).stream().map(String::trim).toList();
+                    if (!USER_CSV_HEADERS.equals(headerColumns)) {
+                        saveError(job, 0, "INVALID_HEADER", "header must be: " + String.join(",", USER_CSV_HEADERS), header);
                         summary = "invalid header";
                         failure++;
                     } else {
@@ -73,12 +82,18 @@ public class ImportJobWorker {
                         while ((row = reader.readLine()) != null) {
                             rowNumber++;
                             total++;
-                            String[] cols = row.split(",", -1);
-                            if (cols.length != headerColumns.length) {
+                            List<String> columns = parseColumns(row);
+                            if (columns.size() != USER_CSV_HEADERS.size()) {
                                 failure++;
                                 saveError(job, rowNumber, "INVALID_ROW_SHAPE", "column count mismatch", row);
-                            } else {
+                                continue;
+                            }
+                            try {
+                                userCsvImportProcessor.processRow(job, rowNumber, columns);
                                 success++;
+                            } catch (ImportRowProcessingException ex) {
+                                failure++;
+                                saveError(job, rowNumber, ex.code(), ex.getMessage(), row);
                             }
                         }
                     }
@@ -98,7 +113,7 @@ public class ImportJobWorker {
             } else {
                 job.setStatus("SUCCEEDED");
                 if (failure > 0) {
-                    job.setErrorSummary("completed with some row validation errors");
+                    job.setErrorSummary("completed with some row errors");
                 }
                 auditEventService.recordEvent(job.getTenantId(), "IMPORT_JOB", job.getId(), "IMPORT_JOB_COMPLETED",
                         job.getRequestedBy(), job.getRequestId(), null,
@@ -117,6 +132,11 @@ public class ImportJobWorker {
                     job.getRequestedBy(), job.getRequestId(), null,
                     Map.of("status", "FAILED", "error", "FILE_READ_ERROR"));
         }
+    }
+
+    private List<String> parseColumns(String row) {
+        return Arrays.stream(row.split(",", -1))
+                .toList();
     }
 
     private void saveError(ImportJobEntity job, Integer rowNumber, String code, String message, String rawPayload) {
