@@ -7,7 +7,8 @@ Last updated: 2026-03-12
 - Week 1 Platform Foundation is complete
 - Week 2 First Business Loop - Tenant User Management is complete
 - Week 3 Ticket Workflow - System of Action is complete
-- Week 4 Audit Trail And Approval Patterns is the active phase
+- Week 4 Audit Trail And Approval Patterns is complete
+- Week 5 Async Import And Data Operations is the active phase
 - Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
@@ -31,19 +32,19 @@ The first business loop is complete: Week 2 turned the user-management groundwor
 
 ## Open-Source Track
 
-- Current tagged milestone: `v0.1.2` marks the completed Week 3 ticket workflow baseline on 2026-03-11
-- Previous tagged milestone: `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11
-- Earlier tagged baseline: `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09
+- Current tagged milestone: `v0.1.3` marks the completed Week 4 audit and approval baseline on 2026-03-12
+- Previous tagged milestone: `v0.1.2` marks the completed Week 3 ticket workflow baseline on 2026-03-11
+- Earlier tagged milestones: `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11 and `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09
 - Week 5 target: prepare for a next-stage preview such as `v0.2.0-alpha` after the first workflow and async-operation backbone is credible
 - Week 6 or Week 7 target: make the first public open-source release that can honestly present the project as an AI-enhanced vertical SaaS, for example `v0.3.0-beta`
 - Week 10 target: reach a more stable open-source reference-implementation milestone and gather input for later commercial discovery
 
 ## Recommended Next Step
 
-Continue Week 4 audit trail and approval patterns:
+Begin Week 5 async import and data operations from the completed Week 4 governance baseline:
 
-- keep the landed Slice A audit backbone and current Slice B approval endpoints aligned across Swagger, reference docs, runbooks, and examples
-- extend the current minimal approval pattern beyond `USER_STATUS_DISABLE` toward reusable multi-action approval envelopes and broader read surfaces
+- keep the landed Week 4 audit/approval baseline aligned across Swagger, reference docs, runbooks, and examples while import-related code starts landing
+- introduce `import_job` and `import_job_item_error` as tenant-scoped async-operation primitives without breaking the existing Week 2-4 public baseline
 
 ## Planned Work By Phase
 
@@ -60,6 +61,7 @@ Week 3 target:
 Week 4 target:
 
 - extend the current audit backbone into approval patterns that later AI and agent flows can reuse
+- record the Week 4 milestone through `v0.1.3` on 2026-03-12 before Week 5 delivery broadens the story toward async operations
 
 Week 5 target:
 
@@ -93,12 +95,12 @@ Stretch target after Week 10:
 ## Near-Term Priorities
 
 - move from RBAC demo endpoints to clearer business-oriented endpoints
-- begin Week 4 audit and approval work from the now-completed Week 3 ticket baseline
-- keep Week 2 and Week 3 docs aligned with the now-public workflow baseline while Week 4 adds reusable governance patterns
-- keep Week 3 hardening follow-up narrow and separate from the Week 4 mainline
+- begin Week 5 async import and data-operation work from the completed Week 4 governance baseline
+- keep Week 2-4 docs aligned with the now-public workflow and governance baseline while Week 5 adds async primitives
+- keep Week 3 and Week 4 hardening follow-up narrow and separate from the Week 5 mainline
 - treat AI as an embedded workflow layer, not as a standalone chatbot detour
 - design audit, approval, and evaluation hooks before agentic automation is added
-- shape the architecture so later open-source packaging is straightforward, but do not front-run the active Week 4 delivery work with broader licensing or release chores
+- shape the architecture so later open-source packaging is straightforward, but do not front-run the active Week 5 delivery work with broader licensing or release chores
 - improve test coverage for authentication, permission checks, and tenant isolation
 - continue turning README-linked docs into a more complete developer handbook
 
@@ -117,4 +119,5 @@ Stretch target after Week 10:
   - minimal tenant-scoped query endpoint added: `GET /api/v1/audit-events`
 - Slice B (minimal approval pattern) is complete with `USER_STATUS_DISABLE` create/detail/approve/reject.
 - Slice C (approval queue read surface) is complete with tenant-scoped paging and filters (`status`, `actionType`, `requestedBy`) at `GET /api/v1/approval-requests`.
-- Next step is expanding to additional action types after queue operations are stable.
+- Week 4 milestone is now recorded through `v0.1.3`.
+- Next step is expanding to additional action types after queue operations are stable, while Week 5 async import becomes the active delivery stream.

@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 ## Purpose
 
@@ -8,23 +8,31 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 
 ## Current Tagged Milestone
 
-- current tag: `v0.1.2`
-- tag date: 2026-03-11
-- tag message: `Week 3 complete: ticket workflow baseline`
+- current tag: `v0.1.3`
+- tag date: 2026-03-12
+- tag message: `Week 4 complete: audit and approval baseline`
 
-This tag records the first completed workflow module while keeping the project inside the early `v0.1.x` line before the broader Week 5 preview story.
+This tag records the first reusable governance baseline while keeping the project inside the early `v0.1.x` line before the broader Week 5 preview story.
 
 ## Previous Tagged Milestone
 
-- previous tag: `v0.1.1`
+- previous tag: `v0.1.2`
+- tag date: 2026-03-11
+- tag message: `Week 3 complete: ticket workflow baseline`
+
+This tag records the first completed workflow module before Week 4 broadened the project into reusable governance patterns.
+
+## Earlier Tagged Milestone
+
+- earlier tag: `v0.1.1`
 - tag date: 2026-03-11
 - tag message: `Week 2 complete: tenant user management loop`
 
 This tag records the first tenant-scoped business loop before Week 3 broadened the project story.
 
-## Earlier Tagged Baseline
+## Initial Tagged Baseline
 
-- earlier tag: `v0.1.0`
+- initial tag: `v0.1.0`
 - tag date: 2026-03-09
 - tag message: `Week 1 complete: foundation phase`
 
@@ -69,6 +77,7 @@ Recommended direction:
 - `v0.1.0`: Week 1 Platform Foundation complete
 - `v0.1.1`: Week 2 tenant user management loop complete milestone
 - `v0.1.2`: Week 3 ticket workflow baseline complete milestone
+- `v0.1.3`: Week 4 audit and approval baseline complete milestone
 - `v0.2.0-alpha`: first open-source preview after Week 5 workflow and async-operation backbone
 - `v0.3.0-beta`: first public AI-enhanced release after Week 6 or Week 7
 - later `v0.x` releases: governance, usage tracking, hardening, and packaging milestones

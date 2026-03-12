@@ -143,15 +143,17 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - Week 1 已完成
 - Week 2 已完成，并作为当前最稳定的业务闭环基线
 - Week 3 已完成，并形成了带 queue filters 与 reopen 语义的第一个公开 workflow baseline
-- 当前主线已进入 Week 4 Audit Trail and Approval Patterns
-- Week 4 之后的工作应建立在 Week 2 用户管理闭环和已完成的 Week 3 ticket workflow 基线之上
+- Week 4 已完成，并形成了 audit-event + approval-request 的治理基线
+- 当前主线已进入 Week 5 Async Import And Data Operations
+- Week 5 之后的工作应建立在 Week 2 用户管理闭环、已完成的 Week 3 ticket workflow 基线，以及已完成的 Week 4 治理基线之上
 
 ### 与开源节奏的关系
 
-- 当前基线已经推进到 `v0.1.2`，对应 2026-03-11 的 Week 3 ticket workflow baseline 完成节点
+- 当前基线已经推进到 `v0.1.3`，对应 2026-03-12 的 Week 4 audit and approval baseline 完成节点
+- `v0.1.2` 继续保留为 2026-03-11 的 Week 3 ticket workflow baseline 里程碑 tag
 - `v0.1.1` 继续保留为 2026-03-11 的 Week 2 tenant user management loop 里程碑 tag
 - `v0.1.0` 继续保留为 2026-03-09 的 Week 1 Platform Foundation 基线 tag
-- Week 1-4 主要目标是把 workflow 和治理骨架站稳，不急于过早对外包装
+- Week 1-4 主要目标已经完成：先把 workflow 和治理骨架站稳，不急于过早对外包装
 - Week 5 更适合作为下一阶段预览版本，例如 `v0.2.0-alpha`，前提是用户、工单、导入链路已具备可信骨架
 - Week 6-7 适合作为第一次公开强调“AI-enhanced vertical SaaS”的开源版本，例如 `v0.3.0-beta`
 - Week 10 适合作为稳定开源参考实现的里程碑，并开始验证潜在商业合作或产品化方向
@@ -567,8 +569,9 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 推荐发布时间点
 
-- 当前基线：`v0.1.2` 已用于 Week 3 ticket workflow baseline 完成节点
-- 前一里程碑：`v0.1.1` 对应 Week 2 tenant user management loop
+- 当前基线：`v0.1.3` 已用于 Week 4 audit and approval baseline 完成节点
+- 前一里程碑：`v0.1.2` 对应 Week 3 ticket workflow baseline
+- 更前一里程碑：`v0.1.1` 对应 Week 2 tenant user management loop
 - 前一基线：`v0.1.0` 继续对应 Week 1 Platform Foundation
 - Week 5 后：下一阶段预览版本，例如 `v0.2.0-alpha`
 - Week 6-7 后：带第一个 AI Copilot 的公开版本，例如 `v0.3.0-beta`

@@ -2,7 +2,7 @@
 
 ## Current Week 4 Scope
 
-As of `v0.1.2` baseline + current Week 4 Slice A/B/C implementation, the repository now includes a generic `audit_event` backbone plus a minimal approval envelope for one high-value action (`USER_STATUS_DISABLE`) and a queue read surface.
+As of the `v0.1.3` Week 4 baseline, the repository now includes a generic `audit_event` backbone plus a minimal approval envelope for one high-value action (`USER_STATUS_DISABLE`) and a queue read surface.
 
 Implemented now:
 

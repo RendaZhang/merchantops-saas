@@ -1,6 +1,6 @@
 # MerchantOps SaaS
 
-MerchantOps SaaS is a multi-tenant backend project for merchant operations scenarios. The current repository focuses on a working Spring Boot skeleton with JWT authentication, RBAC demo endpoints, tenant/user context propagation, tenant-scoped user-management and ticket-workflow flows, a minimal tenant-scoped audit-event query backbone, a minimal approval flow for user disable requests, Flyway migrations, health checks, request tracing, and OpenAPI support.
+MerchantOps SaaS is a multi-tenant backend project for merchant operations scenarios. The current repository focuses on a working Spring Boot skeleton with JWT authentication, RBAC demo endpoints, tenant/user context propagation, tenant-scoped user-management and ticket-workflow flows, a minimal tenant-scoped audit-event query backbone, a minimal approval flow and approval queue for user disable requests, Flyway migrations, health checks, request tracing, and OpenAPI support.
 
 ## Target Users
 
@@ -24,7 +24,7 @@ MerchantOps SaaS is a multi-tenant backend project for merchant operations scena
 - Current-tenant user-management read and write flows protected by `USER_READ` / `USER_WRITE`
 - Current-tenant ticket workflow read and write flows protected by `TICKET_READ` / `TICKET_WRITE`
 - Current-tenant audit-event query backbone protected by `USER_READ`
-- Minimal approval flow for `USER_STATUS_DISABLE` with request, review, and execution endpoints
+- Minimal approval flow for `USER_STATUS_DISABLE` with request, queue, review, and execution endpoints
 - RBAC demo endpoints and permission interception
 - Flyway migrations, enriched Swagger / OpenAPI docs, health checks, and request tracing
 
@@ -125,6 +125,6 @@ More setup details live in [docs/getting-started/README.md](docs/getting-started
 
 - Current project status: [docs/project-status.md](docs/project-status.md)
 - Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
-- Current tagged milestone: `v0.1.2` on 2026-03-11 for the completed Week 3 ticket workflow baseline
+- Current tagged milestone: `v0.1.3` on 2026-03-12 for the completed Week 4 audit and approval baseline
 - Project direction: portfolio first, open-source second, and potential commercial exploration after the workflow and AI layers are credible
-- Week 2 tenant user-management loop is complete, Week 3 ticket workflow core loop is complete, and Week 4 now has both the audit-event backbone and the first minimal approval pattern in public APIs
+- Week 2 tenant user-management loop is complete, Week 3 ticket workflow core loop is complete, Week 4 audit/approval governance baseline is complete, and Week 5 async import becomes the next active phase

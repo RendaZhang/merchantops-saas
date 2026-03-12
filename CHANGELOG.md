@@ -6,9 +6,15 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+No release-level changes recorded yet.
+
+## [v0.1.3] - 2026-03-12
+
+Tagged as `Week 4 complete: audit and approval baseline`.
+
 ### Added
 
-- Started the Week 4 audit-and-approval track with a generic `audit_event` backbone for current public user and ticket write flows.
+- Completed the Week 4 audit-and-approval baseline with a generic `audit_event` backbone for current public user and ticket write flows.
 - Added a minimal tenant-scoped audit query endpoint: `GET /api/v1/audit-events?entityType=...&entityId=...`.
 - Added the first minimal approval pattern for `USER_STATUS_DISABLE` through `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`.
 
@@ -17,6 +23,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Kept workflow-level `ticket_operation_log` in place while adding reusable cross-entity audit records for governance follow-up work.
 - Strengthened the audit schema with DB-level same-tenant linkage for audit operator attribution.
 - Kept direct user-status writes available while adding a separate approval-backed disable flow that executes through the existing user-status write chain after approval.
+- Updated status, roadmap, and plan docs to treat Week 4 as complete and Week 5 async-import work as the active phase.
 
 ### Docs
 
