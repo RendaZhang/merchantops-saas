@@ -15,7 +15,7 @@ This smoke flow covers:
 - tenant-scoped user-management loop
 - approval plus audit happy path for user disable
 - ticket workflow happy path
-- import-job happy path
+- import-job happy path plus error-read surface
 
 Optional RBAC demo endpoint checks stay at the end because they are not part of the main business baseline.
 
@@ -379,7 +379,7 @@ $smokePrefix-import,$smokePrefix Import,$smokePrefix-import@demo-shop.local,abc1
 "@ | Set-Content -Path $importCsvPath
 ```
 
-### 9.2 Create, Read, And Re-check The Job
+### 9.2 Create, Read, Re-check, And Page Errors
 
 ```powershell
 $importCreateRaw = & curl.exe -sS -X POST "$baseUrl/api/v1/import-jobs" `
@@ -417,6 +417,11 @@ $importDetailAfter = Invoke-RestMethod `
   -Uri "$baseUrl/api/v1/import-jobs/$importJobId" `
   -Headers $adminHeaders
 
+$importErrors = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$baseUrl/api/v1/import-jobs/$importJobId/errors?page=0&size=10" `
+  -Headers $adminHeaders
+
 $importAudit = Invoke-RestMethod `
   -Method Get `
   -Uri "$baseUrl/api/v1/audit-events?entityType=IMPORT_JOB&entityId=$importJobId" `
@@ -428,6 +433,7 @@ Expected results:
 - `POST /api/v1/import-jobs` returns a tenant-scoped `QUEUED` job
 - list and detail are tenant-scoped and include the created job
 - `importType=USER_CSV` and `requestedBy=<current admin id>` filters both keep the created job visible
+- `/api/v1/import-jobs/{id}/errors` returns a page object for the same tenant-scoped job; a clean success keeps `items=[]`
 - if local RabbitMQ and worker processing are healthy, the job later moves to `SUCCEEDED` or `FAILED`
 - import audit includes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal import action
 

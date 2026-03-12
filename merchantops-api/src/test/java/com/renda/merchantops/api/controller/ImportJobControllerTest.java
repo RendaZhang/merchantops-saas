@@ -3,6 +3,8 @@ package com.renda.merchantops.api.controller;
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
 import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.filter.RequestIdFilter;
@@ -90,7 +92,7 @@ class ImportJobControllerTest {
     void createShouldBindMultipartAndForwardContext() throws Exception {
         when(importJobCommandService.createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any()))
                 .thenReturn(new ImportJobDetailResponse(1L, 9L, "USER_CSV", "CSV", "users.csv", "9/key.csv", "QUEUED", 9001L,
-                        "req-import-1", 0, 0, 0, null, null, null, null, List.of()));
+                        "req-import-1", 0, 0, 0, null, null, null, null, List.of(), List.of()));
 
         MockMultipartFile requestPart = new MockMultipartFile("request", "", "application/json", "{\"importType\":\"USER_CSV\"}".getBytes());
         MockMultipartFile filePart = new MockMultipartFile("file", "users.csv", "text/csv", "username,email\na,a@x.com".getBytes());
@@ -167,6 +169,34 @@ class ImportJobControllerTest {
         assertThat(queryCaptor.getValue().getImportType()).isEqualTo("USER_CSV");
         assertThat(queryCaptor.getValue().getRequestedBy()).isEqualTo(9001L);
         assertThat(queryCaptor.getValue().getHasFailuresOnly()).isTrue();
+    }
+
+    @Test
+    void listErrorsShouldBindQueryAndForwardTenantScope() throws Exception {
+        when(importJobQueryService.pageJobErrors(eq(9L), eq(88L), any()))
+                .thenReturn(new ImportJobErrorPageResponse(List.of(
+                        new ImportJobErrorItemResponse(701L, 3, "UNKNOWN_ROLE", "role missing", "row-3", null)
+                ), 1, 20, 1, 1));
+
+        mockMvc.perform(get("/api/v1/import-jobs/88/errors")
+                        .queryParam("page", "1")
+                        .queryParam("size", "20")
+                        .queryParam("errorCode", "UNKNOWN_ROLE")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items[0].rowNumber").value(3))
+                .andExpect(jsonPath("$.data.items[0].errorCode").value("UNKNOWN_ROLE"));
+
+        ArgumentCaptor<com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery> queryCaptor =
+                ArgumentCaptor.forClass(com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery.class);
+        verify(importJobQueryService).pageJobErrors(eq(9L), eq(88L), queryCaptor.capture());
+        assertThat(queryCaptor.getValue().getPage()).isEqualTo(1);
+        assertThat(queryCaptor.getValue().getSize()).isEqualTo(20);
+        assertThat(queryCaptor.getValue().getErrorCode()).isEqualTo("UNKNOWN_ROLE");
     }
 
     private static class TestAuthenticationFilter extends OncePerRequestFilter {

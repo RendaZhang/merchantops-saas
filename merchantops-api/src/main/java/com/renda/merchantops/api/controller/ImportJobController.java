@@ -5,6 +5,8 @@ import com.renda.merchantops.api.context.RequestIdAccess;
 import com.renda.merchantops.api.contract.ImportJobApi;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
 import com.renda.merchantops.api.security.RequirePermission;
@@ -47,5 +49,13 @@ public class ImportJobController implements ImportJobApi {
     public ApiResponse<ImportJobDetailResponse> getImportJob(@PathVariable("id") Long id) {
         Long tenantId = ContextAccess.requireTenantId();
         return ApiResponse.success(importJobQueryService.getJobDetail(tenantId, id));
+    }
+
+    @Override
+    @RequirePermission("USER_READ")
+    public ApiResponse<ImportJobErrorPageResponse> listImportJobErrors(@PathVariable("id") Long id,
+                                                                       ImportJobErrorPageQuery query) {
+        Long tenantId = ContextAccess.requireTenantId();
+        return ApiResponse.success(importJobQueryService.pageJobErrors(tenantId, id, query));
     }
 }

@@ -65,7 +65,8 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/approval-requests/{id}/reject` | Yes + `USER_WRITE` | Reject a pending request |
 | `POST` | `/api/v1/import-jobs` | Yes + `USER_WRITE` | Create an async import job from multipart request + CSV file |
 | `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant with optional queue filters |
-| `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job detail with item errors |
+| `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job overview with `errorCodeCounts` plus `itemErrors` |
+| `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -121,13 +122,15 @@ Approval Requests tag note:
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors`.
 - `POST /api/v1/import-jobs` requires `USER_WRITE` and accepts multipart `request` + `file`.
-- `GET /api/v1/import-jobs` and `GET /api/v1/import-jobs/{id}` require `USER_READ`.
+- `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
+- `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.
-- list items expose `requestedBy` and derived `hasFailures`; row-level `itemErrors` remain detail-only.
-- detail returns row-level `itemErrors` that now include both parse failures and business-row execution failures for `USER_CSV`.
+- detail returns `errorCodeCounts` for quick triage plus backward-compatible row-level `itemErrors`.
+- `/errors` pages the same failure rows with stable ordering: null `rowNumber` first, then `rowNumber ASC, id ASC`.
+- row-level `itemErrors` now include both parse failures and business-row execution failures for `USER_CSV`.
 - See [import-jobs.md](import-jobs.md) for the current async-import contract and non-goals.
 
 ## Core Endpoint Examples
@@ -696,7 +699,41 @@ Current notes:
 - the current query shape exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`
 - current list ordering is `createdAt DESC, id DESC`
 - `hasFailuresOnly=true` returns both partial-success jobs (`SUCCEEDED` with `failureCount > 0`) and terminal `FAILED` jobs
-- detail response also exposes `itemErrors` for both parse/header failures and business-row execution failures in the current `USER_CSV` path
+- detail response also exposes `errorCodeCounts` plus `itemErrors` for both parse/header failures and business-row execution failures in the current `USER_CSV` path
+
+### 20. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 31,
+        "rowNumber": 3,
+        "errorCode": "DUPLICATE_USERNAME",
+        "errorMessage": "username already exists in current tenant",
+        "rawPayload": "admin,Duplicate User,dup@example.com,abc123,READ_ONLY",
+        "createdAt": "2026-03-12T18:20:04"
+      }
+    ],
+    "page": 0,
+    "size": 1,
+    "total": 2,
+    "totalPages": 2
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- the current query shape exposes `page`, `size`, and exact `errorCode`
+- failure rows are ordered stably: null `rowNumber` first, then `rowNumber ASC, id ASC`
+- this is the preferred read surface for larger jobs; detail remains the overview surface
 
 ## Stale Swagger Troubleshooting
 

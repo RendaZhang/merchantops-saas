@@ -346,3 +346,12 @@ Authorization: Bearer {{token}}
 ### Get import job detail
 GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}
 Authorization: Bearer {{token}}
+
+### List import job errors
+# Clean success jobs return an empty page here.
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/errors?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List import job errors - filter by error code
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/errors?page=0&size=10&errorCode=UNKNOWN_ROLE
+Authorization: Bearer {{token}}

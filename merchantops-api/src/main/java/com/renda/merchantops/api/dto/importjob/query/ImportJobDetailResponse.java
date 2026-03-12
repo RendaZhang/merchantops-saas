@@ -20,6 +20,7 @@ public record ImportJobDetailResponse(
         LocalDateTime createdAt,
         LocalDateTime startedAt,
         LocalDateTime finishedAt,
+        List<ImportJobErrorCodeCountResponse> errorCodeCounts,
         List<ImportJobErrorItemResponse> itemErrors
 ) {
 }

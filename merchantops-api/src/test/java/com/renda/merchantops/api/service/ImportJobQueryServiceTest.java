@@ -1,5 +1,7 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
 import com.renda.merchantops.infra.persistence.entity.ImportJobEntity;
@@ -74,7 +76,41 @@ class ImportJobQueryServiceTest {
     }
 
     @Test
-    void getJobDetailShouldReturnItemErrors() {
+    void pageJobErrorsShouldNormalizeFilterAndMapItems() {
+        ImportJobEntity entity = new ImportJobEntity();
+        entity.setId(1L);
+        entity.setTenantId(1L);
+
+        ImportJobItemErrorEntity error = new ImportJobItemErrorEntity();
+        error.setId(901L);
+        error.setRowNumber(5);
+        error.setErrorCode("UNKNOWN_ROLE");
+        error.setErrorMessage("role missing");
+        error.setRawPayload("row-5");
+        error.setCreatedAt(LocalDateTime.now());
+
+        when(importJobRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(entity));
+        when(importJobItemErrorRepository.searchPageByTenantIdAndImportJobId(eq(1L), eq(1L), eq("UNKNOWN_ROLE"), any()))
+                .thenReturn(new PageImpl<>(List.of(error)));
+
+        ImportJobErrorPageResponse response = importJobQueryService.pageJobErrors(1L, 1L,
+                new ImportJobErrorPageQuery(-1, 500, " UNKNOWN_ROLE "));
+
+        assertThat(response.total()).isEqualTo(1);
+        assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.rowNumber()).isEqualTo(5);
+            assertThat(item.errorCode()).isEqualTo("UNKNOWN_ROLE");
+            assertThat(item.rawPayload()).isEqualTo("row-5");
+        });
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(importJobItemErrorRepository).searchPageByTenantIdAndImportJobId(eq(1L), eq(1L), eq("UNKNOWN_ROLE"), pageableCaptor.capture());
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(100);
+    }
+
+    @Test
+    void getJobDetailShouldReturnItemErrorsAndErrorCodeCounts() {
         ImportJobEntity entity = new ImportJobEntity();
         entity.setId(1L);
         entity.setTenantId(1L);
@@ -98,8 +134,26 @@ class ImportJobQueryServiceTest {
         error.setCreatedAt(LocalDateTime.now());
 
         when(importJobRepository.findByIdAndTenantId(1L, 1L)).thenReturn(Optional.of(entity));
-        when(importJobItemErrorRepository.findAllByTenantIdAndImportJobIdOrderByIdAsc(1L, 1L)).thenReturn(List.of(error));
+        when(importJobItemErrorRepository.summarizeErrorCodesByTenantIdAndImportJobId(1L, 1L)).thenReturn(List.of(
+                new ImportJobItemErrorRepository.ImportJobErrorCodeCountView() {
+                    @Override
+                    public String getErrorCode() {
+                        return "INVALID_ROW_SHAPE";
+                    }
 
-        assertThat(importJobQueryService.getJobDetail(1L, 1L).itemErrors()).hasSize(1);
+                    @Override
+                    public long getErrorCount() {
+                        return 1L;
+                    }
+                }
+        ));
+        when(importJobItemErrorRepository.findAllByTenantIdAndImportJobIdOrderByRowNumberAscIdAsc(1L, 1L)).thenReturn(List.of(error));
+
+        var response = importJobQueryService.getJobDetail(1L, 1L);
+        assertThat(response.itemErrors()).hasSize(1);
+        assertThat(response.errorCodeCounts()).singleElement().satisfies(item -> {
+            assertThat(item.errorCode()).isEqualTo("INVALID_ROW_SHAPE");
+            assertThat(item.count()).isEqualTo(1L);
+        });
     }
 }

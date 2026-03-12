@@ -12,7 +12,8 @@ Last updated: 2026-03-12
 - Week 4 Audit Trail And Approval Patterns is complete.
 - Week 5 Async Import And Data Operations is the active phase.
 - Week 5 Slice A is complete with import submission/list/detail plus queue backbone.
-- Week 5 Slice B is in progress with narrow `USER_CSV` business-row execution, row-level failure isolation, and filtered import queue reads.
+- Week 5 Slice B is complete with narrow `USER_CSV` business-row execution, row-level failure isolation, and filtered import queue reads.
+- Week 5 Slice C is underway with paged import error reporting and detail-level `errorCodeCounts`.
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 
 ## Current Focus
@@ -20,16 +21,16 @@ Last updated: 2026-03-12
 Week 5 should stay narrow and workflow-oriented:
 
 - keep the landed `USER_CSV` schema and example files aligned across Swagger, `api-demo.http`, reference docs, and runbooks
-- keep the filtered import queue read surface operationally useful before adding more import breadth
+- keep the filtered import queue read surface and the new paged error surface operationally useful before adding more import breadth
 - continue using import jobs as an async operations backbone, not as a generic bulk-admin shortcut
 - keep audit and approval groundwork reusable for later Week 6-9 AI flows
 
 ## Recommended Next Steps
 
-- keep the landed queue filters and job-summary semantics aligned across tests, Swagger, and reference docs
-- add the next narrow follow-up slice such as retry/chunk controls or richer import reporting without expanding to unrelated modules
+- keep the landed queue filters, `/errors` surface, and job-summary semantics aligned across tests, Swagger, and reference docs
+- add the next narrow follow-up slice such as retry/replay semantics or chunk controls now that Week 5 reporting is more stable
 - keep Week 2-4 docs aligned only where Week 5 changes shared workflow or governance expectations
-- avoid pulling Week 6 AI scope forward until the import execution model and failure reporting are stable
+- avoid pulling Week 6 AI scope forward until the import execution model, failure reporting, and replay semantics are stable
 
 ## Near-Term Sequence
 
@@ -43,17 +44,22 @@ Week 5 should stay narrow and workflow-oriented:
 
 ## Active Phase Notes
 
-Week 5 currently has two clear slices:
+Week 5 currently has three clear slices:
 
 - Slice A is complete:
   - public API includes create/list/detail for import jobs
   - create flow persists files locally, writes `QUEUED` jobs, and publishes RabbitMQ messages after commit
-- Slice B is in progress:
+- Slice B is complete:
   - worker enforces fixed `USER_CSV` header `username,displayName,email,password,roleCodes`
   - valid rows create tenant users through the existing user command service path
   - row failures are isolated in `import_job_item_error` with parse and business codes such as `DUPLICATE_USERNAME`, `UNKNOWN_ROLE`, `INVALID_EMAIL`, and `INVALID_PASSWORD`
   - import job counters now reflect real create success/failure counts, with partial-success terminal `SUCCEEDED`
   - import queue reads now support `status`, `importType`, `requestedBy`, and `hasFailuresOnly` while keeping `createdAt DESC, id DESC`
+- Slice C is underway:
+  - detail now exposes `errorCodeCounts` for quick triage while preserving backward-compatible `itemErrors`
+  - `GET /api/v1/import-jobs/{id}/errors` pages failure items with `page`, `size`, and exact `errorCode`
+  - failure-item ordering is stable: null `rowNumber` first, then `rowNumber ASC, id ASC`
+  - reporting now has a cleaner large-job read surface before retry/replay semantics are introduced
 
 ## Open-Source Track
 

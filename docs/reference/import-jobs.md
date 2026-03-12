@@ -4,15 +4,16 @@ Last updated: 2026-03-12
 
 ## Public API Surface
 
-Week 5 exposes three async import endpoints:
+Week 5 now exposes four async import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
 | `POST` | `/api/v1/import-jobs` | Bearer JWT | `USER_WRITE` | Accepts multipart request + CSV file, creates a `QUEUED` job, and schedules the MQ publish after transaction commit |
 | `GET` | `/api/v1/import-jobs` | Bearer JWT | `USER_READ` | Pages current-tenant import jobs with optional queue filters |
-| `GET` | `/api/v1/import-jobs/{id}` | Bearer JWT | `USER_READ` | Returns one current-tenant import job with item errors |
+| `GET` | `/api/v1/import-jobs/{id}` | Bearer JWT | `USER_READ` | Returns one current-tenant import job overview with `errorCodeCounts` plus backward-compatible `itemErrors` |
+| `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
 
-## Current Week 5 Slice B Contract (`USER_CSV`)
+## Current Week 5 Contract (`USER_CSV` + Reporting Surface)
 
 - supported `sourceType`: `CSV`
 - supported `importType`: `USER_CSV`
@@ -51,7 +52,20 @@ Current list query surface:
 - exact `requestedBy`
 - `hasFailuresOnly=true` for queue triage across partial-success and failed jobs
 
+Current error-page query surface:
+
+- `page` and `size`
+- exact `errorCode`
+
 List filtering remains tenant-scoped and keeps stable ordering `createdAt DESC, id DESC`.
+Failure-item ordering is stable for both detail and `/errors`: global/header errors without `rowNumber` first, then `rowNumber ASC, id ASC`.
+
+Detail semantics for reporting:
+
+- `GET /api/v1/import-jobs/{id}` is the overview read surface
+- detail now includes `errorCodeCounts` for quick triage
+- detail still returns backward-compatible `itemErrors`
+- `GET /api/v1/import-jobs/{id}/errors` is the paged failure-item read surface for larger jobs
 
 Current error-code examples in `itemErrors`:
 
@@ -107,6 +121,16 @@ Example detail response after partial success:
     "createdAt": "2026-03-12T18:20:00",
     "startedAt": "2026-03-12T18:20:02",
     "finishedAt": "2026-03-12T18:20:05",
+    "errorCodeCounts": [
+      {
+        "errorCode": "DUPLICATE_USERNAME",
+        "count": 1
+      },
+      {
+        "errorCode": "UNKNOWN_ROLE",
+        "count": 1
+      }
+    ],
     "itemErrors": [
       {
         "id": 31,
@@ -125,6 +149,31 @@ Example detail response after partial success:
         "createdAt": "2026-03-12T18:20:04"
       }
     ]
+  }
+}
+```
+
+Example paged error response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 31,
+        "rowNumber": 3,
+        "errorCode": "DUPLICATE_USERNAME",
+        "errorMessage": "username already exists in current tenant",
+        "rawPayload": "admin,Duplicate User,dup@example.com,abc123,READ_ONLY",
+        "createdAt": "2026-03-12T18:20:04"
+      }
+    ],
+    "page": 0,
+    "size": 1,
+    "total": 2,
+    "totalPages": 2
   }
 }
 ```
@@ -169,6 +218,7 @@ After Slice B:
 - `totalCount`: total data rows read (excluding header)
 - `successCount`: rows that really created tenant users
 - `failureCount`: rows that failed parse validation or business execution
+- `errorCodeCounts`: aggregated counts by `errorCode` for quick triage
 - clean success: `status=SUCCEEDED`, `failureCount=0`, `errorSummary=null`
 - partial success: `status=SUCCEEDED`, `failureCount>0`, `errorSummary="completed with some row errors"`
 - full failure: `status=FAILED`
@@ -186,6 +236,8 @@ After Slice B:
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.
 - list paging now supports `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`; default size is `10` and max size is `100`.
-- list items expose `requestedBy` and derived `hasFailures`, but detailed `itemErrors` remain detail-only.
+- error paging now supports `page`, `size`, and `errorCode`; default size is `10` and max size is `100`.
+- list items expose `requestedBy` and derived `hasFailures`; detail exposes `errorCodeCounts` plus backward-compatible `itemErrors`; `/errors` pages the same failure rows for larger jobs.
 - current list ordering remains `createdAt DESC, id DESC`.
+- current failure-item ordering remains stable: null `rowNumber` first, then `rowNumber ASC, id ASC`.
 - see [../../api-demo.http](../../api-demo.http) for runnable request examples.

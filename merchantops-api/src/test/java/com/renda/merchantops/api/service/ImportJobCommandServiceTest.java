@@ -60,7 +60,7 @@ class ImportJobCommandServiceTest {
         });
         when(importJobQueryService.toDetail(any())).thenReturn(new ImportJobDetailResponse(
                 7001L, 1L, "USER_CSV", "CSV", "users.csv", "1/key.csv", "QUEUED", 101L, "req-1",
-                0, 0, 0, null, null, null, null, List.of()
+                0, 0, 0, null, null, null, null, List.of(), List.of()
         ));
 
         ImportJobCreateRequest request = new ImportJobCreateRequest();

@@ -2,6 +2,8 @@ package com.renda.merchantops.api.contract;
 
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
 import com.renda.merchantops.common.response.ApiResponse;
@@ -34,4 +36,9 @@ public interface ImportJobApi {
     @Operation(summary = "Get import job detail in current tenant")
     @GetMapping("/{id}")
     ApiResponse<ImportJobDetailResponse> getImportJob(@PathVariable("id") Long id);
+
+    @Operation(summary = "Page import job errors in current tenant")
+    @GetMapping("/{id}/errors")
+    ApiResponse<ImportJobErrorPageResponse> listImportJobErrors(@PathVariable("id") Long id,
+                                                                @ParameterObject ImportJobErrorPageQuery query);
 }
