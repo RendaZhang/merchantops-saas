@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 ## Current Phase
 
@@ -8,7 +8,7 @@ Last updated: 2026-03-11
 - Week 2 First Business Loop - Tenant User Management is complete
 - Week 3 Ticket Workflow - System of Action is complete
 - Week 4 Audit Trail And Approval Patterns is the active phase
-- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
+- Public HTTP coverage currently includes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `GET /api/v1/roles`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `GET /api/v1/audit-events`, `POST /api/v1/users/{id}/disable-requests`, `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, `POST /api/v1/approval-requests/{id}/reject`
 - The broader 10-week plan now prioritizes workflow modules and embedded AI use cases over adding more generic SaaS breadth too early
 - The project now explicitly targets a progression from portfolio-quality build to open-source reference project, then possible commercial exploration later
 
@@ -42,8 +42,8 @@ The first business loop is complete: Week 2 turned the user-management groundwor
 
 Continue Week 4 audit trail and approval patterns:
 
-- keep the landed Slice A audit backbone aligned across Swagger, reference docs, runbooks, and examples
-- extend the current audit backbone toward the approval envelope that later AI and agent flows can reuse
+- keep the landed Slice A audit backbone and current Slice B approval endpoints aligned across Swagger, reference docs, runbooks, and examples
+- extend the current minimal approval pattern beyond `USER_STATUS_DISABLE` toward reusable multi-action approval envelopes and broader read surfaces
 
 ## Planned Work By Phase
 
@@ -108,11 +108,13 @@ Stretch target after Week 10:
 - Implemented features and known current limitations are recorded in [project-status.md](project-status.md).
 
 
-## Week 4 Progress Notes (2026-03-11)
+## Week 4 Progress Notes (2026-03-12)
 
-- Slice A (generic audit backbone) has started:
+- Slice A (generic audit backbone) is complete:
   - `audit_event` migration/entity/repository/service added
   - user and ticket public write flows now emit generic audit rows
   - workflow-level `ticket_operation_log` remains separate by design
   - minimal tenant-scoped query endpoint added: `GET /api/v1/audit-events`
-- Slice B (minimal approval pattern) is now started with `USER_STATUS_DISABLE`; next step is expanding to additional action types and broader read surfaces.
+- Slice B (minimal approval pattern) is complete with `USER_STATUS_DISABLE` create/detail/approve/reject.
+- Slice C (approval queue read surface) is complete with tenant-scoped paging and filters (`status`, `actionType`, `requestedBy`) at `GET /api/v1/approval-requests`.
+- Next step is expanding to additional action types after queue operations are stable.

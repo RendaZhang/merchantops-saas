@@ -70,7 +70,7 @@ Use this checklist after foundation-level changes, security changes, environment
 ## User Management
 
 - [ ] Swagger `User Management` tag shows `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `POST /api/v1/users/{id}/disable-requests`
-- [ ] Swagger `Approval Requests` tag shows `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`
+- [ ] Swagger `Approval Requests` tag shows `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`
 - [ ] Swagger `Role Management` tag shows `GET /api/v1/roles`
 - [ ] `GET /api/v1/users` returns a page object rather than a bare array
 - [ ] `GET /api/v1/users/{id}` returns one current-tenant user and includes `roleCodes`
@@ -95,6 +95,11 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] duplicate pending disable request creation for same user returns `400`
 - [ ] requester cannot approve/reject own disable request (`403`)
 - [ ] cross-tenant token cannot read or approve another tenant approval request (`404`)
+- [ ] `GET /api/v1/approval-requests?page=0&size=10` returns a page object with tenant-scoped items only
+- [ ] `GET /api/v1/approval-requests?status=PENDING` returns only pending items
+- [ ] `GET /api/v1/approval-requests?actionType=USER_STATUS_DISABLE` filters by action type
+- [ ] `GET /api/v1/approval-requests?requestedBy=<userId>` filters by requester
+- [ ] approval queue ordering is stable: `createdAt DESC, id DESC`
 - [ ] approve path writes approval audit events and executes user disable (`USER_STATUS_UPDATED`)
 - [ ] a `DISABLED` user is rejected by `POST /api/v1/auth/login`
 - [ ] a token issued before a user was disabled is rejected on protected endpoints with `403` / `user is not active`

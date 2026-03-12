@@ -91,6 +91,8 @@ curl -i -H "Authorization: Bearer $REFRESHED_TOKEN" http://localhost:8080/api/v1
 curl -i -X POST -H "Authorization: Bearer $REFRESHED_TOKEN" \
   http://localhost:8080/api/v1/users/$NEW_USER_ID/disable-requests
 APPROVAL_REQUEST_ID=<paste-id-from-disable-request-response>
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/approval-requests?page=0&size=10"
+curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=USER_STATUS_DISABLE&requestedBy=$NEW_USER_ID"
 curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/approval-requests/$APPROVAL_REQUEST_ID
 curl -i -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId=$APPROVAL_REQUEST_ID"
 curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
@@ -159,6 +161,8 @@ $refreshedToken = "<paste-accessToken-from-role-refresh-login-response>"
 curl.exe -i -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/rbac/users/manage
 curl.exe -i -X POST -H "Authorization: Bearer $refreshedToken" http://localhost:8080/api/v1/users/$newUserId/disable-requests
 $approvalRequestId = "<paste-id-from-disable-request-response>"
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/approval-requests?page=0&size=10"
+curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=USER_STATUS_DISABLE&requestedBy=$newUserId"
 curl.exe -i -H "Authorization: Bearer $token" http://localhost:8080/api/v1/approval-requests/$approvalRequestId
 curl.exe -i -H "Authorization: Bearer $token" "http://localhost:8080/api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId=$approvalRequestId"
 $ticketBody = @{ title = "$smokeUsername POS register frozen"; description = "Register screen froze during checkout." } | ConvertTo-Json -Compress
@@ -204,6 +208,8 @@ Expected results:
 - `PATCH /api/v1/users/{id}/status` accepts only `ACTIVE` or `DISABLED`
 - `PUT /api/v1/users/{id}/roles` clears old roles and writes the new role set
 - `POST /api/v1/users/{id}/disable-requests` creates a `PENDING` request and leaves the target user `ACTIVE` before review
+- `GET /api/v1/approval-requests?page=0&size=10` returns a tenant-scoped page object for approval requests
+- `GET /api/v1/approval-requests?...&requestedBy=<newUserId>` returns the newly created disable request for the smoke user
 - `GET /api/v1/approval-requests/{id}` returns the tenant-scoped approval request detail
 - `GET /api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId=<approvalRequestId>` returns approval-request audit rows such as `APPROVAL_REQUEST_CREATED`
 - `POST /api/v1/approval-requests/{id}/approve` transitions the request to `APPROVED` and then disables the target user

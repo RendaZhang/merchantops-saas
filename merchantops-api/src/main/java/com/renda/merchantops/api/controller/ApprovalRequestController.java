@@ -3,6 +3,8 @@ package com.renda.merchantops.api.controller;
 import com.renda.merchantops.api.context.ContextAccess;
 import com.renda.merchantops.api.context.RequestIdAccess;
 import com.renda.merchantops.api.contract.ApprovalRequestApi;
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageResponse;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.security.RequirePermission;
 import com.renda.merchantops.api.service.ApprovalRequestService;
@@ -16,6 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApprovalRequestController implements ApprovalRequestApi {
 
     private final ApprovalRequestService approvalRequestService;
+
+    @Override
+    @RequirePermission("USER_READ")
+    public ApiResponse<ApprovalRequestPageResponse> listApprovalRequests(ApprovalRequestPageQuery query) {
+        Long tenantId = ContextAccess.requireTenantId();
+        return ApiResponse.success(approvalRequestService.page(tenantId, query));
+    }
 
     @Override
     @RequirePermission("USER_READ")

@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
@@ -13,8 +14,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -115,6 +121,27 @@ class ApprovalRequestServiceTest {
         assertThat(response.reviewedBy()).isEqualTo(105L);
         assertThat(response.reviewedAt()).isNotNull();
         verify(approvalRequestRepository).findByIdAndTenantIdForUpdate(901L, 1L);
+    }
+
+    @Test
+    void pageShouldNormalizeQueryAndUseStableCreatedAtIdDescSort() {
+        ApprovalRequestEntity first = pendingRequest(902L, 1L, 103L, 101L);
+        first.setStatus("APPROVED");
+        first.setReviewedBy(105L);
+        first.setReviewedAt(LocalDateTime.now());
+        Page<ApprovalRequestEntity> page = new PageImpl<>(List.of(first));
+        when(approvalRequestRepository.searchPageByTenantId(eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), any(Pageable.class)))
+                .thenReturn(page);
+
+        approvalRequestService.page(1L, new ApprovalRequestPageQuery(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L));
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(approvalRequestRepository).searchPageByTenantId(eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), pageableCaptor.capture());
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isEqualTo(0);
+        assertThat(pageable.getPageSize()).isEqualTo(10);
+        assertThat(pageable.getSort().getOrderFor("createdAt")).extracting(Sort.Order::getDirection).isEqualTo(Sort.Direction.DESC);
+        assertThat(pageable.getSort().getOrderFor("id")).extracting(Sort.Order::getDirection).isEqualTo(Sort.Direction.DESC);
     }
 
     private void assertBizException(ThrowingCall call, ErrorCode errorCode, String message) {

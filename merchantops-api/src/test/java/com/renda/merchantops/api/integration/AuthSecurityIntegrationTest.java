@@ -358,6 +358,47 @@ class AuthSecurityIntegrationTest {
                 .andExpect(jsonPath("$.message").value("requester cannot approve or reject own request"));
     }
 
+
+    @Test
+    void listApprovalRequestsShouldReturnTenantScopedItemsAndApplyFiltersWithStableSort() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        insertApprovalRequest(9101L, 1L, "USER_STATUS_DISABLE", 103L, 101L, "PENDING", "2026-03-12 10:00:00");
+        insertApprovalRequest(9102L, 1L, "USER_STATUS_DISABLE", 102L, 102L, "APPROVED", "2026-03-12 10:00:00");
+        insertApprovalRequest(9103L, 1L, "ORDER_CANCEL", 5001L, 101L, "PENDING", "2026-03-12 09:00:00");
+        insertApprovalRequest(9201L, 2L, "USER_STATUS_DISABLE", 201L, 201L, "PENDING", "2026-03-12 11:00:00");
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("page", "0")
+                        .queryParam("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.items[*].id", contains(9102, 9101, 9103)))
+                .andExpect(jsonPath("$.data.items[*].id", not(hasItem(9201))));
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("status", "PENDING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[*].status", contains("PENDING", "PENDING")));
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("actionType", "USER_STATUS_DISABLE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[*].actionType", contains("USER_STATUS_DISABLE", "USER_STATUS_DISABLE")));
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("requestedBy", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[*].requestedBy", contains(101, 101)));
+    }
+
     @Test
     void crossTenantShouldNotQueryOrApproveApprovalRequest() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
@@ -769,6 +810,20 @@ class AuthSecurityIntegrationTest {
         assertThat(currentUser.getPermissions()).containsExactly("USER_READ", "TICKET_READ");
     }
 
+
+
+    private void insertApprovalRequest(Long id,
+                                       Long tenantId,
+                                       String actionType,
+                                       Long entityId,
+                                       Long requestedBy,
+                                       String status,
+                                       String createdAt) {
+        jdbcTemplate.update("""
+                INSERT INTO approval_request (id, tenant_id, action_type, entity_type, entity_id, requested_by, status, payload_json, request_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, PARSEDATETIME(?, 'yyyy-MM-dd HH:mm:ss'))
+                """, id, tenantId, actionType, "USER", entityId, requestedBy, status, "{\"status\":\"DISABLED\"}", "req-" + id, createdAt);
+    }
 
     private void createApprovalReviewerUser() {
         String encodedPassword = passwordEncoder.encode("123456");

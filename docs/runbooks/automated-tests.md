@@ -1,6 +1,6 @@
 # Automated Tests
 
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
@@ -26,7 +26,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## What Is Covered Today
 
-Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, Week 4 Slice A audit backbone, and Week 4 Slice B minimal approval flow (`USER_STATUS_DISABLE`).
+Current automated coverage is focused on the completed Week 2 user-management loop, the completed Week 3 ticket workflow slices, Week 4 Slice A audit backbone, Week 4 Slice B minimal approval flow (`USER_STATUS_DISABLE`), and Week 4 Slice C approval queue read surface.
 
 ### `merchantops-api` tests
 
@@ -45,6 +45,7 @@ Current automated coverage is focused on the completed Week 2 user-management lo
   - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence and refreshed `updated_by`
   - successful disable-user flow for `PATCH /api/v1/users/{id}/status` with refreshed `updated_by`, followed by login rejection for `DISABLED`
   - minimal approval flow coverage for disable requests, including duplicate-pending-request rejection
+  - approval queue coverage for tenant isolation, `status` filter, `actionType` filter, `requestedBy` filter, and stable ordering by `createdAt DESC, id DESC`
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
   - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
   - rejection of a pre-change token after role or permission claims become stale

@@ -1,9 +1,12 @@
 package com.renda.merchantops.api.contract;
 
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageResponse;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springdoc.core.annotations.ParameterObject;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +18,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @SecurityRequirement(name = "bearerAuth")
 @RequestMapping("/api/v1/approval-requests")
 public interface ApprovalRequestApi {
+
+
+    @Operation(summary = "Page approval requests in current tenant")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Query successful")
+    })
+    @GetMapping
+    ApiResponse<ApprovalRequestPageResponse> listApprovalRequests(@ParameterObject ApprovalRequestPageQuery query);
 
     @Operation(summary = "Get approval request detail")
     @ApiResponses({

@@ -59,6 +59,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `PATCH` | `/api/v1/tickets/{id}/status` | Yes + `TICKET_WRITE` | Transition the ticket status |
 | `POST` | `/api/v1/tickets/{id}/comments` | Yes + `TICKET_WRITE` | Add a comment and workflow log entry |
 | `GET` | `/api/v1/audit-events` | Yes + `USER_READ` | List current-tenant audit rows for one entity |
+| `GET` | `/api/v1/approval-requests` | Yes + `USER_READ` | Page approval requests in current tenant |
 | `GET` | `/api/v1/approval-requests/{id}` | Yes + `USER_READ` | Get one tenant-scoped approval request |
 | `POST` | `/api/v1/approval-requests/{id}/approve` | Yes + `USER_WRITE` | Approve a pending request and execute the action |
 | `POST` | `/api/v1/approval-requests/{id}/reject` | Yes + `USER_WRITE` | Reject a pending request |
@@ -107,7 +108,8 @@ Audit Events tag note:
 
 Approval Requests tag note:
 
-- Swagger currently exposes `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`.
+- Swagger currently exposes `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`.
+- `GET /api/v1/approval-requests` requires `USER_READ` and supports `page`, `size`, `status`, `actionType`, and `requestedBy`.
 - `GET /api/v1/approval-requests/{id}` requires `USER_READ`.
 - approve/reject endpoints require `USER_WRITE`.
 - the current public approval surface supports one action type only: `USER_STATUS_DISABLE`.
@@ -600,6 +602,44 @@ Current notes:
 - approve/reject requires `USER_WRITE`
 - requester cannot self-approve or self-reject
 - approve path executes the disable action immediately in the same transaction boundary
+
+### 18. Approval Request Queue (`GET /api/v1/approval-requests`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 901,
+        "actionType": "USER_STATUS_DISABLE",
+        "entityType": "USER",
+        "entityId": 5,
+        "requestedBy": 5,
+        "reviewedBy": null,
+        "status": "PENDING",
+        "createdAt": "2026-03-12T10:10:00",
+        "reviewedAt": null,
+        "executedAt": null
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- queue supports `page`, `size`, `status`, `actionType`, and `requestedBy`
+- current ordering is stable: `createdAt DESC, id DESC`
+- the same request variants are available in [../../api-demo.http](../../api-demo.http)
 
 ## Stale Swagger Troubleshooting
 

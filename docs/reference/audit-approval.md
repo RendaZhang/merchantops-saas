@@ -2,7 +2,7 @@
 
 ## Current Week 4 Scope
 
-As of `v0.1.2` baseline + current Week 4 Slice A/B implementation, the repository now includes a generic `audit_event` backbone plus a minimal approval envelope for one high-value action (`USER_STATUS_DISABLE`).
+As of `v0.1.2` baseline + current Week 4 Slice A/B/C implementation, the repository now includes a generic `audit_event` backbone plus a minimal approval envelope for one high-value action (`USER_STATUS_DISABLE`) and a queue read surface.
 
 Implemented now:
 
@@ -10,6 +10,7 @@ Implemented now:
 - tenant-scoped `approval_request` table for `USER_STATUS_DISABLE`
 - user disable request flow:
   - `POST /api/v1/users/{id}/disable-requests`
+  - `GET /api/v1/approval-requests`
   - `GET /api/v1/approval-requests/{id}`
   - `POST /api/v1/approval-requests/{id}/approve`
   - `POST /api/v1/approval-requests/{id}/reject`
@@ -37,6 +38,13 @@ Implemented now:
 - creates a `PENDING` approval request for `USER_STATUS_DISABLE`
 - does not mutate target user status yet
 - rejects duplicate pending disable requests for the same tenant user
+
+### `GET /api/v1/approval-requests`
+
+- scope: current tenant only
+- permission: `USER_READ`
+- supports `page`, `size`, `status`, `actionType`, `requestedBy` filters
+- default sort: `createdAt DESC, id DESC` for stable queue ordering
 
 ### `GET /api/v1/approval-requests/{id}`
 
@@ -124,5 +132,5 @@ Current manual verification hint:
 ## Still Planned (Not Yet Implemented)
 
 - multi-action generic approval routing beyond `USER_STATUS_DISABLE`
-- broader audit/approval read surfaces (queue/search/pagination/cross-entity filters)
+- broader cross-entity audit/approval read surfaces (global search/aggregation statistics)
 - async approval executors or delayed execution modes

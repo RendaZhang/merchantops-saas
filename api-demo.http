@@ -10,6 +10,7 @@
 @createUserEmail = cashier-demo@demo-shop.local
 @targetUserId = replace-with-created-user-id
 @approvalRequestId = replace-with-created-approval-request-id
+@approvalRequestedBy = replace-with-requester-user-id
 @targetUserToken = replace-with-pre-change-user-access-token
 @refreshedTargetUserToken = replace-with-post-role-change-user-access-token
 @opsUserId = 2
@@ -254,6 +255,15 @@ Content-Type: {{contentType}}
 
 ### Create user disable approval request
 POST {{baseUrl}}/api/v1/users/{{targetUserId}}/disable-requests
+Authorization: Bearer {{token}}
+
+### List approval requests (queue)
+GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List pending disable requests by requester
+# Set approvalRequestedBy to the requester id returned by the current tenant workflow instead of using a test-only hardcoded id.
+GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=USER_STATUS_DISABLE&requestedBy={{approvalRequestedBy}}
 Authorization: Bearer {{token}}
 
 ### Get approval request detail

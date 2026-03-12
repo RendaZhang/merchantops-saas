@@ -1,5 +1,8 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestListItemResponse;
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageResponse;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.dto.user.command.UserStatusUpdateCommand;
 import com.renda.merchantops.common.exception.BizException;
@@ -9,6 +12,9 @@ import com.renda.merchantops.infra.persistence.entity.UserEntity;
 import com.renda.merchantops.infra.repository.ApprovalRequestRepository;
 import com.renda.merchantops.infra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,6 +34,10 @@ public class ApprovalRequestService {
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_REJECTED = "REJECTED";
+
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 10;
+    private static final int MAX_SIZE = 100;
 
     private final ApprovalRequestRepository approvalRequestRepository;
     private final UserRepository userRepository;
@@ -69,6 +79,32 @@ public class ApprovalRequestService {
     @Transactional(readOnly = true)
     public ApprovalRequestResponse getById(Long tenantId, Long approvalRequestId) {
         return toResponse(requireTenantApprovalRequest(tenantId, approvalRequestId));
+    }
+
+    @Transactional(readOnly = true)
+    public ApprovalRequestPageResponse page(Long tenantId, ApprovalRequestPageQuery query) {
+        ApprovalRequestPageQuery normalizedQuery = normalizeQuery(query);
+        PageRequest pageable = PageRequest.of(
+                normalizedQuery.getPage(),
+                normalizedQuery.getSize(),
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+        );
+
+        Page<ApprovalRequestEntity> resultPage = approvalRequestRepository.searchPageByTenantId(
+                tenantId,
+                normalizedQuery.getStatus(),
+                normalizedQuery.getActionType(),
+                normalizedQuery.getRequestedBy(),
+                pageable
+        );
+
+        return new ApprovalRequestPageResponse(
+                resultPage.getContent().stream().map(this::toListItemResponse).toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements(),
+                resultPage.getTotalPages()
+        );
     }
 
     @Transactional
@@ -141,6 +177,37 @@ public class ApprovalRequestService {
                 snapshot(saved)
         );
         return toResponse(saved);
+    }
+
+    private ApprovalRequestPageQuery normalizeQuery(ApprovalRequestPageQuery query) {
+        ApprovalRequestPageQuery normalized = query == null ? new ApprovalRequestPageQuery() : query;
+        normalized.setPage(normalizePage(query));
+        normalized.setSize(normalizeSize(query));
+        normalized.setStatus(normalizeFilter(normalized.getStatus()));
+        normalized.setActionType(normalizeFilter(normalized.getActionType()));
+        normalized.setRequestedBy(normalized.getRequestedBy());
+        return normalized;
+    }
+
+    private int normalizePage(ApprovalRequestPageQuery query) {
+        if (query == null || query.getPage() == null || query.getPage() < 0) {
+            return DEFAULT_PAGE;
+        }
+        return query.getPage();
+    }
+
+    private int normalizeSize(ApprovalRequestPageQuery query) {
+        if (query == null || query.getSize() == null || query.getSize() <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(query.getSize(), MAX_SIZE);
+    }
+
+    private String normalizeFilter(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
     private void ensureNoPendingRequest(Long tenantId, Long userId) {
@@ -222,6 +289,21 @@ public class ApprovalRequestService {
         snapshot.put("reviewedAt", entity.getReviewedAt());
         snapshot.put("executedAt", entity.getExecutedAt());
         return snapshot;
+    }
+
+    private ApprovalRequestListItemResponse toListItemResponse(ApprovalRequestEntity entity) {
+        return new ApprovalRequestListItemResponse(
+                entity.getId(),
+                entity.getActionType(),
+                entity.getEntityType(),
+                entity.getEntityId(),
+                entity.getRequestedBy(),
+                entity.getReviewedBy(),
+                entity.getStatus(),
+                entity.getCreatedAt(),
+                entity.getReviewedAt(),
+                entity.getExecutedAt()
+        );
     }
 
     private ApprovalRequestResponse toResponse(ApprovalRequestEntity entity) {
