@@ -19,4 +19,5 @@ This section stores architecture notes, technical decisions, and recorded struct
 ## Other Pages
 
 - [../diagrams/target-architecture.md](../diagrams/target-architecture.md): visual target architecture for the modular-monolith-first path and later selective extraction
+- [import-file-storage-strategy.md](import-file-storage-strategy.md): keep Week 5 import files behind a replaceable storage abstraction while starting with local filesystem storage
 - [non-blocking-backlog.md](non-blocking-backlog.md): recorded follow-up items that stay visible without blocking the current phase

@@ -26,6 +26,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Automated Test Runbook](runbooks/automated-tests.md): preferred Maven test commands, current automated coverage, and when to switch to manual verification
 - [AI Regression Checklist](runbooks/ai-regression-checklist.md): rollout checklist for future AI endpoints, audit logs, and eval changes
 - [Architecture](architecture/README.md): design notes and known structural gaps
+- [Import File Storage Strategy](architecture/import-file-storage-strategy.md): why Week 5 import files should start behind a replaceable local-storage abstraction before later object-storage rollout
 - [Non-Blocking Backlog](architecture/non-blocking-backlog.md): recorded follow-up items that stay visible without blocking the current phase
 - [Target Architecture Diagram](diagrams/target-architecture.md): visual runtime shape for the modular-monolith-first architecture and later selective extraction
 - [Architecture Decision: Workflow Logs vs Generic Audit Events](architecture/adr/0011-keep-workflow-logs-separate-from-generic-audit-events.md): why ticket workflow history stays separate from the Week 4 reusable audit layer
