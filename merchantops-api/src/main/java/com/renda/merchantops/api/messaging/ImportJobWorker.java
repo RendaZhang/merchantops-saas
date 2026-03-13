@@ -20,6 +20,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 @Component
@@ -187,7 +188,7 @@ public class ImportJobWorker {
         if (columns.isEmpty()) {
             return columns;
         }
-        return java.util.stream.IntStream.range(0, columns.size())
+        return IntStream.range(0, columns.size())
                 .mapToObj(index -> normalizeHeaderValue(columns.get(index), index == 0))
                 .toList();
     }

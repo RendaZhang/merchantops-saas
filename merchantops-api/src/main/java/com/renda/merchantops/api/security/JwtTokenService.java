@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -62,10 +63,10 @@ public class JwtTokenService {
         Long tenantId = parseRequiredLong(claims.get("tenantId"), "tenantId");
         String tenantCode = claims.get("tenantCode", String.class);
         String username = claims.get("username", String.class);
-        if (!org.springframework.util.StringUtils.hasText(tenantCode)) {
+        if (!StringUtils.hasText(tenantCode)) {
             throw new IllegalArgumentException("missing claim: tenantCode");
         }
-        if (!org.springframework.util.StringUtils.hasText(username)) {
+        if (!StringUtils.hasText(username)) {
             throw new IllegalArgumentException("missing claim: username");
         }
 
