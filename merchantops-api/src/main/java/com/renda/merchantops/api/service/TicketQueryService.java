@@ -26,6 +26,7 @@ import org.springframework.util.StringUtils;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -63,7 +64,7 @@ public class TicketQueryService {
                 tenantId,
                 resultPage.getContent().stream()
                         .map(TicketEntity::getAssigneeId)
-                        .filter(java.util.Objects::nonNull)
+                        .filter(Objects::nonNull)
                         .collect(Collectors.toCollection(LinkedHashSet::new))
         );
 

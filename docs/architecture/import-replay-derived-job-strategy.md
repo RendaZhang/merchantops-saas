@@ -13,6 +13,7 @@ For the current Week 5 import slices:
 - replay should create a new derived `import_job`, not mutate or reset the old one
 - replay should stay row-level in Week 5, supporting failed-row replay, exact error-code selective replay, and edited failed-row replay
 - edited replay should use the same derived-job model instead of overwriting the source job
+- if whole-file replay is added later, its first implementation should be limited to `FAILED` source jobs; partial-success jobs should continue using row-level replay variants
 - the replay job should keep a lineage link back to the source job
 
 ## Why
@@ -29,6 +30,7 @@ For the current Week 5 import slices:
 - replay input should be built from the source job's failed-row material rather than by mutating the old stored file
 - the worker should process replay jobs through the same normal import pipeline whenever possible
 - replay-related audit should capture lineage and edit scope only; it must not persist sensitive edited values such as passwords or full replacement-row payloads
+- whole-file replay should not be the default retry path for partial-success jobs because it would blur already-succeeded-row semantics
 
 ## Deferred On Purpose
 
@@ -46,6 +48,7 @@ Those can be added later if replay becomes a larger product surface.
 Once replay is stable, later import slices can add more control around:
 
 - replaying the entire original file without blurring already-succeeded-row semantics
+- if whole-file replay is introduced, keeping its first version restricted to `FAILED` source jobs before considering wider retry semantics
 - expanding edited replay beyond current full-row replacement input while keeping the derived-job model and scope-only audit metadata
 - supporting replay for additional import types
 - attaching richer lineage metadata between source jobs and replay jobs beyond the current `sourceJobId` plus selective-replay audit snapshots

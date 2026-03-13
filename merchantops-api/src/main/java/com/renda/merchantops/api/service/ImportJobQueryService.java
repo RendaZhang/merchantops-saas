@@ -21,6 +21,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ImportJobQueryService {
@@ -140,7 +142,7 @@ public class ImportJobQueryService {
         );
     }
 
-    private java.util.List<ImportJobErrorCodeCountResponse> buildErrorCodeCounts(ImportJobEntity job) {
+    private List<ImportJobErrorCodeCountResponse> buildErrorCodeCounts(ImportJobEntity job) {
         return importJobItemErrorRepository.summarizeErrorCodesByTenantIdAndImportJobId(job.getTenantId(), job.getId())
                 .stream()
                 .map(summary -> new ImportJobErrorCodeCountResponse(summary.getErrorCode(), summary.getErrorCount()))

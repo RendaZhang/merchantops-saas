@@ -18,6 +18,7 @@ import com.renda.merchantops.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -65,7 +66,7 @@ public class ImportJobController implements ImportJobApi {
     @Override
     @RequirePermission("USER_WRITE")
     public ApiResponse<ImportJobDetailResponse> replayFailedRowsSelective(@PathVariable("id") Long id,
-                                                                          @Valid @org.springframework.web.bind.annotation.RequestBody ImportJobSelectiveReplayRequest request) {
+                                                                          @Valid @RequestBody ImportJobSelectiveReplayRequest request) {
         Long tenantId = ContextAccess.requireTenantId();
         Long operatorId = ContextAccess.requireUserId();
         String requestId = RequestIdAccess.currentRequestId();
@@ -75,7 +76,7 @@ public class ImportJobController implements ImportJobApi {
     @Override
     @RequirePermission("USER_WRITE")
     public ApiResponse<ImportJobDetailResponse> replayFailedRowsEdited(@PathVariable("id") Long id,
-                                                                       @Valid @org.springframework.web.bind.annotation.RequestBody ImportJobEditedReplayRequest request) {
+                                                                       @Valid @RequestBody ImportJobEditedReplayRequest request) {
         Long tenantId = ContextAccess.requireTenantId();
         Long operatorId = ContextAccess.requireUserId();
         String requestId = RequestIdAccess.currentRequestId();
