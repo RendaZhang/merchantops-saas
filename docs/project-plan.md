@@ -143,7 +143,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 ### 当前计划锚点
 
 - 当前执行已经推进到 Week 5 Async Import And Data Operations。
-- Week 1-4 已构成当前稳定基线，Week 5 当前公开基线已经覆盖导入提交、顺序 chunk 执行、处理中计数推进、错误分页、失败行 replay、按精确 errorCode 的 selective replay 与 edited failed-row replay，后续计划应建立在用户管理、ticket workflow 和 audit/approval 治理骨架之上。
+- Week 1-4 已构成当前稳定基线，Week 5 当前公开基线已经覆盖导入提交、顺序 chunk 执行、处理中计数推进、错误分页、失败行 replay、全失败 source job 的 whole-file replay、按精确 errorCode 的 selective replay 与 edited failed-row replay，后续计划应建立在用户管理、ticket workflow 和 audit/approval 治理骨架之上。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -302,7 +302,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - `import_job_item_error`
 - 上传文件并创建 job
 - MQ 投递与 worker 消费
-- 失败行 replay、按精确 errorCode selective replay、edited failed-row replay / derived-job lineage
+- 失败行 replay、全失败 source job 的 whole-file replay、按精确 errorCode selective replay、edited failed-row replay / derived-job lineage
 - 顺序 chunk 分片处理与处理中计数回写
 - 失败明细与错误报告
 - 吞吐控制与大文件硬性上限
@@ -320,7 +320,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - 上传后立刻返回
 - 后台任务独立推进
 - 可查看进度、失败原因和错误报告
-- 可基于失败行创建新的派生 replay job，并支持按精确 errorCode 做 selective replay 以及按精确 errorId 做 edited failed-row replay，而不重置原 job
+- 可基于失败行创建新的派生 replay job，并为 `FAILED` 且零成功 source job 提供 whole-file replay，同时支持按精确 errorCode 做 selective replay 以及按精确 errorId 做 edited failed-row replay，而不重置原 job
 - 顺序 chunk 执行不会退回到整文件长事务
 
 ---

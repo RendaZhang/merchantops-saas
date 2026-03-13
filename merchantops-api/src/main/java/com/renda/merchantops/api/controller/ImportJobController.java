@@ -65,6 +65,15 @@ public class ImportJobController implements ImportJobApi {
 
     @Override
     @RequirePermission("USER_WRITE")
+    public ApiResponse<ImportJobDetailResponse> replayWholeFile(@PathVariable("id") Long id) {
+        Long tenantId = ContextAccess.requireTenantId();
+        Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
+        return ApiResponse.success(importJobCommandService.replayWholeFile(tenantId, operatorId, requestId, id));
+    }
+
+    @Override
+    @RequirePermission("USER_WRITE")
     public ApiResponse<ImportJobDetailResponse> replayFailedRowsSelective(@PathVariable("id") Long id,
                                                                           @Valid @RequestBody ImportJobSelectiveReplayRequest request) {
         Long tenantId = ContextAccess.requireTenantId();

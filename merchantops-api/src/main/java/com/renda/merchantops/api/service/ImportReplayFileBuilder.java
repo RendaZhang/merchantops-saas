@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +30,7 @@ import java.util.stream.StreamSupport;
 public class ImportReplayFileBuilder {
 
     private static final String REPLAY_FILENAME_PREFIX = "replay-failures-job-";
+    private static final String WHOLE_FILE_REPLAY_FILENAME_PREFIX = "replay-file-job-";
     private static final String EDITED_REPLAY_FILENAME_PREFIX = "replay-edited-job-";
 
     private final ImportJobRepository importJobRepository;
@@ -44,6 +46,12 @@ public class ImportReplayFileBuilder {
         }
 
         return buildReplayFile(tenantId, sourceJob, failedRows);
+    }
+
+    public ReplayFileBuildResult buildWholeFileReplay(Long tenantId, Long sourceJobId) {
+        ImportJobEntity sourceJob = requireWholeFileReplayableSourceJob(tenantId, sourceJobId);
+        String filename = WHOLE_FILE_REPLAY_FILENAME_PREFIX + sourceJob.getId() + ".csv";
+        return copyReplayFile(tenantId, sourceJob, filename, resolveWholeFileReplayRowCount(sourceJob));
     }
 
     public ReplayFileBuildResult buildSelectiveFailedRowReplay(Long tenantId,
@@ -85,11 +93,20 @@ public class ImportReplayFileBuilder {
     }
 
     private ImportJobEntity requireReplayableSourceJob(Long tenantId, Long sourceJobId) {
-        ImportJobEntity sourceJob = importJobRepository.findByIdAndTenantId(sourceJobId, tenantId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
-
+        ImportJobEntity sourceJob = requireSourceJob(tenantId, sourceJobId);
         validateReplayableSourceJob(sourceJob);
         return sourceJob;
+    }
+
+    private ImportJobEntity requireWholeFileReplayableSourceJob(Long tenantId, Long sourceJobId) {
+        ImportJobEntity sourceJob = requireSourceJob(tenantId, sourceJobId);
+        validateWholeFileReplayableSourceJob(sourceJob);
+        return sourceJob;
+    }
+
+    private ImportJobEntity requireSourceJob(Long tenantId, Long sourceJobId) {
+        return importJobRepository.findByIdAndTenantId(sourceJobId, tenantId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
     }
 
     private ReplayFileBuildResult buildReplayFile(Long tenantId,
@@ -98,6 +115,18 @@ public class ImportReplayFileBuilder {
         String filename = REPLAY_FILENAME_PREFIX + sourceJob.getId() + ".csv";
         String csvContent = buildReplayCsv(failedRows);
         return storeReplayFile(tenantId, sourceJob, filename, csvContent, failedRows.size());
+    }
+
+    private ReplayFileBuildResult copyReplayFile(Long tenantId,
+                                                 ImportJobEntity sourceJob,
+                                                 String filename,
+                                                 int replayRowCount) {
+        try (InputStream inputStream = importFileStorageService.openStream(sourceJob.getStorageKey())) {
+            String storageKey = importFileStorageService.store(tenantId, filename, inputStream);
+            return new ReplayFileBuildResult(sourceJob, filename, storageKey, replayRowCount);
+        } catch (IOException ex) {
+            throw new BizException(ErrorCode.BIZ_ERROR, "failed to copy replay source file");
+        }
     }
 
     private ReplayFileBuildResult storeReplayFile(Long tenantId,
@@ -145,8 +174,31 @@ public class ImportReplayFileBuilder {
         }
     }
 
+    private void validateWholeFileReplayableSourceJob(ImportJobEntity sourceJob) {
+        if (!"FAILED".equals(sourceJob.getStatus())) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "whole-file replay is only supported for FAILED source jobs");
+        }
+        if (!"USER_CSV".equals(sourceJob.getImportType())) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "replay is only supported for USER_CSV");
+        }
+        if (safeInt(sourceJob.getFailureCount()) <= 0) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "import job has no failed rows to replay");
+        }
+        if (safeInt(sourceJob.getSuccessCount()) > 0) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "whole-file replay is only supported when source job has no successful rows");
+        }
+    }
+
     private boolean isTerminalStatus(String status) {
         return "SUCCEEDED".equals(status) || "FAILED".equals(status);
+    }
+
+    private int resolveWholeFileReplayRowCount(ImportJobEntity sourceJob) {
+        int totalCount = safeInt(sourceJob.getTotalCount());
+        if (totalCount > 0) {
+            return totalCount;
+        }
+        return safeInt(sourceJob.getFailureCount());
     }
 
     private String buildReplayCsv(List<ImportJobItemErrorEntity> failedRows) {
@@ -213,6 +265,10 @@ public class ImportReplayFileBuilder {
                 || !StringUtils.hasText(sourceError.getRawPayload())) {
             throw new BizException(ErrorCode.BAD_REQUEST, "edited replay is only supported for row-level errors with raw payload");
         }
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
     }
 
     public record ReplayFileBuildResult(

@@ -353,6 +353,11 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures
 Authorization: Bearer {{token}}
 
+### Replay the whole file from a failed import job
+# Set importJobId to a FAILED source job with zero successful rows; the response returns a new derived replay job id.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-file
+Authorization: Bearer {{token}}
+
 ### Replay failed rows from import job by exact error code
 # Use exact values returned by detail `errorCodeCounts` or `/errors?errorCode=...`.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/selective

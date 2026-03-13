@@ -37,6 +37,7 @@ import java.util.Set;
 public class ImportJobCommandService {
 
     private static final String IMPORT_SOURCE_TYPE_CSV = "CSV";
+    private static final String REPLAY_MODE_WHOLE_FILE = "WHOLE_FILE";
     private static final List<String> EDITED_REPLAY_AUDIT_FIELDS = List.of(
             "username",
             "displayName",
@@ -99,6 +100,25 @@ public class ImportJobCommandService {
         ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
                 .buildFailedRowReplay(tenantId, sourceJobId);
         return createReplayJob(tenantId, operatorId, resolvedRequestId, replayFile, Map.of());
+    }
+
+    @Transactional
+    public ImportJobDetailResponse replayWholeFile(Long tenantId,
+                                                   Long operatorId,
+                                                   String requestId,
+                                                   Long sourceJobId) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
+        requireOperatorInTenant(tenantId, operatorId);
+
+        ImportReplayFileBuilder.ReplayFileBuildResult replayFile = importReplayFileBuilder
+                .buildWholeFileReplay(tenantId, sourceJobId);
+        return createReplayJob(
+                tenantId,
+                operatorId,
+                resolvedRequestId,
+                replayFile,
+                buildReplayModeAuditMetadata(REPLAY_MODE_WHOLE_FILE)
+        );
     }
 
     @Transactional
@@ -337,6 +357,10 @@ public class ImportJobCommandService {
         metadata.put("editedRowCount", editedRows.size());
         metadata.put("editedFields", EDITED_REPLAY_AUDIT_FIELDS);
         return metadata;
+    }
+
+    private Map<String, Object> buildReplayModeAuditMetadata(String replayMode) {
+        return Map.of("replayMode", replayMode);
     }
 
     private String requireNonBlank(String value, String fieldName) {

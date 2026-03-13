@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -139,7 +139,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## Import Jobs
 
-- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`
+- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`
 - [ ] `POST /api/v1/import-jobs` accepts multipart `request` + `file` and returns an initial `QUEUED` job
 - [ ] `POST /api/v1/import-jobs` with a `viewer` token returns `403`
 - [ ] `GET /api/v1/import-jobs?page=0&size=10` returns a page object ordered by `createdAt DESC, id DESC`
@@ -151,6 +151,8 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] for a multi-chunk job, `GET /api/v1/import-jobs/{id}` can show `status=PROCESSING` with incrementing `totalCount` / `successCount` / `failureCount` before the terminal state is written
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures` rejects clean-success, non-terminal, cross-tenant, and unsupported-import-type source jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures` returns a new `QUEUED` derived job whose detail keeps `sourceJobId=<source job id>`
+- [ ] `POST /api/v1/import-jobs/{id}/replay-file` rejects `SUCCEEDED`, cross-tenant, unsupported-import-type, and `FAILED` source jobs that already have successful rows
+- [ ] `POST /api/v1/import-jobs/{id}/replay-file` returns a new `QUEUED` derived job whose detail keeps `sourceJobId=<source job id>` and whose stored file matches the source file bytes for full-failure jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective` rejects empty `errorCodes`, unknown selected codes, non-terminal, cross-tenant, and unsupported-import-type source jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective` returns a new `QUEUED` derived job whose execution only replays rows whose `errorCode` exactly matches the request
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/edited` rejects empty `items`, duplicate `errorId`, cross-job or cross-tenant `errorId`, header/global errors, and unsupported-import-type source jobs
@@ -160,13 +162,14 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] import list items expose `requestedBy` and derived `hasFailures`
 - [ ] detail `errorCodeCounts` and `/errors` results stay consistent for partial-success and full-failure jobs
 - [ ] worker processing advances jobs through `QUEUED -> PROCESSING -> SUCCEEDED/FAILED`
-- [ ] replay-derived jobs go through the same worker path and only include the source job's failed rows, not the rows that already succeeded
+- [ ] replay-derived jobs go through the same worker path; row-level replay only includes failed rows, and whole-file replay remains limited to full-failure source jobs with zero successful rows
 - [ ] invalid CSV row shapes create `import_job_item_error` rows and surface them through job detail
 - [ ] business-row failures such as duplicate username, unknown role, invalid email, or invalid password also surface through `itemErrors` without blocking valid rows in the same job
 - [ ] files that exceed the configured row cap fail with `status=FAILED`, `errorSummary="import job exceeded max row limit"`, and a queryable `MAX_ROWS_EXCEEDED` error row
 - [ ] successful jobs keep `errorSummary = null`, partial-success jobs keep `status=SUCCEEDED` with `errorSummary = "completed with some row errors"`, and full failures keep `status=FAILED`
 - [ ] import create/process flow writes `IMPORT_JOB_CREATED`, `IMPORT_JOB_PROCESSING_STARTED`, and a terminal `IMPORT_JOB_COMPLETED` or `IMPORT_JOB_FAILED` audit event
 - [ ] failed-row replay also writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `sourceJobId` in the replay job's `IMPORT_JOB_CREATED` audit snapshot
+- [ ] whole-file replay keeps the same audit event types and adds `replayMode=WHOLE_FILE` to both the source-job replay-requested snapshot and the replay-job created snapshot
 - [ ] selective replay keeps the same audit event types and adds `selectedErrorCodes` to both the source-job replay-requested snapshot and the replay-job created snapshot
 - [ ] edited replay keeps the same audit event types and adds `editedErrorIds`, `editedRowCount`, and `editedFields` without persisting replacement row values
 

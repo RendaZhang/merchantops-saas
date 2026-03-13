@@ -53,6 +53,13 @@ public interface ImportJobApi {
     ApiResponse<ImportJobDetailResponse> replayFailedRows(@PathVariable("id") Long id);
 
     @Operation(
+            summary = "Replay the whole file from one failed import job as a new derived job",
+            description = "Creates a derived QUEUED job by copying the source USER_CSV file as-is. Whole-file replay is only supported for current-tenant FAILED source jobs that have no successful rows."
+    )
+    @PostMapping("/{id}/replay-file")
+    ApiResponse<ImportJobDetailResponse> replayWholeFile(@PathVariable("id") Long id);
+
+    @Operation(
             summary = "Replay failed rows by exact error code from one terminal import job as a new derived job",
             description = "Creates a derived QUEUED job from replayable failed rows whose errorCode exactly matches one of the requested values. The worker still processes the generated USER_CSV file through the standard sequential chunk path."
     )

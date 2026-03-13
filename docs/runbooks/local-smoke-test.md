@@ -1,6 +1,6 @@
 # Local Smoke Test
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 > Maintenance note: keep this page as the current PowerShell-first live smoke path for the public workflow surface. Keep it step-by-step, happy-path-oriented, and reusable across phases. Broad negative-path coverage and environment-wide checks belong in [automated-tests.md](automated-tests.md) and [regression-checklist.md](regression-checklist.md), not as historical add-ons here.
 
@@ -439,7 +439,7 @@ Expected results:
 
 If the job stays in `QUEUED` or `PROCESSING`, treat that as a live infra or worker-follow-up issue rather than silently marking the import smoke step complete.
 
-This smoke path intentionally stops at the clean-success import baseline. Failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, exact-error-code selective replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and edited replay through `POST /api/v1/import-jobs/{id}/replay-failures/edited` are part of the broader import regression surface and should be checked through [regression-checklist.md](regression-checklist.md) when those paths change.
+This smoke path intentionally stops at the clean-success import baseline. Failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, narrow whole-file replay through `POST /api/v1/import-jobs/{id}/replay-file`, exact-error-code selective replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and edited replay through `POST /api/v1/import-jobs/{id}/replay-failures/edited` are part of the broader import regression surface and should be checked through [regression-checklist.md](regression-checklist.md) when those paths change.
 
 ## 10. Optional RBAC Demo Checks
 

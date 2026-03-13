@@ -13,6 +13,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added Week 5 Slice D failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, creating a new derived `QUEUED` job instead of mutating the source job.
 - Added Week 5 Slice F selective failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective`, creating a new derived `QUEUED` job from replayable row failures whose `errorCode` exactly matches the request.
 - Added Week 5 Slice G edited failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures/edited`, creating a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
+- Added Week 5 Slice H whole-file replay through `POST /api/v1/import-jobs/{id}/replay-file`, creating a new derived `QUEUED` job by copying the stored source file for current-tenant `FAILED` `USER_CSV` jobs that have no successful rows.
 
 ### Changed
 
@@ -20,6 +21,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - `GET /api/v1/import-jobs` now supports queue filters for `status`, `importType`, `requestedBy`, and `hasFailuresOnly`, plus derived list fields `requestedBy` and `hasFailures`.
 - `GET /api/v1/import-jobs/{id}` now exposes `errorCodeCounts`, and Week 5 reporting now also includes `GET /api/v1/import-jobs/{id}/errors` for paged failure-item reads with optional `errorCode` filtering.
 - Replay-derived jobs now persist `sourceJobId` lineage, emit `IMPORT_JOB_REPLAY_REQUESTED` on the source job, and reuse the same worker path as standard `USER_CSV` imports.
+- Whole-file replay keeps the same replay-derived job model, copies stored source bytes through the storage abstraction, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - Selective replay keeps the same replay-derived job model and adds `selectedErrorCodes` audit metadata to both the source-job replay-requested snapshot and the replay-job created snapshot without adding a new import-job column.
 - Edited replay keeps the same replay-derived job model while recording only scope metadata such as `editedErrorIds`, `editedRowCount`, and `editedFields` in source/replay audit snapshots instead of persisting replacement values.
 - Import execution now runs in internal sequential chunks, flushes counters during `PROCESSING`, and enforces configurable `chunk-size` / `max-rows-per-job` guardrails with `MAX_ROWS_EXCEEDED` on oversized files.

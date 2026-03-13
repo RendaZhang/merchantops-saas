@@ -170,6 +170,76 @@ class ImportJobCommandServiceTest {
     }
 
     @Test
+    void replayWholeFileShouldCreateDerivedQueuedJobWithWholeFileAuditMetadata() {
+        UserEntity user = new UserEntity();
+        user.setId(101L);
+        user.setTenantId(1L);
+        ImportJobEntity sourceJob = new ImportJobEntity();
+        sourceJob.setId(7001L);
+        sourceJob.setTenantId(1L);
+        sourceJob.setImportType("USER_CSV");
+        sourceJob.setSourceType("CSV");
+        sourceJob.setSourceFilename("users.csv");
+        sourceJob.setStorageKey("1/original.csv");
+        sourceJob.setStatus("FAILED");
+        sourceJob.setRequestedBy(101L);
+        sourceJob.setRequestId("req-source");
+        sourceJob.setTotalCount(3);
+        sourceJob.setSuccessCount(0);
+        sourceJob.setFailureCount(3);
+        when(userRepository.findByIdAndTenantId(101L, 1L)).thenReturn(Optional.of(user));
+        when(importReplayFileBuilder.buildWholeFileReplay(1L, 7001L)).thenReturn(
+                new ImportReplayFileBuilder.ReplayFileBuildResult(
+                        sourceJob,
+                        "replay-file-job-7001.csv",
+                        "1/replay-file.csv",
+                        3
+                )
+        );
+        when(importJobRepository.save(any(ImportJobEntity.class))).thenAnswer(invocation -> {
+            ImportJobEntity entity = invocation.getArgument(0);
+            entity.setId(7005L);
+            return entity;
+        });
+        when(importJobQueryService.toDetail(any())).thenReturn(new ImportJobDetailResponse(
+                7005L, 1L, "USER_CSV", "CSV", "replay-file-job-7001.csv", "1/replay-file.csv", 7001L,
+                "QUEUED", 101L, "req-replay-file-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+        ));
+
+        ImportJobDetailResponse response = importJobCommandService.replayWholeFile(1L, 101L, "req-replay-file-1", 7001L);
+
+        assertThat(response.id()).isEqualTo(7005L);
+        assertThat(response.sourceJobId()).isEqualTo(7001L);
+        verify(importReplayFileBuilder).buildWholeFileReplay(1L, 7001L);
+        verify(applicationEventPublisher).publishEvent(new ImportJobCreatedEvent(7005L, 1L));
+
+        ArgumentCaptor<Long> entityIdCaptor = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<String> actionCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Object> afterCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(auditEventService, times(2)).recordEvent(
+                eq(1L),
+                eq("IMPORT_JOB"),
+                entityIdCaptor.capture(),
+                actionCaptor.capture(),
+                eq(101L),
+                eq("req-replay-file-1"),
+                isNull(),
+                afterCaptor.capture()
+        );
+        assertThat(actionCaptor.getAllValues()).containsExactly("IMPORT_JOB_REPLAY_REQUESTED", "IMPORT_JOB_CREATED");
+        assertThat(entityIdCaptor.getAllValues()).containsExactly(7001L, 7005L);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> replayRequestedAfter = (Map<String, Object>) afterCaptor.getAllValues().get(0);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> createdAfter = (Map<String, Object>) afterCaptor.getAllValues().get(1);
+        assertThat(replayRequestedAfter).containsEntry("replayJobId", 7005L);
+        assertThat(replayRequestedAfter).containsEntry("replayedFailureCount", 3);
+        assertThat(replayRequestedAfter).containsEntry("replayMode", "WHOLE_FILE");
+        assertThat(createdAfter).containsEntry("sourceJobId", 7001L);
+        assertThat(createdAfter).containsEntry("replayMode", "WHOLE_FILE");
+    }
+
+    @Test
     void replayFailedRowsSelectiveShouldNormalizeCodesAndPersistAuditSelection() {
         UserEntity user = new UserEntity();
         user.setId(101L);

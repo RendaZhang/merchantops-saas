@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -18,6 +18,7 @@ Last updated: 2026-03-12
 - Week 5 Slice E is complete with sequential chunked execution, per-chunk counter visibility, and basic throughput guardrails.
 - Week 5 Slice F is complete with selective failed-row replay by exact `errorCode` plus `selectedErrorCodes` audit snapshots.
 - Week 5 Slice G is complete with edited failed-row replay by exact `errorId`, full replacement-row input, and scope-only replay audit metadata.
+- Week 5 Slice H is complete with whole-file replay for `FAILED` `USER_CSV` source jobs that have no successful rows plus `replayMode=WHOLE_FILE` audit snapshots.
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 
 ## Current Focus
@@ -31,8 +32,8 @@ Week 5 should stay narrow and workflow-oriented:
 
 ## Recommended Next Steps
 
-- keep the landed queue filters, `/errors` surface, replay lineage, edited replay semantics, chunk semantics, and job-summary semantics aligned across tests, Swagger, and reference docs
-- add the next narrow follow-up slice such as whole-file replay or broader import-type support now that Week 5 selective replay, edited replay, and chunk / throughput controls are in place
+- keep the landed queue filters, `/errors` surface, replay-file boundary, replay lineage, edited replay semantics, chunk semantics, and job-summary semantics aligned across tests, Swagger, and reference docs
+- add the next narrow follow-up slice such as broader import-type support or richer replay reporting now that Week 5 whole-file replay, selective replay, edited replay, and chunk / throughput controls are in place
 - keep Week 2-4 docs aligned only where Week 5 changes shared workflow or governance expectations
 - avoid pulling Week 6 AI scope forward until the import execution model, failure reporting, replay semantics, and replay breadth are stable
 
@@ -48,7 +49,7 @@ Week 5 should stay narrow and workflow-oriented:
 
 ## Active Phase Notes
 
-Week 5 currently has seven clear slices:
+Week 5 currently has eight clear slices:
 
 - Slice A is complete:
   - public API includes create/list/detail for import jobs
@@ -84,6 +85,10 @@ Week 5 currently has seven clear slices:
   - edited replay keeps the same standard worker path and `sourceJobId` lineage as the existing replay endpoints
   - duplicate `errorId`, cross-job / cross-tenant `errorId`, and header/global errors are rejected
   - edited replay records only edit scope metadata such as `editedErrorIds` and `editedRowCount`; replacement values are intentionally excluded from replay audit snapshots
+- Slice H is complete:
+  - `POST /api/v1/import-jobs/{id}/replay-file` creates a new derived `QUEUED` job by copying the stored source file
+  - whole-file replay is intentionally limited to current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows
+  - partial-success jobs continue using row-level replay variants, and source/replay audit snapshots add `replayMode=WHOLE_FILE`
 
 ## Open-Source Track
 

@@ -1,10 +1,10 @@
 # Import Jobs
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 ## Public API Surface
 
-Week 5 now exposes seven async import endpoints:
+Week 5 now exposes eight async import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -12,6 +12,7 @@ Week 5 now exposes seven async import endpoints:
 | `GET` | `/api/v1/import-jobs` | Bearer JWT | `USER_READ` | Pages current-tenant import jobs with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Bearer JWT | `USER_READ` | Returns one current-tenant import job overview with `errorCodeCounts` plus backward-compatible `itemErrors` |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows only |
+| `POST` | `/api/v1/import-jobs/{id}/replay-file` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job by copying the source file for a full-failure `FAILED` source job |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from caller-provided full replacement rows that target replayable failed-row `errorId` values only |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
@@ -108,10 +109,36 @@ Replay file generation rules:
 
 Still out of scope in this slice:
 
-- replaying the entire original file
+- whole-file replay for source jobs that already succeeded any rows
 - broader import types beyond `USER_CSV`
 - automatic dedupe or idempotency ledger behavior beyond current business validation
 - parallel chunk execution, sub-job / shard tables, and retry orchestration
+
+## Whole-File Replay (`POST /api/v1/import-jobs/{id}/replay-file`)
+
+Whole-file replay stays intentionally narrow:
+
+- request body is empty
+- whole-file replay still creates a new derived `import_job`; it does not reset or mutate the source job
+- the source file is copied through the current storage abstraction into a new system-generated file
+- the source job must be current-tenant `FAILED`, `USER_CSV`, and have `successCount = 0`
+- the replay job keeps `sourceJobId=<source job id>` and starts in `QUEUED`
+- the worker still consumes a standard `USER_CSV` file and does not need a whole-file-specific execution branch
+
+Current rejection rules:
+
+- source job is not found in the current tenant
+- source job is not `FAILED`
+- source job has `failureCount = 0`
+- source job has any successful rows, including `FAILED` jobs such as `MAX_ROWS_EXCEEDED` after earlier successes
+- source job is not `USER_CSV`
+
+Current file-generation and audit behavior:
+
+- the generated filename uses `replay-file-job-<sourceJobId>.csv`
+- the copied replay file preserves the stored source file bytes instead of rebuilding rows from `import_job_item_error.raw_payload`
+- source and replay audit snapshots add `replayMode=WHOLE_FILE`
+- audit keeps lineage plus replay mode only; it does not persist file contents
 
 ## Selective Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures/selective`)
 

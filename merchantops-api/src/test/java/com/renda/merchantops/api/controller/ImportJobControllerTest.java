@@ -140,6 +140,28 @@ class ImportJobControllerTest {
     }
 
     @Test
+    void replayWholeFileShouldForwardContextAndReturnDerivedJobDetail() throws Exception {
+        when(importJobCommandService.replayWholeFile(9L, 9001L, "req-replay-file-1", 88L))
+                .thenReturn(new ImportJobDetailResponse(
+                        92L, 9L, "USER_CSV", "CSV", "replay-file-job-88.csv", "9/replay-file.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-file-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-file")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-file-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(92))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        verify(importJobCommandService).replayWholeFile(9L, 9001L, "req-replay-file-1", 88L);
+    }
+
+    @Test
     void replaySelectiveShouldBindRequestAndForwardContext() throws Exception {
         when(importJobCommandService.replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), any()))
                 .thenReturn(new ImportJobDetailResponse(

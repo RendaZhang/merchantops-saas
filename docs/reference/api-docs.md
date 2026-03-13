@@ -67,6 +67,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job overview with `errorCodeCounts` plus `itemErrors` |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows |
+| `POST` | `/api/v1/import-jobs/{id}/replay-file` | Yes + `USER_WRITE` | Create a new derived import job by copying the stored source file from a full-failure source job |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Yes + `USER_WRITE` | Create a new derived import job from caller-provided full replacement rows keyed by replayable failed-row `errorId` |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
@@ -125,12 +126,13 @@ Approval Requests tag note:
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
-- `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` require `USER_WRITE`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
+- `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` require `USER_WRITE`.
 - `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
 - `GET /api/v1/import-jobs/{id}` detail now exposes nullable `sourceJobId` for replay-derived jobs.
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
+- `POST /api/v1/import-jobs/{id}/replay-file` copies the stored source file into a new derived `QUEUED` job for current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
 - `POST /api/v1/import-jobs/{id}/replay-failures/edited` creates a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
@@ -733,7 +735,33 @@ Current notes:
 - replay creates a new derived job instead of mutating the source job in place
 - the new job's detail now exposes `sourceJobId`
 
-### 21. Selective Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/selective`)
+### 21. Whole-File Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-file`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 1203,
+    "importType": "USER_CSV",
+    "sourceFilename": "replay-file-job-1201.csv",
+    "sourceJobId": 1201,
+    "status": "QUEUED"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_WRITE`
+- source job must be current-tenant, `FAILED`, `USER_CSV`, and have no successful rows
+- whole-file replay creates a new derived job instead of mutating the source job in place
+- whole-file replay copies the stored source file bytes through the current storage abstraction
+- source and replay audit snapshots add `replayMode=WHOLE_FILE`
+
+### 22. Selective Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/selective`)
 
 Request:
 
@@ -751,7 +779,7 @@ Current notes:
 - source and replay audit snapshots record `selectedErrorCodes` in this slice instead of adding a new import-job column
 - response shape stays the same as the standard replay response above because the selective criteria only live in audit snapshots for this slice
 
-### 22. Edited Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
+### 23. Edited Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
 
 Request:
 
@@ -778,7 +806,7 @@ Current notes:
 - duplicate `errorId`, cross-job / cross-tenant `errorId`, and header/global error targets are rejected
 - source and replay audit snapshots record `editedErrorIds`, `editedRowCount`, and `editedFields` only; replacement values are intentionally excluded
 
-### 23. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
+### 24. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
 
 Response:
 
