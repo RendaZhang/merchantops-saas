@@ -1,0 +1,416 @@
+package com.renda.merchantops.api.controller;
+
+import com.renda.merchantops.api.context.CurrentUserContext;
+import com.renda.merchantops.api.context.TenantContext;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
+import com.renda.merchantops.api.exception.GlobalExceptionHandler;
+import com.renda.merchantops.api.filter.RequestIdFilter;
+import com.renda.merchantops.api.security.CurrentUser;
+import com.renda.merchantops.api.security.RequirePermissionInterceptor;
+import com.renda.merchantops.api.service.ImportJobCommandService;
+import com.renda.merchantops.api.service.ImportJobQueryService;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@ExtendWith(MockitoExtension.class)
+class ImportJobControllerTest {
+
+    private static final String HEADER_AUTH = "X-Test-Auth";
+    private static final String HEADER_AUTHORITIES = "X-Test-Authorities";
+    private static final String HEADER_TENANT_ID = "X-Test-Tenant-Id";
+    private static final String HEADER_TENANT_CODE = "X-Test-Tenant-Code";
+    private static final String HEADER_USER_ID = "X-Test-User-Id";
+    private static final String HEADER_REQUEST_ID = "X-Test-Request-Id";
+
+    @Mock
+    private ImportJobCommandService importJobCommandService;
+    @Mock
+    private ImportJobQueryService importJobQueryService;
+
+    private MockMvc mockMvc;
+
+    @BeforeEach
+    void setUp() {
+        ImportJobController controller = new ImportJobController(importJobCommandService, importJobQueryService);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .addInterceptors(new RequirePermissionInterceptor())
+                .addFilters(new TestAuthenticationFilter())
+                .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentUserContext.clear();
+        SecurityContextHolder.clearContext();
+        TenantContext.clear();
+        MDC.remove(RequestIdFilter.MDC_KEY);
+    }
+
+    @Test
+    void listShouldRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/import-jobs"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void createShouldBindMultipartAndForwardContext() throws Exception {
+        when(importJobCommandService.createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any()))
+                .thenReturn(new ImportJobDetailResponse(1L, 9L, "USER_CSV", "CSV", "users.csv", "9/key.csv", null, "QUEUED", 9001L,
+                        "req-import-1", 0, 0, 0, null, null, null, null, List.of(), List.of()));
+
+        MockMultipartFile requestPart = new MockMultipartFile("request", "", "application/json", "{\"importType\":\"USER_CSV\"}".getBytes());
+        MockMultipartFile filePart = new MockMultipartFile("file", "users.csv", "text/csv", "username,email\na,a@x.com".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/import-jobs")
+                        .file(requestPart)
+                        .file(filePart)
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-import-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("QUEUED"));
+
+        verify(importJobCommandService).createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any());
+    }
+
+    @Test
+    void replayShouldForwardContextAndReturnDerivedJobDetail() throws Exception {
+        when(importJobCommandService.replayFailedRows(9L, 9001L, "req-replay-1", 88L))
+                .thenReturn(new ImportJobDetailResponse(
+                        89L, 9L, "USER_CSV", "CSV", "replay-failures-job-88.csv", "9/replay.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(89))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        verify(importJobCommandService).replayFailedRows(9L, 9001L, "req-replay-1", 88L);
+    }
+
+    @Test
+    void replayWholeFileShouldForwardContextAndReturnDerivedJobDetail() throws Exception {
+        when(importJobCommandService.replayWholeFile(9L, 9001L, "req-replay-file-1", 88L))
+                .thenReturn(new ImportJobDetailResponse(
+                        92L, 9L, "USER_CSV", "CSV", "replay-file-job-88.csv", "9/replay-file.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-file-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-file")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-file-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(92))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        verify(importJobCommandService).replayWholeFile(9L, 9001L, "req-replay-file-1", 88L);
+    }
+
+    @Test
+    void replaySelectiveShouldBindRequestAndForwardContext() throws Exception {
+        when(importJobCommandService.replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), any()))
+                .thenReturn(new ImportJobDetailResponse(
+                        90L, 9L, "USER_CSV", "CSV", "replay-failures-job-88.csv", "9/replay-selective.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-selective-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/selective")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"errorCodes\":[\"UNKNOWN_ROLE\",\"INVALID_EMAIL\"]}")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-selective-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(90))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        ArgumentCaptor<ImportJobSelectiveReplayRequest> requestCaptor =
+                ArgumentCaptor.forClass(ImportJobSelectiveReplayRequest.class);
+        verify(importJobCommandService).replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getErrorCodes()).containsExactly("UNKNOWN_ROLE", "INVALID_EMAIL");
+    }
+
+    @Test
+    void replaySelectiveShouldRejectEmptyErrorCodes() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/selective")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"errorCodes\":[]}")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-selective-invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("errorCodes: errorCodes must not be empty"));
+
+        verifyNoInteractions(importJobCommandService);
+    }
+
+    @Test
+    void replayEditedShouldBindRequestAndForwardContext() throws Exception {
+        when(importJobCommandService.replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), any()))
+                .thenReturn(new ImportJobDetailResponse(
+                        91L, 9L, "USER_CSV", "CSV", "replay-edited-job-88.csv", "9/replay-edited.csv", 88L,
+                        "QUEUED", 9001L, "req-replay-edited-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/edited")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "items": [
+                                    {
+                                      "errorId": 701,
+                                      "username": "retry-user",
+                                      "displayName": "Retry User",
+                                      "email": "retry-user@demo-shop.local",
+                                      "password": "123456",
+                                      "roleCodes": ["READ_ONLY"]
+                                    }
+                                  ]
+                                }
+                                """)
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-edited-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(91))
+                .andExpect(jsonPath("$.data.sourceJobId").value(88));
+
+        ArgumentCaptor<ImportJobEditedReplayRequest> requestCaptor =
+                ArgumentCaptor.forClass(ImportJobEditedReplayRequest.class);
+        verify(importJobCommandService).replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getItems()).singleElement().satisfies(item -> {
+            assertThat(item.getErrorId()).isEqualTo(701L);
+            assertThat(item.getUsername()).isEqualTo("retry-user");
+            assertThat(item.getRoleCodes()).containsExactly("READ_ONLY");
+        });
+    }
+
+    @Test
+    void replayEditedShouldRejectEmptyItems() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/edited")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[]}")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-edited-invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("items: items must not be empty"));
+
+        verifyNoInteractions(importJobCommandService);
+    }
+
+    @Test
+    void listShouldRequirePermission() throws Exception {
+        mockMvc.perform(get("/api/v1/import-jobs")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void listShouldReturnTenantScopedPage() throws Exception {
+        when(importJobQueryService.pageJobs(eq(9L), any()))
+                .thenReturn(new ImportJobPageResponse(List.of(
+                        new com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse(
+                                1L,
+                                "USER_CSV",
+                                "CSV",
+                                "users.csv",
+                                "FAILED",
+                                9001L,
+                                true,
+                                3,
+                                1,
+                                2,
+                                "completed with some row errors",
+                                null,
+                                null,
+                                null
+                        )
+                ), 1, 20, 1, 1));
+
+        mockMvc.perform(get("/api/v1/import-jobs")
+                        .queryParam("page", "1")
+                        .queryParam("size", "20")
+                        .queryParam("status", "FAILED")
+                        .queryParam("importType", "USER_CSV")
+                        .queryParam("requestedBy", "9001")
+                        .queryParam("hasFailuresOnly", "true")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items[0].requestedBy").value(9001))
+                .andExpect(jsonPath("$.data.items[0].hasFailures").value(true));
+
+        ArgumentCaptor<com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery> queryCaptor =
+                ArgumentCaptor.forClass(com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery.class);
+        verify(importJobQueryService).pageJobs(eq(9L), queryCaptor.capture());
+        assertThat(queryCaptor.getValue().getPage()).isEqualTo(1);
+        assertThat(queryCaptor.getValue().getSize()).isEqualTo(20);
+        assertThat(queryCaptor.getValue().getStatus()).isEqualTo("FAILED");
+        assertThat(queryCaptor.getValue().getImportType()).isEqualTo("USER_CSV");
+        assertThat(queryCaptor.getValue().getRequestedBy()).isEqualTo(9001L);
+        assertThat(queryCaptor.getValue().getHasFailuresOnly()).isTrue();
+    }
+
+    @Test
+    void listErrorsShouldBindQueryAndForwardTenantScope() throws Exception {
+        when(importJobQueryService.pageJobErrors(eq(9L), eq(88L), any()))
+                .thenReturn(new ImportJobErrorPageResponse(List.of(
+                        new ImportJobErrorItemResponse(701L, 3, "UNKNOWN_ROLE", "role missing", "row-3", null)
+                ), 1, 20, 1, 1));
+
+        mockMvc.perform(get("/api/v1/import-jobs/88/errors")
+                        .queryParam("page", "1")
+                        .queryParam("size", "20")
+                        .queryParam("errorCode", "UNKNOWN_ROLE")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items[0].rowNumber").value(3))
+                .andExpect(jsonPath("$.data.items[0].errorCode").value("UNKNOWN_ROLE"));
+
+        ArgumentCaptor<com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery> queryCaptor =
+                ArgumentCaptor.forClass(com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery.class);
+        verify(importJobQueryService).pageJobErrors(eq(9L), eq(88L), queryCaptor.capture());
+        assertThat(queryCaptor.getValue().getPage()).isEqualTo(1);
+        assertThat(queryCaptor.getValue().getSize()).isEqualTo(20);
+        assertThat(queryCaptor.getValue().getErrorCode()).isEqualTo("UNKNOWN_ROLE");
+    }
+
+    private static class TestAuthenticationFilter extends OncePerRequestFilter {
+
+        @Override
+        protected void doFilterInternal(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        FilterChain filterChain) throws ServletException, IOException {
+            String requestId = request.getHeader(HEADER_REQUEST_ID);
+            if (StringUtils.hasText(requestId)) {
+                MDC.put(RequestIdFilter.MDC_KEY, requestId.trim());
+            }
+
+            if ("true".equalsIgnoreCase(request.getHeader(HEADER_AUTH))) {
+                Long userId = parseLong(request.getHeader(HEADER_USER_ID), 9001L);
+                Long tenantId = parseLong(request.getHeader(HEADER_TENANT_ID), 9L);
+                String tenantCode = request.getHeader(HEADER_TENANT_CODE);
+                if (!StringUtils.hasText(tenantCode)) {
+                    tenantCode = "demo-shop";
+                }
+                String authoritiesHeader = request.getHeader(HEADER_AUTHORITIES);
+                List<SimpleGrantedAuthority> authorities = Stream.of(StringUtils.hasText(authoritiesHeader) ? authoritiesHeader.split(",") : new String[0])
+                        .map(String::trim)
+                        .filter(StringUtils::hasText)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
+
+                SecurityContextHolder.getContext().setAuthentication(
+                        new UsernamePasswordAuthenticationToken("tester", null, authorities)
+                );
+                CurrentUserContext.set(new CurrentUser(
+                        userId,
+                        tenantId,
+                        tenantCode,
+                        "tester",
+                        List.of(),
+                        List.of()
+                ));
+                if (StringUtils.hasText(request.getHeader(HEADER_TENANT_ID))) {
+                    TenantContext.setTenant(tenantId, tenantCode);
+                }
+            }
+
+            try {
+                filterChain.doFilter(request, response);
+            } finally {
+                SecurityContextHolder.clearContext();
+                CurrentUserContext.clear();
+                TenantContext.clear();
+                MDC.remove(RequestIdFilter.MDC_KEY);
+            }
+        }
+
+        private static Long parseLong(String value, Long defaultValue) {
+            if (!StringUtils.hasText(value)) {
+                return defaultValue;
+            }
+            return Long.parseLong(value);
+        }
+    }
+}

@@ -1,0 +1,399 @@
+@baseUrl = http://localhost:8080
+@contentType = application/json
+@tenantCode = demo-shop
+@adminUsername = admin
+@opsUsername = ops
+@viewerUsername = viewer
+@password = 123456
+@token = replace-with-access-token
+@createUsername = cashier-demo
+@createUserEmail = cashier-demo@demo-shop.local
+@targetUserId = replace-with-created-user-id
+@approvalRequestId = replace-with-created-approval-request-id
+@approvalRequestedBy = replace-with-requester-user-id
+@targetUserToken = replace-with-pre-change-user-access-token
+@refreshedTargetUserToken = replace-with-post-role-change-user-access-token
+@opsUserId = 2
+@ticketId = replace-with-created-ticket-id
+@importJobId = replace-with-created-import-job-id
+@importErrorId = replace-with-row-error-id
+@importRequestedBy = replace-with-import-requester-id
+
+# See docs/runbooks/regression-checklist.md for the broader regression checklist.
+# See docs/reference/user-management.md for the current /api/v1/users contract and expected demo response.
+# After creating a smoke user, set targetUserId to the returned id, targetUserToken to the pre-change token, and refreshedTargetUserToken to the post-role-change token instead of mutating seeded demo accounts.
+
+### Login - admin
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "tenantCode": "{{tenantCode}}",
+  "username": "{{adminUsername}}",
+  "password": "{{password}}"
+}
+
+### Login - ops
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "tenantCode": "{{tenantCode}}",
+  "username": "{{opsUsername}}",
+  "password": "{{password}}"
+}
+
+### Login - viewer
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "tenantCode": "{{tenantCode}}",
+  "username": "{{viewerUsername}}",
+  "password": "{{password}}"
+}
+
+### Health
+GET {{baseUrl}}/health
+
+### Actuator health
+GET {{baseUrl}}/actuator/health
+
+### Dev ping
+GET {{baseUrl}}/api/v1/dev/ping
+
+### Dev echo
+POST {{baseUrl}}/api/v1/dev/echo
+Content-Type: {{contentType}}
+
+{
+  "message": "hello merchantops"
+}
+
+### Get current user
+GET {{baseUrl}}/api/v1/user/me
+Authorization: Bearer {{token}}
+
+### Get context
+GET {{baseUrl}}/api/v1/context
+Authorization: Bearer {{token}}
+
+### List tenant users
+GET {{baseUrl}}/api/v1/users?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List tenant users - filter by username
+GET {{baseUrl}}/api/v1/users?page=0&size=10&username=ad
+Authorization: Bearer {{token}}
+
+### List tenant users - filter by status
+GET {{baseUrl}}/api/v1/users?page=0&size=10&status=ACTIVE
+Authorization: Bearer {{token}}
+
+### List tenant users - filter by role
+GET {{baseUrl}}/api/v1/users?page=0&size=10&roleCode=TENANT_ADMIN
+Authorization: Bearer {{token}}
+
+### Get tenant user detail
+GET {{baseUrl}}/api/v1/users/{{targetUserId}}
+Authorization: Bearer {{token}}
+
+### List assignable roles
+GET {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{token}}
+
+### Create tenant user
+# Change createUsername/createUserEmail before re-running against a persistent local database.
+POST {{baseUrl}}/api/v1/users
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "username": "{{createUsername}}",
+  "displayName": "Cashier User",
+  "email": "{{createUserEmail}}",
+  "password": "123456",
+  "roleCodes": ["READ_ONLY"]
+}
+
+### Update tenant user profile
+# Change targetUserId if you want to update a different user.
+PUT {{baseUrl}}/api/v1/users/{{targetUserId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "displayName": "Cashier User Updated",
+  "email": "cashier-demo.updated@demo-shop.local"
+}
+
+### Disable tenant user
+# Change targetUserId if you want to disable a different user.
+PATCH {{baseUrl}}/api/v1/users/{{targetUserId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "DISABLED"
+}
+
+### Re-enable tenant user
+PATCH {{baseUrl}}/api/v1/users/{{targetUserId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "ACTIVE"
+}
+
+### Replace tenant user roles
+# This clears previous roles first, then writes the new role set.
+PUT {{baseUrl}}/api/v1/users/{{targetUserId}}/roles
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "roleCodes": ["TENANT_ADMIN"]
+}
+
+### Reuse old user token after role change
+# If you captured a token for this user before changing roles, reusing it now should return 403 / token claims are stale, please login again.
+GET {{baseUrl}}/api/v1/users?page=0&size=10
+Authorization: Bearer {{targetUserToken}}
+
+### Login again after role change
+# After re-login, the new token carries the updated roles and permissions.
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "tenantCode": "{{tenantCode}}",
+  "username": "{{createUsername}}",
+  "password": "{{password}}"
+}
+
+### Verify refreshed token can use new permissions
+GET {{baseUrl}}/api/v1/rbac/users/manage
+Authorization: Bearer {{refreshedTargetUserToken}}
+
+### List tenant tickets
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List tenant tickets - filter by status
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&status=OPEN
+Authorization: Bearer {{token}}
+
+### List tenant tickets - filter by assignee
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&assigneeId={{opsUserId}}
+Authorization: Bearer {{token}}
+
+### List tenant tickets - filter by keyword(title/description)
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&keyword=printer
+Authorization: Bearer {{token}}
+
+### List tenant tickets - unassigned queue
+GET {{baseUrl}}/api/v1/tickets?page=0&size=10&status=OPEN&unassignedOnly=true
+Authorization: Bearer {{token}}
+
+### Create tenant ticket
+POST {{baseUrl}}/api/v1/tickets
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "POS register frozen",
+  "description": "Register screen froze during checkout."
+}
+
+### Get tenant ticket detail
+GET {{baseUrl}}/api/v1/tickets/{{ticketId}}
+Authorization: Bearer {{token}}
+
+### Assign tenant ticket
+# Use opsUserId=2 for the seeded ops handler in a fresh local database.
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/assignee
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "assigneeId": {{opsUserId}}
+}
+
+### Start tenant ticket
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### Comment on tenant ticket
+POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/comments
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "content": "Investigating store terminal logs."
+}
+
+### Close tenant ticket
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "CLOSED"
+}
+
+### Reopen tenant ticket
+PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "OPEN"
+}
+
+### Create user disable approval request
+POST {{baseUrl}}/api/v1/users/{{targetUserId}}/disable-requests
+Authorization: Bearer {{token}}
+
+### List approval requests (queue)
+GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List pending disable requests by requester
+# Set approvalRequestedBy to the requester id returned by the current tenant workflow instead of using a test-only hardcoded id.
+GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=USER_STATUS_DISABLE&requestedBy={{approvalRequestedBy}}
+Authorization: Bearer {{token}}
+
+### Get approval request detail
+GET {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}
+Authorization: Bearer {{token}}
+
+### Query approval-request audit events
+GET {{baseUrl}}/api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId={{approvalRequestId}}
+Authorization: Bearer {{token}}
+
+### Approve approval request
+# Use a token from a different tenant-local reviewer than the requester.
+POST {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}/approve
+Authorization: Bearer {{token}}
+
+### Reject approval request
+# Use a token from a different tenant-local reviewer than the requester.
+POST {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}/reject
+Authorization: Bearer {{token}}
+
+### Query tenant audit events by entity
+GET {{baseUrl}}/api/v1/audit-events?entityType=TICKET&entityId={{ticketId}}
+Authorization: Bearer {{token}}
+
+
+### RBAC - read users
+GET {{baseUrl}}/api/v1/rbac/users
+Authorization: Bearer {{token}}
+
+### RBAC - manage users
+GET {{baseUrl}}/api/v1/rbac/users/manage
+Authorization: Bearer {{token}}
+
+### RBAC - feature flags
+GET {{baseUrl}}/api/v1/rbac/feature-flags
+Authorization: Bearer {{token}}
+
+### Create import job (multipart)
+# Quote CSV fields that contain commas, double quotes, or embedded newlines.
+POST {{baseUrl}}/api/v1/import-jobs
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="request"
+Content-Type: application/json
+
+{"importType":"USER_CSV"}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="users.csv"
+Content-Type: text/csv
+
+username,displayName,email,password,roleCodes
+import_user_1,"Import User, Tier 1",import_user_1@demo-shop.local,123456,READ_ONLY
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### List import jobs
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List import jobs - failed only
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&status=FAILED
+Authorization: Bearer {{token}}
+
+### List import jobs - rows with any failures
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&hasFailuresOnly=true
+Authorization: Bearer {{token}}
+
+### List import jobs - filter by requester
+# Set importRequestedBy from a create/detail response in the current tenant.
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&requestedBy={{importRequestedBy}}
+Authorization: Bearer {{token}}
+
+### List import jobs - filter by import type
+GET {{baseUrl}}/api/v1/import-jobs?page=0&size=10&importType=USER_CSV
+Authorization: Bearer {{token}}
+
+### Get import job detail
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}
+Authorization: Bearer {{token}}
+
+### Replay failed rows from import job
+# Set importJobId to a terminal source job that has failed rows; the response returns a new derived replay job id.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures
+Authorization: Bearer {{token}}
+
+### Replay the whole file from a failed import job
+# Set importJobId to a FAILED source job with zero successful rows; the response returns a new derived replay job id.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-file
+Authorization: Bearer {{token}}
+
+### Replay failed rows from import job by exact error code
+# Use exact values returned by detail `errorCodeCounts` or `/errors?errorCode=...`.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/selective
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "errorCodes": [
+    "UNKNOWN_ROLE"
+  ]
+}
+
+### Replay edited failed rows from import job by exact error id
+# Use importErrorId from detail `itemErrors` or `/errors`, and send a full replacement row for each edited item.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/edited
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "items": [
+    {
+      "errorId": {{importErrorId}},
+      "username": "retry-user",
+      "displayName": "Retry User",
+      "email": "retry-user@demo-shop.local",
+      "password": "123456",
+      "roleCodes": ["READ_ONLY"]
+    }
+  ]
+}
+
+### List import job errors
+# Clean success jobs return an empty page here.
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/errors?page=0&size=10
+Authorization: Bearer {{token}}
+
+### List import job errors - filter by error code
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/errors?page=0&size=10&errorCode=UNKNOWN_ROLE
+Authorization: Bearer {{token}}

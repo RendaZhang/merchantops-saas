@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: merchantops-saas
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+springdoc:
+  show-actuator: true
+  swagger-ui:
+    operations-sorter: alpha
+    tags-sorter: alpha
+    persist-authorization: true
+    try-it-out-enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{requestId}] %logger{36} - %msg%n"
+
+merchantops:
+  import:
+    processing:
+      chunk-size: ${IMPORT_PROCESSING_CHUNK_SIZE:100}
+      max-rows-per-job: ${IMPORT_PROCESSING_MAX_ROWS_PER_JOB:1000}
