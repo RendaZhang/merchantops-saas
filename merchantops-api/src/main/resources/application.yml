@@ -29,6 +29,14 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{requestId}] %logger{36} - %msg%n"
 
 merchantops:
+  ai:
+    enabled: ${MERCHANTOPS_AI_ENABLED:false}
+    prompt-version: ${MERCHANTOPS_AI_PROMPT_VERSION:ticket-summary-v1}
+    model-id: ${MERCHANTOPS_AI_MODEL_ID:}
+    timeout-ms: ${MERCHANTOPS_AI_TIMEOUT_MS:5000}
+    openai:
+      base-url: ${MERCHANTOPS_AI_OPENAI_BASE_URL:https://api.openai.com}
+      api-key: ${MERCHANTOPS_AI_OPENAI_API_KEY:}
   import:
     processing:
       chunk-size: ${IMPORT_PROCESSING_CHUNK_SIZE:100}

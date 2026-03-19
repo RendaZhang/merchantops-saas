@@ -1,20 +1,20 @@
 # Eval Dataset Guidelines
 
-Last updated: 2026-03-10
+Last updated: 2026-03-19
 
 ## Goal
 
 AI workflow quality should not depend on intuition alone. This project should maintain small, practical evaluation datasets that make prompt or model changes easier to review.
 
-This document defines a lightweight eval dataset approach appropriate for a portfolio project and future Week 6+ AI workflow features.
+This document defines a lightweight eval dataset approach appropriate for the current ticket-summary slice and future Week 6+ AI workflow features.
 
 ## Current Boundary
 
 As of today:
 
-- no public AI endpoints exist yet
-- no eval dataset files exist in the repository yet
-- this document describes how to prepare eval assets before or alongside the first AI workflow rollout
+- one public AI endpoint exists: `POST /api/v1/tickets/{id}/ai-summary`
+- the repository now includes a golden-sample fixture at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`
+- the current public eval baseline is still small and intentionally reviewable by humans
 
 ## Dataset Principles
 
@@ -48,13 +48,13 @@ Examples:
 - ambiguous ticket descriptions
 - mixed-language content
 - noisy import rows
-- edge cases that previously produced unsafe or unhelpful output
+- provider responses that previously produced unstable output
 
 Purpose:
 
 - verify that prompt changes do not reintroduce known bad behavior
 
-### Policy and Safety Set
+### Policy And Safety Set
 
 Use for boundary conditions.
 
@@ -70,7 +70,7 @@ Purpose:
 
 ## Recommended Sample Shape
 
-Each sample should be simple and reviewable.
+Each sample should stay simple and reviewable.
 
 Suggested fields:
 
@@ -87,20 +87,16 @@ The expected result does not always need to be one exact answer. For workflow AI
 - what must not happen
 - what quality bar is acceptable
 
-## Example Expectations
+## Current Ticket Summary Expectations
 
 For a ticket summary sample:
 
 - must mention the core issue
-- must include next action or unresolved point
-- must not invent tenant data
-- must stay within a reasonable length
-
-For an import error summary sample:
-
-- must identify the dominant error pattern
-- must not claim certainty where data is ambiguous
-- must avoid pretending to repair source data automatically
+- must describe the current ticket state
+- must include the latest meaningful operator signal when present
+- must include the next reasonable human follow-up or blocker
+- must not invent cross-tenant or unsupported context
+- must stay concise enough for operator review
 
 ## Dataset Size Guidance
 
@@ -116,7 +112,11 @@ This is enough to support meaningful review without creating heavy maintenance b
 
 ## Storage Guidance
 
-Once AI workflow implementation begins, prefer a structure like:
+Current live storage:
+
+- ticket summary golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-summary/`
+
+If broader AI automation appears later, these can expand into a structure like:
 
 ```text
 docs/ai/evals/
@@ -128,8 +128,6 @@ docs/ai/evals/
     failures.md
 ```
 
-If code-side automation appears later, these can evolve into JSON, YAML, or test fixtures.
-
 ## Review Process
 
 When prompt or model changes are proposed:
@@ -138,13 +136,6 @@ When prompt or model changes are proposed:
 2. compare output against expected characteristics
 3. note improvements, regressions, and unresolved tradeoffs
 4. record whether the version should advance or stay unchanged
-
-## What to Avoid
-
-- giant benchmark sets that nobody reviews
-- fully synthetic samples with no workflow realism
-- one-score evaluation without reviewer notes
-- datasets that mix unrelated workflows together
 
 ## Minimal Acceptance Rule
 
@@ -158,5 +149,5 @@ Before promoting a public AI workflow change:
 
 - [prompt-versioning.md](prompt-versioning.md): versioning rules for prompts and workflow variants
 - [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md): operational checklist for AI changes
-- [../reference/ai-integration.md](../reference/ai-integration.md): workflow guardrails and public boundary
+- [../reference/ai-integration.md](../reference/ai-integration.md): current workflow guardrails and public boundary
 - [../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md](../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md): audit and eval baseline decision

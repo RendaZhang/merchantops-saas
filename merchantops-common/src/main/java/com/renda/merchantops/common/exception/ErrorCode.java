@@ -11,6 +11,7 @@ public enum ErrorCode {
     VALIDATION_ERROR("VALIDATION_ERROR", "validation failed"),
     UNAUTHORIZED("UNAUTHORIZED", "unauthorized"),
     FORBIDDEN("FORBIDDEN", "forbidden"),
+    SERVICE_UNAVAILABLE("SERVICE_UNAVAILABLE", "service unavailable"),
     NOT_FOUND("NOT_FOUND", "resource not found"),
     BIZ_ERROR("BIZ_ERROR", "business error"),
     INTERNAL_ERROR("INTERNAL_ERROR", "internal server error");

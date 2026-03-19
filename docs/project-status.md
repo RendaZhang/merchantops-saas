@@ -6,14 +6,14 @@ Last updated: 2026-03-19
 
 ## Overview
 
-MerchantOps SaaS currently sits on a completed Week 1-5 baseline and a newly active Week 6 AI Copilot planning phase. The public surface now covers tenant-scoped user management, ticket workflow, audit/approval, and import jobs including reporting, replay variants, queued-job recovery, stale-processing safeguards, and throughput controls, while AI-specific workflow features remain planned rather than public.
+MerchantOps SaaS now sits on a completed Week 1-5 baseline plus the first public Week 6 AI Copilot slice. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, and a read-only ticket AI summary endpoint that proves the project has moved from async workflow infrastructure into the first credible AI-assisted business path.
 
 ## Current Phase Summary
 
 - Current phase: Week 6 AI Copilot For Ticket Operations.
 - Stable completed baselines: Week 2 tenant user management, Week 3 ticket workflow, Week 4 audit/approval, and Week 5 async import and data operations.
-- Week 5 is complete with import submission/list/detail/error reporting, narrowed `USER_CSV` business-row execution, filtered queue reads, failed-row replay variants, whole-file replay for full-failure sources, and derived-job lineage.
-- Week 5 runtime hardening is also complete with sequential chunk execution, per-chunk counter flushes during `PROCESSING`, queued-job recovery after after-commit publish failure, stale-processing restart/fail handling, and configurable import guardrails.
+- Week 5 remains complete with import submission/list/detail/error reporting, narrowed `USER_CSV` business-row execution, filtered queue reads, failed-row replay variants, whole-file replay for full-failure sources, and derived-job lineage.
+- Week 6 has now started with a public suggestion-only ticket summary slice exposed as `POST /api/v1/tickets/{id}/ai-summary` under tenant scope, `TICKET_READ`, explicit prompt versioning, controlled provider degradation, and dedicated AI interaction persistence.
 - Exact endpoint contracts live in [reference/README.md](reference/README.md); this page keeps the phase-level truth and current limits.
 
 ## Release Baseline
@@ -21,7 +21,7 @@ MerchantOps SaaS currently sits on a completed Week 1-5 baseline and a newly act
 - Current tagged milestone: `v0.2.0-alpha` on 2026-03-19, recorded as `Week 5 complete: async import and data operations preview`.
 - Previous tagged milestone: `v0.1.3` on 2026-03-12, recorded as `Week 4 complete: audit and approval baseline`.
 - Earlier milestones: `v0.1.2` on 2026-03-11 (`Week 3 complete: ticket workflow baseline`), `v0.1.1` on 2026-03-11 (`Week 2 complete: tenant user management loop`), and `v0.1.0` on 2026-03-09 (`Week 1 complete: foundation phase`).
-- Open-source timing expectation: `v0.2.0-alpha` is the current Week 5 preview line, while a stronger public release should still wait until at least the first AI Copilot milestone in Week 6 or Week 7.
+- The current worktree baseline has moved into Week 6, but no Week 6 tag has been cut yet.
 
 ## Current Repository Baseline
 
@@ -30,37 +30,39 @@ MerchantOps SaaS currently sits on a completed Week 1-5 baseline and a newly act
 - Auth and context: `POST /api/v1/auth/login`, `GET /api/v1/user/me`, and `GET /api/v1/context`.
 - User management: tenant-scoped list/detail/create/update/status/role-assignment plus role lookup and disable-request initiation.
 - Ticket workflow: tenant-scoped list/detail/create/assignee/status/comment flow with queue filters and reopen support.
+- AI-assisted ticket read path: `POST /api/v1/tickets/{id}/ai-summary` for suggestion-only summaries from ticket detail context.
 - Governance: entity-scoped `GET /api/v1/audit-events` plus minimal approval request queue/detail/approve/reject flow for `USER_STATUS_DISABLE`.
 - Import jobs: tenant-scoped create/list/detail/replay/replay-file/selective-replay/edited-replay/error-page flow with `USER_CSV` processing, filtered queue reads, quoted CSV record parsing, `errorCodeCounts`, row-level item errors, replay-derived job lineage, scope-only replay audit metadata, and the current Week 5 reporting/replay surface.
 
 ### Shared runtime and internal baseline
 
 - Multi-module Spring Boot backend with MySQL, Redis, RabbitMQ, Flyway, request tracing, and unified API response / exception handling.
-- Tenant-aware query and command services for users, tickets, approvals, and import jobs.
+- Tenant-aware query and command services for users, tickets, approvals, import jobs, and the current ticket-summary AI read path.
 - JWT claim revalidation against current user status, roles, and permissions on protected requests.
+- Instance-level AI provider configuration under `merchantops.ai.*`, explicit `promptVersion`, timeout-based degradation, and an OpenAI-compatible provider adapter for the current ticket summary slice.
+- Dedicated `ai_interaction_record` persistence for AI runtime metadata, separate from `ticket_operation_log` and generic `audit_event`.
 - Local import file storage abstraction with after-commit queue publish, scheduled queued-job recovery, worker consumption, stale-processing restart/fail handling, system-generated replay-file writes, and configurable chunk / recovery / row-limit controls.
-- Tenant-scoped import queue reporting with stable ordering, paged failure-item reads, `requestedBy` / `hasFailures` / `errorCodeCounts` hints, `sourceJobId` lineage on replay-derived jobs, `replayMode=WHOLE_FILE` plus `selectedErrorCodes` / `editedErrorIds` / `editedRowCount` audit hints for replay variants, and counters that advance during `PROCESSING`.
-- Focused automated coverage for auth, user management, ticket workflow, import jobs, audit, and approval behavior.
+- Focused automated coverage for auth, user management, ticket workflow, AI summary, import jobs, audit, and approval behavior.
 
 ## Current Week 6 Entry Point
 
-- Week 6 should start from the completed Week 5 import baseline rather than reopening Week 5 scope.
-- The first Week 6 focus should be ticket AI Copilot slices such as summary, triage suggestions, and reply-draft generation under tenant, RBAC, audit, and human-oversight boundaries.
-- There are still no public AI endpoints today; AI docs remain planning and governance guidance until the first Week 6 contract is intentionally exposed.
+- The first Week 6 public slice is fixed to `POST /api/v1/tickets/{id}/ai-summary`.
+- The current slice is read-only and suggestion-only: it does not change ticket status, write comments, or trigger approvals.
+- The current AI context is limited to the target current-tenant ticket's core fields, comments, and workflow logs.
+- The current provider ownership model is instance-level configuration rather than tenant BYOK.
+- Near-term Week 6 follow-up should stay narrow: triage suggestion and reply-draft suggestion can come later only if they preserve the same tenant, RBAC, audit, and degradation boundaries.
 
 ## Current Limitations
 
 - Import jobs currently support one business import type only: `USER_CSV`.
 - The `USER_CSV` schema is fixed to `username,displayName,email,password,roleCodes`.
-- Import job list now supports `status`, `importType`, `requestedBy`, and `hasFailuresOnly`; detail now exposes `sourceJobId` and `errorCodeCounts`; `/errors` supports `page`, `size`, and `errorCode`.
-- Replay currently supports four narrow paths from a `USER_CSV` source job: all replayable failed rows, whole-file replay for `FAILED` jobs with `successCount = 0`, replayable failed rows selected by exact `errorCode`, and caller-edited failed rows selected by exact `errorId`.
-- Import job detail still returns full `itemErrors`; a leaner large-job detail payload and broader import reporting/export flows are still deferred.
-- Broader import types and richer replay reporting remain post-Week-5 follow-up work instead of current baseline scope.
 - Approval flow currently covers one action type only: `USER_STATUS_DISABLE`.
 - Audit reads are still minimal and entity-scoped by `entityType + entityId`.
 - `UserCommandService#updatePassword` remains a placeholder business error, not a completed write flow.
 - There is no refresh-token flow, logout flow, or token revocation flow yet.
-- There are no public AI-assisted workflow endpoints, runtime AI audit records, or code-backed AI eval datasets yet.
+- The only public AI endpoint today is ticket summary; ticket triage, reply draft, import AI, and agentic write paths are still pending.
+- There is no public read API for `ai_interaction_record` yet.
+- AI runtime still uses instance-level provider configuration only; there is no tenant BYOK, streaming, tool calling, model routing, or automatic write-back loop.
 - Ticket enrichments such as priority, SLA, attachments, and notifications remain post-Week-3 follow-up work.
 - Deployment-ready manifests, production secret-management guidance, and performance artifacts are still pending.
 - There is no tenant admin UI or frontend yet.
@@ -70,6 +72,7 @@ MerchantOps SaaS currently sits on a completed Week 1-5 baseline and a newly act
 - `user_role` tenant consistency is not yet enforced at the database layer.
 - Ticket assignee / creator / operator tenant consistency is enforced in service logic today, not yet at the database-constraint level.
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs.
-- Focused automated coverage exists for the current auth + user-management + ticket + import + audit + approval path, including import authz, sequential chunk execution, queued-job recovery, stale-processing redelivery handling, processing-progress counters, paged import error reporting, row-limit failure handling, failed-row replay, whole-file replay for full-failure jobs, exact error-code selective replay, and edited failed-row replay, but Swagger rendering, real infra health, and modules outside that path still need manual verification.
-- Use [runbooks/automated-tests.md](runbooks/automated-tests.md) and [runbooks/regression-checklist.md](runbooks/regression-checklist.md) for the current verification baseline.
+- Focused automated coverage now includes the public AI summary slice: happy path, permission failure, cross-tenant not-found behavior, feature-disabled degradation, timeout degradation, controller request forwarding, and golden-sample regression checks.
+- Live provider verification, Swagger rendering, real infra health, and modules outside the current focused path still need manual verification.
+- Use [runbooks/automated-tests.md](runbooks/automated-tests.md), [runbooks/regression-checklist.md](runbooks/regression-checklist.md), and [runbooks/ai-regression-checklist.md](runbooks/ai-regression-checklist.md) for the current verification baseline.
 - Use [architecture/non-blocking-backlog.md](architecture/non-blocking-backlog.md) for tracked non-blocking follow-up items that should not be lost between phases.

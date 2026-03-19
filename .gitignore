@@ -26,6 +26,7 @@ logs/
 
 # Maven wrapper temporary
 .mvn/wrapper/maven-wrapper.jar
+.mvn/local-settings.xml
 
 # Docker local data
 mysql_data/

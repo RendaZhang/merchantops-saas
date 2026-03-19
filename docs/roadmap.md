@@ -12,24 +12,24 @@ Last updated: 2026-03-19
 - Week 4 Audit Trail And Approval Patterns is complete.
 - Week 5 Async Import And Data Operations is complete.
 - Week 6 AI Copilot For Ticket Operations is the active phase.
-- Week 5 now provides the current async-operations baseline: import submission/list/detail/errors, narrowed `USER_CSV` business-row execution, replay variants, queued-job recovery, stale-processing handling, and throughput guardrails.
+- Week 5 still provides the current async-operations baseline: import submission/list/detail/errors, narrowed `USER_CSV` business-row execution, replay variants, queued-job recovery, stale-processing handling, and throughput guardrails.
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 
 ## Current Focus
 
 Week 6 should stay narrow and workflow-oriented:
 
-- start with ticket-summary, ticket-triage, and reply-draft assistance rather than broad agent automation
-- keep AI suggestions tenant-scoped, RBAC-scoped, and recommendation-first with clear human oversight
-- record prompt version, model choice, latency, and approval or acceptance context from the first public AI slice
-- keep the completed Week 5 import baseline stable while Week 6 AI work starts
+- the first public AI slice is ticket summary only: `POST /api/v1/tickets/{id}/ai-summary`
+- keep the current slice suggestion-only, read-only, tenant-scoped, RBAC-scoped, and failure-tolerant
+- preserve explicit prompt versioning, model tracking, latency capture, and separate AI interaction persistence from the first public slice onward
+- keep the completed Week 5 import baseline stable while Week 6 AI work expands carefully
 
 ## Recommended Next Steps
 
-- define the first narrow Week 6 public AI ticket slice only after prompt, audit, and response-shape expectations are explicit
-- implement the supporting AI plumbing for ticket context assembly, prompt version tracking, and model or latency observability without turning it into a generic chatbot shell
-- keep Week 5 import docs and examples aligned where shared request tracing, governance, or release framing changed
-- avoid widening Week 6 into autonomous write actions before the first suggestion-only slice is credible
+- keep the ticket summary contract stable while validating provider configuration, timeout behavior, and golden-sample regression coverage
+- add ticket triage suggestion next only if it reuses the same tenant, RBAC, audit, and degradation boundaries
+- consider reply-draft suggestion after summary and triage are credible, still without widening into automatic write-back
+- avoid turning Week 6 into a generic chatbot shell, agent loop, or tenant-BYOK project before the narrow ticket slices are proven
 
 ## Near-Term Sequence
 
@@ -43,9 +43,9 @@ Week 6 should stay narrow and workflow-oriented:
 
 ## Week 5 Outcome
 
-- Week 5 now ends with a credible async import and data-operations baseline: create/list/detail/errors, filtered queue reads, row-level execution, replay variants, and derived-job lineage.
-- Runtime hardening now includes sequential chunk execution, per-chunk counter visibility during `PROCESSING`, queued-job recovery after after-commit publish failure, stale-processing handling, and bounded import controls.
-- This is the intended handoff point into Week 6 AI ticket work, not an instruction to keep expanding Week 5 breadth before the first Copilot slice.
+- Week 5 ended with a credible async import and data-operations baseline: create/list/detail/errors, filtered queue reads, row-level execution, replay variants, and derived-job lineage.
+- Runtime hardening includes sequential chunk execution, per-chunk counter visibility during `PROCESSING`, queued-job recovery after after-commit publish failure, stale-processing handling, and bounded import controls.
+- That remains the intended handoff into Week 6 AI ticket work rather than an invitation to keep widening Week 5 breadth.
 
 ## Open-Source Track
 

@@ -210,6 +210,11 @@ Content-Type: {{contentType}}
 GET {{baseUrl}}/api/v1/tickets/{{ticketId}}
 Authorization: Bearer {{token}}
 
+### Generate tenant ticket AI summary
+# Requires merchantops.ai.enabled=true plus a configured instance-level provider.
+POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-summary
+Authorization: Bearer {{token}}
+
 ### Assign tenant ticket
 # Use opsUserId=2 for the seeded ops handler in a fresh local database.
 PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/assignee

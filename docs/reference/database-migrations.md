@@ -19,6 +19,7 @@
 - `V8__add_minimal_approval_request.sql`: adds tenant-scoped `approval_request` for the first minimal approval flow (`USER_STATUS_DISABLE`), including same-tenant requester/reviewer foreign-key linkage
 - `V9__add_import_job_backbone.sql`: adds tenant-scoped `import_job` and `import_job_item_error` for Week 5 async import submission, queue processing, and row-level error tracking, including DB-level same-tenant linkage from item errors back to the parent import job
 - `V10__add_import_job_replay_lineage.sql`: adds nullable `import_job.source_job_id` so replay-derived jobs can point back to the source job, including DB-level same-tenant lineage protection through `(tenant_id, source_job_id) -> import_job(tenant_id, id)`
+- `V11__add_ai_interaction_record.sql`: adds tenant-scoped `ai_interaction_record` for Week 6 AI runtime traceability, including same-tenant linkage between `tenant_id` and `user_id` plus indexed lookup by entity and request id
 
 ## Demo Accounts
 
@@ -39,6 +40,8 @@ WHERE t.tenant_code = 'demo-shop'
 ORDER BY u.username;
 ```
 
+## Useful Verification Queries
+
 To verify lightweight operator attribution after Week 2 write operations:
 
 ```sql
@@ -48,7 +51,7 @@ WHERE tenant_id = 1
 ORDER BY id;
 ```
 
-To verify ticket tables and demo ticket permissions after the completed Week 3 ticket workflow baseline:
+To verify ticket tables, import tables, and the Week 6 AI interaction table exist:
 
 ```sql
 SELECT permission_code
@@ -72,9 +75,25 @@ SELECT COUNT(*) AS audit_event_cnt FROM audit_event;
 SELECT COUNT(*) AS approval_request_cnt FROM approval_request;
 SELECT COUNT(*) AS import_job_cnt FROM import_job;
 SELECT COUNT(*) AS import_job_item_error_cnt FROM import_job_item_error;
+SELECT COUNT(*) AS ai_interaction_record_cnt FROM ai_interaction_record;
+```
 
-SELECT id, tenant_id, source_job_id, source_filename, status
-FROM import_job
+To inspect recent AI interaction rows for ticket summary:
+
+```sql
+SELECT id,
+       tenant_id,
+       user_id,
+       request_id,
+       entity_type,
+       entity_id,
+       interaction_type,
+       prompt_version,
+       model_id,
+       status,
+       latency_ms,
+       created_at
+FROM ai_interaction_record
 ORDER BY id DESC;
 ```
 
@@ -98,7 +117,8 @@ SELECT
   (SELECT COUNT(*) FROM role_permission) AS role_perm_cnt,
   (SELECT COUNT(*) FROM ticket) AS ticket_cnt,
   (SELECT COUNT(*) FROM ticket_comment) AS ticket_comment_cnt,
-  (SELECT COUNT(*) FROM ticket_operation_log) AS ticket_operation_log_cnt;
+  (SELECT COUNT(*) FROM ticket_operation_log) AS ticket_operation_log_cnt,
+  (SELECT COUNT(*) FROM ai_interaction_record) AS ai_interaction_record_cnt;
 ```
 
 ## Related Notes
@@ -106,4 +126,5 @@ SELECT
 - Password hashes for seed users can be generated with `merchantops-api/src/main/java/com/renda/merchantops/api/tools/PasswordHashGenerator.java`
 - Do not edit an already-applied migration. Create a new version for follow-up changes instead.
 - `created_by` and `updated_by` are intentionally nullable so historical seed rows do not pretend to have a synthetic operator.
+- `ai_interaction_record` is intentionally separate from `audit_event`; see [../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md](../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md).
 - Known schema gap: [../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity](../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity)

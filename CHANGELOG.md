@@ -6,7 +6,14 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
-No release-level notes yet.
+### Added
+
+- Added the first public Week 6 AI Copilot slice through `POST /api/v1/tickets/{id}/ai-summary`, a tenant-scoped suggestion-only summary endpoint for one current-tenant ticket.
+
+### Changed
+
+- Week 6 AI runtime now persists dedicated `ai_interaction_record` rows instead of overloading generic business audit rows, capturing prompt version, model id, status, latency, request id, and summary output metadata for the ticket summary slice.
+- AI configuration, ticket workflow docs, API examples, automated coverage notes, and AI regression guidance now reflect the public ticket-summary baseline and its controlled degradation paths.
 
 ## [v0.2.0-alpha] - 2026-03-19
 

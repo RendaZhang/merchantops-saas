@@ -12,11 +12,13 @@ import com.renda.merchantops.api.dto.ticket.command.TicketCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketWriteResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketCommentResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageQuery;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageResponse;
 import com.renda.merchantops.api.security.RequirePermission;
+import com.renda.merchantops.api.service.TicketAiSummaryService;
 import com.renda.merchantops.api.service.TicketCommandService;
 import com.renda.merchantops.api.service.TicketQueryService;
 import com.renda.merchantops.common.response.ApiResponse;
@@ -32,6 +34,7 @@ public class TicketController implements TicketManagementApi {
 
     private final TicketQueryService ticketQueryService;
     private final TicketCommandService ticketCommandService;
+    private final TicketAiSummaryService ticketAiSummaryService;
 
     @Override
     @RequirePermission("TICKET_READ")
@@ -45,6 +48,15 @@ public class TicketController implements TicketManagementApi {
     public ApiResponse<TicketDetailResponse> getTicketDetail(@PathVariable("id") Long id) {
         Long tenantId = ContextAccess.requireTenantId();
         return ApiResponse.success(ticketQueryService.getTicketDetail(tenantId, id));
+    }
+
+    @Override
+    @RequirePermission("TICKET_READ")
+    public ApiResponse<TicketAiSummaryResponse> getAiSummary(@PathVariable("id") Long id) {
+        Long tenantId = ContextAccess.requireTenantId();
+        Long userId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
+        return ApiResponse.success(ticketAiSummaryService.generateSummary(tenantId, userId, requestId, id));
     }
 
     @Override

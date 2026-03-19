@@ -1,0 +1,43 @@
+[
+  {
+    "ticketId": 9001,
+    "tenantId": 1,
+    "title": "POS printer offline",
+    "description": "Store POS printer stopped responding during lunch peak.",
+    "status": "OPEN",
+    "assigneeUsername": null,
+    "createdBy": 101,
+    "createdByUsername": "admin",
+    "createdAt": "2026-03-19T09:00:00",
+    "updatedAt": "2026-03-19T09:05:00",
+    "comments": [
+      {
+        "id": 501,
+        "ticketId": 9001,
+        "content": "Cashier reports the printer stopped after the lunch rush started.",
+        "createdBy": 102,
+        "createdByUsername": "ops",
+        "createdAt": "2026-03-19T09:03:00"
+      }
+    ],
+    "operationLogs": [
+      {
+        "id": 601,
+        "operationType": "CREATED",
+        "detail": "ticket created",
+        "operatorId": 101,
+        "operatorUsername": "admin",
+        "createdAt": "2026-03-19T09:00:00"
+      },
+      {
+        "id": 602,
+        "operationType": "COMMENTED",
+        "detail": "comment added",
+        "operatorId": 102,
+        "operatorUsername": "ops",
+        "createdAt": "2026-03-19T09:03:00"
+      }
+    ],
+    "expectedSummary": "Issue: The POS printer stopped responding during lunch peak. Current: the ticket is OPEN, unassigned, and the latest signal says the cashier reported the outage after rush started. Next: assign an operator and verify printer connectivity before deciding whether hardware replacement is needed."
+  }
+]

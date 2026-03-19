@@ -1,8 +1,8 @@
 # Audit And Approval Patterns
 
-## Current Week 4 Scope
+## Current Scope
 
-As of the `v0.1.3` Week 4 baseline, the repository now includes a generic `audit_event` backbone plus a minimal approval envelope for one high-value action (`USER_STATUS_DISABLE`) and a queue read surface.
+The repository includes a generic `audit_event` backbone plus a minimal approval envelope for one high-value action (`USER_STATUS_DISABLE`).
 
 Implemented now:
 
@@ -15,11 +15,8 @@ Implemented now:
   - `POST /api/v1/approval-requests/{id}/approve`
   - `POST /api/v1/approval-requests/{id}/reject`
 - approve executes synchronously via existing user status write chain (`UserCommandService.updateStatus`)
-- approval governance minimum rules:
-  - tenant isolation on read/review/execute
-  - only `PENDING` request can be approved/rejected
-  - requester cannot self-approve/reject
-  - approve-time revalidation that target user is still in current tenant and still `ACTIVE`
+
+Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceability. That model is not part of the public `GET /api/v1/audit-events` contract and does not replace `audit_event`.
 
 ## Public API
 
@@ -28,8 +25,8 @@ Implemented now:
 - scope: current tenant only
 - permission: `USER_READ`
 - required query params: `entityType`, `entityId`
-- still entity-scoped read only (no global/paged audit search yet)
-- current entity families emitted by public flows: `USER`, `TICKET`, and `APPROVAL_REQUEST`
+- still entity-scoped read only; there is no global or paged audit search yet
+- current entity families emitted by public write flows: `USER`, `TICKET`, `APPROVAL_REQUEST`, and `IMPORT_JOB`
 
 ### `POST /api/v1/users/{id}/disable-requests`
 
@@ -43,7 +40,7 @@ Implemented now:
 
 - scope: current tenant only
 - permission: `USER_READ`
-- supports `page`, `size`, `status`, `actionType`, `requestedBy` filters
+- supports `page`, `size`, `status`, `actionType`, and `requestedBy` filters
 - default sort: `createdAt DESC, id DESC` for stable queue ordering
 
 ### `GET /api/v1/approval-requests/{id}`
@@ -89,12 +86,6 @@ Shared response shape example:
 }
 ```
 
-Current status values:
-
-- `PENDING`
-- `APPROVED`
-- `REJECTED`
-
 ## Data Model
 
 `approval_request` fields:
@@ -118,19 +109,30 @@ Current constraint note:
 
 ## Current Audit Coverage For Approval Flow
 
-Week 4 minimal approval flow writes at least:
+The current approval flow writes at least:
 
 - `APPROVAL_REQUEST_CREATED`
 - `APPROVAL_REQUEST_APPROVED` or `APPROVAL_REQUEST_REJECTED`
 - `APPROVAL_ACTION_EXECUTED` (for approve path)
 - existing user-chain event `USER_STATUS_UPDATED` from the reused write service
 
-Current manual verification hint:
+Manual verification hint:
 
 - query `GET /api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId=<approvalRequestId>` to inspect approval-request lifecycle audit rows
+
+## AI Traceability Note
+
+Week 6 summary calls are intentionally recorded outside `audit_event`:
+
+- `audit_event` remains for business-governance snapshots around write actions
+- `ticket_operation_log` remains the domain-readable ticket timeline
+- `ai_interaction_record` captures AI runtime metadata such as `promptVersion`, `modelId`, `status`, latency, and optional usage fields
+
+This separation keeps read-only AI suggestion calls from polluting the business audit stream while still preserving traceability.
 
 ## Still Planned (Not Yet Implemented)
 
 - multi-action generic approval routing beyond `USER_STATUS_DISABLE`
-- broader cross-entity audit/approval read surfaces (global search/aggregation statistics)
+- broader cross-entity audit and approval read surfaces
+- public read surfaces for AI interaction history or usage summaries
 - async approval executors or delayed execution modes

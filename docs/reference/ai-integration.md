@@ -1,158 +1,189 @@
 # AI Integration
 
-Last updated: 2026-03-10
+Last updated: 2026-03-19
 
 ## Purpose
 
 This project treats AI as an embedded workflow layer, not as a standalone chatbot feature.
 
-The target direction is:
+The current target direction is:
 
 - tenant-scoped AI Copilot inside real business workflows
-- human-in-the-loop approval for higher-risk actions
+- human-reviewed suggestions before any higher-risk write action
 - auditable and evaluable AI outputs
 - clear RBAC boundaries around AI-assisted actions
 
-## Current Boundary
+## Current Public Boundary
 
-As of today:
+The first public AI contract is now live:
 
-- no AI endpoints are exposed in Swagger yet
-- no AI controller routes are public HTTP API yet
-- the current public business surface is still centered on Week 2 user management
-- AI design is being documented before implementation so workflow, audit, and permission boundaries are explicit
-
-Do not document future AI endpoints as callable until they are published in controllers and visible in OpenAPI.
-
-## Planned AI Workflow Areas
-
-### 1. Ticket Operations
-
-Planned Week 6 AI Copilot capabilities:
-
-- ticket summary
-- ticket classification suggestion
-- priority suggestion
-- assignee suggestion
-- reply draft generation
-- operation-log summary
-
-Typical shape:
-
-1. load ticket data within tenant scope
-2. generate AI suggestion
-3. present suggestion to operator
-4. require manual approval for any write-back action
-5. record the AI request, output summary, and approval result
-
-### 2. Import and Data Quality
-
-Planned Week 7 AI Copilot capabilities:
-
-- import error summary
-- error clustering
-- field-mapping suggestion
-- fix recommendation
-- failed-row summary
-
-Typical shape:
-
-1. load import job and error records within tenant scope
-2. generate AI interpretation or recommendation
-3. let operator accept, reject, or edit the output
-4. write follow-up actions through normal permission-checked business APIs
-
-## Core Integration Rules
-
-### Tenant Scope
-
-- AI input must be limited to the current tenant
-- prompt assembly must not mix data across tenants
-- any cached AI artifacts must remain tenant-scoped
-
-### RBAC
-
-- AI read access inherits the same permission boundary as the source business data
-- AI-assisted write actions must still pass normal write permissions
-- AI tooling must never bypass `@RequirePermission` or equivalent service-layer checks
-
-### Human Oversight
-
-- AI output is suggestion-first by default
-- high-risk actions must require explicit human approval
-- auto-execution, if ever introduced, should be limited to low-risk and reversible actions
-
-### Auditability
-
-At minimum, AI-related logs should capture:
-
-- tenantId
-- userId
-- requestId
-- business entity type and id
-- prompt version
-- model identifier
-- output summary
-- approval status
-- latency
-- token or cost metrics when available
-
-### Evaluation
-
-Before AI features are treated as stable, the project should keep:
-
-- a small golden dataset
-- representative failure samples
-- a prompt or model regression checklist
-- basic quality and latency review for major changes
-
-## Provider Ownership Direction
-
-- the initial rollout should assume instance-level provider configuration owned by the MerchantOps deployment operator or platform admin
-- tenant-level BYOK is a later extension and should be limited to tenant admins, not ordinary end users
-- hosted model integrations will usually be usage- or token-metered, while self-hosted models shift cost from provider billing to infrastructure cost
-- concrete environment-variable names or config keys should only be documented once they exist in code
-
-## Recommended Future API Shape
-
-These are planned examples, not current public endpoints.
-Permission labels below are illustrative placeholders, not current code-level permission names:
-
-| Method | Path | Purpose | Suggested Permission Pattern |
+| Method | Path | Permission | Current Scope |
 | --- | --- | --- | --- |
-| `POST` | `/api/v1/tickets/{ticketId}/ai-summary` | Summarize a ticket | ticket read permission |
-| `POST` | `/api/v1/tickets/{ticketId}/ai-triage` | Suggest classification / priority | ticket read permission |
-| `POST` | `/api/v1/tickets/{ticketId}/ai-reply-draft` | Draft a reply | ticket write permission |
-| `POST` | `/api/v1/import-jobs/{jobId}/ai-error-summary` | Summarize import failures | import read permission |
-| `POST` | `/api/v1/import-jobs/{jobId}/ai-mapping-suggestion` | Suggest field mapping | import write permission |
-| `POST` | `/api/v1/import-jobs/{jobId}/ai-fix-recommendation` | Suggest follow-up fixes | import write permission |
+| `POST` | `/api/v1/tickets/{id}/ai-summary` | `TICKET_READ` | Generate a suggestion-only summary for one current-tenant ticket |
 
-These paths should only move into Swagger after the underlying workflow, auth, and audit behavior exist in code.
+Current Week 6 scope is intentionally narrow:
 
-## Implementation Expectations
+- one public AI endpoint only
+- no request body; the server derives the prompt from the current ticket plus operator context
+- no ticket status change, comment write, approval trigger, or other workflow mutation
+- no public raw prompt, raw provider response, token breakdown, or cost breakdown in the response body
 
-When AI endpoints are introduced, each one should have:
+## Public Response Contract
 
-- OpenAPI examples
-- a matching request in `api-demo.http` or a dedicated AI demo HTTP file
-- reference documentation with real request and response examples
-- regression or smoke-test coverage in `docs/runbooks/`
+`POST /api/v1/tickets/{id}/ai-summary` returns a minimal suggestion shape:
 
-## Failure and Safety Expectations
+- `ticketId`
+- `summary`
+- `promptVersion`
+- `modelId`
+- `generatedAt`
+- `latencyMs`
+- `requestId`
 
-Expected non-happy-path handling:
+Example:
 
-- model failure should return a controlled application error, not raw provider output
-- permission failure should remain `403`
-- tenant scope failure should behave like business data not found or forbidden access
-- degraded mode should allow operators to continue the business workflow without AI
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "ticketId": 302,
+    "summary": "Issue: Printer cable replacement is in progress under ops. Current: the ticket is assigned and the latest signal says cable swap started. Next: confirm the replacement outcome and close the ticket if the printer is healthy.",
+    "promptVersion": "ticket-summary-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-19T13:20:15",
+    "latencyMs": 412,
+    "requestId": "ticket-ai-summary-req-1"
+  }
+}
+```
+
+## Current Context Assembly Boundary
+
+The current summary prompt is built only from the target ticket in the current tenant:
+
+- ticket core fields
+- current status, assignee, creator, and timestamps
+- ticket comments
+- workflow-level `ticket_operation_log` entries
+
+The current implementation intentionally does not pull in:
+
+- attachments
+- external systems
+- other tickets
+- import-job data
+- cross-tenant examples or historical corpus lookups
+
+Tenant scoping is inherited from the existing ticket query path. The AI slice does not bypass ticket read rules.
+
+## Current Provider And Execution Boundary
+
+The current runtime keeps AI plumbing narrow rather than introducing a general chat framework:
+
+- a ticket-summary-specific prompt builder
+- a ticket-summary-specific provider adapter interface
+- instance-level provider configuration under `merchantops.ai.*`
+- an enable/disable flag plus provider-configuration guard
+- timeout-based controlled degradation
+
+The current provider adapter calls an OpenAI-compatible Responses API shape and requests a strict JSON schema containing only `summary`.
+
+The current implementation does not include:
+
+- tenant BYOK
+- streaming
+- tool calling
+- model routing
+- agent loops
+- automatic retries with write-back behavior
+
+## Audit And Traceability Baseline
+
+Week 6 does not overload the existing generic `audit_event` model with AI runtime metadata.
+
+Instead, AI invocations now persist a dedicated `ai_interaction_record` row with:
+
+- `tenantId`
+- `userId`
+- `requestId`
+- `entityType`
+- `entityId`
+- `interactionType`
+- `promptVersion`
+- `modelId`
+- `status`
+- `latencyMs`
+- `outputSummary`
+- optional usage and cost placeholders when available
+
+Current status values include:
+
+- `SUCCEEDED`
+- `FEATURE_DISABLED`
+- `PROVIDER_NOT_CONFIGURED`
+- `PROVIDER_TIMEOUT`
+- `PROVIDER_UNAVAILABLE`
+- `INVALID_RESPONSE`
+
+This record is governance-facing internal persistence. There is no public read API for AI interaction history yet.
+
+## Evaluation Baseline
+
+The first public AI slice also establishes a minimal eval path:
+
+- explicit prompt versioning through `ticket-summary-v1`
+- a golden-sample regression fixture at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`
+- focused automated tests for happy path, permission failure, tenant isolation, feature-disabled behavior, and timeout degradation
+- the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
+
+## Failure And Safety Expectations
+
+Current non-happy-path behavior:
+
+- missing `TICKET_READ` remains `403`
+- cross-tenant or missing tickets remain `404`
+- disabled AI returns `503 SERVICE_UNAVAILABLE` with `ticket ai summary is disabled`
+- missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
+- raw provider exceptions are not exposed to API consumers
+- the rest of the ticket workflow remains usable even when AI is unavailable
+
+## Current Limitations
+
+The first public AI slice is intentionally narrower than the Week 6 long-range plan.
+
+Not implemented yet:
+
+- `POST /api/v1/tickets/{id}/ai-triage`
+- `POST /api/v1/tickets/{id}/ai-reply-draft`
+- any AI-driven ticket write-back flow
+- approval-integrated AI execution
+- tenant-level BYOK
+- public AI usage or cost reporting
+- attachments or external-system context enrichment
+
+## Planned Next Workflow Areas
+
+Near-term Week 6 follow-up work should stay in the ticket workflow lane:
+
+- triage suggestion
+- reply-draft suggestion
+- stronger failure-set and policy-set eval coverage
+- future approval-aware write-back only after the suggestion-only slices are stable
+
+Later roadmap areas remain:
+
+- Week 7 import and data-quality AI workflows
+- Week 8 agentic workflows with human oversight
+- Week 9 broader AI governance, cost, and usage reporting
 
 ## Related Documents
 
-- [../project-plan.md](../project-plan.md): 10-week AI-enhanced roadmap
+- [ticket-workflow.md](ticket-workflow.md): current ticket endpoint surface and workflow details
 - [authentication-and-rbac.md](authentication-and-rbac.md): auth and permission boundaries
-- [user-management.md](user-management.md): current Week 2 business-loop boundary
+- [ai-provider-configuration.md](ai-provider-configuration.md): active provider-key ownership and config keys
+- [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md): rollout checklist for current and future AI endpoint changes
 - [../architecture/adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md](../architecture/adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md): architecture decision for AI workflow placement and governance
-- [../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md](../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md): minimum audit and eval baseline for future AI APIs
-- [ai-provider-configuration.md](ai-provider-configuration.md): provider-key ownership, cost model, and rollout strategy for future AI features
-- [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md): rollout checklist for future AI endpoint changes
+- [../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md](../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md): minimum audit and eval baseline for public AI APIs
+- [../architecture/adr/0009-start-with-instance-level-ai-provider-keys-before-tenant-byok.md](../architecture/adr/0009-start-with-instance-level-ai-provider-keys-before-tenant-byok.md): deployment-owned provider configuration baseline
+- [../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md](../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md): separation rule for AI runtime traceability versus generic business audit

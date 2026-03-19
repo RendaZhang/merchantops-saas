@@ -1,86 +1,90 @@
 # AI Regression Checklist
 
-Last updated: 2026-03-12
+Last updated: 2026-03-19
 
-> Maintenance note: keep this page as a future-facing specialized checklist for AI-assisted workflow rollout. Keep it focused on AI-specific safety, audit, eval, and provider behavior. Do not copy the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both AI and the current public business surface.
+> Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
-Use this checklist when AI-assisted workflow endpoints are introduced or when any of the following change:
+Use this checklist when any of the following change:
 
 - prompt templates
 - model selection
-- tool-calling logic
-- approval flow behavior
-- AI-related logging, cost tracking, or error handling
+- provider adapter logic
+- AI feature gating or timeout behavior
+- AI-related logging, usage, or error handling
+- the public AI summary response shape or Swagger examples
 
-## Current Boundary
+## Current Public Boundary
 
-As of today:
+The AI checklist is now active because the first public AI endpoint exists:
 
-- no AI endpoints are public in Swagger
-- no AI regression run is required for the current Week 5 public workflow surface
-- this checklist becomes active once Week 6+ AI features begin landing or any AI-assisted flow becomes externally testable
+- `POST /api/v1/tickets/{id}/ai-summary`
+- suggestion-only summary for one current-tenant ticket
+- read permission inherited from `TICKET_READ`
+- no write-back, no comment creation, and no approval execution in the current slice
 
-## Environment and Control
+## Environment And Control
 
-- [ ] provider credentials and model configuration are loaded from expected environment variables
-- [ ] AI features can be disabled cleanly via configuration or feature flag
-- [ ] degraded mode behavior is defined when the model provider is unavailable
-- [ ] request timeouts and retry behavior are explicit rather than accidental defaults
+- [ ] provider credentials and model configuration are loaded from the expected `merchantops.ai.*` keys
+- [ ] AI features can be disabled cleanly via `merchantops.ai.enabled`
+- [ ] degraded mode behavior is verified when the provider is unavailable or not configured
+- [ ] request timeout behavior is explicit and covered by a simulated timeout path
 
-## Tenant and Permission Safety
+## Tenant And Permission Safety
 
 - [ ] AI input data is limited to the current tenant
 - [ ] AI requests do not combine records across tenants
-- [ ] AI-assisted write paths still enforce normal business permissions
 - [ ] permission failures still return normal application errors such as `403`
-- [ ] approval-gated actions cannot execute without an authorized operator
+- [ ] cross-tenant or missing tickets still return normal business `404`
+- [ ] the summary endpoint does not bypass the existing ticket read boundary
 
-## Audit and Traceability
+## Audit And Traceability
 
 - [ ] AI requests are linked to `tenantId`, `userId`, and `requestId`
-- [ ] prompt or workflow version is captured
-- [ ] model identifier is captured
-- [ ] approval or rejection outcome is captured where relevant
+- [ ] `promptVersion` is captured
+- [ ] `modelId` is captured
+- [ ] `status` is captured in `ai_interaction_record`
 - [ ] latency is recorded
 - [ ] usage or cost metrics are recorded when available from the provider
 - [ ] raw provider errors are not leaked directly to API consumers
+- [ ] read-only AI calls are recorded without pretending they are normal business write `audit_event` rows
 
 ## Output Quality
 
-- [ ] golden-set samples still produce acceptable outputs
-- [ ] representative failure samples are reviewed after prompt or model changes
-- [ ] changes in output shape do not break API contracts or downstream workflow expectations
-- [ ] AI suggestions remain understandable enough for operator review
-- [ ] AI output is still suggestion-first unless a low-risk approved automation path explicitly exists
+- [ ] golden ticket-summary samples still produce the expected stable shape
+- [ ] output still includes issue, current state, latest meaningful signal, and next human follow-up
+- [ ] the public response shape remains stable for `ticketId`, `summary`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
+- [ ] the summary stays suggestion-only and does not imply unsupported automatic execution
+- [ ] prompt or model changes are reviewed against both happy-path and known-risk samples when those samples exist
 
 ## Workflow Safety
 
-- [ ] rejected AI suggestions do not mutate business state
-- [ ] accepted AI suggestions write through normal service paths
-- [ ] approval and execution events remain distinguishable in logs
-- [ ] failed execution after approval leaves the workflow in a recoverable state
-- [ ] operators can continue the workflow manually without AI
+- [ ] AI summary calls do not mutate ticket status, assignee, comments, or approvals
+- [ ] operators can continue the ticket workflow manually when AI is unavailable
+- [ ] ticket detail, ticket workflow log, and business audit behavior remain unchanged by AI summary calls
 
-## API and Documentation Alignment
+## API And Documentation Alignment
 
-- [ ] any public AI endpoint appears in Swagger
+- [ ] the public AI endpoint appears in Swagger
 - [ ] Swagger examples match real request and response shapes
 - [ ] AI reference docs are updated in [../reference/ai-integration.md](../reference/ai-integration.md)
-- [ ] request examples are added to `api-demo.http` or a dedicated AI HTTP demo file
+- [ ] request examples are updated in `api-demo.http`
+- [ ] provider configuration docs stay aligned with active runtime keys
 - [ ] architecture notes stay aligned with the governing ADRs
 
 ## Suggested Minimal Test Pass
 
-When the first AI endpoint lands, at minimum run:
+For the current Week 6 ticket summary slice, at minimum run:
 
-1. one happy-path request with an authorized user
+1. one authorized happy-path request with a `TICKET_READ` user
 2. one permission-denied request
-3. one tenant-scope isolation check
-4. one provider-failure or timeout simulation
-5. one manual approval / rejection flow if the endpoint supports downstream write actions
+3. one tenant-isolation or not-found check
+4. one feature-disabled check
+5. one provider-timeout or provider-unavailable simulation
+6. one golden-sample regression check
 
 ## Related Documents
 
-- [../reference/ai-integration.md](../reference/ai-integration.md): AI workflow guardrails and planned endpoint shapes
-- [../architecture/adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md](../architecture/adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md): AI placement and approval model
+- [../reference/ai-integration.md](../reference/ai-integration.md): current AI workflow guardrails and public contract
+- [../reference/ai-provider-configuration.md](../reference/ai-provider-configuration.md): active provider configuration model and keys
 - [../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md](../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md): AI audit and eval baseline decision
+- [../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md](../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md): separation rule for AI runtime records

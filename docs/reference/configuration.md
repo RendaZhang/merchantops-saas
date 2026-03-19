@@ -32,6 +32,13 @@ Shared application configuration currently includes:
 - Swagger UI tag sorting: alphabetical
 - Swagger authorization persistence enabled
 - Swagger try-it-out enabled by default
+- AI summary defaults:
+  - `merchantops.ai.enabled=false`
+  - `merchantops.ai.prompt-version=ticket-summary-v1`
+  - `merchantops.ai.model-id=`
+  - `merchantops.ai.timeout-ms=5000`
+  - `merchantops.ai.openai.base-url=https://api.openai.com`
+  - `merchantops.ai.openai.api-key=`
 - import processing defaults:
   - `merchantops.import.processing.chunk-size=100`
   - `merchantops.import.processing.max-rows-per-job=1000`
@@ -56,6 +63,12 @@ Shared application configuration currently includes:
 - `RABBITMQ_VHOST`
 - `JWT_SECRET`
 - `JWT_EXPIRE_SECONDS`
+- `MERCHANTOPS_AI_ENABLED`
+- `MERCHANTOPS_AI_PROMPT_VERSION`
+- `MERCHANTOPS_AI_MODEL_ID`
+- `MERCHANTOPS_AI_TIMEOUT_MS`
+- `MERCHANTOPS_AI_OPENAI_BASE_URL`
+- `MERCHANTOPS_AI_OPENAI_API_KEY`
 - `IMPORT_STORAGE_LOCAL_DIR`
 - `IMPORT_PROCESSING_CHUNK_SIZE`
 - `IMPORT_PROCESSING_MAX_ROWS_PER_JOB`
@@ -63,6 +76,15 @@ Shared application configuration currently includes:
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_BATCH_SIZE`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_DELAY_MS`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_MIN_AGE_SECONDS`
+
+## AI Provider Controls
+
+- `merchantops.ai.enabled` gates the public ticket AI summary endpoint. When `false`, `POST /api/v1/tickets/{id}/ai-summary` returns `503 SERVICE_UNAVAILABLE` with `ticket ai summary is disabled`.
+- `merchantops.ai.prompt-version` is the explicit prompt identifier stored into `ai_interaction_record` and returned in the public AI summary response.
+- `merchantops.ai.model-id` is the deployment-selected model identifier sent to the provider and recorded for traceability.
+- `merchantops.ai.timeout-ms` controls provider connect and read timeouts for the current OpenAI-backed summary adapter.
+- `merchantops.ai.openai.base-url` and `merchantops.ai.openai.api-key` are the minimum current provider settings for the Week 6 ticket summary slice.
+- Leaving the model id or provider credentials blank keeps the rest of the application usable; only the AI summary endpoint degrades with a controlled `503`.
 
 ## Import Processing Controls
 

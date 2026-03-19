@@ -1,10 +1,10 @@
 # Regression Checklist
 
-Last updated: 2026-03-13
+Last updated: 2026-03-19
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
-Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, ticket-workflow API changes, audit/approval API changes, or import-job API changes.
+Use this checklist after foundation-level changes, security changes, environment changes, user-management API changes, ticket-workflow API changes, audit/approval API changes, import-job API changes, or other public business-surface changes. If the change also touches the public AI slice, complete [ai-regression-checklist.md](ai-regression-checklist.md) in the same verification pass.
 
 ## Automated
 
@@ -179,3 +179,4 @@ Use this checklist after foundation-level changes, security changes, environment
 - Use [../../api-demo.http](../../api-demo.http) for the main request flow
 - Compare the current user-list behavior against [../reference/user-management.md](../reference/user-management.md)
 - Use [local-smoke-test.md](local-smoke-test.md) when you want a shorter step-by-step validation path
+- Use [ai-regression-checklist.md](ai-regression-checklist.md) when the staged change touches the public ticket AI summary path or other future public AI endpoints
