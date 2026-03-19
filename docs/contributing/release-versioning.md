@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-03-12
+Last updated: 2026-03-19
 
 ## Purpose
 
@@ -8,31 +8,39 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 
 ## Current Tagged Milestone
 
-- current tag: `v0.1.3`
-- tag date: 2026-03-12
-- tag message: `Week 4 complete: audit and approval baseline`
+- current tag: `v0.2.0-alpha`
+- tag date: 2026-03-19
+- tag message: `Week 5 complete: async import and data operations preview`
 
-This tag records the first reusable governance baseline while keeping the project inside the early `v0.1.x` line before the broader Week 5 preview story.
+This tag records the completed Week 5 async import and data operations baseline and opens the first explicit preview line beyond the early `v0.1.x` milestones.
 
 ## Previous Tagged Milestone
 
-- previous tag: `v0.1.2`
+- previous tag: `v0.1.3`
+- tag date: 2026-03-12
+- tag message: `Week 4 complete: audit and approval baseline`
+
+This tag records the first reusable governance baseline before Week 5 broadened the public story into async import and data operations.
+
+## Earlier Tagged Milestone
+
+- earlier tag: `v0.1.2`
 - tag date: 2026-03-11
 - tag message: `Week 3 complete: ticket workflow baseline`
 
 This tag records the first completed workflow module before Week 4 broadened the project into reusable governance patterns.
 
-## Earlier Tagged Milestone
+## Initial Tagged Baseline
 
-- earlier tag: `v0.1.1`
+- initial tag: `v0.1.1`
 - tag date: 2026-03-11
 - tag message: `Week 2 complete: tenant user management loop`
 
 This tag records the first tenant-scoped business loop before Week 3 broadened the project story.
 
-## Initial Tagged Baseline
+## Foundation Tagged Baseline
 
-- initial tag: `v0.1.0`
+- foundation tag: `v0.1.0`
 - tag date: 2026-03-09
 - tag message: `Week 1 complete: foundation phase`
 
@@ -78,7 +86,7 @@ Recommended direction:
 - `v0.1.1`: Week 2 tenant user management loop complete milestone
 - `v0.1.2`: Week 3 ticket workflow baseline complete milestone
 - `v0.1.3`: Week 4 audit and approval baseline complete milestone
-- `v0.2.0-alpha`: first open-source preview after Week 5 workflow and async-operation backbone
+- `v0.2.0-alpha`: Week 5 async import and data operations preview line
 - `v0.3.0-beta`: first public AI-enhanced release after Week 6 or Week 7
 - later `v0.x` releases: governance, usage tracking, hardening, and packaging milestones
 
@@ -98,6 +106,12 @@ When a new release tag is created:
 1. update [../../CHANGELOG.md](../../CHANGELOG.md)
 2. update any docs that mention the current release baseline or next planned release
 3. keep planning docs consistent with already-used version numbers
+
+When using a release-cut commit that will be tagged immediately:
+
+1. align [../project-status.md](../project-status.md), [../roadmap.md](../roadmap.md), and [../project-plan.md](../project-plan.md) with the new tagged phase framing
+2. update [../../CHANGELOG.md](../../CHANGELOG.md), [../../README.md](../../README.md), and this page to the new tagged state on the same commit
+3. create the Git tag immediately after that commit so the docs do not temporarily drift from Git reality
 
 ## Related Documents
 

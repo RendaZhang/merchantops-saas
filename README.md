@@ -1,105 +1,48 @@
 # MerchantOps SaaS
 
-MerchantOps SaaS is a multi-tenant backend project for merchant operations scenarios. The current repository focuses on a working Spring Boot skeleton with JWT authentication, RBAC demo endpoints, tenant/user context propagation, tenant-scoped user-management and ticket-workflow flows, a minimal tenant-scoped audit-event query backbone, a minimal approval flow and approval queue for user disable requests, and a narrow async `USER_CSV` import path with error reporting plus replay variants on top of the import-job surface, plus Flyway migrations, health checks, request tracing, and OpenAPI support.
+`v0.2.0-alpha` | workflow-first, AI-enhanced vertical SaaS backend
 
-## Target Users
+MerchantOps SaaS is an open-source, multi-tenant backend reference implementation for merchant operations workflows. It combines tenant isolation, JWT and RBAC security, ticket workflow execution, audit and approval patterns, and async import/data-operations flows in a modular Spring Boot codebase.
 
-- Cross-border e-commerce seller teams
-- Platform operators
-- Merchant administrators
-- Internal support and customer service teams
+## Status
 
-## Core Goals
+- Current tagged milestone: `v0.2.0-alpha`
+- Milestone meaning: `Week 5 complete: async import and data operations preview`
+- Next active phase: Week 6 AI Copilot for Ticket Operations
+- Release maturity: alpha preview, not production-ready
+- Prior baseline: `v0.1.3` for the completed Week 4 audit and approval baseline
 
-- Build a realistic multi-tenant SaaS backend
-- Support interview storytelling and portfolio presentation
-- Evolve from a portfolio-quality system into an open-source reference project, then evaluate commercial collaboration paths
-- Keep the repository easy to run and easy to extend
+## Current Capabilities
 
-## What It Does
+- Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
+- Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, and queue filters
+- Audit-event query backbone plus minimal approval flow for `USER_STATUS_DISABLE`
+- Async import jobs with create, list, detail, paged error reporting, failed-row replay, whole-file replay, selective replay, edited replay, queued-job recovery, and stale-processing safeguards
+- JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
 
-- Multi-module Spring Boot backend
-- JWT login and Bearer-token authentication
-- Current-user and current-context endpoints
-- Current-tenant user-management read and write flows protected by `USER_READ` / `USER_WRITE`
-- Current-tenant ticket workflow read and write flows protected by `TICKET_READ` / `TICKET_WRITE`
-- Current-tenant audit-event query backbone protected by `USER_READ`
-- Minimal approval flow for `USER_STATUS_DISABLE` with request, queue, review, and execution endpoints
-- Current-tenant async import-job create/list/detail/error flows plus failed-row replay, narrow whole-file replay for full-failure jobs, exact error-code selective replay, and edited failed-row replay, with the narrow `USER_CSV` row-execution path now landed
-- RBAC demo endpoints and permission interception
-- Flyway migrations, enriched Swagger / OpenAPI docs, health checks, and request tracing
+## Known Limits
 
-## Repository Structure
-
-```text
-merchantops-saas/
-├── merchantops-api/
-├── merchantops-common/
-├── merchantops-domain/
-├── merchantops-infra/
-├── deploy/
-├── docs/
-├── scripts/
-├── sql/
-├── CHANGELOG.md
-├── README.md
-├── .env.example
-├── docker-compose.yml
-└── pom.xml
-```
-
-## Module Responsibilities
-
-- `merchantops-api`: REST controllers, DTOs, security, and application bootstrap
-- `merchantops-domain`: business models, domain services, and rules
-- `merchantops-infra`: persistence, repositories, and infrastructure integration
-- `merchantops-common`: shared responses, exceptions, and utilities
-
-## Requirements
-
-- JDK 21
-- Maven Wrapper or Maven 3.9.x
-- Docker Compose for the default local environment
-- Access to Maven Central
+- The public import surface currently supports one business import type only: `USER_CSV`
+- There is no frontend or tenant admin UI in this repository
+- AI endpoints are not public yet; Week 6 begins the first AI Copilot slice
+- This release line is intended for evaluation and contribution, not production deployment
 
 ## Quick Start
 
-1. Create the local environment file and start dependencies:
+Requirements:
 
-```bash
-cp .env.example .env
-docker compose up -d
-```
+- JDK 21
+- Maven Wrapper or Maven 3.9.x
+- Docker Compose
+- Access to Maven Central
 
-PowerShell:
+Start the local environment:
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up -d
-```
-
-2. Build the API module and its dependencies:
-
-```bash
-./mvnw -pl merchantops-api -am -DskipTests install
-```
-
-PowerShell:
-
-```powershell
-mvnw.cmd -pl merchantops-api -am -DskipTests install
-```
-
-3. Start the API:
-
-```bash
-./mvnw -f merchantops-api/pom.xml spring-boot:run
-```
-
-PowerShell:
-
-```powershell
-mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
+.\mvnw.cmd -pl merchantops-api -am -DskipTests install
+.\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 
 After startup:
@@ -107,25 +50,28 @@ After startup:
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - Health: `http://localhost:8080/health`
 
-More setup details live in [docs/getting-started/README.md](docs/getting-started/README.md).
+For the full setup flow, see [docs/getting-started/README.md](docs/getting-started/README.md).
 
 ## Documentation
 
 - [docs/README.md](docs/README.md): documentation index
-- [docs/project-status.md](docs/project-status.md): implemented scope, current phase, completion status, and known gaps
-- [docs/roadmap.md](docs/roadmap.md): next-phase work aligned to the 10-week project plan
-- [docs/project-plan.md](docs/project-plan.md): 10-week market-aligned plan for a workflow-first, AI-enhanced vertical SaaS
-- [docs/getting-started/README.md](docs/getting-started/README.md): setup and startup guides
-- [docs/contributing/README.md](docs/contributing/README.md): contributor and agent workflow guidance
+- [docs/project-status.md](docs/project-status.md): current implementation reality, tagged baseline, and known gaps
+- [docs/roadmap.md](docs/roadmap.md): active phase and near-term next steps
+- [docs/project-plan.md](docs/project-plan.md): 10-week workflow-first, AI-enhanced project plan
 - [docs/reference/README.md](docs/reference/README.md): technical reference index
-- [docs/runbooks/README.md](docs/runbooks/README.md): smoke tests, regression sign-off, and verification runbooks
+- [docs/runbooks/README.md](docs/runbooks/README.md): verification runbooks and regression guidance
 - [docs/architecture/README.md](docs/architecture/README.md): ADRs and architecture notes
 - [api-demo.http](api-demo.http): IDE-friendly API request examples
 
-## Summary
+## Project Direction
 
-- Current project status: [docs/project-status.md](docs/project-status.md)
-- Planned next-phase work: [docs/roadmap.md](docs/roadmap.md)
-- Current tagged milestone: `v0.1.3` on 2026-03-12 for the completed Week 4 audit and approval baseline
-- Project direction: portfolio first, open-source second, and potential commercial exploration after the workflow and AI layers are credible
-- Week 2 tenant user-management loop is complete, Week 3 ticket workflow core loop is complete, Week 4 audit/approval governance baseline is complete, and Week 5 async import is active with `USER_CSV` business-row import, error reporting, failed-row replay, narrow whole-file replay for full-failure jobs, exact error-code selective replay, and edited failed-row replay now landed
+- Portfolio-quality system first
+- Open-source reference implementation second
+- Commercial exploration only after the workflow and AI layers become credible
+
+## Contributing, Security, and License
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [LICENSE](LICENSE)

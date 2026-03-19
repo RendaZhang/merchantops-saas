@@ -40,6 +40,7 @@ When a shortcut keeps triggering the same multi-step workflow, check [../../.age
 
 Common variants:
 
+- `DOC pre-tag`: run the final release-doc sync before a tag cut; use prepared-next-tag wording by default, or tagged-state wording only when the same commit will be tagged immediately
 - `DOC staged` / `DOC last`: inspect the staged diff or the most recent commit first, then route required doc updates
 - `TT staged` / `TT last`: inspect the staged diff or the most recent commit first, then choose the smallest sufficient verification set
 - `RR review` / `RR last`: review the staged diff or the most recent commit instead of the full worktree

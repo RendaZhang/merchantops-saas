@@ -1,6 +1,6 @@
 # Documentation Maintenance
 
-Last updated: 2026-03-12
+Last updated: 2026-03-19
 
 ## Purpose
 
@@ -180,6 +180,13 @@ Update when needed:
 - `docs/project-status.md` if the current tagged baseline changed
 - `docs/roadmap.md` if the planned release sequence changed
 - `README.md` if the current tagged milestone summary changed
+
+Before a new tag is created:
+
+- align `docs/project-status.md`, `docs/roadmap.md`, and `docs/project-plan.md` with the current phase framing
+- prepare `CHANGELOG.md` for the intended release cut
+- update `README.md` and `docs/contributing/release-versioning.md` only up to the prepared next-tag state unless the same release-cut commit will be tagged immediately
+- if using a release-cut commit that already reflects the tagged state, create the Git tag immediately after that commit so docs and Git do not drift
 
 ## Update Matrix By Phase Or Node
 

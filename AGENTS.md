@@ -61,10 +61,12 @@ This repository currently organizes handoff rules around five roles plus a small
 - Follow the routing rules in the linked maintenance and development guidance pages instead of re-encoding detailed update matrices here.
 - Use [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md) when the task is centered on `DOC staged`, `DOC last`, Swagger-visible doc sync, or documentation routing after implementation changes.
 - Use [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md) when the task is centered on import endpoints, replay modes, import runbooks, or import-specific doc alignment across reference, examples, and milestone pages.
+- Use [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md) and [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) together when the task is centered on the final release-doc sync across status, roadmap, plan, changelog, README, and release-versioning.
 - Shortcut prefix: `DOC`
 - Supported shortcuts include:
   - `DOC staged`: inspect the staged diff first and identify which docs must change
   - `DOC last`: inspect the most recent commit (`HEAD^..HEAD`) first and identify which docs should have changed or still need follow-up updates
+  - `DOC pre-tag`: run the final release-doc sync before a tag cut; use prepared-next-tag wording by default, or tagged-state wording only when the same commit will be tagged immediately
   - `DOC route`: map the current change to the required doc updates using [docs/contributing/documentation-maintenance.md](docs/contributing/documentation-maintenance.md)
   - `DOC sync`: align affected docs with the current implementation, keeping `public`, `planned`, and `internal` wording correct
   - `DOC nav`: update `README.md`, `docs/README.md`, and the relevant index pages when docs were added, moved, or renamed

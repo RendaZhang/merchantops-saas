@@ -142,8 +142,9 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 当前计划锚点
 
-- 当前执行已经推进到 Week 5 Async Import And Data Operations。
-- Week 1-4 已构成当前稳定基线，Week 5 当前公开基线已经覆盖导入提交、顺序 chunk 执行、处理中计数推进、错误分页、失败行 replay、全失败 source job 的 whole-file replay、按精确 errorCode 的 selective replay 与 edited failed-row replay，后续计划应建立在用户管理、ticket workflow 和 audit/approval 治理骨架之上。
+- 当前执行已经推进到 Week 6 AI Copilot for Ticket Operations。
+- Week 1-5 已构成当前稳定 workflow baseline，其中 Week 5 已完成导入提交、错误报告、顺序 chunk 执行、处理中计数推进、失败行 replay、whole-file replay、按精确 errorCode 的 selective replay、edited failed-row replay，以及队列恢复与 stale-processing runtime hardening。
+- 当前 tagged baseline 已是 `v0.2.0-alpha`，对应 `Week 5 complete: async import and data operations preview`。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -561,9 +562,8 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 推荐发布时间点
 
-- 当前 tagged baseline：`v0.1.3`
+- 当前 tagged baseline：`v0.2.0-alpha`，对应 `Week 5 complete: async import and data operations preview`
 - 详细版本历史以 `CHANGELOG.md` 和 `docs/contributing/release-versioning.md` 为准
-- Week 5 后：下一阶段预览版本，例如 `v0.2.0-alpha`
 - Week 6-7 后：带第一个 AI Copilot 的公开版本，例如 `v0.3.0-beta`
 - Week 10 后：更稳定的开源参考实现，可作为商业探索起点
 

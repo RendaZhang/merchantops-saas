@@ -6,32 +6,39 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+No release-level notes yet.
+
+## [v0.2.0-alpha] - 2026-03-19
+
+Tagged as `Week 5 complete: async import and data operations preview`.
+
 ### Added
 
-- Added Week 5 Slice B import-row execution through `USER_CSV`, including tenant-scoped user creation from valid rows.
-- Added a dedicated `UserCsvImportProcessor` so import-row execution stays isolated from the generic worker loop.
-- Added Week 5 Slice D failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, creating a new derived `QUEUED` job instead of mutating the source job.
-- Added Week 5 Slice F selective failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective`, creating a new derived `QUEUED` job from replayable row failures whose `errorCode` exactly matches the request.
-- Added Week 5 Slice G edited failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures/edited`, creating a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
-- Added Week 5 Slice H whole-file replay through `POST /api/v1/import-jobs/{id}/replay-file`, creating a new derived `QUEUED` job by copying the stored source file for current-tenant `FAILED` `USER_CSV` jobs that have no successful rows.
+- Added the Week 5 public import-job baseline with tenant-scoped `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, and `GET /api/v1/import-jobs/{id}` on top of the queue-backed async job model.
+- Added paged import failure reporting through `GET /api/v1/import-jobs/{id}/errors` plus detail-level `errorCodeCounts` for quick triage.
+- Added narrow `USER_CSV` row execution through the import worker, including tenant-scoped user creation from valid rows and row-level failure isolation.
+- Added failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, creating a new derived `QUEUED` job instead of mutating the source job.
+- Added whole-file replay through `POST /api/v1/import-jobs/{id}/replay-file` for current-tenant `FAILED` `USER_CSV` source jobs with zero successful rows.
+- Added selective failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective`, creating a new derived `QUEUED` job from replayable row failures whose `errorCode` exactly matches the request.
+- Added edited failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures/edited`, creating a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
 
 ### Changed
 
-- Widened the Week 5 import story from queue backbone only into narrow business-row execution for `USER_CSV`.
+- Expanded the Week 5 import story from queue backbone only into a credible async data-operations surface with list/detail/errors plus replay variants.
 - `GET /api/v1/import-jobs` now supports queue filters for `status`, `importType`, `requestedBy`, and `hasFailuresOnly`, plus derived list fields `requestedBy` and `hasFailures`.
-- `GET /api/v1/import-jobs/{id}` now exposes `errorCodeCounts`, and Week 5 reporting now also includes `GET /api/v1/import-jobs/{id}/errors` for paged failure-item reads with optional `errorCode` filtering.
+- `GET /api/v1/import-jobs/{id}` now exposes `errorCodeCounts`, `sourceJobId`, and counters that advance during `PROCESSING`.
 - Replay-derived jobs now persist `sourceJobId` lineage, emit `IMPORT_JOB_REPLAY_REQUESTED` on the source job, and reuse the same worker path as standard `USER_CSV` imports.
 - Whole-file replay keeps the same replay-derived job model, copies stored source bytes through the storage abstraction, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - Selective replay keeps the same replay-derived job model and adds `selectedErrorCodes` audit metadata to both the source-job replay-requested snapshot and the replay-job created snapshot without adding a new import-job column.
 - Edited replay keeps the same replay-derived job model while recording only scope metadata such as `editedErrorIds`, `editedRowCount`, and `editedFields` in source/replay audit snapshots instead of persisting replacement values.
-- Import execution now runs in internal sequential chunks, flushes counters during `PROCESSING`, and enforces configurable `chunk-size` / `max-rows-per-job` guardrails with `MAX_ROWS_EXCEEDED` on oversized files.
+- Import execution now runs in internal sequential chunks, flushes counters during `PROCESSING`, enforces configurable `chunk-size` / `max-rows-per-job` guardrails with `MAX_ROWS_EXCEEDED` on oversized files, republishes aged `QUEUED` jobs after after-commit publish failure, and handles stale `PROCESSING` jobs through restart-or-fail recovery rules.
 - Import worker now enforces the fixed `username,displayName,email,password,roleCodes` header, rejects unsupported import types, and records both parse/header and business-row failures through `itemErrors`.
 - Import create and processing flows now write reusable `audit_event` rows for `IMPORT_JOB` entities.
 - Request tracing now normalizes client-supplied `X-Request-Id` values before echoing and persisting them, and import-row request ids derive from that normalized base.
 
 ### Docs
 
-- Updated import-job reference docs, runbooks, API examples, architecture notes, and status/roadmap notes to match the current `USER_CSV` execution path, replay variants, sequential chunk runtime, and paged error-reporting behavior.
+- Updated import-job reference docs, runbooks, API examples, configuration docs, and status/roadmap/plan notes to match the current `USER_CSV` execution path, replay variants, queue recovery, stale-processing handling, sequential chunk runtime, and paged error-reporting behavior.
 
 ## [v0.1.3] - 2026-03-12
 
