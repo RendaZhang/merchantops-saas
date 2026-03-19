@@ -31,7 +31,18 @@ public interface ImportJobItemErrorRepository extends JpaRepository<ImportJobIte
             order by e.rowNumber asc, e.id asc
             """)
     List<ImportJobItemErrorEntity> findReplayableRowsByTenantIdAndImportJobId(@Param("tenantId") Long tenantId,
-                                                                               @Param("importJobId") Long importJobId);
+                                                                                @Param("importJobId") Long importJobId);
+
+    @Query("""
+            select count(e)
+            from ImportJobItemErrorEntity e
+            where e.tenantId = :tenantId
+              and e.importJobId = :importJobId
+              and e.rowNumber is not null
+              and e.rowNumber > 1
+            """)
+    long countReplayableRowsByTenantIdAndImportJobId(@Param("tenantId") Long tenantId,
+                                                     @Param("importJobId") Long importJobId);
 
     @Query("""
             select e

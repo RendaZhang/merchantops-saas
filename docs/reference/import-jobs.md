@@ -1,6 +1,6 @@
 # Import Jobs
 
-Last updated: 2026-03-13
+Last updated: 2026-03-19
 
 ## Public API Surface
 
@@ -39,22 +39,30 @@ username,displayName,email,password,roleCodes
 `roleCodes` uses `|` as an in-cell delimiter, for example: `READ_ONLY|TENANT_ADMIN`.
 CSV parsing follows standard quoted-record behavior: quote any field that contains commas, double quotes, or embedded newlines, and escape inner quotes as `""`.
 
-Worker behavior (Week 5 Slice E runtime):
+Worker and runtime behavior (Week 5 runtime hardening):
 
-1. consumes `jobId` and transitions `QUEUED -> PROCESSING`
-2. parses the file through the current CSV parser, strips a UTF-8 BOM on the first header cell when present, and validates fixed header + row shape
-3. keeps one worker per job and processes the file in internal sequential chunks; chunking is not a public API concept and does not change the current status model
-4. executes each row in one independent transaction via the existing user-create service chain, so row-level partial success still holds across chunk boundaries
-5. records row errors in `import_job_item_error` for both parse-level and business-level failures
-6. flushes `totalCount`, `successCount`, and `failureCount` back to `import_job` after each chunk so `GET /api/v1/import-jobs/{id}` can show real progress during `PROCESSING`
-7. fails files that exceed the configured row guardrail with `MAX_ROWS_EXCEEDED`
-8. writes terminal status + audit events (`IMPORT_JOB_COMPLETED` / `IMPORT_JOB_FAILED`)
+1. create requests persist a `QUEUED` job and schedule the first MQ publish after transaction commit
+2. if after-commit publish fails and the job remains `QUEUED`, the scheduled recovery loop republishes aged queued jobs in bounded batches; this is a best-effort recovery path, not a new public API
+3. worker startup accepts either a fresh `QUEUED` job or a stale `PROCESSING` job that crossed the configured stale threshold
+4. a stale `PROCESSING` job with no recorded progress is restarted from `PROCESSING`; the processing-started audit snapshot adds `recoveredFromStale=true`
+5. a stale `PROCESSING` job that already has `totalCount`, `successCount`, or `failureCount` progress is failed in place with job summary `import job processing expired after partial progress` and audit error `PROCESSING_STALE`
+6. the worker parses the file through the current CSV parser, strips a UTF-8 BOM on the first header cell when present, and validates fixed header + row shape
+7. one worker still owns one job and processes the file in internal sequential chunks; chunking is not a public API concept and does not change the current status model
+8. each row executes in its own transaction through the existing user-create service chain, so row-level partial success still holds across chunk boundaries
+9. row errors are recorded in `import_job_item_error` for both parse-level and business-level failures
+10. `totalCount`, `successCount`, and `failureCount` are flushed back to `import_job` after each chunk so `GET /api/v1/import-jobs/{id}` can show real progress during `PROCESSING`
+11. files that exceed the configured row guardrail fail with `MAX_ROWS_EXCEEDED`
+12. terminal transitions still write job-level audit events such as `IMPORT_JOB_COMPLETED` and `IMPORT_JOB_FAILED`
 
 Current internal processing controls:
 
 - one import job is still consumed by one worker
 - default `merchantops.import.processing.chunk-size=100`
 - default `merchantops.import.processing.max-rows-per-job=1000`
+- default `merchantops.import.processing.stale-processing-threshold-seconds=300`
+- default `merchantops.import.processing.enqueue-recovery-batch-size=100`
+- default `merchantops.import.processing.enqueue-recovery-delay-ms=300000`
+- default `merchantops.import.processing.enqueue-recovery-min-age-seconds=60`
 - current implementation is intentionally sequential; parallel chunk workers, sub-jobs, and shard tables are still out of scope
 
 Current list query surface:
@@ -433,6 +441,8 @@ Current semantics:
 ## Governance Behavior
 
 - job-level audit events remain `IMPORT_JOB_*`.
+- a stale zero-progress restart records `recoveredFromStale=true` on `IMPORT_JOB_PROCESSING_STARTED`.
+- a stale in-progress failure currently surfaces through job summary plus audit error `PROCESSING_STALE`; it does not create a replayable row-level `itemError`.
 - replay writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `IMPORT_JOB_CREATED` on the new replay job with `sourceJobId` in the created snapshot.
 - selective replay keeps the same event types and additionally records `selectedErrorCodes` in both source and replay audit snapshots.
 - edited replay keeps the same event types and additionally records `editedErrorIds`, `editedRowCount`, and `editedFields` in both source and replay audit snapshots without persisting replacement values.
@@ -452,5 +462,5 @@ Current semantics:
 - list items expose `requestedBy` and derived `hasFailures`; detail exposes `sourceJobId`, `errorCodeCounts`, and backward-compatible `itemErrors`; `/errors` pages the same failure rows for larger jobs.
 - current list ordering remains `createdAt DESC, id DESC`.
 - current failure-item ordering remains stable: null `rowNumber` first, then `rowNumber ASC, id ASC`.
-- see [configuration.md](configuration.md) for the current import chunk-size and row-limit settings.
+- see [configuration.md](configuration.md) for the current import chunking, stale-processing, and queue-recovery controls.
 - see [../../api-demo.http](../../api-demo.http) for runnable request examples.

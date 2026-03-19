@@ -16,4 +16,16 @@ public class ImportProcessingProperties {
     @Min(1)
     private int maxRowsPerJob = 1000;
 
+    @Min(1)
+    private int staleProcessingThresholdSeconds = 300;
+
+    @Min(1)
+    private int enqueueRecoveryBatchSize = 100;
+
+    @Min(1)
+    private long enqueueRecoveryDelayMs = 300000;
+
+    @Min(0)
+    private int enqueueRecoveryMinAgeSeconds = 60;
+
 }

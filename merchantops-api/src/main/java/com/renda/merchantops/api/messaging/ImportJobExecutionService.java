@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.messaging;
 
+import com.renda.merchantops.api.config.ImportProcessingProperties;
 import com.renda.merchantops.api.service.AuditEventService;
 import com.renda.merchantops.api.service.ImportCsvSupport;
 import com.renda.merchantops.infra.persistence.entity.ImportJobEntity;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,11 +25,14 @@ public class ImportJobExecutionService {
     private static final String STATUS_SUCCEEDED = "SUCCEEDED";
     private static final String STATUS_FAILED = "FAILED";
     private static final String IMPORT_TYPE_USER_CSV = "USER_CSV";
+    private static final String PROCESSING_STALE_ERROR = "PROCESSING_STALE";
+    private static final String PROCESSING_STALE_ERROR_SUMMARY = "import job processing expired after partial progress";
 
     private final ImportJobRepository importJobRepository;
     private final ImportJobItemErrorRepository importJobItemErrorRepository;
     private final AuditEventService auditEventService;
     private final UserCsvImportProcessor userCsvImportProcessor;
+    private final ImportProcessingProperties importProcessingProperties;
 
     @Transactional
     public ImportJobExecutionContext startProcessing(Long jobId, Long tenantId) {
@@ -35,14 +40,40 @@ public class ImportJobExecutionService {
             return null;
         }
         ImportJobEntity job = importJobRepository.findByIdAndTenantIdForUpdate(jobId, tenantId).orElse(null);
-        if (job == null || !STATUS_QUEUED.equals(job.getStatus())) {
+        if (job == null) {
             return null;
         }
+        if (STATUS_QUEUED.equals(job.getStatus())) {
+            return transitionToProcessing(job, false);
+        }
+        if (STATUS_PROCESSING.equals(job.getStatus())) {
+            return recoverOrFailStaleProcessing(job);
+        }
+        return null;
+    }
 
+    private ImportJobExecutionContext recoverOrFailStaleProcessing(ImportJobEntity job) {
+        if (!isStaleProcessing(job)) {
+            return null;
+        }
+        if (hasProgress(job)) {
+            failStaleProcessingJob(job);
+            return null;
+        }
+        return transitionToProcessing(job, true);
+    }
+
+    private ImportJobExecutionContext transitionToProcessing(ImportJobEntity job, boolean recoveredFromStale) {
         LocalDateTime now = LocalDateTime.now();
         job.setStatus(STATUS_PROCESSING);
         job.setStartedAt(now);
+        job.setFinishedAt(null);
         importJobRepository.save(job);
+        Map<String, Object> afterValue = new LinkedHashMap<>();
+        afterValue.put("status", STATUS_PROCESSING);
+        if (recoveredFromStale) {
+            afterValue.put("recoveredFromStale", true);
+        }
         auditEventService.recordEvent(
                 job.getTenantId(),
                 "IMPORT_JOB",
@@ -51,8 +82,49 @@ public class ImportJobExecutionService {
                 job.getRequestedBy(),
                 job.getRequestId(),
                 null,
-                Map.of("status", STATUS_PROCESSING)
+                afterValue
         );
+        return toExecutionContext(job);
+    }
+
+    private void failStaleProcessingJob(ImportJobEntity job) {
+        job.setStatus(STATUS_FAILED);
+        job.setFinishedAt(LocalDateTime.now());
+        job.setErrorSummary(PROCESSING_STALE_ERROR_SUMMARY);
+        importJobRepository.save(job);
+        auditEventService.recordEvent(
+                job.getTenantId(),
+                "IMPORT_JOB",
+                job.getId(),
+                "IMPORT_JOB_FAILED",
+                job.getRequestedBy(),
+                job.getRequestId(),
+                null,
+                Map.of(
+                        "status", STATUS_FAILED,
+                        "error", PROCESSING_STALE_ERROR,
+                        "successCount", safeInt(job.getSuccessCount()),
+                        "failureCount", safeInt(job.getFailureCount()),
+                        "totalCount", safeInt(job.getTotalCount())
+                )
+        );
+    }
+
+    private boolean isStaleProcessing(ImportJobEntity job) {
+        LocalDateTime startedAt = job.getStartedAt();
+        if (startedAt == null) {
+            return true;
+        }
+        return startedAt.isBefore(LocalDateTime.now().minusSeconds(importProcessingProperties.getStaleProcessingThresholdSeconds()));
+    }
+
+    private boolean hasProgress(ImportJobEntity job) {
+        return safeInt(job.getTotalCount()) > 0
+                || safeInt(job.getSuccessCount()) > 0
+                || safeInt(job.getFailureCount()) > 0;
+    }
+
+    private ImportJobExecutionContext toExecutionContext(ImportJobEntity job) {
         return new ImportJobExecutionContext(
                 job.getId(),
                 job.getTenantId(),

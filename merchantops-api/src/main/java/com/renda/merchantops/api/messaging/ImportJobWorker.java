@@ -43,6 +43,7 @@ public class ImportJobWorker {
         ImportJobExecutionService.ImportJobExecutionContext context =
                 importJobExecutionService.startProcessing(message.jobId(), message.tenantId());
         if (context == null) {
+            log.debug("ignored import job message for job {} tenant {}", message.jobId(), message.tenantId());
             return;
         }
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TDR Last Cycle"
+  short_description: "Iterate TT, DOC, and RR on last commit"
+  default_prompt: "Use $tdr-last-cycle to run the TT last, DOC last, and RR last cycle against the most recent commit until no fixable findings remain."

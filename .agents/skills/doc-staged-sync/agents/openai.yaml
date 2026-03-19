@@ -1,0 +1,4 @@
+interface:
+  display_name: "Doc Staged Sync"
+  short_description: "Route and sync staged doc changes"
+  default_prompt: "Use $doc-staged-sync to inspect staged changes and update the required docs."

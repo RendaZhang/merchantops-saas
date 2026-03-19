@@ -1,6 +1,6 @@
 # Automated Tests
 
-Last updated: 2026-03-13
+Last updated: 2026-03-19
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
@@ -34,7 +34,7 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface
 - tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import queue publication, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
+- import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, stale-processing redelivery handling, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -126,6 +126,8 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
   - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
 - `ImportJobControllerTest`
   - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, replay request validation, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
+- `ImportJobAuthzIntegrationTest`
+  - real authz enforcement for import create plus all current replay write endpoints, including tenant-scoped persistence for authorized writes and `403` rejection for read-only callers
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
   - duplicate pending disable requests are rejected
@@ -138,8 +140,9 @@ Current automated coverage is centered on the completed Week 2-4 public workflow
 - `ImportJobQueryServiceTest`
   - import-job page normalization, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `sourceJobId`, `errorCodeCounts`, and item-error hydration
 - `ImportJobIntegrationTest`
-  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay as a derived job, whole-file replay for full-failure jobs, rejection when a source job already has successful rows, selective replay by exact `errorCode`, edited replay by exact `errorId`, replay rejection cases, summary semantics, and import audit events including replay-scope metadata
+  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, stale `PROCESSING` redelivery handling, failed-row replay as a derived job, whole-file replay for full-failure jobs, rejection when a source job already has successful rows, selective replay by exact `errorCode`, edited replay by exact `errorId`, replay rejection cases, summary semantics, and import audit events including replay-scope metadata
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
+  - scheduled queue recovery can republish aged `QUEUED` jobs when the original after-commit publish failed
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
   - internal sequential chunk boundaries follow the configured chunk size without changing public contract shape

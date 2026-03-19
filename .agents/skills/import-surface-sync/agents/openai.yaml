@@ -1,0 +1,4 @@
+interface:
+  display_name: "Import Surface Sync"
+  short_description: "Sync import API docs and runbooks"
+  default_prompt: "Use $import-surface-sync to align import API docs, runbooks, examples, and milestone docs with the current implementation."

@@ -100,7 +100,7 @@ public class ImportReplayFileBuilder {
 
     private ImportJobEntity requireWholeFileReplayableSourceJob(Long tenantId, Long sourceJobId) {
         ImportJobEntity sourceJob = requireSourceJob(tenantId, sourceJobId);
-        validateWholeFileReplayableSourceJob(sourceJob);
+        validateWholeFileReplayableSourceJob(tenantId, sourceJob);
         return sourceJob;
     }
 
@@ -174,7 +174,7 @@ public class ImportReplayFileBuilder {
         }
     }
 
-    private void validateWholeFileReplayableSourceJob(ImportJobEntity sourceJob) {
+    private void validateWholeFileReplayableSourceJob(Long tenantId, ImportJobEntity sourceJob) {
         if (!"FAILED".equals(sourceJob.getStatus())) {
             throw new BizException(ErrorCode.BAD_REQUEST, "whole-file replay is only supported for FAILED source jobs");
         }
@@ -186,6 +186,13 @@ public class ImportReplayFileBuilder {
         }
         if (safeInt(sourceJob.getSuccessCount()) > 0) {
             throw new BizException(ErrorCode.BAD_REQUEST, "whole-file replay is only supported when source job has no successful rows");
+        }
+        long replayableRowErrors = importJobItemErrorRepository.countReplayableRowsByTenantIdAndImportJobId(
+                tenantId,
+                sourceJob.getId()
+        );
+        if (replayableRowErrors <= 0) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "whole-file replay is only supported for row-level failed rows");
         }
     }
 

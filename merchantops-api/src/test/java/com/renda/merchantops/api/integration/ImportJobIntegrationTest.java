@@ -16,8 +16,9 @@ import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
 import com.renda.merchantops.api.messaging.ImportJobMessage;
-import com.renda.merchantops.api.messaging.ImportJobPublisher;
 import com.renda.merchantops.api.messaging.ImportJobExecutionService;
+import com.renda.merchantops.api.messaging.ImportJobPublisher;
+import com.renda.merchantops.api.messaging.ImportJobQueueRecoveryService;
 import com.renda.merchantops.api.messaging.ImportJobWorker;
 import com.renda.merchantops.api.service.AuditEventService;
 import com.renda.merchantops.api.service.ImportJobCommandService;
@@ -64,10 +65,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
                 "spring.jpa.hibernate.ddl-auto=none",
                 "spring.sql.init.mode=never",
                 "spring.flyway.enabled=false",
+                "spring.task.scheduling.enabled=false",
                 "spring.rabbitmq.listener.simple.auto-startup=false",
                 "merchantops.import.storage.local-dir=target/test-imports",
                 "merchantops.import.processing.chunk-size=2",
-                "merchantops.import.processing.max-rows-per-job=1000"
+                "merchantops.import.processing.max-rows-per-job=1000",
+                "merchantops.import.processing.enqueue-recovery-delay-ms=600000"
         }
 )
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -89,6 +92,8 @@ class ImportJobIntegrationTest {
     private PlatformTransactionManager transactionManager;
     @Autowired
     private ImportProcessingProperties importProcessingProperties;
+    @Autowired
+    private ImportJobQueueRecoveryService importJobQueueRecoveryService;
 
     @MockBean
     private ImportJobPublisher importJobPublisher;
@@ -218,6 +223,9 @@ class ImportJobIntegrationTest {
         Mockito.reset(importJobPublisher, importJobExecutionService);
         importProcessingProperties.setChunkSize(2);
         importProcessingProperties.setMaxRowsPerJob(1000);
+        importProcessingProperties.setStaleProcessingThresholdSeconds(300);
+        importProcessingProperties.setEnqueueRecoveryBatchSize(100);
+        importProcessingProperties.setEnqueueRecoveryMinAgeSeconds(60);
     }
 
     @Test
@@ -318,6 +326,93 @@ class ImportJobIntegrationTest {
         assertThat(processed.totalCount()).isEqualTo(4);
         assertThat(processed.successCount()).isEqualTo(4);
         assertThat(processed.failureCount()).isZero();
+    }
+
+    @Test
+    void workerShouldReprocessStaleProcessingJobOnRedelivery() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-stale-redelivery.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                stale,Stale User,stale@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-stale-redelivery", request, file);
+        jdbcTemplate.update(
+                "UPDATE import_job SET status = 'PROCESSING', started_at = DATEADD('SECOND', -900, CURRENT_TIMESTAMP), finished_at = NULL WHERE id = ?",
+                created.id()
+        );
+
+        importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
+
+        ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
+        assertThat(processed.status()).isEqualTo("SUCCEEDED");
+        assertThat(processed.totalCount()).isEqualTo(1);
+        assertThat(processed.successCount()).isEqualTo(1);
+        assertThat(processed.failureCount()).isZero();
+
+        Integer processingStartedAuditCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_PROCESSING_STARTED'",
+                Integer.class,
+                created.id()
+        );
+        assertThat(processingStartedAuditCount).isEqualTo(1);
+    }
+
+    @Test
+    void workerShouldIgnoreDuplicateImportMessagesAfterFirstSuccessfulRun() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-duplicate-message.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                dup1,Dup One,dup1@example.com,abc123,READ_ONLY
+                dup2,Dup Two,dup2@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-duplicate-message", request, file);
+        importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
+
+        ImportJobDetailResponse firstProcessed = importJobQueryService.getJobDetail(1L, created.id());
+        Integer userCountAfterFirstRun = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username IN ('dup1','dup2')",
+                Integer.class
+        );
+        Integer processingStartedAuditAfterFirstRun = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_PROCESSING_STARTED'",
+                Integer.class,
+                created.id()
+        );
+        Integer completedAuditAfterFirstRun = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_COMPLETED'",
+                Integer.class,
+                created.id()
+        );
+
+        importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
+
+        ImportJobDetailResponse secondProcessed = importJobQueryService.getJobDetail(1L, created.id());
+        Integer userCountAfterSecondRun = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username IN ('dup1','dup2')",
+                Integer.class
+        );
+        Integer processingStartedAuditAfterSecondRun = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_PROCESSING_STARTED'",
+                Integer.class,
+                created.id()
+        );
+        Integer completedAuditAfterSecondRun = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_COMPLETED'",
+                Integer.class,
+                created.id()
+        );
+
+        assertThat(secondProcessed.status()).isEqualTo("SUCCEEDED");
+        assertThat(secondProcessed.totalCount()).isEqualTo(firstProcessed.totalCount());
+        assertThat(secondProcessed.successCount()).isEqualTo(firstProcessed.successCount());
+        assertThat(secondProcessed.failureCount()).isEqualTo(firstProcessed.failureCount());
+        assertThat(userCountAfterSecondRun).isEqualTo(userCountAfterFirstRun);
+        assertThat(processingStartedAuditAfterSecondRun).isEqualTo(processingStartedAuditAfterFirstRun);
+        assertThat(completedAuditAfterSecondRun).isEqualTo(completedAuditAfterFirstRun);
     }
 
     @Test
@@ -549,6 +644,66 @@ class ImportJobIntegrationTest {
                     BizException biz = (BizException) ex;
                     assertThat(biz.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST);
                     assertThat(biz.getMessage()).contains("no successful rows");
+                });
+    }
+
+    @Test
+    void replayWholeFileShouldRejectFailedSourceJobsWithoutRowLevelFailureEvidence() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile invalidHeaderFile = new MockMultipartFile("file", "users-replay-file-invalid-header.csv", "text/csv", ("""
+                badHeader,displayName,email,password,roleCodes
+                retry,Retry User,retry@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse invalidHeaderSource = importJobCommandService.createJob(
+                1L,
+                101L,
+                "req-import-replay-file-invalid-header-source",
+                request,
+                invalidHeaderFile
+        );
+        importJobWorker.consume(new ImportJobMessage(invalidHeaderSource.id(), 1L));
+
+        assertThatThrownBy(() -> importJobCommandService.replayWholeFile(
+                1L,
+                101L,
+                "req-import-replay-file-invalid-header-derived",
+                invalidHeaderSource.id()
+        ))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException biz = (BizException) ex;
+                    assertThat(biz.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST);
+                    assertThat(biz.getMessage()).contains("row-level failed rows");
+                });
+
+        MockMultipartFile emptyFile = new MockMultipartFile(
+                "file",
+                "users-replay-file-empty.csv",
+                "text/csv",
+                "\n".getBytes(StandardCharsets.UTF_8)
+        );
+        ImportJobDetailResponse emptySource = importJobCommandService.createJob(
+                1L,
+                101L,
+                "req-import-replay-file-empty-source",
+                request,
+                emptyFile
+        );
+        importJobWorker.consume(new ImportJobMessage(emptySource.id(), 1L));
+
+        assertThatThrownBy(() -> importJobCommandService.replayWholeFile(
+                1L,
+                101L,
+                "req-import-replay-file-empty-derived",
+                emptySource.id()
+        ))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException biz = (BizException) ex;
+                    assertThat(biz.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST);
+                    assertThat(biz.getMessage()).contains("row-level failed rows");
                 });
     }
 
@@ -1102,6 +1257,118 @@ class ImportJobIntegrationTest {
     }
 
     @Test
+    void queuedJobShouldBeRepublishedByRecoveryWhenAfterCommitPublishFails() {
+        importProcessingProperties.setEnqueueRecoveryMinAgeSeconds(0);
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "users-queued-recovery.csv",
+                "text/csv",
+                "username,displayName,email,password,roleCodes\nqueued,Queued User,queued@example.com,123456,READ_ONLY".getBytes(StandardCharsets.UTF_8)
+        );
+        Mockito.doThrow(new RuntimeException("broker down"))
+                .when(importJobPublisher)
+                .publish(Mockito.any(ImportJobMessage.class));
+
+        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-queued-recovery", request, file);
+        Integer queuedCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM import_job WHERE id = ? AND tenant_id = 1 AND status = 'QUEUED'",
+                Integer.class,
+                created.id()
+        );
+        assertThat(queuedCount).isEqualTo(1);
+
+        Mockito.reset(importJobPublisher);
+        int republished = importJobQueueRecoveryService.republishStaleQueuedJobs();
+
+        assertThat(republished).isGreaterThanOrEqualTo(1);
+        verify(importJobPublisher).publish(new ImportJobMessage(created.id(), 1L));
+    }
+
+    @Test
+    void replayRollbackShouldCleanupStagedFilesForAllReplayPaths() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile sourceFile = new MockMultipartFile("file", "users-replay-rollback-source.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                retry-role,Retry Role,retry-role@example.com,abc123,RETRY_ROLE
+                retry-email,Retry Email,bad-email,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(
+                1L,
+                101L,
+                "req-import-replay-rollback-source",
+                request,
+                sourceFile
+        );
+        importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
+
+        ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
+        assertThat(sourceProcessed.status()).isEqualTo("FAILED");
+        assertThat(sourceProcessed.successCount()).isZero();
+        assertThat(sourceProcessed.failureCount()).isEqualTo(2);
+
+        Long unknownRoleErrorId = sourceProcessed.itemErrors().stream()
+                .filter(item -> "UNKNOWN_ROLE".equals(item.errorCode()))
+                .map(ImportJobErrorItemResponse::id)
+                .findFirst()
+                .orElseThrow();
+        Long invalidEmailErrorId = sourceProcessed.itemErrors().stream()
+                .filter(item -> "INVALID_EMAIL".equals(item.errorCode()))
+                .map(ImportJobErrorItemResponse::id)
+                .findFirst()
+                .orElseThrow();
+
+        assertReplayRollbackCleansStagedFile(
+                "req-replay-rollback-failed-rows",
+                () -> importJobCommandService.replayFailedRows(1L, 101L, "req-replay-rollback-failed-rows", sourceCreated.id())
+        );
+        assertReplayRollbackCleansStagedFile(
+                "req-replay-rollback-file",
+                () -> importJobCommandService.replayWholeFile(1L, 101L, "req-replay-rollback-file", sourceCreated.id())
+        );
+        assertReplayRollbackCleansStagedFile(
+                "req-replay-rollback-selective",
+                () -> importJobCommandService.replayFailedRowsSelective(
+                        1L,
+                        101L,
+                        "req-replay-rollback-selective",
+                        sourceCreated.id(),
+                        new ImportJobSelectiveReplayRequest(java.util.List.of("UNKNOWN_ROLE"))
+                )
+        );
+        assertReplayRollbackCleansStagedFile(
+                "req-replay-rollback-edited",
+                () -> importJobCommandService.replayFailedRowsEdited(
+                        1L,
+                        101L,
+                        "req-replay-rollback-edited",
+                        sourceCreated.id(),
+                        new ImportJobEditedReplayRequest(java.util.List.of(
+                                new ImportJobEditedReplayItemRequest(
+                                        unknownRoleErrorId,
+                                        "retry-role-fixed",
+                                        "Retry Role Fixed",
+                                        "retry-role-fixed@example.com",
+                                        "abc123",
+                                        java.util.List.of("READ_ONLY")
+                                ),
+                                new ImportJobEditedReplayItemRequest(
+                                        invalidEmailErrorId,
+                                        "retry-email-fixed",
+                                        "Retry Email Fixed",
+                                        "retry-email-fixed@example.com",
+                                        "abc123",
+                                        java.util.List.of("READ_ONLY")
+                                )
+                        ))
+                )
+        );
+    }
+
+    @Test
     void pageJobsShouldApplyTenantScopedFiltersAndStableOrdering() {
         insertImportJob(5101L, 1L, "USER_CSV", "SUCCEEDED", 101L, 2, 2, 0, null, "2026-03-12 10:00:00");
         insertImportJob(5102L, 1L, "USER_CSV", "FAILED", 101L, 2, 0, 2, "all rows failed validation", "2026-03-12 10:05:00");
@@ -1175,6 +1442,25 @@ class ImportJobIntegrationTest {
         assertThatThrownBy(() -> importJobQueryService.pageJobErrors(1L, 6201L, new ImportJobErrorPageQuery(0, 10, null)))
                 .isInstanceOf(BizException.class)
                 .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+    }
+
+    private void assertReplayRollbackCleansStagedFile(String requestId, Runnable replayInvocation) {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        long baselineFileCount = countStoredFiles();
+        AtomicLong fileCountInsideTransaction = new AtomicLong();
+        transactionTemplate.executeWithoutResult(status -> {
+            replayInvocation.run();
+            fileCountInsideTransaction.set(countStoredFiles());
+            status.setRollbackOnly();
+        });
+        assertThat(fileCountInsideTransaction.get()).isGreaterThan(baselineFileCount);
+        assertThat(countStoredFiles()).isEqualTo(baselineFileCount);
+        Integer replayJobCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM import_job WHERE tenant_id = 1 AND request_id = ?",
+                Integer.class,
+                requestId
+        );
+        assertThat(replayJobCount).isZero();
     }
 
     private long countStoredFiles() {

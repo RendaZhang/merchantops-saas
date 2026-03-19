@@ -16,6 +16,7 @@ Use it as the routing table for answering two questions:
 - `README.md` stays high-level. Do not move detailed implementation notes into it.
 - `docs/README.md` is the documentation entry page and should link to important new pages.
 - `docs/README.md` should prefer section-level entry points plus a short list of high-value jump targets; do not duplicate every child page that already has its own section index.
+- repeated multi-step contributor or agent workflows should live in `.agents/skills/`; keep `AGENTS.md` and `docs/contributing/README.md` as entry points and do not duplicate full skill step-by-step logic there.
 - `docs/project-plan.md` should stay milestone-level; do not mirror slice-level current implementation notes there when `docs/project-status.md` already records repository reality.
 - `docs/project-plan.md` may keep a short planning anchor for the current week, but detailed current status, near-term slice tracking, and detailed release history belong in `docs/project-status.md`, `docs/roadmap.md`, `CHANGELOG.md`, and `docs/contributing/release-versioning.md`.
 - `docs/roadmap.md` should stay focused on the active phase, next steps, and near-term sequencing; exact current endpoint inventories belong in `docs/project-status.md` and `docs/reference/`.

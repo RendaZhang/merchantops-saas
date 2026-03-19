@@ -15,6 +15,10 @@ If a rule starts turning into implementation detail, runbook nuance, or verifica
 - [execution-planning-agent-guidance.md](execution-planning-agent-guidance.md): current-phase assessment, next-step planning, and plan-adjustment guidance
 - [release-versioning.md](release-versioning.md): current tag baseline, changelog ownership, and recommended version progression
 
+## Repo Skills
+
+- [../../.agents/skills/README.md](../../.agents/skills/README.md): repo-local skill index for repeated multi-step workflows that are too detailed to keep in [../../AGENTS.md](../../AGENTS.md)
+
 ## Suggested Entry Points
 
 - start with [../../AGENTS.md](../../AGENTS.md) if you are new to the repository
@@ -32,6 +36,8 @@ If a rule starts turning into implementation detail, runbook nuance, or verifica
 - `RR`: Review and Release role shortcut for staged review, commit-message suggestion, branch checks, and tag/release checks
 - `EP`: Execution Planning role shortcut for current-phase assessment, next-step planning, and drift checks
 
+When a shortcut keeps triggering the same multi-step workflow, check [../../.agents/skills/README.md](../../.agents/skills/README.md) for a matching repo-local skill before expanding the rule set in [../../AGENTS.md](../../AGENTS.md).
+
 Common variants:
 
 - `DOC staged` / `DOC last`: inspect the staged diff or the most recent commit first, then route required doc updates
@@ -40,4 +46,4 @@ Common variants:
 
 ## Composite Shortcuts
 
-- `TDR last`: run three iterative passes against the most recent commit in this order: Testing, Documentation, then Review and Release. If one pass finds a fixable issue, fix it and restart the sequence from `TT last` until the full cycle is clean or blocked by a real decision.
+- `TDR last`: composite last-commit check; see [../../.agents/skills/tdr-last-cycle/SKILL.md](../../.agents/skills/tdr-last-cycle/SKILL.md) for the loop and restart details

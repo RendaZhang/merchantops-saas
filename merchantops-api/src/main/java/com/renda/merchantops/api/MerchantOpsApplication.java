@@ -7,8 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(scanBasePackages = "com.renda.merchantops")
+@EnableScheduling
 @EnableConfigurationProperties({JwtProperties.class, ImportProcessingProperties.class})
 @EntityScan(basePackages = "com.renda.merchantops.infra.persistence.entity")
 @EnableJpaRepositories(basePackages = "com.renda.merchantops.infra.repository")

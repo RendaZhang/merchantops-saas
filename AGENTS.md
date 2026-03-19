@@ -1,6 +1,6 @@
 # Project Guidance
 
-This repository currently organizes handoff rules around five roles:
+This repository currently organizes handoff rules around five roles plus a small set of repo-local skills for repeated workflows:
 
 1. Documentation
 2. Testing
@@ -22,6 +22,7 @@ This repository currently organizes handoff rules around five roles:
   - future agents are likely to benefit from seeing it before they start work
 - If this file is updated, keep linked reference pages and runbooks aligned in the same change when needed.
 - Do not use this file as the only place for product, architecture, permission-policy, or release-policy decisions; those still belong in the relevant docs and ADRs.
+- If a repeated workflow is too detailed for this file but stable enough to reuse, promote it into `.agents/skills/` and keep only the entry-point summary here.
 
 ## Cross-Role Documentation Ownership
 
@@ -34,6 +35,22 @@ This repository currently organizes handoff rules around five roles:
 - Execution-planning work may update status, roadmap, plan, and architecture guidance when it finds phase drift, scope mismatch, or planning assumptions that no longer match repository reality.
 - If a role updates a doc outside its usual focus area, it should keep the change scoped to the facts learned through that role's work rather than rewriting unrelated narrative.
 
+## Repo Skills
+
+- Repo-local skills live under [`.agents/skills/README.md`](.agents/skills/README.md).
+- Use a repo skill when the task matches a stable, repeated, multi-step workflow that would otherwise add too much detail to this file.
+- Read the matching `.agents/skills/<skill-name>/SKILL.md` before acting when the task clearly fits that workflow.
+- Skills refine execution. They do not override repository-level rules in this file or the linked docs under `docs/contributing/`.
+- Keep repo skills concise and prefer linking repository docs over duplicating long guidance into the skill itself.
+
+## Current Repo Skills
+
+- [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md): staged or recent diff to documentation-routing and documentation-sync workflow
+- [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md): align `project-status`, `roadmap`, and `project-plan` without mixing current reality, near-term work, and long-range milestones
+- [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md): milestone and release-tag documentation preparation plus post-tag cleanup
+- [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md): align import API docs, examples, runbooks, and milestone text with current import implementation
+- [`.agents/skills/tdr-last-cycle/SKILL.md`](.agents/skills/tdr-last-cycle/SKILL.md): run the `TT last`, `DOC last`, `RR last` cleanup loop against the most recent commit until no fixable findings remain
+
 ## Documentation Role
 
 - Read [docs/contributing/documentation-maintenance.md](docs/contributing/documentation-maintenance.md) before making documentation changes.
@@ -42,6 +59,8 @@ This repository currently organizes handoff rules around five roles:
 - Do not document an endpoint as public unless it is visible in Swagger.
 - Use the linked contributing pages for detailed wording rules around verification scope, environment-sensitive sample data, and stale-token versus re-login expectations instead of duplicating those details here.
 - Follow the routing rules in the linked maintenance and development guidance pages instead of re-encoding detailed update matrices here.
+- Use [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md) when the task is centered on `DOC staged`, `DOC last`, Swagger-visible doc sync, or documentation routing after implementation changes.
+- Use [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md) when the task is centered on import endpoints, replay modes, import runbooks, or import-specific doc alignment across reference, examples, and milestone pages.
 - Shortcut prefix: `DOC`
 - Supported shortcuts include:
   - `DOC staged`: inspect the staged diff first and identify which docs must change
@@ -87,6 +106,7 @@ This repository currently organizes handoff rules around five roles:
 - Default review scope is the staged diff only.
 - Treat pasted findings from earlier review rounds as hints, not as still-open facts. Re-check whether they still apply to the current staged diff before repeating or carrying them forward.
 - Keep changelog, release versioning, and milestone docs aligned with the reviewed change set.
+- Use [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md) when the task is centered on tag readiness, release-note drafting, or pre-tag / post-tag doc alignment.
 - Shortcut prefix: `RR`
 - Supported shortcuts include:
   - `RR review`: review the staged diff only
@@ -103,6 +123,7 @@ This repository currently organizes handoff rules around five roles:
 ## Composite Shortcuts
 
 - `TDR last`: run a three-pass role-based check against the most recent commit (`HEAD^..HEAD`) in this order: `TT last`, `DOC last`, `RR last`. If any pass finds a fixable issue, fix it, then restart from `TT last` and repeat until all three passes report no remaining findings or a real blocker requires user input.
+- Use [`.agents/skills/tdr-last-cycle/SKILL.md`](.agents/skills/tdr-last-cycle/SKILL.md) when the task is centered on running or repeating this composite loop.
 
 ## Execution Planning Role
 
@@ -110,6 +131,7 @@ This repository currently organizes handoff rules around five roles:
 - Ground execution guidance in code, tests, Swagger, staged changes, and status docs before trusting milestone text alone.
 - Output concrete next tasks, validation steps, and doc-update expectations without dropping into code unless the requester asks for implementation.
 - If the current plan, architecture, or milestone sequencing no longer matches repository reality, call that out explicitly and point to the docs that should change.
+- Use [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) when the task is centered on keeping `docs/project-status.md`, `docs/roadmap.md`, and `docs/project-plan.md` aligned without repeating the same current-state text across all three files.
 - Shortcut prefix: `EP`
 - Supported shortcuts include:
   - `EP now`: summarize current phase, completed scope, and remaining work
