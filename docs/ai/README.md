@@ -4,19 +4,19 @@ This section collects AI-specific design and operating documents that sit betwee
 
 ## Pages
 
-- [prompt-versioning.md](prompt-versioning.md): how the project versions the current ticket-summary and ticket-triage prompts plus future workflow variants
+- [prompt-versioning.md](prompt-versioning.md): how the project versions the current ticket-summary, ticket-triage, and ticket-reply-draft prompts plus future workflow variants
 - [eval-dataset-guidelines.md](eval-dataset-guidelines.md): how to build and maintain lightweight evaluation datasets for current and future AI workflow features
 - [workflow-candidates.md](workflow-candidates.md): prioritized AI workflow candidates for ticket, import, and low-risk agent use cases
 
 ## Scope
 
-These documents now support the live Week 6 ticket summary and ticket triage slices plus the future AI roadmap.
+These documents now support the live Week 6 ticket summary, ticket triage, and ticket reply-draft slices plus the future AI roadmap.
 
 Current reality:
 
-- `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage` are public in Swagger
+- `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` are public in Swagger
 - the current public AI workflows are still suggestion-only and read-only
-- prompt versioning and eval guidance already apply to the live ticket summary and ticket triage paths, not just future design work
+- prompt versioning and eval guidance already apply to the live ticket summary, ticket triage, and ticket reply-draft paths, not just future design work
 
 ## Related Documents
 

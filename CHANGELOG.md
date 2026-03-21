@@ -10,11 +10,12 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 - Added the first public Week 6 AI Copilot slice through `POST /api/v1/tickets/{id}/ai-summary`, a tenant-scoped suggestion-only summary endpoint for one current-tenant ticket.
 - Added the second public Week 6 AI Copilot slice through `POST /api/v1/tickets/{id}/ai-triage`, a tenant-scoped suggestion-only classification and priority endpoint for one current-tenant ticket.
+- Added the third public Week 6 AI Copilot slice through `POST /api/v1/tickets/{id}/ai-reply-draft`, a tenant-scoped suggestion-only internal reply-draft endpoint for one current-tenant ticket.
 
 ### Changed
 
-- Week 6 AI runtime now persists dedicated `ai_interaction_record` rows instead of overloading generic business audit rows, capturing prompt version, model id, status, latency, request id, and output metadata for the public ticket summary and triage slices.
-- AI configuration, ticket workflow docs, API examples, automated coverage notes, and AI regression guidance now reflect the public ticket summary and triage baselines plus their controlled degradation paths.
+- Week 6 AI runtime now persists dedicated `ai_interaction_record` rows instead of overloading generic business audit rows, capturing prompt version, model id, status, latency, request id, and output metadata for the public ticket summary, triage, and reply-draft slices.
+- AI configuration, ticket workflow docs, API examples, automated coverage notes, and AI regression guidance now reflect the public ticket summary, triage, and reply-draft baselines plus their controlled degradation paths.
 
 ## [v0.2.0-alpha] - 2026-03-19
 

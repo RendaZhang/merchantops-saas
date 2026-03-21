@@ -21,11 +21,12 @@ The current public AI contracts are now live:
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | `TICKET_READ` | Generate a suggestion-only summary for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | `TICKET_READ` | Generate suggestion-only classification and priority guidance for one current-tenant ticket |
+| `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | `TICKET_READ` | Generate a suggestion-only internal ticket comment draft for one current-tenant ticket |
 
 Current Week 6 scope is intentionally narrow:
 
-- two public AI endpoints only
-- no request body; the server derives the prompt from the current ticket plus operator context
+- three public AI endpoints only
+- no request body; the server derives the prompt from the current tenant-scoped ticket detail context
 - no ticket status change, comment write, approval trigger, or other workflow mutation
 - no public raw prompt, raw provider response, token breakdown, or cost breakdown in the response body
 
@@ -91,9 +92,45 @@ Example:
 }
 ```
 
+`POST /api/v1/tickets/{id}/ai-reply-draft` returns a structured internal draft shape:
+
+- `ticketId`
+- `draftText`
+- `opening`
+- `body`
+- `nextStep`
+- `closing`
+- `promptVersion`
+- `modelId`
+- `generatedAt`
+- `latencyMs`
+- `requestId`
+
+Example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "ticketId": 302,
+    "draftText": "Quick update from ops.\n\nThe ticket is still in progress and the latest ticket activity confirms the cable swap has started for the store printer issue.\n\nNext step: Confirm whether the replacement restored printer health and note any blocker before moving toward closure.\n\nI will add another internal update once the verification result is confirmed.",
+    "opening": "Quick update from ops.",
+    "body": "The ticket is still in progress and the latest ticket activity confirms the cable swap has started for the store printer issue.",
+    "nextStep": "Confirm whether the replacement restored printer health and note any blocker before moving toward closure.",
+    "closing": "I will add another internal update once the verification result is confirmed.",
+    "promptVersion": "ticket-reply-draft-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-21T15:10:15",
+    "latencyMs": 436,
+    "requestId": "ticket-ai-reply-draft-req-1"
+  }
+}
+```
+
 ## Current Context Assembly Boundary
 
-The current summary and triage prompts are built only from the target ticket in the current tenant:
+The current summary, triage, and reply-draft prompts are built only from the target ticket in the current tenant:
 
 - ticket core fields
 - current status, assignee, creator, and timestamps
@@ -116,6 +153,7 @@ The current runtime keeps AI plumbing narrow rather than introducing a general c
 
 - a ticket-summary-specific prompt builder and provider adapter
 - a ticket-triage-specific prompt builder and provider adapter
+- a ticket-reply-draft-specific prompt builder and provider adapter
 - instance-level provider configuration under `merchantops.ai.*`
 - an enable/disable flag plus provider-configuration guard
 - timeout-based controlled degradation
@@ -124,6 +162,7 @@ The current provider adapters call an OpenAI-compatible Responses API shape and 
 
 - summary requires `summary`
 - triage requires `classification`, `priority`, and `reasoning`
+- reply draft requires `opening`, `body`, `nextStep`, and `closing`
 
 The current implementation does not include:
 
@@ -168,8 +207,8 @@ This record is governance-facing internal persistence. There is no public read A
 
 The current public AI slices establish a minimal eval path:
 
-- explicit prompt versioning through `ticket-summary-v1` and `ticket-triage-v1`
-- golden-sample regression fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json` and `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`
+- explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, and `ticket-reply-draft-v1`
+- golden-sample regression fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, and `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
 - focused automated tests for happy path, permission failure, tenant isolation, feature-disabled behavior, and timeout degradation
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
 
@@ -179,7 +218,7 @@ Current non-happy-path behavior:
 
 - missing `TICKET_READ` remains `403`
 - cross-tenant or missing tickets remain `404`
-- disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled` or `ticket ai triage is disabled`
+- disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled`
 - missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
 - raw provider exceptions are not exposed to API consumers
 - the rest of the ticket workflow remains usable even when AI is unavailable
@@ -189,7 +228,6 @@ Current non-happy-path behavior:
 The current public AI slices are intentionally narrower than the Week 6 long-range plan.
 
 Not implemented yet:
-- `POST /api/v1/tickets/{id}/ai-reply-draft`
 - any AI-driven ticket write-back flow
 - approval-integrated AI execution
 - tenant-level BYOK
@@ -200,7 +238,6 @@ Not implemented yet:
 
 Near-term Week 6 follow-up work should stay in the ticket workflow lane:
 
-- reply-draft suggestion
 - stronger failure-set and policy-set eval coverage
 - future approval-aware write-back only after the suggestion-only slices are stable
 

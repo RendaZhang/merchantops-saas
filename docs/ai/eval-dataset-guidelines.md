@@ -6,14 +6,14 @@ Last updated: 2026-03-21
 
 AI workflow quality should not depend on intuition alone. This project should maintain small, practical evaluation datasets that make prompt or model changes easier to review.
 
-This document defines a lightweight eval dataset approach appropriate for the current ticket-summary and ticket-triage slices plus future Week 6+ AI workflow features.
+This document defines a lightweight eval dataset approach appropriate for the current ticket-summary, ticket-triage, and ticket-reply-draft slices plus future Week 6+ AI workflow features.
 
 ## Current Boundary
 
 As of today:
 
-- two public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage`
-- the repository now includes golden-sample fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json` and `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`
+- three public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
+- the repository now includes golden-sample fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, and `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
 - the current public eval baseline is still small and intentionally reviewable by humans
 
 ## Dataset Principles
@@ -33,6 +33,7 @@ Examples:
 
 - normal ticket summary cases
 - common ticket triage cases
+- common internal ticket reply-draft cases
 - common import error summary cases
 
 Purpose:
@@ -116,6 +117,7 @@ Current live storage:
 
 - ticket summary golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-summary/`
 - ticket triage golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-triage/`
+- ticket reply-draft golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-reply-draft/`
 
 If broader AI automation appears later, these can expand into a structure like:
 

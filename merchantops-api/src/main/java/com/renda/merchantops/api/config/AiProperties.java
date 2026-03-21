@@ -18,6 +18,8 @@ public class AiProperties {
 
     private String triagePromptVersion = "ticket-triage-v1";
 
+    private String replyDraftPromptVersion = "ticket-reply-draft-v1";
+
     private String modelId;
 
     @Min(100)

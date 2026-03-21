@@ -20,7 +20,7 @@ Definition:
 
 - one MerchantOps deployment owns one provider configuration for its public AI features
 - the configuration is managed by the operator of that deployment, not by ordinary tenant users
-- the current public AI surface is `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage`
+- the current public AI surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 
 This means the current Week 6 slice does not support tenant-specific model keys or tenant-managed provider setup.
 
@@ -31,6 +31,7 @@ Current Spring configuration keys:
 - `merchantops.ai.enabled`
 - `merchantops.ai.prompt-version`
 - `merchantops.ai.triage-prompt-version`
+- `merchantops.ai.reply-draft-prompt-version`
 - `merchantops.ai.model-id`
 - `merchantops.ai.timeout-ms`
 - `merchantops.ai.openai.base-url`
@@ -41,6 +42,7 @@ Current environment-variable overrides:
 - `MERCHANTOPS_AI_ENABLED`
 - `MERCHANTOPS_AI_PROMPT_VERSION`
 - `MERCHANTOPS_AI_TRIAGE_PROMPT_VERSION`
+- `MERCHANTOPS_AI_REPLY_DRAFT_PROMPT_VERSION`
 - `MERCHANTOPS_AI_MODEL_ID`
 - `MERCHANTOPS_AI_TIMEOUT_MS`
 - `MERCHANTOPS_AI_OPENAI_BASE_URL`
@@ -51,13 +53,14 @@ Current defaults in `application.yml` keep AI optional:
 - `enabled=false`
 - `prompt-version=ticket-summary-v1`
 - `triage-prompt-version=ticket-triage-v1`
+- `reply-draft-prompt-version=ticket-reply-draft-v1`
 - `timeout-ms=5000`
 - `openai.base-url=https://api.openai.com`
 - `model-id` and `api-key` blank until the deployment operator supplies them
 
 ## Minimum Current Setup
 
-To enable the public ticket summary and ticket triage slices, the deployment must provide all of:
+To enable the public ticket summary, ticket triage, and ticket reply-draft slices, the deployment must provide all of:
 
 - `merchantops.ai.enabled=true`
 - a non-blank `merchantops.ai.model-id`
@@ -109,7 +112,7 @@ If that model is introduced later, it should add all of the following before bec
 - tenant-level usage and failure visibility
 - explicit quota and support boundaries
 
-The current Week 6 ticket summary and ticket triage slices do not implement any of those pieces yet.
+The current Week 6 ticket summary, ticket triage, and ticket reply-draft slices do not implement any of those pieces yet.
 
 ## Related Documents
 

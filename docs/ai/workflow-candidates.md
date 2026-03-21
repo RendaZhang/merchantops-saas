@@ -95,7 +95,7 @@ Avoid candidates that:
 - Why it is valuable:
   - clear time savings
   - natural human-in-the-loop fit
-- Suggested priority: implement after summary and triage
+- Suggested priority: implemented in the current Week 6 public slice
 
 ### 4. Assignee Suggestion
 
@@ -214,11 +214,11 @@ Avoid these in the first AI wave:
 
 - ticket summary
 - ticket triage suggestion
+- reply draft generation
 - import error summary
 
 ### Second Wave
 
-- reply draft generation
 - field mapping suggestion
 - fix recommendation
 

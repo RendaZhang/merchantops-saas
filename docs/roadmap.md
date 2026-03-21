@@ -19,15 +19,15 @@ Last updated: 2026-03-21
 
 Week 6 should stay narrow and workflow-oriented:
 
-- the current public AI slices are ticket summary and ticket triage: `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage`
+- the current public AI slices are ticket summary, ticket triage, and ticket internal reply draft: `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the current slices suggestion-only, read-only, tenant-scoped, RBAC-scoped, and failure-tolerant
 - preserve explicit prompt versioning, model tracking, latency capture, and separate AI interaction persistence across the public ticket AI slices
 - keep the completed Week 5 import baseline stable while Week 6 AI work expands carefully
 
 ## Recommended Next Steps
 
-- keep the ticket summary and ticket triage contracts stable while validating provider configuration, timeout behavior, and golden-sample regression coverage
-- consider reply-draft suggestion after summary and triage are credible, still without widening into automatic write-back
+- keep the ticket summary, ticket triage, and ticket reply-draft contracts stable while validating provider configuration, timeout behavior, and golden-sample regression coverage
+- strengthen failure-set and policy-set coverage around the current three ticket AI slices before widening into automatic write-back
 - avoid turning Week 6 into a generic chatbot shell, agent loop, or tenant-BYOK project before the narrow ticket slices are proven
 
 ## Near-Term Sequence

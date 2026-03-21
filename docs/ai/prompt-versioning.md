@@ -6,14 +6,14 @@ Last updated: 2026-03-21
 
 Prompt changes should be reviewable and traceable in the same way code changes are reviewable and traceable.
 
-This document defines the lightweight prompt-versioning approach used by the current ticket-summary and ticket-triage AI slices and expected for future AI workflow features.
+This document defines the lightweight prompt-versioning approach used by the current ticket-summary, ticket-triage, and ticket-reply-draft AI slices and expected for future AI workflow features.
 
 ## Current Boundary
 
 As of today:
 
-- two public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage`
-- the current prompt versions are `ticket-summary-v1` and `ticket-triage-v1`
+- three public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
+- the current prompt versions are `ticket-summary-v1`, `ticket-triage-v1`, and `ticket-reply-draft-v1`
 - the public response returns `promptVersion`
 - `ai_interaction_record` persists the prompt version for each AI invocation
 - prompt text still lives in code-side prompt builders rather than a separate prompt registry
@@ -40,6 +40,7 @@ Suggested format:
 - `ticket-summary-v1`
 - `ticket-summary-v2`
 - `ticket-triage-v1`
+- `ticket-reply-draft-v1`
 - `import-error-summary-v1`
 
 Keep version ids stable and human-readable. Avoid storing `latest` as a production reference.
@@ -50,7 +51,8 @@ Today the live prompt version is carried by configuration and code together:
 
 - `merchantops.ai.prompt-version` stores the public and persisted summary version identifier
 - `merchantops.ai.triage-prompt-version` stores the public and persisted triage version identifier
-- the current prompt text lives in `TicketSummaryPromptBuilder` and `TicketTriagePromptBuilder`
+- `merchantops.ai.reply-draft-prompt-version` stores the public and persisted reply-draft version identifier
+- the current prompt text lives in `TicketSummaryPromptBuilder`, `TicketTriagePromptBuilder`, and `TicketReplyDraftPromptBuilder`
 
 That is acceptable for the first slice because the public contract and stored audit record already expose an explicit version id.
 

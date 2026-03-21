@@ -11,7 +11,7 @@ Use this checklist when any of the following change:
 - provider adapter logic
 - AI feature gating or timeout behavior
 - AI-related logging, usage, or error handling
-- the public AI summary or ticket triage response shape or Swagger examples
+- the public AI summary, ticket triage, or ticket reply-draft response shape or Swagger examples
 
 ## Current Public Boundary
 
@@ -19,7 +19,8 @@ The AI checklist is now active because public AI endpoints exist:
 
 - `POST /api/v1/tickets/{id}/ai-summary`
 - `POST /api/v1/tickets/{id}/ai-triage`
-- suggestion-only summary and triage results for one current-tenant ticket
+- `POST /api/v1/tickets/{id}/ai-reply-draft`
+- suggestion-only summary, triage, and internal reply-draft results for one current-tenant ticket
 - read permission inherited from `TICKET_READ`
 - no write-back, no comment creation, and no approval execution in the current slice
 
@@ -36,7 +37,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] AI requests do not combine records across tenants
 - [ ] permission failures still return normal application errors such as `403`
 - [ ] cross-tenant or missing tickets still return normal business `404`
-- [ ] the summary and triage endpoints do not bypass the existing ticket read boundary
+- [ ] the summary, triage, and reply-draft endpoints do not bypass the existing ticket read boundary
 
 ## Audit And Traceability
 
@@ -53,16 +54,21 @@ The AI checklist is now active because public AI endpoints exist:
 
 - [ ] golden ticket-summary samples still produce the expected stable shape
 - [ ] golden ticket-triage samples still produce the expected stable shape
+- [ ] golden ticket-reply-draft samples still produce the expected stable shape
 - [ ] summary output still includes issue, current state, latest meaningful signal, and next human follow-up
 - [ ] triage output still includes `classification`, `priority`, and concise `reasoning`
+- [ ] reply-draft output still includes `opening`, `body`, `nextStep`, `closing`, and server-assembled `draftText`
 - [ ] the public summary response shape remains stable for `ticketId`, `summary`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public triage response shape remains stable for `ticketId`, `classification`, `priority`, `reasoning`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
-- [ ] the summary and triage slices stay suggestion-only and do not imply unsupported automatic execution
+- [ ] the public reply-draft response shape remains stable for `ticketId`, `draftText`, `opening`, `body`, `nextStep`, `closing`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
+- [ ] the reply-draft `draftText` still equals `opening + "\n\n" + body + "\n\nNext step: " + nextStep + "\n\n" + closing`
+- [ ] assembled reply drafts still fit the current ticket comment length limit
+- [ ] the summary, triage, and reply-draft slices stay suggestion-only and do not imply unsupported automatic execution
 - [ ] prompt or model changes are reviewed against both happy-path and known-risk samples when those samples exist
 
 ## Workflow Safety
 
-- [ ] AI summary and triage calls do not mutate ticket status, assignee, comments, workflow logs, or approvals
+- [ ] AI summary, triage, and reply-draft calls do not mutate ticket status, assignee, comments, workflow logs, or approvals
 - [ ] operators can continue the ticket workflow manually when AI is unavailable
 - [ ] ticket detail, ticket workflow log, and business audit behavior remain unchanged by AI summary or triage calls
 

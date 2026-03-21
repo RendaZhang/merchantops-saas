@@ -220,6 +220,11 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-triage
 Authorization: Bearer {{token}}
 
+### Generate tenant ticket AI internal reply draft
+# Requires merchantops.ai.enabled=true plus a configured instance-level provider.
+POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-reply-draft
+Authorization: Bearer {{token}}
+
 ### Assign tenant ticket
 # Use opsUserId=2 for the seeded ops handler in a fresh local database.
 PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/assignee

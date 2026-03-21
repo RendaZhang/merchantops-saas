@@ -19,7 +19,7 @@ This smoke flow covers:
 
 Optional RBAC demo endpoint checks stay at the end because they are not part of the main business baseline.
 
-The public AI summary and ticket triage endpoints are intentionally not part of this default smoke path because live provider wiring is environment-sensitive. When the staged change touches `POST /api/v1/tickets/{id}/ai-summary` or `POST /api/v1/tickets/{id}/ai-triage`, run this page for the non-AI workflow baseline and then use [ai-regression-checklist.md](ai-regression-checklist.md) for the AI-specific verification pass.
+The public AI summary, ticket triage, and ticket reply-draft endpoints are intentionally not part of this default smoke path because live provider wiring is environment-sensitive. When the staged change touches `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, or `POST /api/v1/tickets/{id}/ai-reply-draft`, run this page for the non-AI workflow baseline and then use [ai-regression-checklist.md](ai-regression-checklist.md) for the AI-specific verification pass.
 
 ## 1. Run Automated Tests First
 

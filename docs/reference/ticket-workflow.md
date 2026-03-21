@@ -4,7 +4,7 @@ Last updated: 2026-03-21
 
 ## Public API Surface
 
-Swagger currently exposes eight ticket-workflow endpoints:
+Swagger currently exposes nine ticket-workflow endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -12,6 +12,7 @@ Swagger currently exposes eight ticket-workflow endpoints:
 | `GET` | `/api/v1/tickets/{id}` | Bearer JWT | `TICKET_READ` | Returns one current-tenant ticket with comments and workflow logs |
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only AI summary from the current ticket detail context |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | Bearer JWT | `TICKET_READ` | Generates suggestion-only AI classification and priority guidance from the current ticket detail context |
+| `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only internal ticket comment draft from the current ticket detail context |
 | `POST` | `/api/v1/tickets` | Bearer JWT | `TICKET_WRITE` | Creates a new `OPEN` ticket |
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Bearer JWT | `TICKET_WRITE` | Replaces the current assignee with an active tenant user |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Bearer JWT | `TICKET_WRITE` | Transitions the ticket state |
@@ -27,7 +28,7 @@ Current Week 3-6 ticket workflow keeps the business state model narrow:
 - write permission: `TICKET_WRITE`
 - read permission: `TICKET_READ`
 - workflow log event types: `CREATED`, `ASSIGNED`, `STATUS_CHANGED`, `COMMENTED`
-- AI summary and triage behavior: suggestion-only, read-only, and non-mutating
+- AI summary, triage, and reply-draft behavior: suggestion-only, read-only, and non-mutating
 
 Current transition rules:
 
@@ -179,6 +180,47 @@ Failure examples:
 - AI disabled: `503`, message `ticket ai triage is disabled`
 - provider unavailable: `503`, message `ticket ai triage is unavailable`
 
+## `POST /api/v1/tickets/{id}/ai-reply-draft`
+
+Current behavior:
+
+- requires `TICKET_READ`
+- loads the target ticket through the existing tenant-scoped detail query path
+- builds the prompt from ticket core fields, comments, and workflow logs only
+- returns a structured internal comment draft plus assembled `draftText`
+- does not create a comment, send an external message, mutate ticket state, or trigger approvals
+- returns controlled `503 SERVICE_UNAVAILABLE` responses when AI is disabled, not configured, or unavailable
+- writes an internal `ai_interaction_record` row for success and controlled failure states
+
+Response example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "ticketId": 302,
+    "draftText": "Quick update from ops.\n\nThe ticket is still in progress and the latest ticket activity confirms the cable swap has started for the store printer issue.\n\nNext step: Confirm whether the replacement restored printer health and note any blocker before moving toward closure.\n\nI will add another internal update once the verification result is confirmed.",
+    "opening": "Quick update from ops.",
+    "body": "The ticket is still in progress and the latest ticket activity confirms the cable swap has started for the store printer issue.",
+    "nextStep": "Confirm whether the replacement restored printer health and note any blocker before moving toward closure.",
+    "closing": "I will add another internal update once the verification result is confirmed.",
+    "promptVersion": "ticket-reply-draft-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-21T15:10:15",
+    "latencyMs": 436,
+    "requestId": "ticket-ai-reply-draft-req-1"
+  }
+}
+```
+
+Failure examples:
+
+- missing `TICKET_READ`: `403`, message `permission denied`
+- ticket outside the current tenant: `404`, message `ticket not found`
+- AI disabled: `503`, message `ticket ai reply draft is disabled`
+- provider unavailable: `503`, message `ticket ai reply draft is unavailable`
+
 ## `POST /api/v1/tickets`
 
 Current behavior:
@@ -235,7 +277,7 @@ Current ticket-related tracking is intentionally split by concern:
 - controllers resolve `tenantId`, `operatorId`, and `requestId`
 - ticket writes persist workflow history into `ticket_operation_log`
 - ticket writes also emit governance-oriented `audit_event` rows where applicable
-- AI summary and triage calls persist runtime traceability into `ai_interaction_record`
+- AI summary, triage, and reply-draft calls persist runtime traceability into `ai_interaction_record`
 - the public ticket and AI response shapes do not expose raw provider payloads or internal audit tables directly
 
 ## Demo Roles
@@ -248,9 +290,9 @@ Current seeded ticket permissions:
 
 That means:
 
-- `admin` can create, assign, update status, comment, and request AI summaries or triage suggestions
-- `ops` can create, assign, update status, comment, and request AI summaries or triage suggestions
-- `viewer` can list, view details, and request AI summaries or triage suggestions, but cannot write
+- `admin` can create, assign, update status, comment, and request AI summaries, triage suggestions, or reply drafts
+- `ops` can create, assign, update status, comment, and request AI summaries, triage suggestions, or reply drafts
+- `viewer` can list, view details, and request AI summaries, triage suggestions, or reply drafts, but cannot write
 
 If `viewer` is promoted through `PUT /api/v1/users/{id}/roles`, old JWT claims become stale immediately. The user must log in again before the new ticket permissions apply.
 
@@ -259,7 +301,7 @@ If `viewer` is promoted through `PUT /api/v1/users/{id}/roles`, old JWT claims b
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - [api-docs.md](api-docs.md): endpoint coverage matrix
 - [authentication-and-rbac.md](authentication-and-rbac.md): JWT and permission expectations
-- [ai-integration.md](ai-integration.md): AI summary and triage contracts plus runtime boundary
+- [ai-integration.md](ai-integration.md): AI summary, triage, and reply-draft contracts plus runtime boundary
 - [../runbooks/automated-tests.md](../runbooks/automated-tests.md): automated coverage
 - [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md): AI-specific regression checks
 - [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md): live verification flow

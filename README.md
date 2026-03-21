@@ -15,7 +15,7 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 ## Current Capabilities
 
 - Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
-- Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, and suggestion-only AI summary and triage read paths
+- Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, and suggestion-only AI summary, triage, and internal reply-draft read paths
 - Audit-event query backbone plus minimal approval flow for `USER_STATUS_DISABLE`
 - Async import jobs with create, list, detail, paged error reporting, failed-row replay, whole-file replay, selective replay, edited replay, queued-job recovery, and stale-processing safeguards
 - JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
@@ -24,7 +24,7 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 - The public import surface currently supports one business import type only: `USER_CSV`
 - There is no frontend or tenant admin UI in this repository
-- The current public AI surface is limited to two suggestion-only ticket endpoints: summary and triage; reply drafts, broader ticket AI flows, and any AI write-back remain pending
+- The current public AI surface is limited to three suggestion-only ticket endpoints: summary, triage, and internal reply draft; broader ticket AI flows and any AI write-back remain pending
 - This release line is intended for evaluation and contribution, not production deployment
 
 ## Quick Start

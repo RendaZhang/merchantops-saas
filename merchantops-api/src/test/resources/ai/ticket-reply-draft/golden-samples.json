@@ -1,0 +1,39 @@
+[
+  {
+    "ticketId": 302,
+    "tenantId": 1,
+    "title": "Printer cable replacement",
+    "description": "Replace damaged cable for store printer.",
+    "status": "IN_PROGRESS",
+    "assigneeUsername": "ops",
+    "createdBy": 101,
+    "createdByUsername": "admin",
+    "createdAt": "2026-03-11T09:30:00",
+    "updatedAt": "2026-03-11T10:20:00",
+    "comments": [
+      {
+        "id": 3101,
+        "ticketId": 302,
+        "content": "Cable swap started.",
+        "createdBy": 102,
+        "createdByUsername": "ops",
+        "createdAt": "2026-03-11T10:05:00"
+      }
+    ],
+    "operationLogs": [
+      {
+        "id": 3201,
+        "operationType": "CREATED",
+        "detail": "ticket created",
+        "operatorId": 101,
+        "operatorUsername": "admin",
+        "createdAt": "2026-03-11T09:30:00"
+      }
+    ],
+    "expectedOpening": "Quick update from ops.",
+    "expectedBody": "The ticket remains in progress and the latest internal signal confirms the cable swap has started for the printer issue.",
+    "expectedNextStep": "Confirm whether the replacement restored printer health and capture any blocker before moving toward closure.",
+    "expectedClosing": "I will add another internal note once the verification result is confirmed.",
+    "expectedDraftText": "Quick update from ops.\n\nThe ticket remains in progress and the latest internal signal confirms the cable swap has started for the printer issue.\n\nNext step: Confirm whether the replacement restored printer health and capture any blocker before moving toward closure.\n\nI will add another internal note once the verification result is confirmed."
+  }
+]

@@ -2,7 +2,7 @@ package com.renda.merchantops.api.controller;
 
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
-import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
 import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import com.renda.merchantops.api.security.CurrentUser;
@@ -45,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
-class TicketAiSummaryControllerTest {
+class TicketAiReplyDraftControllerTest {
 
     private static final String HEADER_AUTH = "X-Test-Auth";
     private static final String HEADER_AUTHORITIES = "X-Test-Authorities";
@@ -92,15 +92,15 @@ class TicketAiSummaryControllerTest {
     }
 
     @Test
-    void aiSummaryShouldReturnUnauthorizedWhenAuthenticationIsMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/tickets/11/ai-summary"))
+    void aiReplyDraftShouldReturnUnauthorizedWhenAuthenticationIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/tickets/11/ai-reply-draft"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
-    void aiSummaryShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/tickets/11/ai-summary")
+    void aiReplyDraftShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/tickets/11/ai-reply-draft")
                         .header(HEADER_AUTH, "true")
                         .header(HEADER_TENANT_ID, "9")
                         .header(HEADER_TENANT_CODE, "demo-shop")
@@ -110,31 +110,36 @@ class TicketAiSummaryControllerTest {
     }
 
     @Test
-    void aiSummaryShouldForwardTenantUserAndRequestId() throws Exception {
-        TicketAiSummaryResponse response = new TicketAiSummaryResponse(
+    void aiReplyDraftShouldForwardTenantUserAndRequestId() throws Exception {
+        TicketAiReplyDraftResponse response = new TicketAiReplyDraftResponse(
                 11L,
-                "Issue: Printer cable replacement is in progress. Current: ops already started the swap. Next: verify the replacement outcome and close the ticket if the printer is healthy.",
-                "ticket-summary-v1",
+                "Quick update from ops.\n\nWork is still in progress on the printer issue.\n\nNext step: Confirm whether the cable replacement resolved the outage.\n\nI will add another note once verification is complete.",
+                "Quick update from ops.",
+                "Work is still in progress on the printer issue.",
+                "Confirm whether the cable replacement resolved the outage.",
+                "I will add another note once verification is complete.",
+                "ticket-reply-draft-v1",
                 "gpt-4.1-mini",
-                LocalDateTime.of(2026, 3, 19, 13, 20, 15),
-                412L,
-                "ticket-ai-summary-req-1"
+                LocalDateTime.of(2026, 3, 21, 15, 10, 15),
+                436L,
+                "ticket-ai-reply-draft-req-1"
         );
-        when(ticketAiSummaryService.generateSummary(9L, 9001L, "ticket-ai-summary-req-1", 11L)).thenReturn(response);
+        when(ticketAiReplyDraftService.generateReplyDraft(9L, 9001L, "ticket-ai-reply-draft-req-1", 11L)).thenReturn(response);
 
-        mockMvc.perform(post("/api/v1/tickets/11/ai-summary")
+        mockMvc.perform(post("/api/v1/tickets/11/ai-reply-draft")
                         .header(HEADER_AUTH, "true")
                         .header(HEADER_USER_ID, "9001")
                         .header(HEADER_TENANT_ID, "9")
                         .header(HEADER_TENANT_CODE, "demo-shop")
                         .header(HEADER_AUTHORITIES, "TICKET_READ")
-                        .header(HEADER_REQUEST_ID, "ticket-ai-summary-req-1"))
+                        .header(HEADER_REQUEST_ID, "ticket-ai-reply-draft-req-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.ticketId").value(11))
-                .andExpect(jsonPath("$.data.requestId").value("ticket-ai-summary-req-1"));
+                .andExpect(jsonPath("$.data.nextStep").value("Confirm whether the cable replacement resolved the outage."))
+                .andExpect(jsonPath("$.data.requestId").value("ticket-ai-reply-draft-req-1"));
 
-        verify(ticketAiSummaryService).generateSummary(eq(9L), eq(9001L), eq("ticket-ai-summary-req-1"), eq(11L));
+        verify(ticketAiReplyDraftService).generateReplyDraft(eq(9L), eq(9001L), eq("ticket-ai-reply-draft-req-1"), eq(11L));
     }
 
     private static final class TestAuthenticationFilter extends OncePerRequestFilter {

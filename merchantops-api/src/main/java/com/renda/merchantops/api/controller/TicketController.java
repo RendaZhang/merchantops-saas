@@ -12,6 +12,7 @@ import com.renda.merchantops.api.dto.ticket.command.TicketCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketWriteResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiTriageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketCommentResponse;
@@ -19,6 +20,7 @@ import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageQuery;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageResponse;
 import com.renda.merchantops.api.security.RequirePermission;
+import com.renda.merchantops.api.service.TicketAiReplyDraftService;
 import com.renda.merchantops.api.service.TicketAiTriageService;
 import com.renda.merchantops.api.service.TicketAiSummaryService;
 import com.renda.merchantops.api.service.TicketCommandService;
@@ -38,6 +40,7 @@ public class TicketController implements TicketManagementApi {
     private final TicketCommandService ticketCommandService;
     private final TicketAiSummaryService ticketAiSummaryService;
     private final TicketAiTriageService ticketAiTriageService;
+    private final TicketAiReplyDraftService ticketAiReplyDraftService;
 
     @Override
     @RequirePermission("TICKET_READ")
@@ -69,6 +72,15 @@ public class TicketController implements TicketManagementApi {
         Long userId = ContextAccess.requireUserId();
         String requestId = RequestIdAccess.currentRequestId();
         return ApiResponse.success(ticketAiTriageService.generateTriage(tenantId, userId, requestId, id));
+    }
+
+    @Override
+    @RequirePermission("TICKET_READ")
+    public ApiResponse<TicketAiReplyDraftResponse> getAiReplyDraft(@PathVariable("id") Long id) {
+        Long tenantId = ContextAccess.requireTenantId();
+        Long userId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
+        return ApiResponse.success(ticketAiReplyDraftService.generateReplyDraft(tenantId, userId, requestId, id));
     }
 
     @Override
