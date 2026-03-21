@@ -160,7 +160,7 @@ public class TicketAiSummaryService {
 
     private String normalizeRequiredSummary(String value) {
         if (!StringUtils.hasText(value)) {
-            throw new BizException(ErrorCode.SERVICE_UNAVAILABLE, "ticket ai summary is unavailable");
+            throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider summary payload is blank");
         }
         return value.trim();
     }

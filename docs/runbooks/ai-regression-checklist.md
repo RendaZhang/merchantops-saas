@@ -31,6 +31,14 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] degraded mode behavior is verified when the provider is unavailable or not configured
 - [ ] request timeout behavior is explicit and covered by a simulated timeout path
 
+## Three-Endpoint Symmetry Checks
+
+- [ ] `POST /api/v1/tickets/{id}/ai-summary` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
+- [ ] `POST /api/v1/tickets/{id}/ai-triage` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
+- [ ] `POST /api/v1/tickets/{id}/ai-reply-draft` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
+- [ ] summary, triage, and reply-draft adapter tests all cover unsupported content, refusal, and invalid JSON payload handling
+- [ ] summary adapter rejects missing `summary`; triage adapter rejects missing `classification`, missing `reasoning`, missing `priority`, and invalid `priority`
+
 ## Tenant And Permission Safety
 
 - [ ] AI input data is limited to the current tenant
@@ -56,7 +64,9 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] golden ticket-triage samples still produce the expected stable shape
 - [ ] golden ticket-reply-draft samples still produce the expected stable shape
 - [ ] summary output still includes issue, current state, latest meaningful signal, and next human follow-up
-- [ ] triage output still includes `classification`, `priority`, and concise `reasoning`
+- [ ] summary output remains non-blank and does not expose raw prompt text or raw provider payload
+- [ ] triage output still includes non-blank `classification`, `priority`, and concise `reasoning`
+- [ ] triage `priority` remains restricted to `LOW`, `MEDIUM`, or `HIGH`, and the slice stays suggestion-only without assignee suggestions
 - [ ] reply-draft output still includes `opening`, `body`, `nextStep`, `closing`, and server-assembled `draftText`
 - [ ] the public summary response shape remains stable for `ticketId`, `summary`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public triage response shape remains stable for `ticketId`, `classification`, `priority`, `reasoning`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
@@ -69,6 +79,7 @@ The AI checklist is now active because public AI endpoints exist:
 ## Workflow Safety
 
 - [ ] AI summary, triage, and reply-draft calls do not mutate ticket status, assignee, comments, workflow logs, or approvals
+- [ ] AI summary, triage, and reply-draft calls do not create business `audit_event` rows
 - [ ] operators can continue the ticket workflow manually when AI is unavailable
 - [ ] ticket detail, ticket workflow log, and business audit behavior remain unchanged by AI summary or triage calls
 
@@ -89,8 +100,10 @@ For the current Week 6 ticket AI slices, at minimum run:
 2. one permission-denied request
 3. one tenant-isolation or not-found check
 4. one feature-disabled check
-5. one provider-timeout or provider-unavailable simulation
-6. one golden-sample regression check for each affected AI workflow
+5. one provider-not-configured or provider-unavailable simulation
+6. one provider-timeout simulation
+7. one invalid-response simulation
+8. one golden-sample regression check for each affected AI workflow
 
 ## Related Documents
 

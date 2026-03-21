@@ -184,6 +184,7 @@ class TicketAiReplyDraftIntegrationTest {
 
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ai_interaction_record", Integer.class)).isEqualTo(0);
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isEqualTo(0);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM approval_request", Integer.class)).isEqualTo(0);
     }
 
     @Test
@@ -199,6 +200,7 @@ class TicketAiReplyDraftIntegrationTest {
                 .andExpect(jsonPath("$.message").value("ticket ai reply draft is unavailable"));
 
         verifyNoInteractions(ticketReplyDraftAiProvider);
+        assertNoTicketWorkflowMutation();
         assertThat(jdbcTemplate.queryForObject("SELECT interaction_type FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("REPLY_DRAFT");
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("PROVIDER_NOT_CONFIGURED");
     }
@@ -215,6 +217,7 @@ class TicketAiReplyDraftIntegrationTest {
                 .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
                 .andExpect(jsonPath("$.message").value("ticket ai reply draft timed out"));
 
+        assertNoTicketWorkflowMutation();
         assertThat(jdbcTemplate.queryForObject("SELECT interaction_type FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("REPLY_DRAFT");
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("PROVIDER_TIMEOUT");
         assertThat(jdbcTemplate.queryForObject("SELECT output_summary FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isNull();
@@ -232,8 +235,27 @@ class TicketAiReplyDraftIntegrationTest {
                 .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
                 .andExpect(jsonPath("$.message").value("ticket ai reply draft is unavailable"));
 
+        assertNoTicketWorkflowMutation();
         assertThat(jdbcTemplate.queryForObject("SELECT interaction_type FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("REPLY_DRAFT");
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("PROVIDER_UNAVAILABLE");
+        assertThat(jdbcTemplate.queryForObject("SELECT output_summary FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isNull();
+    }
+
+    @Test
+    void aiReplyDraftShouldPersistInvalidResponseWhenProviderReturnsControlledInvalidOutput() throws Exception {
+        when(ticketReplyDraftAiProvider.generateReplyDraft(any())).thenThrow(new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "invalid response"));
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/302/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-ai-reply-draft-invalid-response-1"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("ticket ai reply draft is unavailable"));
+
+        assertNoTicketWorkflowMutation();
+        assertThat(jdbcTemplate.queryForObject("SELECT interaction_type FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("REPLY_DRAFT");
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("INVALID_RESPONSE");
         assertThat(jdbcTemplate.queryForObject("SELECT output_summary FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isNull();
     }
 
@@ -250,6 +272,7 @@ class TicketAiReplyDraftIntegrationTest {
                 .andExpect(jsonPath("$.message").value("ticket ai reply draft is disabled"));
 
         verifyNoInteractions(ticketReplyDraftAiProvider);
+        assertNoTicketWorkflowMutation();
         assertThat(jdbcTemplate.queryForObject("SELECT interaction_type FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("REPLY_DRAFT");
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("FEATURE_DISABLED");
     }
@@ -276,6 +299,7 @@ class TicketAiReplyDraftIntegrationTest {
                 .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
                 .andExpect(jsonPath("$.message").value("ticket ai reply draft is unavailable"));
 
+        assertNoTicketWorkflowMutation();
         assertThat(jdbcTemplate.queryForObject("SELECT interaction_type FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("REPLY_DRAFT");
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isEqualTo("INVALID_RESPONSE");
         assertThat(jdbcTemplate.queryForObject("SELECT output_summary FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L)).isNull();
@@ -287,6 +311,7 @@ class TicketAiReplyDraftIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ticket_comment WHERE ticket_id = ?", Integer.class, 302L)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ticket_operation_log WHERE ticket_id = ?", Integer.class, 302L)).isEqualTo(3);
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isEqualTo(0);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM approval_request", Integer.class)).isEqualTo(0);
     }
 
     private void createSchema() {
@@ -299,7 +324,8 @@ class TicketAiReplyDraftIntegrationTest {
         jdbcTemplate.execute("CREATE TABLE ticket (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, title VARCHAR(128) NOT NULL, description VARCHAR(2000), status VARCHAR(32) NOT NULL, assignee_id BIGINT, created_by BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)");
         jdbcTemplate.execute("CREATE TABLE ticket_comment (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, ticket_id BIGINT NOT NULL, content VARCHAR(2000) NOT NULL, created_by BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL)");
         jdbcTemplate.execute("CREATE TABLE ticket_operation_log (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, ticket_id BIGINT NOT NULL, operation_type VARCHAR(64) NOT NULL, detail VARCHAR(512) NOT NULL, operator_id BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL)");
-        jdbcTemplate.execute("CREATE TABLE audit_event (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, entity_type VARCHAR(64), entity_id BIGINT, action_type VARCHAR(64), created_at TIMESTAMP NOT NULL)");
+        jdbcTemplate.execute("CREATE TABLE audit_event (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, entity_type VARCHAR(64) NOT NULL, entity_id BIGINT NOT NULL, action_type VARCHAR(64) NOT NULL, operator_id BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, before_value CLOB, after_value CLOB, approval_status VARCHAR(32) NOT NULL, created_at TIMESTAMP NOT NULL)");
+        jdbcTemplate.execute("CREATE TABLE approval_request (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, action_type VARCHAR(64) NOT NULL, entity_type VARCHAR(64) NOT NULL, entity_id BIGINT NOT NULL, requested_by BIGINT NOT NULL, reviewed_by BIGINT, status VARCHAR(32) NOT NULL, payload_json CLOB NOT NULL, request_id VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL, reviewed_at TIMESTAMP, executed_at TIMESTAMP, CONSTRAINT fk_approval_request_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id), CONSTRAINT fk_approval_request_requested_by_tenant FOREIGN KEY (requested_by, tenant_id) REFERENCES users(id, tenant_id), CONSTRAINT fk_approval_request_reviewed_by_tenant FOREIGN KEY (reviewed_by, tenant_id) REFERENCES users(id, tenant_id))");
         jdbcTemplate.execute("CREATE TABLE ai_interaction_record (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, user_id BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, entity_type VARCHAR(64) NOT NULL, entity_id BIGINT NOT NULL, interaction_type VARCHAR(64) NOT NULL, prompt_version VARCHAR(128) NOT NULL, model_id VARCHAR(128), status VARCHAR(32) NOT NULL, latency_ms BIGINT NOT NULL, output_summary CLOB, usage_prompt_tokens INT, usage_completion_tokens INT, usage_total_tokens INT, usage_cost_micros BIGINT, created_at TIMESTAMP NOT NULL, CONSTRAINT fk_ai_interaction_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id), CONSTRAINT fk_ai_interaction_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id))");
     }
 

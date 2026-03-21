@@ -165,14 +165,14 @@ public class TicketAiTriageService {
 
     private String normalizeRequiredText(String value) {
         if (!StringUtils.hasText(value)) {
-            throw new BizException(ErrorCode.SERVICE_UNAVAILABLE, "ticket ai triage is unavailable");
+            throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider triage payload is missing required text");
         }
         return value.trim();
     }
 
     private TicketAiTriagePriority normalizeRequiredPriority(TicketAiTriagePriority value) {
         if (value == null) {
-            throw new BizException(ErrorCode.SERVICE_UNAVAILABLE, "ticket ai triage is unavailable");
+            throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider triage payload is missing priority");
         }
         return value;
     }

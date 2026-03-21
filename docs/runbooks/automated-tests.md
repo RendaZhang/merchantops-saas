@@ -36,6 +36,9 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, stale-processing redelivery handling, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - AI summary, AI triage, and AI reply-draft prompt-version and golden-sample regression coverage
+- provider adapter failure coverage for AI summary, AI triage, and AI reply-draft, including unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
+- symmetrical degraded-mode persistence coverage for AI summary, AI triage, and AI reply-draft across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
+- explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -81,20 +84,21 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
   - real `POST /api/v1/tickets/{id}/ai-summary` happy path for a `TICKET_READ` user with database assertions on `ai_interaction_record`
   - `403` when `TICKET_READ` is missing
   - `404` for cross-tenant ticket access
-  - `503` when AI is disabled or the provider times out, with controlled persisted status values
+  - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
+  - no-side-effect assertions for ticket fields, comments, workflow logs, approvals, and audit rows
 - `TicketAiTriageIntegrationTest`
   - real `POST /api/v1/tickets/{id}/ai-triage` happy path for a `TICKET_READ` user with database assertions on `ai_interaction_record`
   - `403` when `TICKET_READ` is missing
   - `404` for cross-tenant ticket access
-  - `503` when AI is disabled or the provider times out, with controlled persisted status values
-  - no-side-effect assertions for ticket fields, comments, workflow logs, and audit rows
+  - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
+  - no-side-effect assertions for ticket fields, comments, workflow logs, approvals, and audit rows
 - `TicketAiReplyDraftIntegrationTest`
   - real `POST /api/v1/tickets/{id}/ai-reply-draft` happy path for a `TICKET_READ` user with database assertions on `ai_interaction_record`
   - `403` when `TICKET_READ` is missing
   - `404` for cross-tenant ticket access
-  - `503` when AI is disabled, not configured, unavailable, or the provider times out, with controlled persisted status values
-  - invalid-response coverage for oversize assembled drafts against the current comment length limit
-  - no-side-effect assertions for ticket fields, comments, workflow logs, and audit rows
+  - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
+  - invalid-response coverage for both provider-thrown invalid responses and oversize assembled drafts against the current comment length limit
+  - no-side-effect assertions for ticket fields, comments, workflow logs, approvals, and audit rows
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -151,6 +155,10 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
   - stable stubbed triage formatting against checked-in ticket golden samples
 - `TicketReplyDraftGoldenSampleTest`
   - stable stubbed reply-draft formatting against checked-in ticket golden samples, including assembled `draftText`
+- `OpenAiTicketSummaryProviderTest`
+  - unsupported content, refusal, invalid JSON, and missing `summary` provider-payload failures for the summary adapter
+- `OpenAiTicketTriageProviderTest`
+  - unsupported content, refusal, invalid JSON, missing `classification`, missing `reasoning`, missing `priority`, and invalid `priority` provider-payload failures for the triage adapter
 - `OpenAiTicketReplyDraftProviderTest`
   - unsupported content, refusal, and invalid JSON provider-payload failures for the reply-draft adapter
 - `TicketQueryServiceTest`
