@@ -5,6 +5,7 @@ import com.renda.merchantops.api.ai.AiInteractionRecordService;
 import com.renda.merchantops.api.ai.AiInteractionStatus;
 import com.renda.merchantops.api.ai.AiProviderException;
 import com.renda.merchantops.api.ai.AiProviderFailureType;
+import com.renda.merchantops.api.ai.TicketAiPromptContext;
 import com.renda.merchantops.api.ai.TicketReplyDraftAiProvider;
 import com.renda.merchantops.api.ai.TicketReplyDraftPrompt;
 import com.renda.merchantops.api.ai.TicketReplyDraftPromptBuilder;
@@ -13,7 +14,6 @@ import com.renda.merchantops.api.ai.TicketReplyDraftProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
-import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class TicketAiReplyDraftService {
 
     public TicketAiReplyDraftResponse generateReplyDraft(Long tenantId, Long userId, String requestId, Long ticketId) {
         String normalizedRequestId = RequestIdPolicy.requireNormalized(requestId);
-        TicketDetailResponse ticket = ticketQueryService.getTicketDetail(tenantId, ticketId);
+        TicketAiPromptContext ticket = ticketQueryService.getTicketPromptContext(tenantId, ticketId);
         String promptVersion = normalizePromptVersion(aiProperties.getReplyDraftPromptVersion());
         String configuredModelId = normalizeNullable(aiProperties.getModelId());
         TicketReplyDraftPrompt prompt = ticketReplyDraftPromptBuilder.build(promptVersion, ticket);

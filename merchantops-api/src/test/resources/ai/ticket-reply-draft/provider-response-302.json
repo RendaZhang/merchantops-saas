@@ -1,0 +1,18 @@
+{
+  "model": "gpt-4.1-mini",
+  "usage": {
+    "input_tokens": 110,
+    "output_tokens": 70,
+    "total_tokens": 180
+  },
+  "output": [
+    {
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"opening\":\"Quick update from ops.\",\"body\":\"The ticket remains in progress and the latest internal signal confirms the cable swap has started for the printer issue.\",\"nextStep\":\"Confirm whether the replacement restored printer health and capture any blocker before moving toward closure.\",\"closing\":\"I will add another internal note once the verification result is confirmed.\"}"
+        }
+      ]
+    }
+  ]
+}

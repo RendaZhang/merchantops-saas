@@ -45,10 +45,11 @@ This repository currently organizes handoff rules around five roles plus a small
 
 ## Current Repo Skills
 
-- [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md): staged or recent diff to documentation-routing and documentation-sync workflow
+- [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md): staged or recent diff to documentation-routing and documentation-sync workflow, plus repo-wide doc maintenance when no diff exists
 - [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md): align `project-status`, `roadmap`, and `project-plan` without mixing current reality, near-term work, and long-range milestones
-- [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md): milestone and release-tag documentation preparation plus post-tag cleanup
+- [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md): milestone and release-tag documentation preparation, open-source release-cut work, and post-tag cleanup
 - [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md): align import API docs, examples, runbooks, and milestone text with current import implementation
+- [`.agents/skills/ai-ticket-surface-sync/SKILL.md`](.agents/skills/ai-ticket-surface-sync/SKILL.md): align public ticket AI docs, provider/runtime wording, runbooks, examples, and milestone text with the current Week 6 implementation
 - [`.agents/skills/tdr-last-cycle/SKILL.md`](.agents/skills/tdr-last-cycle/SKILL.md): run the `TT last`, `DOC last`, `RR last` cleanup loop against the most recent commit until no fixable findings remain
 
 ## Documentation Role
@@ -61,6 +62,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Follow the routing rules in the linked maintenance and development guidance pages instead of re-encoding detailed update matrices here.
 - Use [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md) when the task is centered on `DOC staged`, `DOC last`, Swagger-visible doc sync, or documentation routing after implementation changes.
 - Use [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md) when the task is centered on import endpoints, replay modes, import runbooks, or import-specific doc alignment across reference, examples, and milestone pages.
+- Use [`.agents/skills/ai-ticket-surface-sync/SKILL.md`](.agents/skills/ai-ticket-surface-sync/SKILL.md) when the task is centered on public AI ticket endpoints, AI provider/runtime docs, AI runbooks, or AI reference alignment across the current Week 6 surface.
 - Use [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md) and [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) together when the task is centered on the final release-doc sync across status, roadmap, plan, changelog, README, and release-versioning.
 - Shortcut prefix: `DOC`
 - Supported shortcuts include:
@@ -81,6 +83,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Start from [docs/runbooks/automated-tests.md](docs/runbooks/automated-tests.md) for the current regression command and coverage boundary.
 - Keep tests, runbooks, and public API docs aligned when verification reality changes.
 - Use the linked testing guidance for detailed rules on smoke-scope wording, Flyway migration sign-off, and stale-token versus refreshed-login verification.
+- When multiple public AI endpoints share the same slice and governance model, keep adapter failure-set, degraded-mode, no-side-effect assertions, and runbook/checklist coverage symmetric instead of hardening only one endpoint.
 - Treat `TT staged` as a testing-focused staged review entry point: inspect the staged diff, run or choose the smallest sufficient verification set, and report findings ordered by urgency (`P1`, `P2`, `P3`) rather than stopping at scope mapping alone.
 - Shortcut prefix: `TT`
 - Supported shortcuts include:
@@ -100,6 +103,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Keep tenant scoping explicit and keep query/write models separated.
 - Use the linked development guidance for detailed rules on `operatorId` / `requestId` propagation, internal attribution fields, and request-time access revalidation.
 - Do not present internal groundwork as public API.
+- For public suggestion-only AI endpoints, if provider data fails local output-policy validation after the provider returns, keep that path mapped as `AiProviderException(INVALID_RESPONSE)` so `ai_interaction_record` preserves `INVALID_RESPONSE` rather than collapsing into a generic business error.
 - If implementation changes affect public contract or reusable repo rules, update the linked docs in the same change.
 
 ## Review and Release Role

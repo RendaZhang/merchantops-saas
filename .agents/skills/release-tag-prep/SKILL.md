@@ -1,6 +1,6 @@
 ---
 name: release-tag-prep
-description: Prepare or finalize release-tag documentation for this repository. Use when a week or milestone is being declared complete, a tag is being planned or just created, changelog notes must move between Unreleased and a versioned section, or README, project-status, roadmap, project-plan, and release-versioning need to reflect the current tagged baseline.
+description: Prepare or finalize release-tag documentation for this repository, including open-source release-cut commits. Use when a week or milestone is being declared complete, a tag is being planned or just created, a release-cut commit will be tagged immediately, changelog notes must move between Unreleased and a versioned section, or README, project-status, roadmap, project-plan, release-versioning, and open-source entry files must reflect the current tagged baseline.
 ---
 
 # Release Tag Prep
@@ -15,6 +15,7 @@ Use this skill to keep tag-related docs consistent without mixing release histor
 2. Determine the release context before editing:
    - pre-tag preparation
    - post-tag cleanup
+   - open-source release-cut commit
    - release-notes drafting
    - baseline consistency check
 3. Respect document ownership:
@@ -24,17 +25,24 @@ Use this skill to keep tag-related docs consistent without mixing release histor
    - [docs/roadmap.md](../../../docs/roadmap.md): active phase and next steps
    - [docs/project-plan.md](../../../docs/project-plan.md): long-range milestones only
    - [../../../README.md](../../../README.md): high-level current baseline only
+   - `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `.github` templates: open-source entry and community expectations for a public release cut
 4. Prepare docs before a tag:
    - keep `Unreleased` limited to release-level changes supported by the current diff
    - align phase completion and next active phase in status and roadmap
    - update high-level baseline text without claiming the tag already exists unless the user explicitly confirmed it or git proves it
-5. Finalize docs after a tag is confirmed:
+5. Handle open-source release-cut work when the same commit will be tagged immediately:
+   - allow tagged-state wording only when the user explicitly confirmed the release-cut flow
+   - ensure changelog, release-versioning, README, status, roadmap, and plan all reflect the same current tag and prior baseline
+   - also confirm the public-release entry set exists and matches the cut: `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `.github` issue or PR templates
+   - call out any missing public-release entry file instead of treating the release cut as complete
+6. Finalize docs after a tag is confirmed:
    - move release-worthy notes from `Unreleased` into a dated version section
    - update current tagged milestone references across README, status, roadmap, and release-versioning
    - demote the prior baseline to previous or earlier milestone wording
-6. Keep versioning realistic:
+7. Keep versioning realistic:
    - do not reuse an existing tag
    - do not write speculative future tags as if they already happened
+   - if docs are written in tagged-state wording during a release-cut commit, the tag must be created on that same commit immediately after it lands
    - keep absolute dates explicit
 
 ## Repo Anchors
@@ -48,7 +56,8 @@ Use this skill to keep tag-related docs consistent without mixing release histor
 
 ## Output Shape
 
-- State whether the work is pre-tag, post-tag, or a consistency pass.
-- State the current tagged baseline and the prepared or confirmed next tag when relevant.
+- State whether the work is pre-tag, post-tag, open-source release-cut, or a consistency pass.
+- State the current tagged baseline and the target or confirmed next tag when relevant.
 - List the files updated.
+- Call out whether any open-source entry file is still missing when the task is a release cut.
 - Call out any remaining pre-tag or post-tag gaps.

@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-03-11
+Last updated: 2026-03-21
 
 ## Purpose
 
@@ -47,19 +47,22 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-4 public workflow surface plus the active Week 5 import path.
+The current automated baseline is centered on the completed Week 2-5 public workflow surface plus the active Week 6 ticket AI path.
 
 Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
-- current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, and `GET /api/v1/roles`
+- current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, ticket AI summary/triage/reply-draft, and `GET /api/v1/roles`
 - controller request binding and tenant-context forwarding for the current public workflow surface
 - user, ticket, approval, and import query/command service behavior
 - repository-backed tenant-scoped user page query behavior
 - operator attribution persistence on user writes
 - workflow-log persistence on `ticket_operation_log` and generic `audit_event` emission on covered write flows
 - import queue publication, worker execution, row-level failure isolation, and import migration protection
+- provider-adapter failure handling for the current public ticket AI summary, triage, and reply-draft paths
+- symmetric degraded-mode persistence and no-side-effect assertions across the current public ticket AI summary, triage, and reply-draft endpoints
+- symmetric AI hardening parity across the current public ticket AI summary, triage, and reply-draft endpoints, including provider-not-configured, provider-unavailable, timeout, invalid-response or output-policy-validation failure paths, `ai_interaction_record.status` assertions, and response-shape / golden-sample expectations
 - stale-token rejection after user status, role, or permission changes
 
 It does not replace manual checks for:
@@ -104,6 +107,8 @@ Use the full reactor only when broader verification is needed:
 - Use [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md) for broader validation after security, SQL, environment, or public API changes.
 - For `/api/v1/users` behavior, compare runtime and test expectations against [../reference/user-management.md](../reference/user-management.md) and [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md).
 - For access-change work such as status updates, role reassignment, permission-seed edits, or ticket-write promotion, compare runtime and test expectations against [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md) and the affected business reference page so stale-token versus re-login behavior stays documented and verified together.
+- When a slice exposes multiple parallel public AI endpoints, keep the hardening symmetric across them rather than letting one endpoint become the only fully hardened reference.
+- That symmetry should explicitly cover adapter failure tests, integration degraded-mode coverage, workflow-safety or no-side-effect assertions, AI runbook/checklist expectations, provider-not-configured and provider-unavailable paths, timeout behavior, invalid-response or output-policy-validation failures, `ai_interaction_record.status` assertions, and response-shape / golden-sample parity.
 - If a public API contract changes, update the related automated tests, runbooks, and public reference docs in the same change.
 - If automated coverage meaningfully expands or narrows, update [../project-status.md](../project-status.md) so the current testing reality stays accurate.
 

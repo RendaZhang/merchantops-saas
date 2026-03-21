@@ -1,5 +1,7 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.ai.TicketAiPromptContext;
+import com.renda.merchantops.api.ai.TicketAiPromptSupport;
 import com.renda.merchantops.api.dto.ticket.query.TicketCommentResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketListItemResponse;
@@ -23,6 +25,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,8 +84,7 @@ public class TicketQueryService {
     }
 
     public TicketDetailResponse getTicketDetail(Long tenantId, Long ticketId) {
-        TicketEntity ticket = ticketRepository.findByIdAndTenantId(ticketId, tenantId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "ticket not found"));
+        TicketEntity ticket = requireTicket(tenantId, ticketId);
 
         List<TicketCommentEntity> comments = ticketCommentRepository.findAllByTicketIdAndTenantIdOrderByIdAsc(ticketId, tenantId);
         List<TicketOperationLogEntity> operationLogs = ticketOperationLogRepository.findAllByTicketIdAndTenantIdOrderByIdAsc(ticketId, tenantId);
@@ -124,6 +127,54 @@ public class TicketQueryService {
                         usernamesById.get(log.getOperatorId()),
                         log.getCreatedAt()
                 )).toList()
+        );
+    }
+
+    public TicketAiPromptContext getTicketPromptContext(Long tenantId, Long ticketId) {
+        TicketEntity ticket = requireTicket(tenantId, ticketId);
+
+        WindowedComments comments = loadRecentComments(ticketId, tenantId);
+        WindowedOperationLogs operationLogs = loadRecentOperationLogs(ticketId, tenantId);
+
+        Set<Long> userIds = new LinkedHashSet<>();
+        if (ticket.getAssigneeId() != null) {
+            userIds.add(ticket.getAssigneeId());
+        }
+        userIds.add(ticket.getCreatedBy());
+        comments.items().stream().map(TicketCommentEntity::getCreatedBy).forEach(userIds::add);
+        operationLogs.items().stream().map(TicketOperationLogEntity::getOperatorId).forEach(userIds::add);
+
+        Map<Long, String> usernamesById = loadUsernamesById(tenantId, userIds);
+
+        return new TicketAiPromptContext(
+                ticket.getId(),
+                ticket.getTenantId(),
+                ticket.getTitle(),
+                ticket.getDescription(),
+                ticket.getStatus(),
+                usernamesById.get(ticket.getAssigneeId()),
+                usernamesById.get(ticket.getCreatedBy()),
+                ticket.getCreatedAt(),
+                ticket.getUpdatedAt(),
+                comments.items().stream()
+                        .map(comment -> new TicketAiPromptContext.Comment(
+                                comment.getId(),
+                                comment.getContent(),
+                                usernamesById.get(comment.getCreatedBy()),
+                                comment.getCreatedAt()
+                        ))
+                        .toList(),
+                comments.olderItemsOmitted(),
+                operationLogs.items().stream()
+                        .map(log -> new TicketAiPromptContext.OperationLog(
+                                log.getId(),
+                                log.getOperationType(),
+                                log.getDetail(),
+                                usernamesById.get(log.getOperatorId()),
+                                log.getCreatedAt()
+                        ))
+                        .toList(),
+                operationLogs.olderItemsOmitted()
         );
     }
 
@@ -180,5 +231,50 @@ public class TicketQueryService {
         }
         return userRepository.findAllByTenantIdAndIdIn(tenantId, userIds).stream()
                 .collect(Collectors.toMap(UserEntity::getId, UserEntity::getUsername, (left, right) -> left));
+    }
+
+    private TicketEntity requireTicket(Long tenantId, Long ticketId) {
+        return ticketRepository.findByIdAndTenantId(ticketId, tenantId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "ticket not found"));
+    }
+
+    private WindowedComments loadRecentComments(Long ticketId, Long tenantId) {
+        List<TicketCommentEntity> latestComments = ticketCommentRepository.findByTicketIdAndTenantIdOrderByIdDesc(
+                ticketId,
+                tenantId,
+                PageRequest.of(0, TicketAiPromptSupport.COMMENT_HISTORY_LIMIT + 1)
+        );
+        boolean olderItemsOmitted = latestComments.size() > TicketAiPromptSupport.COMMENT_HISTORY_LIMIT;
+        List<TicketCommentEntity> window = new ArrayList<>(
+                latestComments.subList(0, Math.min(latestComments.size(), TicketAiPromptSupport.COMMENT_HISTORY_LIMIT))
+        );
+        window.sort(Comparator.comparing(TicketCommentEntity::getId));
+        return new WindowedComments(List.copyOf(window), olderItemsOmitted);
+    }
+
+    private WindowedOperationLogs loadRecentOperationLogs(Long ticketId, Long tenantId) {
+        List<TicketOperationLogEntity> latestOperationLogs = ticketOperationLogRepository.findByTicketIdAndTenantIdOrderByIdDesc(
+                ticketId,
+                tenantId,
+                PageRequest.of(0, TicketAiPromptSupport.OPERATION_LOG_HISTORY_LIMIT + 1)
+        );
+        boolean olderItemsOmitted = latestOperationLogs.size() > TicketAiPromptSupport.OPERATION_LOG_HISTORY_LIMIT;
+        List<TicketOperationLogEntity> window = new ArrayList<>(
+                latestOperationLogs.subList(0, Math.min(latestOperationLogs.size(), TicketAiPromptSupport.OPERATION_LOG_HISTORY_LIMIT))
+        );
+        window.sort(Comparator.comparing(TicketOperationLogEntity::getId));
+        return new WindowedOperationLogs(List.copyOf(window), olderItemsOmitted);
+    }
+
+    private record WindowedComments(
+            List<TicketCommentEntity> items,
+            boolean olderItemsOmitted
+    ) {
+    }
+
+    private record WindowedOperationLogs(
+            List<TicketOperationLogEntity> items,
+            boolean olderItemsOmitted
+    ) {
     }
 }

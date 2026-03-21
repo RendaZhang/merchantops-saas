@@ -37,19 +37,19 @@ MerchantOps SaaS now sits on a completed Week 1-5 baseline plus three public Wee
 ### Shared runtime and internal baseline
 
 - Multi-module Spring Boot backend with MySQL, Redis, RabbitMQ, Flyway, request tracing, and unified API response / exception handling.
-- Tenant-aware query and command services for users, tickets, approvals, import jobs, and the current ticket-summary and ticket-triage AI read paths.
+- Tenant-aware query and command services for users, tickets, approvals, import jobs, and the current ticket-summary, ticket-triage, and ticket reply-draft AI read paths.
 - JWT claim revalidation against current user status, roles, and permissions on protected requests.
 - Instance-level AI provider configuration under `merchantops.ai.*`, explicit summary, triage, and reply-draft prompt versions, timeout-based degradation, and OpenAI-compatible provider adapters for the current ticket AI slices.
 - Dedicated `ai_interaction_record` persistence for AI runtime metadata, separate from `ticket_operation_log` and generic `audit_event`.
 - Local import file storage abstraction with after-commit queue publish, scheduled queued-job recovery, worker consumption, stale-processing restart/fail handling, system-generated replay-file writes, and configurable chunk / recovery / row-limit controls.
-- Focused automated coverage for auth, user management, ticket workflow, AI summary, AI triage, import jobs, audit, and approval behavior.
+- Focused automated coverage for auth, user management, ticket workflow, AI summary, AI triage, AI reply draft, import jobs, audit, and approval behavior.
 
 ## Current Week 6 Public AI Baseline
 
 - The current public Week 6 AI slices are `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`.
 - All three slices are read-only and suggestion-only: they do not change ticket status, write comments, or trigger approvals.
 - Reply-draft semantics are explicitly internal and comment-style: the endpoint returns a structured draft plus `draftText`, but still does not create a comment or send an external message.
-- The current AI context is limited to the target current-tenant ticket's core fields, comments, and workflow logs.
+- The current AI context is limited to the target current-tenant ticket's core fields plus the most recent comments and workflow logs, with prompt-time truncation and explicit `earlier ... omitted` markers when older history exists.
 - The current provider ownership model is instance-level configuration rather than tenant BYOK.
 - Near-term Week 6 follow-up should stay narrow: strengthen eval coverage and keep the three ticket AI slices stable without widening into automatic write-back.
 
@@ -73,7 +73,7 @@ MerchantOps SaaS now sits on a completed Week 1-5 baseline plus three public Wee
 - `user_role` tenant consistency is not yet enforced at the database layer.
 - Ticket assignee / creator / operator tenant consistency is enforced in service logic today, not yet at the database-constraint level.
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs.
-- Focused automated coverage now includes the public AI summary, AI triage, and AI reply-draft slices: happy path, permission failure, cross-tenant not-found behavior, symmetrical degraded-mode coverage for feature-disabled, provider-not-configured, provider-unavailable, timeout, and invalid-response paths, provider adapter failure coverage for unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation, golden-sample regression checks, and no-business-side-effect assertions across all three endpoints.
+- Focused automated coverage now includes the public AI summary, AI triage, and AI reply-draft slices: happy path, permission failure, cross-tenant not-found behavior, symmetrical degraded-mode coverage for feature-disabled, provider-not-configured, provider-unavailable, timeout, and invalid-response paths, provider request-contract assertions, full `output[].content[]` scanning with multi-part `output_text` parsing, `408` or `504` timeout classification, endpoint-specific required-field validation, real-provider-path golden-sample regression checks, AI-context-window guards, and no-business-side-effect assertions across all three endpoints.
 - Live provider verification, Swagger rendering, real infra health, and modules outside the current focused path still need manual verification.
 - Use [runbooks/automated-tests.md](runbooks/automated-tests.md), [runbooks/regression-checklist.md](runbooks/regression-checklist.md), and [runbooks/ai-regression-checklist.md](runbooks/ai-regression-checklist.md) for the current verification baseline.
 - Use [architecture/non-blocking-backlog.md](architecture/non-blocking-backlog.md) for tracked non-blocking follow-up items that should not be lost between phases.

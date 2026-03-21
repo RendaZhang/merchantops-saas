@@ -1,6 +1,7 @@
 package com.renda.merchantops.infra.repository;
 
 import com.renda.merchantops.infra.persistence.entity.TicketCommentEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -8,4 +9,6 @@ import java.util.List;
 public interface TicketCommentRepository extends JpaRepository<TicketCommentEntity, Long> {
 
     List<TicketCommentEntity> findAllByTicketIdAndTenantIdOrderByIdAsc(Long ticketId, Long tenantId);
+
+    List<TicketCommentEntity> findByTicketIdAndTenantIdOrderByIdDesc(Long ticketId, Long tenantId, Pageable pageable);
 }

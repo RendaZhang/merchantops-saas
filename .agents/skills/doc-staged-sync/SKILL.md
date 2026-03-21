@@ -1,6 +1,6 @@
 ---
 name: doc-staged-sync
-description: Inspect staged changes or the most recent commit in this repository, classify the change type, and route it into the right documentation updates. Use when handling DOC staged or DOC last work, Swagger-visible API changes, documentation navigation changes, current-phase status updates, or any task that asks which docs must change after code changes.
+description: Inspect staged changes, the most recent commit, or a no-diff repository-wide maintenance pass in this repository, classify the change type, and route it into the right documentation updates. Use when handling DOC staged, DOC last, DOC sync, DOC phase, DOC audit, DOC nav, Swagger-visible API changes, documentation navigation changes, or any task that asks which docs must change after code changes.
 ---
 
 # Doc Staged Sync
@@ -15,6 +15,7 @@ Use this skill to keep repository docs aligned with implementation without sprea
 2. Inspect the requested scope:
    - use the staged diff for `DOC staged`
    - use `HEAD^..HEAD` for `DOC last`
+   - if there is no staged or worktree diff and the task is repo-wide maintenance, inspect the current doc entry points and treat it as a repository-wide wording, navigation, and phase-consistency pass
    - use named files directly if the user pointed to a specific area
 3. Classify the change before editing:
    - public API or Swagger contract change
@@ -22,12 +23,14 @@ Use this skill to keep repository docs aligned with implementation without sprea
    - configuration, demo-account, seed-data, or environment change
    - phase, milestone, or release-baseline change
    - navigation-only doc move or rename
+   - repo-wide maintenance or wording-drift pass with no implementation diff
 4. Route updates by change type:
    - public API: update the relevant page under `docs/reference/`, `api-demo.http`, matching runbooks, and [docs/project-status.md](../../../docs/project-status.md)
    - internal groundwork: update [docs/project-status.md](../../../docs/project-status.md), [docs/roadmap.md](../../../docs/roadmap.md), and architecture or contributing docs when boundaries changed; do not present it as public API
    - config or environment: update [docs/reference/configuration.md](../../../docs/reference/configuration.md) and any affected getting-started or runbook pages
    - phase or milestone: update [docs/project-status.md](../../../docs/project-status.md), [docs/roadmap.md](../../../docs/roadmap.md), and only touch [docs/project-plan.md](../../../docs/project-plan.md) if the long-range plan itself changed
    - release/tag context: update [../../../CHANGELOG.md](../../../CHANGELOG.md), [docs/contributing/release-versioning.md](../../../docs/contributing/release-versioning.md), and any file that states the current baseline
+   - repo-wide maintenance: audit [../../../README.md](../../../README.md), [../../../docs/README.md](../../../docs/README.md), [docs/project-status.md](../../../docs/project-status.md), [docs/roadmap.md](../../../docs/roadmap.md), [docs/project-plan.md](../../../docs/project-plan.md), [docs/runbooks/README.md](../../../docs/runbooks/README.md), and [docs/reference/README.md](../../../docs/reference/README.md) for wording drift and navigation consistency instead of forcing diff-driven routing
 5. Keep wording boundaries explicit:
    - `public` only when the endpoint is controller-backed and visible in Swagger
    - `planned` for future intent
@@ -48,6 +51,7 @@ Use this skill to keep repository docs aligned with implementation without sprea
 
 ## Output Shape
 
-- State the staged or recent change type first.
+- If no staged or worktree diff exists, state that first and call the work a repo-wide maintenance or audit pass.
+- Otherwise, state the staged or recent change type first.
 - List the docs updated or confirmed already aligned.
 - Call out remaining gaps, or explicitly say none remain.

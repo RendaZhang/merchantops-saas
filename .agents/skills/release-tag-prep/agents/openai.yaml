@@ -1,4 +1,4 @@
 interface:
   display_name: "Release Tag Prep"
-  short_description: "Prepare tags and release doc updates"
-  default_prompt: "Use $release-tag-prep to prepare release docs and tag readiness from the current staged work."
+  short_description: "Prepare tag, release-doc, and release-cut work"
+  default_prompt: "Use $release-tag-prep to prepare tag docs, release-note wording, or open-source release-cut updates from the current repository state."

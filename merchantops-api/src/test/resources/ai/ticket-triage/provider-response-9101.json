@@ -1,0 +1,18 @@
+{
+  "model": "gpt-4.1-mini",
+  "usage": {
+    "input_tokens": 100,
+    "output_tokens": 55,
+    "total_tokens": 155
+  },
+  "output": [
+    {
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"classification\":\"DEVICE_ISSUE\",\"priority\":\"HIGH\",\"reasoning\":\"The ticket describes a printer outage blocking store operations during peak hours, so it should be treated as a high-priority device issue.\"}"
+        }
+      ]
+    }
+  ]
+}

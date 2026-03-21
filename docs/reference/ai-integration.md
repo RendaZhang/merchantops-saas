@@ -134,8 +134,14 @@ The current summary, triage, and reply-draft prompts are built only from the tar
 
 - ticket core fields
 - current status, assignee, creator, and timestamps
-- ticket comments
-- workflow-level `ticket_operation_log` entries
+- the most recent 20 ticket comments
+- the most recent 20 workflow-level `ticket_operation_log` entries
+
+Current prompt shaping stays intentionally narrow:
+
+- if more than 20 comments or workflow logs exist, the prompt keeps the most recent window, restores that window to ascending order, and marks the section with an `earlier ... omitted` line
+- `description` is truncated before prompt assembly
+- each comment and workflow-log detail is truncated before prompt assembly
 
 The current implementation intentionally does not pull in:
 
@@ -163,6 +169,9 @@ The current provider adapters call an OpenAI-compatible Responses API shape and 
 - summary requires `summary`
 - triage requires `classification`, `priority`, and `reasoning`
 - reply draft requires `opening`, `body`, `nextStep`, and `closing`
+- request tests lock `Authorization`, `X-Client-Request-Id`, model id, `input` roles, and `text.format` schema wiring for all three adapters
+- response parsing now scans all `output[].content[]` parts, concatenates later `output_text` fragments in order, and ignores earlier non-text parts when valid text exists
+- upstream `408` and `504` HTTP responses are classified as provider timeouts so the timeout degradation path and `ai_interaction_record.status=PROVIDER_TIMEOUT` stay aligned
 
 The current implementation does not include:
 
@@ -208,8 +217,9 @@ This record is governance-facing internal persistence. There is no public read A
 The current public AI slices establish a minimal eval path:
 
 - explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, and `ticket-reply-draft-v1`
-- golden-sample regression fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, and `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
-- focused automated tests for happy path, permission failure, tenant isolation, feature-disabled behavior, and timeout degradation
+- golden-sample ticket inputs at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, and `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
+- checked-in provider-response fixtures per workflow that drive the real provider parser and service path in automated golden tests
+- focused automated tests for happy path, permission failure, tenant isolation, feature-disabled behavior, timeout degradation, request-contract assertions, multi-part `output_text` parsing, and endpoint-specific required-field validation
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
 
 ## Failure And Safety Expectations

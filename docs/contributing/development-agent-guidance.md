@@ -1,6 +1,6 @@
 # Development Agent Guidance
 
-Last updated: 2026-03-11
+Last updated: 2026-03-21
 
 ## Purpose
 
@@ -171,6 +171,7 @@ For future repository additions:
 - uniqueness checks belong in service logic even if the database also has a unique constraint
 - not-found business reads should return `BizException(ErrorCode.NOT_FOUND, ...)`
 - not-yet-implemented business write flows should return `BizException`, not `UnsupportedOperationException`
+- for public suggestion-only AI endpoints, distinguish provider unavailability from invalid provider output; if the provider returned data but local output-policy validation fails, preserve that path as `AiProviderException(INVALID_RESPONSE)` so `ai_interaction_record` keeps `INVALID_RESPONSE` instead of collapsing into a generic `BizException`
 - permission enforcement stays at controller/interceptor level, not repository level
 - protected JWT requests that depend on current roles or permissions must reject stale claims after status, role, or permission changes
 - when access changes are supposed to take effect immediately, do not treat successful re-login alone as sufficient verification; the pre-change token must also be rejected on the next protected request

@@ -36,8 +36,9 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] `POST /api/v1/tickets/{id}/ai-summary` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
 - [ ] `POST /api/v1/tickets/{id}/ai-triage` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
 - [ ] `POST /api/v1/tickets/{id}/ai-reply-draft` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
-- [ ] summary, triage, and reply-draft adapter tests all cover unsupported content, refusal, and invalid JSON payload handling
+- [ ] summary, triage, and reply-draft adapter tests all cover request-contract assertions, unsupported content, refusal, invalid JSON payload handling, later-part `output_text` parsing, and `408` or `504` timeout classification
 - [ ] summary adapter rejects missing `summary`; triage adapter rejects missing `classification`, missing `reasoning`, missing `priority`, and invalid `priority`
+- [ ] reply-draft adapter rejects missing `opening`, missing `body`, missing `nextStep`, and missing `closing`
 
 ## Tenant And Permission Safety
 
@@ -63,6 +64,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] golden ticket-summary samples still produce the expected stable shape
 - [ ] golden ticket-triage samples still produce the expected stable shape
 - [ ] golden ticket-reply-draft samples still produce the expected stable shape
+- [ ] golden tests use checked-in provider-response fixtures and the real provider/service parsing path rather than echoing expected output fields back from the sample file
 - [ ] summary output still includes issue, current state, latest meaningful signal, and next human follow-up
 - [ ] summary output remains non-blank and does not expose raw prompt text or raw provider payload
 - [ ] triage output still includes non-blank `classification`, `priority`, and concise `reasoning`
@@ -75,6 +77,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] assembled reply drafts still fit the current ticket comment length limit
 - [ ] the summary, triage, and reply-draft slices stay suggestion-only and do not imply unsupported automatic execution
 - [ ] prompt or model changes are reviewed against both happy-path and known-risk samples when those samples exist
+- [ ] AI prompt context stays capped to the recent ticket history window and marks omitted older history when the window truncates
 
 ## Workflow Safety
 

@@ -18,6 +18,7 @@ If a rule starts turning into implementation detail, runbook nuance, or verifica
 ## Repo Skills
 
 - [../../.agents/skills/README.md](../../.agents/skills/README.md): repo-local skill index for repeated multi-step workflows that are too detailed to keep in [../../AGENTS.md](../../AGENTS.md)
+- Use the repo skill index when the work is clearly centered on import doc sync, ticket AI doc sync, release-cut cleanup, or other repeated multi-step contributor workflows.
 
 ## Suggested Entry Points
 

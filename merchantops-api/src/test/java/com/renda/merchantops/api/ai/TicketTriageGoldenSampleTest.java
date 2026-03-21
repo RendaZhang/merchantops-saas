@@ -1,58 +1,89 @@
 package com.renda.merchantops.api.ai;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiTriagePriority;
-import com.renda.merchantops.api.dto.ticket.query.TicketCommentResponse;
-import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
-import com.renda.merchantops.api.dto.ticket.query.TicketOperationLogResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiTriageResponse;
+import com.renda.merchantops.api.service.TicketAiTriageService;
+import com.renda.merchantops.api.service.TicketQueryService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.web.client.RestClient;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TicketTriageGoldenSampleTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Test
-    void goldenSamplesShouldKeepStableStubTriageFormat() throws Exception {
+    void goldenSamplesShouldKeepStableTriageFormatThroughRealProviderAndServicePath() throws Exception {
         List<GoldenSample> samples = loadSamples();
-        TicketTriagePromptBuilder promptBuilder = new TicketTriagePromptBuilder();
-        TicketTriageAiProvider stubProvider = request -> samples.stream()
-                .filter(sample -> sample.ticketId().equals(request.ticketId()))
-                .findFirst()
-                .map(sample -> new TicketTriageProviderResult(
-                        sample.expectedClassification(),
-                        sample.expectedPriority(),
-                        sample.expectedReasoning(),
-                        "stub-triage-v1",
-                        null,
-                        null,
-                        null,
-                        null
-                ))
-                .orElseThrow();
+        assertThat(samples).isNotEmpty();
 
         for (GoldenSample sample : samples) {
-            TicketDetailResponse ticket = sample.toTicketDetailResponse();
-            TicketTriagePrompt prompt = promptBuilder.build("ticket-triage-v1", ticket);
-            TicketTriageProviderResult result = stubProvider.generateTriage(
-                    new TicketTriageProviderRequest("golden-" + sample.ticketId(), sample.ticketId(), "stub-triage-v1", 1000, prompt)
-            );
+            OpenAiFixtureServer.withServer(200, loadProviderResponse(sample.ticketId()), server -> {
+                TicketQueryService ticketQueryService = mock(TicketQueryService.class);
+                AiInteractionRecordService recordService = mock(AiInteractionRecordService.class);
+                when(ticketQueryService.getTicketPromptContext(sample.tenantId(), sample.ticketId()))
+                        .thenReturn(sample.toPromptContext());
 
-            assertThat(prompt.userPrompt()).contains(sample.title());
-            assertThat(prompt.userPrompt()).contains(sample.status());
-            assertThat(prompt.userPrompt()).contains(sample.operationLogs().getFirst().detail());
-            assertThat(result.classification()).isEqualTo(sample.expectedClassification());
-            assertThat(result.priority()).isEqualTo(sample.expectedPriority());
-            assertThat(result.reasoning()).isEqualTo(sample.expectedReasoning());
-            assertThat(result.priority()).isIn(TicketAiTriagePriority.LOW, TicketAiTriagePriority.MEDIUM, TicketAiTriagePriority.HIGH);
-            assertThat(result.reasoning()).isNotBlank();
+                TicketAiTriageService service = new TicketAiTriageService(
+                        ticketQueryService,
+                        new TicketTriagePromptBuilder(),
+                        newProvider(server.baseUrl()),
+                        recordService,
+                        aiProperties(server.baseUrl())
+                );
+
+                TicketAiTriageResponse response = service.generateTriage(
+                        sample.tenantId(),
+                        7002L,
+                        "golden-triage-" + sample.ticketId(),
+                        sample.ticketId()
+                );
+
+                assertThat(response.ticketId()).isEqualTo(sample.ticketId());
+                assertThat(response.classification()).isEqualTo(sample.expectedClassification());
+                assertThat(response.priority()).isEqualTo(sample.expectedPriority());
+                assertThat(response.reasoning()).isEqualTo(sample.expectedReasoning());
+                assertThat(response.priority()).isIn(TicketAiTriagePriority.LOW, TicketAiTriagePriority.MEDIUM, TicketAiTriagePriority.HIGH);
+                assertThat(response.reasoning()).isNotBlank();
+                assertThat(response.promptVersion()).isEqualTo("ticket-triage-v1");
+                assertThat(response.modelId()).isEqualTo("gpt-4.1-mini");
+                assertThat(response.generatedAt()).isNotNull();
+                assertThat(response.latencyMs()).isNotNegative();
+                assertThat(response.requestId()).isEqualTo("golden-triage-" + sample.ticketId());
+
+                JsonNode requestBody = objectMapper.readTree(server.requireCapturedRequest().body());
+                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.title());
+                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.status());
+                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.operationLogs().getFirst().detail());
+
+                ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
+                verify(recordService).record(commandCaptor.capture());
+                assertThat(commandCaptor.getValue().tenantId()).isEqualTo(sample.tenantId());
+                assertThat(commandCaptor.getValue().userId()).isEqualTo(7002L);
+                assertThat(commandCaptor.getValue().requestId()).isEqualTo("golden-triage-" + sample.ticketId());
+                assertThat(commandCaptor.getValue().entityId()).isEqualTo(sample.ticketId());
+                assertThat(commandCaptor.getValue().interactionType()).isEqualTo("TRIAGE");
+                assertThat(commandCaptor.getValue().promptVersion()).isEqualTo("ticket-triage-v1");
+                assertThat(commandCaptor.getValue().modelId()).isEqualTo("gpt-4.1-mini");
+                assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.SUCCEEDED);
+                assertThat(commandCaptor.getValue().outputSummary())
+                        .isEqualTo("classification=" + sample.expectedClassification() + "; priority=" + sample.expectedPriority().name());
+            });
         }
     }
 
@@ -62,6 +93,28 @@ class TicketTriageGoldenSampleTest {
             return objectMapper.readValue(inputStream, new TypeReference<>() {
             });
         }
+    }
+
+    private String loadProviderResponse(Long ticketId) throws Exception {
+        try (InputStream inputStream = getClass().getResourceAsStream("/ai/ticket-triage/provider-response-" + ticketId + ".json")) {
+            assertThat(inputStream).isNotNull();
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private OpenAiTicketTriageProvider newProvider(String baseUrl) {
+        return new OpenAiTicketTriageProvider(RestClient.builder(), new ObjectMapper(), aiProperties(baseUrl));
+    }
+
+    private AiProperties aiProperties(String baseUrl) {
+        AiProperties aiProperties = new AiProperties();
+        aiProperties.setEnabled(true);
+        aiProperties.setTriagePromptVersion("ticket-triage-v1");
+        aiProperties.setModelId("gpt-4.1-mini");
+        aiProperties.setTimeoutMs(1000);
+        aiProperties.getOpenai().setApiKey("test-key");
+        aiProperties.getOpenai().setBaseUrl(baseUrl);
+        return aiProperties;
     }
 
     private record GoldenSample(
@@ -81,39 +134,36 @@ class TicketTriageGoldenSampleTest {
             TicketAiTriagePriority expectedPriority,
             String expectedReasoning
     ) {
-        private TicketDetailResponse toTicketDetailResponse() {
-            return new TicketDetailResponse(
+        private TicketAiPromptContext toPromptContext() {
+            return new TicketAiPromptContext(
                     ticketId,
                     tenantId,
                     title,
                     description,
                     status,
-                    null,
                     assigneeUsername,
-                    createdBy,
                     createdByUsername,
                     createdAt,
                     updatedAt,
                     comments.stream()
-                            .map(comment -> new TicketCommentResponse(
+                            .map(comment -> new TicketAiPromptContext.Comment(
                                     comment.id(),
-                                    comment.ticketId(),
                                     comment.content(),
-                                    comment.createdBy(),
                                     comment.createdByUsername(),
                                     comment.createdAt()
                             ))
                             .toList(),
+                    false,
                     operationLogs.stream()
-                            .map(log -> new TicketOperationLogResponse(
+                            .map(log -> new TicketAiPromptContext.OperationLog(
                                     log.id(),
                                     log.operationType(),
                                     log.detail(),
-                                    log.operatorId(),
                                     log.operatorUsername(),
                                     log.createdAt()
                             ))
-                            .toList()
+                            .toList(),
+                    false
             );
         }
     }

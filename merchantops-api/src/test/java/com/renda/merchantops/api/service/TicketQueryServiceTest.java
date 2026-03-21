@@ -1,5 +1,8 @@
 package com.renda.merchantops.api.service;
 
+import com.renda.merchantops.api.ai.TicketAiPromptContext;
+import com.renda.merchantops.api.ai.TicketAiPromptSupport;
+import com.renda.merchantops.api.ai.TicketSummaryPromptBuilder;
 import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageQuery;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageResponse;
@@ -24,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -122,6 +126,89 @@ class TicketQueryServiceTest {
                 .isInstanceOf(BizException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    void getTicketPromptContextShouldWindowRecentHistoryAndPromptShouldMarkOmissionsAndTruncateFields() {
+        TicketEntity ticket = ticket(11L, 1L, "POS printer offline", "IN_PROGRESS", 102L, 101L);
+        ticket.setDescription("d".repeat(650));
+
+        List<TicketCommentEntity> recentCommentsDesc = new ArrayList<>();
+        for (long id = 121L; id >= 101L; id--) {
+            recentCommentsDesc.add(comment(id, 1L, 11L, 102L, "c".repeat(320) + "-" + id));
+        }
+        List<TicketOperationLogEntity> recentLogsDesc = new ArrayList<>();
+        for (long id = 221L; id >= 201L; id--) {
+            recentLogsDesc.add(operationLog(id, 1L, 11L, 101L, "STATUS_CHANGED", "l".repeat(220) + "-" + id));
+        }
+
+        when(ticketRepository.findByIdAndTenantId(11L, 1L)).thenReturn(Optional.of(ticket));
+        when(ticketCommentRepository.findByTicketIdAndTenantIdOrderByIdDesc(eq(11L), eq(1L), any(Pageable.class)))
+                .thenReturn(recentCommentsDesc);
+        when(ticketOperationLogRepository.findByTicketIdAndTenantIdOrderByIdDesc(eq(11L), eq(1L), any(Pageable.class)))
+                .thenReturn(recentLogsDesc);
+        when(userRepository.findAllByTenantIdAndIdIn(eq(1L), any()))
+                .thenReturn(List.of(
+                        user(101L, 1L, "admin"),
+                        user(102L, 1L, "ops")
+                ));
+
+        TicketAiPromptContext context = ticketQueryService.getTicketPromptContext(1L, 11L);
+
+        ArgumentCaptor<Pageable> commentPageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        ArgumentCaptor<Pageable> logPageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(ticketCommentRepository).findByTicketIdAndTenantIdOrderByIdDesc(eq(11L), eq(1L), commentPageableCaptor.capture());
+        verify(ticketOperationLogRepository).findByTicketIdAndTenantIdOrderByIdDesc(eq(11L), eq(1L), logPageableCaptor.capture());
+
+        assertThat(commentPageableCaptor.getValue().getPageSize()).isEqualTo(TicketAiPromptSupport.COMMENT_HISTORY_LIMIT + 1);
+        assertThat(logPageableCaptor.getValue().getPageSize()).isEqualTo(TicketAiPromptSupport.OPERATION_LOG_HISTORY_LIMIT + 1);
+        assertThat(context.comments()).hasSize(TicketAiPromptSupport.COMMENT_HISTORY_LIMIT);
+        assertThat(context.comments().getFirst().id()).isEqualTo(102L);
+        assertThat(context.comments().getLast().id()).isEqualTo(121L);
+        assertThat(context.olderCommentsOmitted()).isTrue();
+        assertThat(context.operationLogs()).hasSize(TicketAiPromptSupport.OPERATION_LOG_HISTORY_LIMIT);
+        assertThat(context.operationLogs().getFirst().id()).isEqualTo(202L);
+        assertThat(context.operationLogs().getLast().id()).isEqualTo(221L);
+        assertThat(context.olderOperationLogsOmitted()).isTrue();
+
+        String userPrompt = new TicketSummaryPromptBuilder().build("ticket-summary-v1", context).userPrompt();
+        assertThat(userPrompt).contains("- earlier comments omitted");
+        assertThat(userPrompt).contains("- earlier operation logs omitted");
+        assertThat(userPrompt).contains("description: " + "d".repeat(597) + "...");
+        assertThat(userPrompt).contains(": " + "c".repeat(297) + "...");
+        assertThat(userPrompt).contains(": " + "l".repeat(197) + "...");
+        assertThat(userPrompt).doesNotContain("d".repeat(650));
+    }
+
+    @Test
+    void getTicketDetailShouldReturnFullHistoryEvenWhenAiPromptContextIsCapped() {
+        TicketEntity ticket = ticket(11L, 1L, "POS printer offline", "IN_PROGRESS", 102L, 101L);
+        List<TicketCommentEntity> commentsAsc = new ArrayList<>();
+        for (long id = 101L; id <= 121L; id++) {
+            commentsAsc.add(comment(id, 1L, 11L, 102L, "comment-" + id));
+        }
+        List<TicketOperationLogEntity> logsAsc = new ArrayList<>();
+        for (long id = 201L; id <= 221L; id++) {
+            logsAsc.add(operationLog(id, 1L, 11L, 101L, "STATUS_CHANGED", "log-" + id));
+        }
+
+        when(ticketRepository.findByIdAndTenantId(11L, 1L)).thenReturn(Optional.of(ticket));
+        when(ticketCommentRepository.findAllByTicketIdAndTenantIdOrderByIdAsc(11L, 1L)).thenReturn(commentsAsc);
+        when(ticketOperationLogRepository.findAllByTicketIdAndTenantIdOrderByIdAsc(11L, 1L)).thenReturn(logsAsc);
+        when(userRepository.findAllByTenantIdAndIdIn(eq(1L), any()))
+                .thenReturn(List.of(
+                        user(101L, 1L, "admin"),
+                        user(102L, 1L, "ops")
+                ));
+
+        TicketDetailResponse response = ticketQueryService.getTicketDetail(1L, 11L);
+
+        assertThat(response.getComments()).hasSize(21);
+        assertThat(response.getComments().getFirst().getId()).isEqualTo(101L);
+        assertThat(response.getComments().getLast().getId()).isEqualTo(121L);
+        assertThat(response.getOperationLogs()).hasSize(21);
+        assertThat(response.getOperationLogs().getFirst().getId()).isEqualTo(201L);
+        assertThat(response.getOperationLogs().getLast().getId()).isEqualTo(221L);
     }
 
     private TicketEntity ticket(Long id,

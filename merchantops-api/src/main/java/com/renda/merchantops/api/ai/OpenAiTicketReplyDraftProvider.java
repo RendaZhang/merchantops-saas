@@ -44,6 +44,10 @@ public class OpenAiTicketReplyDraftProvider implements TicketReplyDraftAiProvide
                     .body(JsonNode.class);
             return parseResponse(request, response);
         } catch (RestClientResponseException ex) {
+            AiProviderFailureType failureType = OpenAiTicketProviderSupport.classifyHttpFailure(ex);
+            if (failureType == AiProviderFailureType.TIMEOUT) {
+                throw new AiProviderException(AiProviderFailureType.TIMEOUT, "ai provider timed out");
+            }
             throw new AiProviderException(AiProviderFailureType.UNAVAILABLE, "ai provider returned an error");
         } catch (ResourceAccessException ex) {
             if (isTimeout(ex)) {
@@ -117,20 +121,19 @@ public class OpenAiTicketReplyDraftProvider implements TicketReplyDraftAiProvide
             throw new AiProviderException(AiProviderFailureType.UNAVAILABLE, "provider response reported an error");
         }
 
-        JsonNode contentNode = findFirstContentNode(response.path("output"));
-        if (contentNode == null) {
-            throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider response did not include content");
-        }
-
-        String contentType = contentNode.path("type").asText();
-        if ("refusal".equals(contentType)) {
-            throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider refused the reply draft request");
-        }
-        if (!"output_text".equals(contentType)) {
-            throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider returned unsupported content");
-        }
-
-        String rawText = contentNode.path("text").asText(null);
+        OpenAiTicketProviderSupport.OutputTextExtraction extraction =
+                OpenAiTicketProviderSupport.extractOutputText(response.path("output"));
+        String rawText = switch (extraction.status()) {
+            case OUTPUT_TEXT -> extraction.text();
+            case MISSING_CONTENT ->
+                    throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider response did not include content");
+            case BLANK_OUTPUT_TEXT ->
+                    throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider returned blank content");
+            case REFUSAL_ONLY ->
+                    throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider refused the reply draft request");
+            case UNSUPPORTED_CONTENT ->
+                    throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider returned unsupported content");
+        };
         if (!StringUtils.hasText(rawText)) {
             throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider returned blank content");
         }
@@ -173,22 +176,6 @@ public class OpenAiTicketReplyDraftProvider implements TicketReplyDraftAiProvide
             throw new AiProviderException(AiProviderFailureType.INVALID_RESPONSE, "provider reply draft payload is missing " + fieldName);
         }
         return value.trim();
-    }
-
-    private JsonNode findFirstContentNode(JsonNode outputNode) {
-        if (outputNode == null || !outputNode.isArray()) {
-            return null;
-        }
-        for (JsonNode outputItem : outputNode) {
-            JsonNode content = outputItem.path("content");
-            if (!content.isArray()) {
-                continue;
-            }
-            for (JsonNode contentItem : content) {
-                return contentItem;
-            }
-        }
-        return null;
     }
 
     private boolean isTimeout(Throwable throwable) {
