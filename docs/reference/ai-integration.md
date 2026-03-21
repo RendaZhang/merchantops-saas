@@ -1,6 +1,6 @@
 # AI Integration
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 
 ## Purpose
 
@@ -15,15 +15,16 @@ The current target direction is:
 
 ## Current Public Boundary
 
-The first public AI contract is now live:
+The current public AI contracts are now live:
 
 | Method | Path | Permission | Current Scope |
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | `TICKET_READ` | Generate a suggestion-only summary for one current-tenant ticket |
+| `POST` | `/api/v1/tickets/{id}/ai-triage` | `TICKET_READ` | Generate suggestion-only classification and priority guidance for one current-tenant ticket |
 
 Current Week 6 scope is intentionally narrow:
 
-- one public AI endpoint only
+- two public AI endpoints only
 - no request body; the server derives the prompt from the current ticket plus operator context
 - no ticket status change, comment write, approval trigger, or other workflow mutation
 - no public raw prompt, raw provider response, token breakdown, or cost breakdown in the response body
@@ -58,9 +59,41 @@ Example:
 }
 ```
 
+`POST /api/v1/tickets/{id}/ai-triage` returns a minimal suggestion shape:
+
+- `ticketId`
+- `classification`
+- `priority`
+- `reasoning`
+- `promptVersion`
+- `modelId`
+- `generatedAt`
+- `latencyMs`
+- `requestId`
+
+Example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "ticketId": 302,
+    "classification": "DEVICE_ISSUE",
+    "priority": "HIGH",
+    "reasoning": "The ticket describes a store printer issue affecting active operations and the latest signal still points to an unfinished hardware fix, so it should be treated as a high-priority device issue.",
+    "promptVersion": "ticket-triage-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-21T14:20:15",
+    "latencyMs": 418,
+    "requestId": "ticket-ai-triage-req-1"
+  }
+}
+```
+
 ## Current Context Assembly Boundary
 
-The current summary prompt is built only from the target ticket in the current tenant:
+The current summary and triage prompts are built only from the target ticket in the current tenant:
 
 - ticket core fields
 - current status, assignee, creator, and timestamps
@@ -81,13 +114,16 @@ Tenant scoping is inherited from the existing ticket query path. The AI slice do
 
 The current runtime keeps AI plumbing narrow rather than introducing a general chat framework:
 
-- a ticket-summary-specific prompt builder
-- a ticket-summary-specific provider adapter interface
+- a ticket-summary-specific prompt builder and provider adapter
+- a ticket-triage-specific prompt builder and provider adapter
 - instance-level provider configuration under `merchantops.ai.*`
 - an enable/disable flag plus provider-configuration guard
 - timeout-based controlled degradation
 
-The current provider adapter calls an OpenAI-compatible Responses API shape and requests a strict JSON schema containing only `summary`.
+The current provider adapters call an OpenAI-compatible Responses API shape and request strict JSON schemas:
+
+- summary requires `summary`
+- triage requires `classification`, `priority`, and `reasoning`
 
 The current implementation does not include:
 
@@ -130,10 +166,10 @@ This record is governance-facing internal persistence. There is no public read A
 
 ## Evaluation Baseline
 
-The first public AI slice also establishes a minimal eval path:
+The current public AI slices establish a minimal eval path:
 
-- explicit prompt versioning through `ticket-summary-v1`
-- a golden-sample regression fixture at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`
+- explicit prompt versioning through `ticket-summary-v1` and `ticket-triage-v1`
+- golden-sample regression fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json` and `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`
 - focused automated tests for happy path, permission failure, tenant isolation, feature-disabled behavior, and timeout degradation
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
 
@@ -143,18 +179,16 @@ Current non-happy-path behavior:
 
 - missing `TICKET_READ` remains `403`
 - cross-tenant or missing tickets remain `404`
-- disabled AI returns `503 SERVICE_UNAVAILABLE` with `ticket ai summary is disabled`
+- disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled` or `ticket ai triage is disabled`
 - missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
 - raw provider exceptions are not exposed to API consumers
 - the rest of the ticket workflow remains usable even when AI is unavailable
 
 ## Current Limitations
 
-The first public AI slice is intentionally narrower than the Week 6 long-range plan.
+The current public AI slices are intentionally narrower than the Week 6 long-range plan.
 
 Not implemented yet:
-
-- `POST /api/v1/tickets/{id}/ai-triage`
 - `POST /api/v1/tickets/{id}/ai-reply-draft`
 - any AI-driven ticket write-back flow
 - approval-integrated AI execution
@@ -166,7 +200,6 @@ Not implemented yet:
 
 Near-term Week 6 follow-up work should stay in the ticket workflow lane:
 
-- triage suggestion
 - reply-draft suggestion
 - stronger failure-set and policy-set eval coverage
 - future approval-aware write-back only after the suggestion-only slices are stable

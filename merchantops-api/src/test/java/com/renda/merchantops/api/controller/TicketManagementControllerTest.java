@@ -17,6 +17,8 @@ import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.RequirePermissionInterceptor;
+import com.renda.merchantops.api.service.TicketAiTriageService;
+import com.renda.merchantops.api.service.TicketAiSummaryService;
 import com.renda.merchantops.api.service.TicketCommandService;
 import com.renda.merchantops.api.service.TicketQueryService;
 import jakarta.servlet.FilterChain;
@@ -71,6 +73,12 @@ class TicketManagementControllerTest {
 
     @Mock
     private TicketCommandService ticketCommandService;
+
+    @Mock
+    private TicketAiSummaryService ticketAiSummaryService;
+
+    @Mock
+    private TicketAiTriageService ticketAiTriageService;
 
     @InjectMocks
     private TicketController ticketController;

@@ -1,19 +1,19 @@
 # Eval Dataset Guidelines
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 
 ## Goal
 
 AI workflow quality should not depend on intuition alone. This project should maintain small, practical evaluation datasets that make prompt or model changes easier to review.
 
-This document defines a lightweight eval dataset approach appropriate for the current ticket-summary slice and future Week 6+ AI workflow features.
+This document defines a lightweight eval dataset approach appropriate for the current ticket-summary and ticket-triage slices plus future Week 6+ AI workflow features.
 
 ## Current Boundary
 
 As of today:
 
-- one public AI endpoint exists: `POST /api/v1/tickets/{id}/ai-summary`
-- the repository now includes a golden-sample fixture at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`
+- two public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage`
+- the repository now includes golden-sample fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json` and `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`
 - the current public eval baseline is still small and intentionally reviewable by humans
 
 ## Dataset Principles
@@ -115,6 +115,7 @@ This is enough to support meaningful review without creating heavy maintenance b
 Current live storage:
 
 - ticket summary golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-summary/`
+- ticket triage golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-triage/`
 
 If broader AI automation appears later, these can expand into a structure like:
 

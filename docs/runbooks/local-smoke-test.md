@@ -1,6 +1,6 @@
 # Local Smoke Test
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 
 > Maintenance note: keep this page as the current PowerShell-first live smoke path for the public workflow surface. Keep it step-by-step, happy-path-oriented, and reusable across phases. Broad negative-path coverage and environment-wide checks belong in [automated-tests.md](automated-tests.md) and [regression-checklist.md](regression-checklist.md), not as historical add-ons here.
 
@@ -19,7 +19,7 @@ This smoke flow covers:
 
 Optional RBAC demo endpoint checks stay at the end because they are not part of the main business baseline.
 
-The public AI summary endpoint is intentionally not part of this default smoke path because live provider wiring is environment-sensitive. When the staged change touches `POST /api/v1/tickets/{id}/ai-summary`, run this page for the non-AI workflow baseline and then use [ai-regression-checklist.md](ai-regression-checklist.md) for the AI-specific verification pass.
+The public AI summary and ticket triage endpoints are intentionally not part of this default smoke path because live provider wiring is environment-sensitive. When the staged change touches `POST /api/v1/tickets/{id}/ai-summary` or `POST /api/v1/tickets/{id}/ai-triage`, run this page for the non-AI workflow baseline and then use [ai-regression-checklist.md](ai-regression-checklist.md) for the AI-specific verification pass.
 
 ## 1. Run Automated Tests First
 

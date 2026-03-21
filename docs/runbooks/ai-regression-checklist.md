@@ -1,6 +1,6 @@
 # AI Regression Checklist
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 
 > Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
@@ -11,14 +11,15 @@ Use this checklist when any of the following change:
 - provider adapter logic
 - AI feature gating or timeout behavior
 - AI-related logging, usage, or error handling
-- the public AI summary response shape or Swagger examples
+- the public AI summary or ticket triage response shape or Swagger examples
 
 ## Current Public Boundary
 
-The AI checklist is now active because the first public AI endpoint exists:
+The AI checklist is now active because public AI endpoints exist:
 
 - `POST /api/v1/tickets/{id}/ai-summary`
-- suggestion-only summary for one current-tenant ticket
+- `POST /api/v1/tickets/{id}/ai-triage`
+- suggestion-only summary and triage results for one current-tenant ticket
 - read permission inherited from `TICKET_READ`
 - no write-back, no comment creation, and no approval execution in the current slice
 
@@ -35,7 +36,7 @@ The AI checklist is now active because the first public AI endpoint exists:
 - [ ] AI requests do not combine records across tenants
 - [ ] permission failures still return normal application errors such as `403`
 - [ ] cross-tenant or missing tickets still return normal business `404`
-- [ ] the summary endpoint does not bypass the existing ticket read boundary
+- [ ] the summary and triage endpoints do not bypass the existing ticket read boundary
 
 ## Audit And Traceability
 
@@ -51,16 +52,19 @@ The AI checklist is now active because the first public AI endpoint exists:
 ## Output Quality
 
 - [ ] golden ticket-summary samples still produce the expected stable shape
-- [ ] output still includes issue, current state, latest meaningful signal, and next human follow-up
-- [ ] the public response shape remains stable for `ticketId`, `summary`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
-- [ ] the summary stays suggestion-only and does not imply unsupported automatic execution
+- [ ] golden ticket-triage samples still produce the expected stable shape
+- [ ] summary output still includes issue, current state, latest meaningful signal, and next human follow-up
+- [ ] triage output still includes `classification`, `priority`, and concise `reasoning`
+- [ ] the public summary response shape remains stable for `ticketId`, `summary`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
+- [ ] the public triage response shape remains stable for `ticketId`, `classification`, `priority`, `reasoning`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
+- [ ] the summary and triage slices stay suggestion-only and do not imply unsupported automatic execution
 - [ ] prompt or model changes are reviewed against both happy-path and known-risk samples when those samples exist
 
 ## Workflow Safety
 
-- [ ] AI summary calls do not mutate ticket status, assignee, comments, or approvals
+- [ ] AI summary and triage calls do not mutate ticket status, assignee, comments, workflow logs, or approvals
 - [ ] operators can continue the ticket workflow manually when AI is unavailable
-- [ ] ticket detail, ticket workflow log, and business audit behavior remain unchanged by AI summary calls
+- [ ] ticket detail, ticket workflow log, and business audit behavior remain unchanged by AI summary or triage calls
 
 ## API And Documentation Alignment
 
@@ -73,14 +77,14 @@ The AI checklist is now active because the first public AI endpoint exists:
 
 ## Suggested Minimal Test Pass
 
-For the current Week 6 ticket summary slice, at minimum run:
+For the current Week 6 ticket AI slices, at minimum run:
 
-1. one authorized happy-path request with a `TICKET_READ` user
+1. one authorized happy-path request for each affected AI endpoint with a `TICKET_READ` user
 2. one permission-denied request
 3. one tenant-isolation or not-found check
 4. one feature-disabled check
 5. one provider-timeout or provider-unavailable simulation
-6. one golden-sample regression check
+6. one golden-sample regression check for each affected AI workflow
 
 ## Related Documents
 

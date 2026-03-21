@@ -5,6 +5,7 @@ import com.renda.merchantops.api.dto.ticket.command.TicketCommentCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketWriteResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiTriageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketCommentResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
@@ -36,6 +37,9 @@ import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_TIC
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FORBIDDEN;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_SERVICE_UNAVAILABLE_AI_DISABLED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_SERVICE_UNAVAILABLE_AI_PROVIDER;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_SERVICE_UNAVAILABLE_AI_TRIAGE_DISABLED;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_SERVICE_UNAVAILABLE_AI_TRIAGE_PROVIDER;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_AI_TRIAGE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_AI_SUMMARY;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_ASSIGNED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_COMMENT_CREATED;
@@ -148,6 +152,43 @@ public interface TicketManagementApi {
     })
     @PostMapping("/{id}/ai-summary")
     ApiResponse<TicketAiSummaryResponse> getAiSummary(@PathVariable("id") Long id);
+
+    @Operation(
+            summary = "Generate AI triage suggestion for one current-tenant ticket",
+            description = "Requires TICKET_READ permission. Builds a suggestion-only triage result from current-tenant ticket core fields, comments, and workflow logs. This endpoint does not change ticket status, write comments, trigger approvals, or suggest assignees."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Triage generated successfully",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_TICKET_AI_TRIAGE))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Missing TICKET_READ permission",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Ticket not found in current tenant",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"code\":\"NOT_FOUND\",\"message\":\"ticket not found\",\"data\":null}"))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "503",
+                    description = "AI feature disabled or provider unavailable",
+                    content = @Content(mediaType = "application/json", examples = {
+                            @ExampleObject(name = "disabled", value = RESP_SERVICE_UNAVAILABLE_AI_TRIAGE_DISABLED),
+                            @ExampleObject(name = "providerUnavailable", value = RESP_SERVICE_UNAVAILABLE_AI_TRIAGE_PROVIDER)
+                    })
+            )
+    })
+    @PostMapping("/{id}/ai-triage")
+    ApiResponse<TicketAiTriageResponse> getAiTriage(@PathVariable("id") Long id);
 
     @Operation(
             summary = "Create ticket in current tenant",

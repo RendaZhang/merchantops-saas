@@ -78,7 +78,7 @@ SELECT COUNT(*) AS import_job_item_error_cnt FROM import_job_item_error;
 SELECT COUNT(*) AS ai_interaction_record_cnt FROM ai_interaction_record;
 ```
 
-To inspect recent AI interaction rows for ticket summary:
+To inspect recent AI interaction rows for ticket summary or ticket triage:
 
 ```sql
 SELECT id,

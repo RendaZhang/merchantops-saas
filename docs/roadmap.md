@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -19,15 +19,14 @@ Last updated: 2026-03-19
 
 Week 6 should stay narrow and workflow-oriented:
 
-- the first public AI slice is ticket summary only: `POST /api/v1/tickets/{id}/ai-summary`
-- keep the current slice suggestion-only, read-only, tenant-scoped, RBAC-scoped, and failure-tolerant
-- preserve explicit prompt versioning, model tracking, latency capture, and separate AI interaction persistence from the first public slice onward
+- the current public AI slices are ticket summary and ticket triage: `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage`
+- keep the current slices suggestion-only, read-only, tenant-scoped, RBAC-scoped, and failure-tolerant
+- preserve explicit prompt versioning, model tracking, latency capture, and separate AI interaction persistence across the public ticket AI slices
 - keep the completed Week 5 import baseline stable while Week 6 AI work expands carefully
 
 ## Recommended Next Steps
 
-- keep the ticket summary contract stable while validating provider configuration, timeout behavior, and golden-sample regression coverage
-- add ticket triage suggestion next only if it reuses the same tenant, RBAC, audit, and degradation boundaries
+- keep the ticket summary and ticket triage contracts stable while validating provider configuration, timeout behavior, and golden-sample regression coverage
 - consider reply-draft suggestion after summary and triage are credible, still without widening into automatic write-back
 - avoid turning Week 6 into a generic chatbot shell, agent loop, or tenant-BYOK project before the narrow ticket slices are proven
 

@@ -32,9 +32,10 @@ Shared application configuration currently includes:
 - Swagger UI tag sorting: alphabetical
 - Swagger authorization persistence enabled
 - Swagger try-it-out enabled by default
-- AI summary defaults:
+- AI ticket-copilot defaults:
   - `merchantops.ai.enabled=false`
   - `merchantops.ai.prompt-version=ticket-summary-v1`
+  - `merchantops.ai.triage-prompt-version=ticket-triage-v1`
   - `merchantops.ai.model-id=`
   - `merchantops.ai.timeout-ms=5000`
   - `merchantops.ai.openai.base-url=https://api.openai.com`
@@ -65,6 +66,7 @@ Shared application configuration currently includes:
 - `JWT_EXPIRE_SECONDS`
 - `MERCHANTOPS_AI_ENABLED`
 - `MERCHANTOPS_AI_PROMPT_VERSION`
+- `MERCHANTOPS_AI_TRIAGE_PROMPT_VERSION`
 - `MERCHANTOPS_AI_MODEL_ID`
 - `MERCHANTOPS_AI_TIMEOUT_MS`
 - `MERCHANTOPS_AI_OPENAI_BASE_URL`
@@ -79,12 +81,13 @@ Shared application configuration currently includes:
 
 ## AI Provider Controls
 
-- `merchantops.ai.enabled` gates the public ticket AI summary endpoint. When `false`, `POST /api/v1/tickets/{id}/ai-summary` returns `503 SERVICE_UNAVAILABLE` with `ticket ai summary is disabled`.
-- `merchantops.ai.prompt-version` is the explicit prompt identifier stored into `ai_interaction_record` and returned in the public AI summary response.
+- `merchantops.ai.enabled` gates the public ticket AI summary and ticket AI triage endpoints. When `false`, those endpoints return controlled `503 SERVICE_UNAVAILABLE` responses such as `ticket ai summary is disabled` or `ticket ai triage is disabled`.
+- `merchantops.ai.prompt-version` is the explicit summary prompt identifier stored into `ai_interaction_record` and returned in the public AI summary response.
+- `merchantops.ai.triage-prompt-version` is the explicit triage prompt identifier stored into `ai_interaction_record` and returned in the public AI triage response.
 - `merchantops.ai.model-id` is the deployment-selected model identifier sent to the provider and recorded for traceability.
-- `merchantops.ai.timeout-ms` controls provider connect and read timeouts for the current OpenAI-backed summary adapter.
-- `merchantops.ai.openai.base-url` and `merchantops.ai.openai.api-key` are the minimum current provider settings for the Week 6 ticket summary slice.
-- Leaving the model id or provider credentials blank keeps the rest of the application usable; only the AI summary endpoint degrades with a controlled `503`.
+- `merchantops.ai.timeout-ms` controls provider connect and read timeouts for the current OpenAI-backed ticket AI adapters.
+- `merchantops.ai.openai.base-url` and `merchantops.ai.openai.api-key` are the minimum current provider settings for the Week 6 ticket summary and ticket triage slices.
+- Leaving the model id or provider credentials blank keeps the rest of the application usable; only the public ticket AI endpoints degrade with controlled `503` responses.
 
 ## Import Processing Controls
 

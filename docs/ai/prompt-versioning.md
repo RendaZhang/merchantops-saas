@@ -1,19 +1,19 @@
 # Prompt Versioning
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 
 ## Goal
 
 Prompt changes should be reviewable and traceable in the same way code changes are reviewable and traceable.
 
-This document defines the lightweight prompt-versioning approach used by the current ticket-summary AI slice and expected for future AI workflow features.
+This document defines the lightweight prompt-versioning approach used by the current ticket-summary and ticket-triage AI slices and expected for future AI workflow features.
 
 ## Current Boundary
 
 As of today:
 
-- one public AI endpoint exists: `POST /api/v1/tickets/{id}/ai-summary`
-- the current prompt version is `ticket-summary-v1`
+- two public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary` and `POST /api/v1/tickets/{id}/ai-triage`
+- the current prompt versions are `ticket-summary-v1` and `ticket-triage-v1`
 - the public response returns `promptVersion`
 - `ai_interaction_record` persists the prompt version for each AI invocation
 - prompt text still lives in code-side prompt builders rather than a separate prompt registry
@@ -48,8 +48,9 @@ Keep version ids stable and human-readable. Avoid storing `latest` as a producti
 
 Today the live prompt version is carried by configuration and code together:
 
-- `merchantops.ai.prompt-version` stores the public and persisted version identifier
-- the ticket-summary prompt text currently lives in `TicketSummaryPromptBuilder`
+- `merchantops.ai.prompt-version` stores the public and persisted summary version identifier
+- `merchantops.ai.triage-prompt-version` stores the public and persisted triage version identifier
+- the current prompt text lives in `TicketSummaryPromptBuilder` and `TicketTriagePromptBuilder`
 
 That is acceptable for the first slice because the public contract and stored audit record already expose an explicit version id.
 

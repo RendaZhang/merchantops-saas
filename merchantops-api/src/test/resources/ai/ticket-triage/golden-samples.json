@@ -1,0 +1,45 @@
+[
+  {
+    "ticketId": 9101,
+    "tenantId": 1,
+    "title": "POS printer offline",
+    "description": "Store POS printer stopped responding during lunch peak.",
+    "status": "OPEN",
+    "assigneeUsername": null,
+    "createdBy": 101,
+    "createdByUsername": "admin",
+    "createdAt": "2026-03-21T09:00:00",
+    "updatedAt": "2026-03-21T09:05:00",
+    "comments": [
+      {
+        "id": 511,
+        "ticketId": 9101,
+        "content": "Cashier reports checkout is blocked until the printer is working again.",
+        "createdBy": 102,
+        "createdByUsername": "ops",
+        "createdAt": "2026-03-21T09:03:00"
+      }
+    ],
+    "operationLogs": [
+      {
+        "id": 611,
+        "operationType": "CREATED",
+        "detail": "ticket created",
+        "operatorId": 101,
+        "operatorUsername": "admin",
+        "createdAt": "2026-03-21T09:00:00"
+      },
+      {
+        "id": 612,
+        "operationType": "COMMENTED",
+        "detail": "comment added",
+        "operatorId": 102,
+        "operatorUsername": "ops",
+        "createdAt": "2026-03-21T09:03:00"
+      }
+    ],
+    "expectedClassification": "DEVICE_ISSUE",
+    "expectedPriority": "HIGH",
+    "expectedReasoning": "The ticket describes a printer outage blocking store operations during peak hours, so it should be treated as a high-priority device issue."
+  }
+]

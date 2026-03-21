@@ -1,6 +1,6 @@
 # Automated Tests
 
-Last updated: 2026-03-19
+Last updated: 2026-03-21
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
@@ -28,14 +28,14 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-5 public workflow baseline plus the active Week 6 ticket AI summary path. Today that means:
+Current automated coverage is centered on the completed Week 2-5 public workflow baseline plus the active Week 6 ticket AI summary and ticket AI triage paths. Today that means:
 
-- auth and permission checks for the current public user-management, ticket, AI summary, audit, approval, and import-job endpoints
-- controller binding and request-scoped forwarding for the current public workflow surface, including the AI summary endpoint
+- auth and permission checks for the current public user-management, ticket, AI summary, AI triage, audit, approval, and import-job endpoints
+- controller binding and request-scoped forwarding for the current public workflow surface, including the AI summary and AI triage endpoints
 - tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, stale-processing redelivery handling, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
-- AI summary prompt-version and golden-sample regression coverage
+- AI summary and AI triage prompt-version and golden-sample regression coverage
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -82,6 +82,12 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
   - `403` when `TICKET_READ` is missing
   - `404` for cross-tenant ticket access
   - `503` when AI is disabled or the provider times out, with controlled persisted status values
+- `TicketAiTriageIntegrationTest`
+  - real `POST /api/v1/tickets/{id}/ai-triage` happy path for a `TICKET_READ` user with database assertions on `ai_interaction_record`
+  - `403` when `TICKET_READ` is missing
+  - `404` for cross-tenant ticket access
+  - `503` when AI is disabled or the provider times out, with controlled persisted status values
+  - no-side-effect assertions for ticket fields, comments, workflow logs, and audit rows
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -124,8 +130,14 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
   - HTTP request binding for `POST /api/v1/tickets/{id}/ai-summary`
   - `401` when authentication is missing and `403` when `TICKET_READ` is missing
   - request-scoped forwarding of `tenantId`, `userId`, and `requestId` to `TicketAiSummaryService`
+- `TicketAiTriageControllerTest`
+  - HTTP request binding for `POST /api/v1/tickets/{id}/ai-triage`
+  - `401` when authentication is missing and `403` when `TICKET_READ` is missing
+  - request-scoped forwarding of `tenantId`, `userId`, and `requestId` to `TicketAiTriageService`
 - `TicketSummaryGoldenSampleTest`
   - stable stubbed summary formatting against checked-in ticket golden samples
+- `TicketTriageGoldenSampleTest`
+  - stable stubbed triage formatting against checked-in ticket golden samples
 - `TicketQueryServiceTest`
   - page defaulting, filter normalization, and invalid filter-combination rejection for ticket list
   - ticket detail mapping for assignee, comments, and workflow logs
@@ -183,7 +195,7 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and live provider wiring for AI summary
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and live provider wiring for AI summary and AI triage
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
