@@ -142,9 +142,11 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 当前计划锚点
 
-- 当前执行已经推进到 Week 6 AI Copilot for Ticket Operations。
+- 当前执行已经把 Week 6 AI Copilot for Ticket Operations 推进到 completion-ready。
 - Week 1-5 已构成当前稳定 workflow baseline，其中 Week 5 已完成导入提交、错误报告、顺序 chunk 执行、处理中计数推进、失败行 replay、whole-file replay、按精确 errorCode 的 selective replay、edited failed-row replay，以及队列恢复与 stale-processing runtime hardening。
 - 当前 tagged baseline 已是 `v0.2.0-alpha`，对应 `Week 5 complete: async import and data operations preview`。
+- 当前准备中的下一枚 tag 是 `v0.3.0-beta`，意图记录 Week 6 AI Copilot for Ticket Operations 的第一个较正式 AI-enhanced release cut；在 tag 真正创建前，它仍然只是 prepared next tag。
+- Week 6 tag cut 之后，近期待办会切到 Week 7 import and data-quality AI。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -534,10 +536,15 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - 你有一个可信的运营工作流和异步处理链路
 - 项目适合整理成下一阶段开源预览版，例如 `v0.2.0-alpha`
 
+### Week 6 结束时
+
+- 你有一个可信的 ticket AI Copilot baseline，包括 interaction history、摘要、分类/优先级建议和内部回复草稿
+- 项目适合整理成第一条更正式的 AI-enhanced 开源发布，例如 `v0.3.0-beta`
+
 ### Week 7 结束时
 
-- 你有至少一个真实工作流里的 AI Copilot
-- 项目适合以“AI-enhanced vertical SaaS”定位做第一次较正式的公开开源发布，例如 `v0.3.0-beta`
+- 你有 ticket workflow 和 import/data-quality 两个真实工作流里的 AI Copilot
+- 项目适合把 AI-enhanced vertical SaaS 的公开叙事从 ticket baseline 扩到双场景 workflow baseline
 
 ### Week 8 结束时
 
@@ -563,8 +570,9 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 ### 推荐发布时间点
 
 - 当前 tagged baseline：`v0.2.0-alpha`，对应 `Week 5 complete: async import and data operations preview`
+- prepared next tag：`v0.3.0-beta`，目标是记录 Week 6 AI Copilot for Ticket Operations 的 release-cut baseline；在 tag 创建前不要把它写成 current tag
 - 详细版本历史以 `CHANGELOG.md` 和 `docs/contributing/release-versioning.md` 为准
-- Week 6-7 后：带第一个 AI Copilot 的公开版本，例如 `v0.3.0-beta`
+- Week 7 后：继续把公开叙事从 ticket AI 扩到 import/data-quality AI，而不是把 `v0.3.0-beta` 继续拖成更晚的 tag
 - Week 10 后：更稳定的开源参考实现，可作为商业探索起点
 
 ### 开源前最低准备项

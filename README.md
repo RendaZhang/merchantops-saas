@@ -8,14 +8,16 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 - Current tagged milestone: `v0.2.0-alpha`
 - Milestone meaning: `Week 5 complete: async import and data operations preview`
-- Next active phase: Week 6 AI Copilot for Ticket Operations
-- Release maturity: alpha preview, not production-ready
+- Current worktree milestone: Week 6 AI Copilot for Ticket Operations (`completion-ready`)
+- Prepared next tag: `v0.3.0-beta`
+- Next active phase after tag cut: Week 7 AI Copilot for Import and Data Quality
+- Release maturity: pre-tag beta candidate, not production-ready
 - Prior baseline: `v0.1.3` for the completed Week 4 audit and approval baseline
 
 ## Current Capabilities
 
 - Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
-- Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, narrowed AI interaction-history reads, and suggestion-only AI summary, triage, and internal reply-draft generation paths
+- Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, narrowed AI interaction-history reads with runtime usage/cost metadata, and suggestion-only AI summary, triage, and internal reply-draft generation paths
 - Audit-event query backbone plus minimal approval flow for `USER_STATUS_DISABLE`
 - Async import jobs with create, list, detail, paged error reporting, failed-row replay, whole-file replay, selective replay, edited replay, queued-job recovery, and stale-processing safeguards
 - JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
@@ -24,7 +26,7 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 - The public import surface currently supports one business import type only: `USER_CSV`
 - There is no frontend or tenant admin UI in this repository
-- The current public AI surface is limited to one narrowed ticket AI interaction-history read endpoint plus three suggestion-only ticket generation endpoints: summary, triage, and internal reply draft; broader ticket AI flows and any AI write-back remain pending
+- The current public AI surface is limited to one narrowed ticket AI interaction-history read endpoint with runtime usage/cost metadata plus three suggestion-only ticket generation endpoints: summary, triage, and internal reply draft; broader ticket AI flows and any AI write-back remain pending
 - This release line is intended for evaluation and contribution, not production deployment
 
 ## Quick Start

@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-03-19
+Last updated: 2026-03-22
 
 ## Purpose
 
@@ -13,6 +13,13 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 - tag message: `Week 5 complete: async import and data operations preview`
 
 This tag records the completed Week 5 async import and data operations baseline and opens the first explicit preview line beyond the early `v0.1.x` milestones.
+
+## Prepared Next Tag
+
+- prepared next tag: `v0.3.0-beta`
+- intended meaning: `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
+
+This is the intended next release-cut tag for the current Week 6 completion-ready worktree baseline. It is not the current tag until Git proves it exists.
 
 ## Previous Tagged Milestone
 
@@ -87,7 +94,7 @@ Recommended direction:
 - `v0.1.2`: Week 3 ticket workflow baseline complete milestone
 - `v0.1.3`: Week 4 audit and approval baseline complete milestone
 - `v0.2.0-alpha`: Week 5 async import and data operations preview line
-- `v0.3.0-beta`: first public AI-enhanced release after Week 6 or Week 7
+- `v0.3.0-beta`: prepared next tag for the Week 6 AI Copilot for Ticket Operations release cut
 - later `v0.x` releases: governance, usage tracking, hardening, and packaging milestones
 
 ## Practical Rules
@@ -112,6 +119,12 @@ When using a release-cut commit that will be tagged immediately:
 1. align [../project-status.md](../project-status.md), [../roadmap.md](../roadmap.md), and [../project-plan.md](../project-plan.md) with the new tagged phase framing
 2. update [../../CHANGELOG.md](../../CHANGELOG.md), [../../README.md](../../README.md), and this page to the new tagged state on the same commit
 3. create the Git tag immediately after that commit so the docs do not temporarily drift from Git reality
+
+When preparing docs before a tag that has not been created yet:
+
+1. keep the current tagged milestone unchanged
+2. refer to the intended new version as a prepared next tag instead of writing it as current Git reality
+3. keep `CHANGELOG.md` notes in `Unreleased` until the tag is actually cut
 
 ## Related Documents
 

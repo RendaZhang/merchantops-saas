@@ -16,7 +16,9 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 ### Changed
 
 - Week 6 AI runtime now persists dedicated `ai_interaction_record` rows instead of overloading generic business audit rows, capturing prompt version, model id, status, latency, request id, and output metadata for the public ticket interaction-history, summary, triage, and reply-draft slices.
-- AI configuration, ticket workflow docs, API examples, automated coverage notes, and AI regression guidance now reflect the public ticket interaction-history, summary, triage, and reply-draft baselines plus their controlled degradation and narrowed read-surface paths.
+- `GET /api/v1/tickets/{id}/ai-interactions` now exposes operator-visible usage tokens and raw micros cost metadata when available while still hiding raw prompt text and raw provider payloads.
+- Import execution now requeues fresh `PROCESSING` redelivery and preserves handled chunk progress before terminal runtime failure through an internal execution service path.
+- AI configuration, ticket workflow docs, API examples, automated coverage notes, quick-start/build guidance, and AI regression guidance now reflect the Week 6 ticket AI release-cut baseline plus the latest import execution hardening.
 
 ## [v0.2.0-alpha] - 2026-03-19
 
