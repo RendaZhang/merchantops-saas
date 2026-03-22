@@ -1,6 +1,6 @@
 # MerchantOps SaaS
 
-`v0.2.0-alpha` | workflow-first, AI-enhanced vertical SaaS backend
+`v0.3.0-beta` | workflow-first, AI-enhanced vertical SaaS backend
 
 MerchantOps SaaS is an open-source, multi-tenant backend reference implementation for merchant operations workflows. It combines tenant isolation, JWT and RBAC security, ticket workflow execution, audit and approval patterns, and async import/data-operations flows in a modular Spring Boot codebase.
 

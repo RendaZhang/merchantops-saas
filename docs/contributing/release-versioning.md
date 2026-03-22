@@ -110,17 +110,17 @@ When a new release tag is created:
 2. update any docs that mention the current release baseline or next planned release
 3. keep planning docs consistent with already-used version numbers
 
-When using a release-cut commit that will be tagged immediately:
+When using `DOC pre-tag` or another release-cut commit that will be tagged immediately:
 
 1. align [../project-status.md](../project-status.md), [../roadmap.md](../roadmap.md), and [../project-plan.md](../project-plan.md) with the new tagged phase framing
 2. update [../../CHANGELOG.md](../../CHANGELOG.md), [../../README.md](../../README.md), and this page to the new tagged state on the same commit
 3. create the Git tag immediately after that commit so the docs do not temporarily drift from Git reality
 
-When preparing docs before a tag that has not been created yet:
+When doing earlier planning or tag-readiness work before the release-cut commit exists:
 
 1. keep the current tagged milestone unchanged
 2. refer to the intended new version as a prepared next tag instead of writing it as current Git reality
-3. keep `CHANGELOG.md` notes in `Unreleased` until the tag is actually cut
+3. keep `CHANGELOG.md` notes in `Unreleased` until the release-cut commit is ready
 
 ## Related Documents
 

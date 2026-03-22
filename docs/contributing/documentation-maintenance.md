@@ -1,6 +1,6 @@
 # Documentation Maintenance
 
-Last updated: 2026-03-19
+Last updated: 2026-03-22
 
 ## Purpose
 
@@ -181,12 +181,17 @@ Update when needed:
 - `docs/roadmap.md` if the planned release sequence changed
 - `README.md` if the current tagged milestone summary changed
 
-Before a new tag is created:
+For `DOC pre-tag` or another release-cut commit that will be tagged immediately:
 
 - align `docs/project-status.md`, `docs/roadmap.md`, and `docs/project-plan.md` with the current phase framing
-- prepare `CHANGELOG.md` for the intended release cut
-- update `README.md` and `docs/contributing/release-versioning.md` only up to the prepared next-tag state unless the same release-cut commit will be tagged immediately
-- if using a release-cut commit that already reflects the tagged state, create the Git tag immediately after that commit so docs and Git do not drift
+- update `CHANGELOG.md`, `README.md`, and `docs/contributing/release-versioning.md` to the intended new tagged state on that same commit
+- create the Git tag immediately after that commit so docs and Git do not drift
+
+For earlier planning or tag-readiness passes before the release-cut commit exists:
+
+- keep the current tagged milestone unchanged
+- describe the intended new version as a prepared next tag instead of current Git reality
+- keep `CHANGELOG.md` notes in `Unreleased` until the release-cut commit is ready
 
 Treat the following as the minimum tag-ready doc checklist:
 
@@ -197,7 +202,7 @@ Treat the following as the minimum tag-ready doc checklist:
 
 Also update when the tagged baseline summary or milestone framing changed:
 
-- `README.md`
+- `README.md`, including any top-of-file version banner or release-line wording
 - `docs/project-plan.md`
 
 ## Update Matrix By Phase Or Node

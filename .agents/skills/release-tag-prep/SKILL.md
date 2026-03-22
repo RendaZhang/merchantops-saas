@@ -27,12 +27,13 @@ Use this skill to keep tag-related docs consistent without mixing release histor
    - [../../../README.md](../../../README.md): high-level current baseline only
    - `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `.github` templates: open-source entry and community expectations for a public release cut
 4. Prepare docs before a tag:
-   - keep `Unreleased` limited to release-level changes supported by the current diff
+   - for `DOC pre-tag`, treat the work as the release-cut commit that will be tagged immediately unless the requester explicitly asked only for an earlier planning or tag-check pass
+   - keep `Unreleased` limited to release-level changes supported by the current diff until the release-cut commit is ready
    - align phase completion and next active phase in status and roadmap
-   - update high-level baseline text without claiming the tag already exists unless the user explicitly confirmed it or git proves it
-   - treat the tag-ready minimum doc set as mandatory: `CHANGELOG.md`, `docs/contributing/release-versioning.md`, `docs/project-status.md`, and `docs/roadmap.md`
-   - also update `README.md` when the current tagged milestone summary changed
+   - when the release-cut commit is being prepared, update the minimum doc set to the intended new tagged state: `CHANGELOG.md`, `docs/contributing/release-versioning.md`, `docs/project-status.md`, and `docs/roadmap.md`
+   - also update `README.md` when the current tagged milestone summary changed, including any top-of-file version banner, release line, or other high-visibility baseline wording
    - also update `docs/project-plan.md` when milestone framing, release cadence, or the current planning anchor changed
+   - stage the release-doc changes together and generate commit guidance for that release-cut commit
 5. Handle open-source release-cut work when the same commit will be tagged immediately:
    - allow tagged-state wording only when the user explicitly confirmed the release-cut flow
    - ensure changelog, release-versioning, README, status, roadmap, and plan all reflect the same current tag and prior baseline
@@ -68,7 +69,7 @@ Treat these checks as required, not optional, whenever a tag is being prepared o
 
 Review and update when the change supports it:
 
-- [../../../README.md](../../../README.md): current tagged milestone summary and high-level capability baseline
+- [../../../README.md](../../../README.md): current tagged milestone summary, top-of-file version banner, and high-level capability baseline
 - [docs/project-plan.md](../../../docs/project-plan.md): planning anchor, release cadence, and milestone framing
 
 For open-source release cuts, also confirm:

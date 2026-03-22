@@ -68,7 +68,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Supported shortcuts include:
   - `DOC staged`: inspect the staged diff first and identify which docs must change
   - `DOC last`: inspect the most recent commit (`HEAD^..HEAD`) first and identify which docs should have changed or still need follow-up updates
-  - `DOC pre-tag`: run the final release-doc sync before a tag cut; use prepared-next-tag wording by default, or tagged-state wording only when the same commit will be tagged immediately
+  - `DOC pre-tag`: run the final release-doc sync for the release-cut commit, update docs to the intended new tagged state, stage the doc changes, and create the Git tag immediately after that same commit lands
   - `DOC route`: map the current change to the required doc updates using [docs/contributing/documentation-maintenance.md](docs/contributing/documentation-maintenance.md)
   - `DOC sync`: align affected docs with the current implementation, keeping `public`, `planned`, and `internal` wording correct
   - `DOC nav`: update `README.md`, `docs/README.md`, and the relevant index pages when docs were added, moved, or renamed
