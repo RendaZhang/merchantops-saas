@@ -102,6 +102,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before changing tenant-scoped repositories, services, DTOs, or user-management internals.
 - Keep tenant scoping explicit and keep query/write models separated.
 - Use the linked development guidance for detailed rules on `operatorId` / `requestId` propagation, internal attribution fields, and request-time access revalidation.
+- For large repetitive or cross-file edits, prefer scoped Python or Node transforms over a single giant `apply_patch`; keep the detailed execution guidance in the linked development guidance page.
 - Do not present internal groundwork as public API.
 - For public suggestion-only AI endpoints, if provider data fails local output-policy validation after the provider returns, keep that path mapped as `AiProviderException(INVALID_RESPONSE)` so `ai_interaction_record` preserves `INVALID_RESPONSE` rather than collapsing into a generic business error.
 - If implementation changes affect public contract or reusable repo rules, update the linked docs in the same change.

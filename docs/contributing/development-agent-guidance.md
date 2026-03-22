@@ -1,6 +1,6 @@
 # Development Agent Guidance
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 ## Purpose
 
@@ -41,6 +41,14 @@ Use it when changing code or development-facing documentation.
 - Command DTOs must describe allowed write inputs only.
 - Unimplemented business flows must throw unified business exceptions, not raw framework or JDK exceptions.
 - If a write can change effective access state such as user status, roles, or permissions, request-time authentication must revalidate that state and reject stale JWT claims instead of relying on login-time checks alone.
+
+### Large-Scale Edit Strategy
+
+- Use `apply_patch` for localized manual edits and small review-friendly diffs.
+- For repetitive or cross-file transforms, prefer scoped Python or Node scripts over a single giant `apply_patch`.
+- Keep scripted rewrites narrow enough that the resulting diff can still be reviewed by directory, file class, or transform shape instead of as one opaque bulk edit.
+- Review generated diffs before commit and run the smallest verification set that proves the scripted rewrite did not spill into unrelated behavior.
+- Only keep helper scripts in the repository when they are reusable tooling; remove one-off migration or refactor helpers before finishing the task.
 
 ### Tenant Scope Rules
 
