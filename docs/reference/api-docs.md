@@ -54,6 +54,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/users/{id}/disable-requests` | Yes + `USER_WRITE` | Create a pending approval request for disabling a user |
 | `GET` | `/api/v1/tickets` | Yes + `TICKET_READ` | Page tickets in current tenant |
 | `GET` | `/api/v1/tickets/{id}` | Yes + `TICKET_READ` | Get one tenant-scoped ticket detail with comments and workflow logs |
+| `GET` | `/api/v1/tickets/{id}/ai-interactions` | Yes + `TICKET_READ` | Page narrowed stored AI interaction history for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | Yes + `TICKET_READ` | Generate a suggestion-only AI summary for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | Yes + `TICKET_READ` | Generate a suggestion-only AI triage result for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Yes + `TICKET_READ` | Generate a suggestion-only AI internal reply draft for one current-tenant ticket |
@@ -98,9 +99,11 @@ User Management tag note:
 
 Ticket Workflow tag note:
 
-- Swagger currently exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`.
+- Swagger currently exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`.
 - `GET /api/v1/tickets` supports `page`, `size`, `status`, `assigneeId`, `keyword` (title/description), and `unassignedOnly`.
 - `GET /api/v1/tickets/{id}` includes current comments and workflow-level operation logs.
+- `GET /api/v1/tickets/{id}/ai-interactions` supports `page`, `size`, `interactionType`, and `status`, with stable ordering `createdAt DESC, id DESC`.
+- `GET /api/v1/tickets/{id}/ai-interactions` exposes a narrowed read shape only and does not expose raw prompt text, raw provider payload, token counts, or cost fields.
 - `POST /api/v1/tickets/{id}/ai-reply-draft` exposes no request body and returns a structured internal comment draft plus assembled `draftText`.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.

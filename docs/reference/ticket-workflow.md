@@ -1,15 +1,16 @@
 # Ticket Workflow
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 ## Public API Surface
 
-Swagger currently exposes nine ticket-workflow endpoints:
+Swagger currently exposes ten ticket-workflow endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
 | `GET` | `/api/v1/tickets` | Bearer JWT | `TICKET_READ` | Pages tickets in the current tenant |
 | `GET` | `/api/v1/tickets/{id}` | Bearer JWT | `TICKET_READ` | Returns one current-tenant ticket with comments and workflow logs |
+| `GET` | `/api/v1/tickets/{id}/ai-interactions` | Bearer JWT | `TICKET_READ` | Returns a narrowed page of stored AI interaction history for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only AI summary from the current ticket detail context |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | Bearer JWT | `TICKET_READ` | Generates suggestion-only AI classification and priority guidance from the current ticket detail context |
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only internal ticket comment draft from the current ticket detail context |
@@ -29,6 +30,7 @@ Current Week 3-6 ticket workflow keeps the business state model narrow:
 - read permission: `TICKET_READ`
 - workflow log event types: `CREATED`, `ASSIGNED`, `STATUS_CHANGED`, `COMMENTED`
 - AI summary, triage, and reply-draft behavior: suggestion-only, read-only, and non-mutating
+- AI interaction history behavior: read-only operator visibility over stored `ai_interaction_record` rows only
 
 Current transition rules:
 
@@ -104,6 +106,63 @@ Response example:
   }
 }
 ```
+
+## `GET /api/v1/tickets/{id}/ai-interactions`
+
+Current behavior:
+
+- requires `TICKET_READ`
+- loads the target ticket through the existing tenant-scoped ticket read boundary before querying stored AI history
+- supports `page`, `size`, `interactionType`, and `status`
+- reads only `ai_interaction_record` rows for `entityType=TICKET` and the target `entityId`
+- returns a page ordered by `createdAt DESC`, then `id DESC`
+- exposes only `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`
+- does not expose raw prompt text, raw provider payloads, token counts, or cost fields
+- does not create new AI records, mutate ticket state, write comments, or trigger approvals
+
+Response example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 9003,
+        "interactionType": "TRIAGE",
+        "status": "INVALID_RESPONSE",
+        "outputSummary": null,
+        "promptVersion": "ticket-triage-v1",
+        "modelId": "gpt-4.1-mini",
+        "latencyMs": 251,
+        "requestId": "ticket-ai-triage-invalid-response-1",
+        "createdAt": "2026-03-22T09:00:00"
+      },
+      {
+        "id": 9002,
+        "interactionType": "REPLY_DRAFT",
+        "status": "SUCCEEDED",
+        "outputSummary": "nextStep=Confirm whether the replacement restored printer health and note any blocker before moving toward closure.",
+        "promptVersion": "ticket-reply-draft-v1",
+        "modelId": "gpt-4.1-mini",
+        "latencyMs": 436,
+        "requestId": "ticket-ai-reply-draft-req-1",
+        "createdAt": "2026-03-22T09:00:00"
+      }
+    ],
+    "page": 0,
+    "size": 2,
+    "total": 3,
+    "totalPages": 2
+  }
+}
+```
+
+Failure examples:
+
+- missing `TICKET_READ`: `403`, message `permission denied`
+- ticket outside the current tenant: `404`, message `ticket not found`
 
 ## `POST /api/v1/tickets/{id}/ai-summary`
 
@@ -278,6 +337,7 @@ Current ticket-related tracking is intentionally split by concern:
 - ticket writes persist workflow history into `ticket_operation_log`
 - ticket writes also emit governance-oriented `audit_event` rows where applicable
 - AI summary, triage, and reply-draft calls persist runtime traceability into `ai_interaction_record`
+- AI history reads expose a narrowed page over `ai_interaction_record` without exposing raw prompt, provider payload, usage, or cost columns
 - the public ticket and AI response shapes do not expose raw provider payloads or internal audit tables directly
 
 ## Demo Roles
@@ -290,9 +350,9 @@ Current seeded ticket permissions:
 
 That means:
 
-- `admin` can create, assign, update status, comment, and request AI summaries, triage suggestions, or reply drafts
-- `ops` can create, assign, update status, comment, and request AI summaries, triage suggestions, or reply drafts
-- `viewer` can list, view details, and request AI summaries, triage suggestions, or reply drafts, but cannot write
+- `admin` can create, assign, update status, comment, and access AI summaries, triage suggestions, reply drafts, and ticket AI interaction history
+- `ops` can create, assign, update status, comment, and access AI summaries, triage suggestions, reply drafts, and ticket AI interaction history
+- `viewer` can list, view details, and access AI summaries, triage suggestions, reply drafts, and ticket AI interaction history, but cannot write
 
 If `viewer` is promoted through `PUT /api/v1/users/{id}/roles`, old JWT claims become stale immediately. The user must log in again before the new ticket permissions apply.
 
@@ -301,7 +361,7 @@ If `viewer` is promoted through `PUT /api/v1/users/{id}/roles`, old JWT claims b
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - [api-docs.md](api-docs.md): endpoint coverage matrix
 - [authentication-and-rbac.md](authentication-and-rbac.md): JWT and permission expectations
-- [ai-integration.md](ai-integration.md): AI summary, triage, and reply-draft contracts plus runtime boundary
+- [ai-integration.md](ai-integration.md): AI summary, triage, reply-draft, and interaction-history contracts plus runtime boundary
 - [../runbooks/automated-tests.md](../runbooks/automated-tests.md): automated coverage
 - [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md): AI-specific regression checks
 - [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md): live verification flow

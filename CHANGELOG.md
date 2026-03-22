@@ -8,14 +8,15 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ### Added
 
+- Added a fourth public Week 6 AI Copilot slice through `GET /api/v1/tickets/{id}/ai-interactions`, a tenant-scoped narrowed read endpoint for stored ticket AI interaction history with `interactionType` and `status` filters.
 - Added the first public Week 6 AI Copilot slice through `POST /api/v1/tickets/{id}/ai-summary`, a tenant-scoped suggestion-only summary endpoint for one current-tenant ticket.
 - Added the second public Week 6 AI Copilot slice through `POST /api/v1/tickets/{id}/ai-triage`, a tenant-scoped suggestion-only classification and priority endpoint for one current-tenant ticket.
 - Added the third public Week 6 AI Copilot slice through `POST /api/v1/tickets/{id}/ai-reply-draft`, a tenant-scoped suggestion-only internal reply-draft endpoint for one current-tenant ticket.
 
 ### Changed
 
-- Week 6 AI runtime now persists dedicated `ai_interaction_record` rows instead of overloading generic business audit rows, capturing prompt version, model id, status, latency, request id, and output metadata for the public ticket summary, triage, and reply-draft slices.
-- AI configuration, ticket workflow docs, API examples, automated coverage notes, and AI regression guidance now reflect the public ticket summary, triage, and reply-draft baselines plus their controlled degradation paths.
+- Week 6 AI runtime now persists dedicated `ai_interaction_record` rows instead of overloading generic business audit rows, capturing prompt version, model id, status, latency, request id, and output metadata for the public ticket interaction-history, summary, triage, and reply-draft slices.
+- AI configuration, ticket workflow docs, API examples, automated coverage notes, and AI regression guidance now reflect the public ticket interaction-history, summary, triage, and reply-draft baselines plus their controlled degradation and narrowed read-surface paths.
 
 ## [v0.2.0-alpha] - 2026-03-19
 

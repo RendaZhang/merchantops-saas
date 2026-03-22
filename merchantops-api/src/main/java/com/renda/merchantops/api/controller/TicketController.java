@@ -12,6 +12,8 @@ import com.renda.merchantops.api.dto.ticket.command.TicketCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketWriteResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiTriageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
@@ -81,6 +83,14 @@ public class TicketController implements TicketManagementApi {
         Long userId = ContextAccess.requireUserId();
         String requestId = RequestIdAccess.currentRequestId();
         return ApiResponse.success(ticketAiReplyDraftService.generateReplyDraft(tenantId, userId, requestId, id));
+    }
+
+    @Override
+    @RequirePermission("TICKET_READ")
+    public ApiResponse<TicketAiInteractionPageResponse> listAiInteractions(@PathVariable("id") Long id,
+                                                                           TicketAiInteractionPageQuery query) {
+        Long tenantId = ContextAccess.requireTenantId();
+        return ApiResponse.success(ticketQueryService.pageTicketAiInteractions(tenantId, id, query));
     }
 
     @Override

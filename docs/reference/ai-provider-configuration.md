@@ -20,7 +20,8 @@ Definition:
 
 - one MerchantOps deployment owns one provider configuration for its public AI features
 - the configuration is managed by the operator of that deployment, not by ordinary tenant users
-- the current public AI surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
+- the current provider-driven AI generation surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
+- the ticket AI interaction history endpoint `GET /api/v1/tickets/{id}/ai-interactions` reuses stored records and does not trigger a provider call
 
 This means the current Week 6 slice does not support tenant-specific model keys or tenant-managed provider setup.
 

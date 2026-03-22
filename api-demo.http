@@ -210,6 +210,15 @@ Content-Type: {{contentType}}
 GET {{baseUrl}}/api/v1/tickets/{{ticketId}}
 Authorization: Bearer {{token}}
 
+### Get tenant ticket AI interaction history
+GET {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-interactions?page=0&size=10
+Authorization: Bearer {{token}}
+
+### Get tenant ticket AI interaction history - filtered
+# Canonical filter values are uppercase exact matches such as SUMMARY, TRIAGE, REPLY_DRAFT and SUCCEEDED, INVALID_RESPONSE.
+GET {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-interactions?page=0&size=10&interactionType=SUMMARY&status=SUCCEEDED
+Authorization: Bearer {{token}}
+
 ### Generate tenant ticket AI summary
 # Requires merchantops.ai.enabled=true plus a configured instance-level provider.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-summary

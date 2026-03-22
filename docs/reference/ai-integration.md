@@ -1,6 +1,6 @@
 # AI Integration
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 ## Purpose
 
@@ -19,14 +19,16 @@ The current public AI contracts are now live:
 
 | Method | Path | Permission | Current Scope |
 | --- | --- | --- | --- |
+| `GET` | `/api/v1/tickets/{id}/ai-interactions` | `TICKET_READ` | Page operator-visible AI interaction history for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | `TICKET_READ` | Generate a suggestion-only summary for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | `TICKET_READ` | Generate suggestion-only classification and priority guidance for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | `TICKET_READ` | Generate a suggestion-only internal ticket comment draft for one current-tenant ticket |
 
 Current Week 6 scope is intentionally narrow:
 
-- three public AI endpoints only
-- no request body; the server derives the prompt from the current tenant-scoped ticket detail context
+- four public AI endpoints only: one history read endpoint plus three suggestion-generating endpoints
+- the generation endpoints use no request body; the server derives the prompt from the current tenant-scoped ticket detail context
+- the history endpoint supports `page`, `size`, `interactionType`, and `status` query params over stored `ai_interaction_record` rows
 - no ticket status change, comment write, approval trigger, or other workflow mutation
 - no public raw prompt, raw provider response, token breakdown, or cost breakdown in the response body
 
@@ -128,6 +130,65 @@ Example:
 }
 ```
 
+`GET /api/v1/tickets/{id}/ai-interactions` returns a narrowed page shape over stored ticket AI history:
+
+- `items[]`
+- `page`
+- `size`
+- `total`
+- `totalPages`
+
+Each `items[]` record includes:
+
+- `id`
+- `interactionType`
+- `status`
+- `outputSummary`
+- `promptVersion`
+- `modelId`
+- `latencyMs`
+- `requestId`
+- `createdAt`
+
+Example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "id": 9003,
+        "interactionType": "TRIAGE",
+        "status": "INVALID_RESPONSE",
+        "outputSummary": null,
+        "promptVersion": "ticket-triage-v1",
+        "modelId": "gpt-4.1-mini",
+        "latencyMs": 251,
+        "requestId": "ticket-ai-triage-invalid-response-1",
+        "createdAt": "2026-03-22T09:00:00"
+      },
+      {
+        "id": 9002,
+        "interactionType": "REPLY_DRAFT",
+        "status": "SUCCEEDED",
+        "outputSummary": "nextStep=Confirm whether the replacement restored printer health and note any blocker before moving toward closure.",
+        "promptVersion": "ticket-reply-draft-v1",
+        "modelId": "gpt-4.1-mini",
+        "latencyMs": 436,
+        "requestId": "ticket-ai-reply-draft-req-1",
+        "createdAt": "2026-03-22T09:00:00"
+      }
+    ],
+    "page": 0,
+    "size": 2,
+    "total": 3,
+    "totalPages": 2
+  }
+}
+```
+
 ## Current Context Assembly Boundary
 
 The current summary, triage, and reply-draft prompts are built only from the target ticket in the current tenant:
@@ -210,16 +271,16 @@ Current status values include:
 - `PROVIDER_UNAVAILABLE`
 - `INVALID_RESPONSE`
 
-This record is governance-facing internal persistence. There is no public read API for AI interaction history yet.
+This record is still the governance-facing source of truth. The public history endpoint now exposes only a narrowed read shape over those rows and intentionally does not expose raw prompt text, raw provider payloads, token counts, or cost fields.
 
 ## Evaluation Baseline
 
-The current public AI slices establish a minimal eval path:
+The current public AI slices establish a minimal eval and visibility path:
 
 - explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, and `ticket-reply-draft-v1`
 - golden-sample ticket inputs at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, and `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
 - checked-in provider-response fixtures per workflow that drive the real provider parser and service path in automated golden tests
-- focused automated tests for happy path, permission failure, tenant isolation, feature-disabled behavior, timeout degradation, request-contract assertions, multi-part `output_text` parsing, and endpoint-specific required-field validation
+- focused automated tests for generation-endpoint happy path, permission failure, tenant isolation, symmetric degraded-mode coverage, request-contract assertions, multi-part `output_text` parsing, endpoint-specific required-field validation, and history-endpoint filter/sort/non-leakage coverage
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
 
 ## Failure And Safety Expectations
@@ -228,6 +289,7 @@ Current non-happy-path behavior:
 
 - missing `TICKET_READ` remains `403`
 - cross-tenant or missing tickets remain `404`
+- `GET /api/v1/tickets/{id}/ai-interactions` is read-only and does not create new interaction rows or mutate ticket workflow state
 - disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled`
 - missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
 - raw provider exceptions are not exposed to API consumers
@@ -248,7 +310,7 @@ Not implemented yet:
 
 Near-term Week 6 follow-up work should stay in the ticket workflow lane:
 
-- stronger failure-set and policy-set eval coverage
+- a ticket-scoped public AI usage or cost read surface over existing `ai_interaction_record` data, still without exposing raw prompt or raw provider payload
 - future approval-aware write-back only after the suggestion-only slices are stable
 
 Later roadmap areas remain:

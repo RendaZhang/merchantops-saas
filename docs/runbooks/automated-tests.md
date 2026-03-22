@@ -1,6 +1,6 @@
 # Automated Tests
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
@@ -28,17 +28,19 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-5 public workflow baseline plus the active Week 6 ticket AI summary, ticket AI triage, and ticket AI reply-draft paths. Today that means:
+Current automated coverage is centered on the completed Week 2-5 public workflow baseline plus the active Week 6 ticket AI summary, ticket AI triage, ticket AI reply-draft, and ticket AI interaction-history paths. Today that means:
 
-- auth and permission checks for the current public user-management, ticket, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
-- controller binding and request-scoped forwarding for the current public workflow surface, including the AI summary, AI triage, and AI reply-draft endpoints
-- tenant-scoped query and command service behavior for users, tickets, approvals, and import jobs
+- auth and permission checks for the current public user-management, ticket, AI interaction-history, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
+- tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, stale-processing redelivery handling, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - AI summary, AI triage, and AI reply-draft prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
 - provider adapter coverage for AI summary, AI triage, and AI reply-draft, including request-contract assertions, multi-part `output_text` parsing, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - symmetrical degraded-mode persistence coverage for AI summary, AI triage, and AI reply-draft across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
 - explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
+- ticket AI interaction-history coverage for tenant-scoped ticket existence, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, narrowed response mapping, and non-leakage of raw prompt, raw provider payload, usage, and cost fields
+- explicit read-only assertions for `GET /api/v1/tickets/{id}/ai-interactions` against ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
 - stale-token rejection after status, role, or permission changes
 
 ## Suite Map
@@ -99,6 +101,14 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
   - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
   - invalid-response coverage for both provider-thrown invalid responses and oversize assembled drafts against the current comment length limit
   - no-side-effect assertions for ticket fields, comments, workflow logs, approvals, and audit rows
+- `TicketAiInteractionHistoryIntegrationTest`
+  - real `GET /api/v1/tickets/{id}/ai-interactions` happy path for a `TICKET_READ` user with seeded `ai_interaction_record` rows
+  - `403` when `TICKET_READ` is missing
+  - `404` for cross-tenant or missing ticket access
+  - exact-match `interactionType` and `status` filters plus pagination
+  - stable `createdAt DESC, id DESC` ordering, including same-timestamp tie breaks
+  - narrowed response shape with no leakage of raw prompt, raw provider payload, usage, or cost fields
+  - read-only assertions for ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -132,10 +142,11 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
   - tenant resolution through request-scoped context and forwarding to `UserCommandService`
   - wrapping successful responses with `ApiResponse.success(...)`
 - `TicketManagementControllerTest`
-  - HTTP request binding for `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}`
+  - HTTP request binding for `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, and `GET /api/v1/tickets/{id}/ai-interactions`
   - HTTP request binding for `POST /api/v1/tickets`
   - HTTP request binding for `PATCH /api/v1/tickets/{id}/assignee` and `PATCH /api/v1/tickets/{id}/status`
   - HTTP request binding for `POST /api/v1/tickets/{id}/comments`
+  - AI interaction-history query binding for `page`, `size`, `interactionType`, and `status`
   - request-scoped forwarding of `tenantId`, `operatorId`, and `requestId`
 - `TicketAiSummaryControllerTest`
   - HTTP request binding for `POST /api/v1/tickets/{id}/ai-summary`
@@ -164,6 +175,7 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
 - `TicketQueryServiceTest`
   - page defaulting, filter normalization, and invalid filter-combination rejection for ticket list
   - public ticket detail mapping for assignee, comments, and workflow logs
+  - ticket AI interaction-history page normalization, exact filter forwarding, required ticket existence, stable `createdAt DESC, id DESC` sorting, and narrowed list-item mapping
   - AI prompt-context windowing to the most recent comments and workflow logs, restored ascending order, omission markers, and prompt truncation guards
   - ticket detail `NOT_FOUND` path
 - `TicketCommandServiceTest`
@@ -219,7 +231,7 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and live provider wiring for AI summary, AI triage, and AI reply draft
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and live provider wiring for AI summary, AI triage, and AI reply draft
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

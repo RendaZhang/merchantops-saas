@@ -5,6 +5,8 @@ import com.renda.merchantops.api.dto.ticket.command.TicketCommentCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketWriteResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiTriageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
@@ -45,6 +47,7 @@ import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_SERVICE_UNAVAIL
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_AI_REPLY_DRAFT;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_AI_TRIAGE;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_AI_SUMMARY;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_AI_INTERACTIONS;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_ASSIGNED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_COMMENT_CREATED;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_TICKET_CREATED;
@@ -230,6 +233,36 @@ public interface TicketManagementApi {
     })
     @PostMapping("/{id}/ai-reply-draft")
     ApiResponse<TicketAiReplyDraftResponse> getAiReplyDraft(@PathVariable("id") Long id);
+
+    @Operation(
+            summary = "Page AI interaction history for one current-tenant ticket",
+            description = "Requires TICKET_READ permission. Returns current-tenant ai_interaction_record history for one ticket with optional page/size plus exact interactionType and status filters. This endpoint is read-only and does not expose raw prompts, raw provider payloads, token counts, or cost fields."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Query successful",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_TICKET_AI_INTERACTIONS))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Missing TICKET_READ permission",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Ticket not found in current tenant",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"code\":\"NOT_FOUND\",\"message\":\"ticket not found\",\"data\":null}"))
+            )
+    })
+    @GetMapping("/{id}/ai-interactions")
+    ApiResponse<TicketAiInteractionPageResponse> listAiInteractions(@PathVariable("id") Long id,
+                                                                    @ParameterObject TicketAiInteractionPageQuery query);
 
     @Operation(
             summary = "Create ticket in current tenant",

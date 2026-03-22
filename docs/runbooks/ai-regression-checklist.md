@@ -1,6 +1,6 @@
 # AI Regression Checklist
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 > Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
@@ -11,7 +11,7 @@ Use this checklist when any of the following change:
 - provider adapter logic
 - AI feature gating or timeout behavior
 - AI-related logging, usage, or error handling
-- the public AI summary, ticket triage, or ticket reply-draft response shape or Swagger examples
+- the public AI interaction-history, ticket summary, ticket triage, or ticket reply-draft response shape or Swagger examples
 
 ## Current Public Boundary
 
@@ -20,9 +20,11 @@ The AI checklist is now active because public AI endpoints exist:
 - `POST /api/v1/tickets/{id}/ai-summary`
 - `POST /api/v1/tickets/{id}/ai-triage`
 - `POST /api/v1/tickets/{id}/ai-reply-draft`
-- suggestion-only summary, triage, and internal reply-draft results for one current-tenant ticket
+- `GET /api/v1/tickets/{id}/ai-interactions`
+- suggestion-only summary, triage, internal reply-draft results, and narrowed interaction-history visibility for one current-tenant ticket
 - read permission inherited from `TICKET_READ`
 - no write-back, no comment creation, and no approval execution in the current slice
+- interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`, but do not expose raw prompt, raw provider payload, usage, or cost
 
 ## Environment And Control
 
@@ -46,7 +48,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] AI requests do not combine records across tenants
 - [ ] permission failures still return normal application errors such as `403`
 - [ ] cross-tenant or missing tickets still return normal business `404`
-- [ ] the summary, triage, and reply-draft endpoints do not bypass the existing ticket read boundary
+- [ ] the interaction-history, summary, triage, and reply-draft endpoints do not bypass the existing ticket read boundary
 
 ## Audit And Traceability
 
@@ -58,6 +60,17 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] usage or cost metrics are recorded when available from the provider
 - [ ] raw provider errors are not leaked directly to API consumers
 - [ ] read-only AI calls are recorded without pretending they are normal business write `audit_event` rows
+
+## Interaction History Read Surface
+
+- [ ] `GET /api/v1/tickets/{id}/ai-interactions` returns `403` when `TICKET_READ` is missing
+- [ ] `GET /api/v1/tickets/{id}/ai-interactions` returns `404` for cross-tenant or missing tickets
+- [ ] `interactionType` filtering is exact-match on stored canonical values such as `SUMMARY`, `TRIAGE`, and `REPLY_DRAFT`
+- [ ] `status` filtering is exact-match on stored canonical values such as `SUCCEEDED`, `FEATURE_DISABLED`, `PROVIDER_NOT_CONFIGURED`, `PROVIDER_TIMEOUT`, `PROVIDER_UNAVAILABLE`, and `INVALID_RESPONSE`
+- [ ] history results are ordered by `createdAt DESC, id DESC`, including stable same-timestamp tie breaks
+- [ ] history responses stay paged and return only `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`
+- [ ] history responses do not leak raw prompt text, raw provider payload, usage tokens, or cost fields
+- [ ] history reads do not create new `ai_interaction_record` rows or mutate ticket workflow state, approvals, or business `audit_event`
 
 ## Output Quality
 
@@ -73,6 +86,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] the public summary response shape remains stable for `ticketId`, `summary`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public triage response shape remains stable for `ticketId`, `classification`, `priority`, `reasoning`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public reply-draft response shape remains stable for `ticketId`, `draftText`, `opening`, `body`, `nextStep`, `closing`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
+- [ ] the public interaction-history response shape remains stable for `items`, `page`, `size`, `total`, `totalPages`, and item fields `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`
 - [ ] the reply-draft `draftText` still equals `opening + "\n\n" + body + "\n\nNext step: " + nextStep + "\n\n" + closing`
 - [ ] assembled reply drafts still fit the current ticket comment length limit
 - [ ] the summary, triage, and reply-draft slices stay suggestion-only and do not imply unsupported automatic execution
@@ -83,14 +97,16 @@ The AI checklist is now active because public AI endpoints exist:
 
 - [ ] AI summary, triage, and reply-draft calls do not mutate ticket status, assignee, comments, workflow logs, or approvals
 - [ ] AI summary, triage, and reply-draft calls do not create business `audit_event` rows
+- [ ] AI interaction-history reads do not mutate ticket status, assignee, comments, workflow logs, approvals, or business `audit_event` rows
 - [ ] operators can continue the ticket workflow manually when AI is unavailable
 - [ ] ticket detail, ticket workflow log, and business audit behavior remain unchanged by AI summary or triage calls
 
 ## API And Documentation Alignment
 
-- [ ] the public AI endpoint appears in Swagger
+- [ ] the public AI endpoints appear in Swagger
 - [ ] Swagger examples match real request and response shapes
 - [ ] AI reference docs are updated in [../reference/ai-integration.md](../reference/ai-integration.md)
+- [ ] ticket workflow docs are updated in [../reference/ticket-workflow.md](../reference/ticket-workflow.md)
 - [ ] request examples are updated in `api-demo.http`
 - [ ] provider configuration docs stay aligned with active runtime keys
 - [ ] architecture notes stay aligned with the governing ADRs
@@ -106,7 +122,8 @@ For the current Week 6 ticket AI slices, at minimum run:
 5. one provider-not-configured or provider-unavailable simulation
 6. one provider-timeout simulation
 7. one invalid-response simulation
-8. one golden-sample regression check for each affected AI workflow
+8. one interaction-history filter, ordering, and non-leakage check when the history surface is affected
+9. one golden-sample regression check for each affected AI generation workflow
 
 ## Related Documents
 

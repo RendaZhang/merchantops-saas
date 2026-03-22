@@ -3,15 +3,19 @@ package com.renda.merchantops.api.service;
 import com.renda.merchantops.api.ai.TicketAiPromptContext;
 import com.renda.merchantops.api.ai.TicketAiPromptSupport;
 import com.renda.merchantops.api.ai.TicketSummaryPromptBuilder;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageQuery;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageResponse;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
+import com.renda.merchantops.infra.persistence.entity.AiInteractionRecordEntity;
 import com.renda.merchantops.infra.persistence.entity.TicketCommentEntity;
 import com.renda.merchantops.infra.persistence.entity.TicketEntity;
 import com.renda.merchantops.infra.persistence.entity.TicketOperationLogEntity;
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
+import com.renda.merchantops.infra.repository.AiInteractionRecordRepository;
 import com.renda.merchantops.infra.repository.TicketCommentRepository;
 import com.renda.merchantops.infra.repository.TicketOperationLogRepository;
 import com.renda.merchantops.infra.repository.TicketRepository;
@@ -43,6 +47,9 @@ class TicketQueryServiceTest {
 
     @Mock
     private TicketRepository ticketRepository;
+
+    @Mock
+    private AiInteractionRecordRepository aiInteractionRecordRepository;
 
     @Mock
     private TicketCommentRepository ticketCommentRepository;
@@ -88,6 +95,74 @@ class TicketQueryServiceTest {
                 .isInstanceOf(BizException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.BAD_REQUEST);
+    }
+
+    @Test
+    void pageTicketAiInteractionsShouldNormalizeFiltersAndMapStoredFields() {
+        TicketEntity ticket = ticket(11L, 1L, "POS printer offline", "OPEN", 102L, 101L);
+        TicketAiInteractionPageQuery query = new TicketAiInteractionPageQuery(-1, 999, " SUMMARY ", " SUCCEEDED ");
+        AiInteractionRecordEntity record = aiInteractionRecord(
+                9001L,
+                1L,
+                11L,
+                "SUMMARY",
+                "SUCCEEDED",
+                "Issue: Printer cable replacement is in progress under ops.",
+                "ticket-summary-v1",
+                "gpt-4.1-mini",
+                412L,
+                "ticket-ai-summary-req-1",
+                LocalDateTime.of(2026, 3, 22, 8, 30)
+        );
+
+        when(ticketRepository.findByIdAndTenantId(11L, 1L)).thenReturn(Optional.of(ticket));
+        when(aiInteractionRecordRepository.searchPageByTenantIdAndEntity(
+                eq(1L),
+                eq("TICKET"),
+                eq(11L),
+                eq("SUMMARY"),
+                eq("SUCCEEDED"),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(record), PageRequest.of(0, 100), 1));
+
+        TicketAiInteractionPageResponse response = ticketQueryService.pageTicketAiInteractions(1L, 11L, query);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(aiInteractionRecordRepository).searchPageByTenantIdAndEntity(
+                eq(1L),
+                eq("TICKET"),
+                eq(11L),
+                eq("SUMMARY"),
+                eq("SUCCEEDED"),
+                pageableCaptor.capture()
+        );
+
+        assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(0);
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(100);
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("createdAt").getDirection()).isEqualTo(org.springframework.data.domain.Sort.Direction.DESC);
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("id").getDirection()).isEqualTo(org.springframework.data.domain.Sort.Direction.DESC);
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems().getFirst().getId()).isEqualTo(9001L);
+        assertThat(response.getItems().getFirst().getInteractionType()).isEqualTo("SUMMARY");
+        assertThat(response.getItems().getFirst().getStatus()).isEqualTo("SUCCEEDED");
+        assertThat(response.getItems().getFirst().getOutputSummary()).isEqualTo("Issue: Printer cable replacement is in progress under ops.");
+        assertThat(response.getItems().getFirst().getPromptVersion()).isEqualTo("ticket-summary-v1");
+        assertThat(response.getItems().getFirst().getModelId()).isEqualTo("gpt-4.1-mini");
+        assertThat(response.getItems().getFirst().getLatencyMs()).isEqualTo(412L);
+        assertThat(response.getItems().getFirst().getRequestId()).isEqualTo("ticket-ai-summary-req-1");
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(100);
+        assertThat(response.getTotal()).isEqualTo(1);
+    }
+
+    @Test
+    void pageTicketAiInteractionsShouldThrowNotFoundWhenTicketMissing() {
+        when(ticketRepository.findByIdAndTenantId(99L, 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> ticketQueryService.pageTicketAiInteractions(1L, 99L, new TicketAiInteractionPageQuery()))
+                .isInstanceOf(BizException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.NOT_FOUND);
     }
 
     @Test
@@ -271,5 +346,33 @@ class TicketQueryServiceTest {
         user.setTenantId(tenantId);
         user.setUsername(username);
         return user;
+    }
+
+    private AiInteractionRecordEntity aiInteractionRecord(Long id,
+                                                          Long tenantId,
+                                                          Long entityId,
+                                                          String interactionType,
+                                                          String status,
+                                                          String outputSummary,
+                                                          String promptVersion,
+                                                          String modelId,
+                                                          Long latencyMs,
+                                                          String requestId,
+                                                          LocalDateTime createdAt) {
+        AiInteractionRecordEntity record = new AiInteractionRecordEntity();
+        record.setId(id);
+        record.setTenantId(tenantId);
+        record.setUserId(103L);
+        record.setEntityType("TICKET");
+        record.setEntityId(entityId);
+        record.setInteractionType(interactionType);
+        record.setStatus(status);
+        record.setOutputSummary(outputSummary);
+        record.setPromptVersion(promptVersion);
+        record.setModelId(modelId);
+        record.setLatencyMs(latencyMs);
+        record.setRequestId(requestId);
+        record.setCreatedAt(createdAt);
+        return record;
     }
 }

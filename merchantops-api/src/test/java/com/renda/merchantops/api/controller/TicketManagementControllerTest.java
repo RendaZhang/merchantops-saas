@@ -7,6 +7,9 @@ import com.renda.merchantops.api.dto.ticket.command.TicketCommentCreateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketCreateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateCommand;
 import com.renda.merchantops.api.dto.ticket.command.TicketWriteResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionListItemResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketCommentResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketListItemResponse;
@@ -202,6 +205,70 @@ class TicketManagementControllerTest {
                 .andExpect(jsonPath("$.data.operationLogs[0].operationType").value("CREATED"));
 
         verify(ticketQueryService).getTicketDetail(9L, 11L);
+    }
+
+    @Test
+    void listAiInteractionsShouldReturnUnauthorizedWhenAuthenticationIsMissing() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets/11/ai-interactions"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void listAiInteractionsShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        mockMvc.perform(get("/api/v1/tickets/11/ai-interactions")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("permission denied"));
+    }
+
+    @Test
+    void listAiInteractionsShouldBindQueryAndReturnPageResponse() throws Exception {
+        TicketAiInteractionPageResponse response = new TicketAiInteractionPageResponse(
+                List.of(new TicketAiInteractionListItemResponse(
+                        9003L,
+                        "TRIAGE",
+                        "INVALID_RESPONSE",
+                        null,
+                        "ticket-triage-v1",
+                        "gpt-4.1-mini",
+                        251L,
+                        "ticket-ai-triage-invalid-response-1",
+                        LocalDateTime.of(2026, 3, 22, 9, 0)
+                )),
+                1,
+                5,
+                6,
+                2
+        );
+        when(ticketQueryService.pageTicketAiInteractions(eq(9L), eq(11L), any(TicketAiInteractionPageQuery.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/tickets/11/ai-interactions")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "TICKET_READ")
+                        .queryParam("page", "1")
+                        .queryParam("size", "5")
+                        .queryParam("interactionType", "SUMMARY")
+                        .queryParam("status", "SUCCEEDED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.items[0].interactionType").value("TRIAGE"))
+                .andExpect(jsonPath("$.data.items[0].status").value("INVALID_RESPONSE"));
+
+        ArgumentCaptor<TicketAiInteractionPageQuery> queryCaptor = ArgumentCaptor.forClass(TicketAiInteractionPageQuery.class);
+        verify(ticketQueryService).pageTicketAiInteractions(eq(9L), eq(11L), queryCaptor.capture());
+        assertThat(queryCaptor.getValue().getPage()).isEqualTo(1);
+        assertThat(queryCaptor.getValue().getSize()).isEqualTo(5);
+        assertThat(queryCaptor.getValue().getInteractionType()).isEqualTo("SUMMARY");
+        assertThat(queryCaptor.getValue().getStatus()).isEqualTo("SUCCEEDED");
     }
 
     @Test

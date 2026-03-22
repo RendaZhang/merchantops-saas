@@ -1,6 +1,6 @@
 # Execution Planning Agent Guidance
 
-Last updated: 2026-03-10
+Last updated: 2026-03-22
 
 ## Purpose
 
@@ -46,15 +46,36 @@ Rules:
 - if higher-confidence sources conflict with lower-confidence planning text, report the conflict explicitly
 - if docs drift from repository reality, recommend the doc updates that should happen next
 
+## Phase Evidence Pass
+
+Before writing an `EP now`, `EP next`, `EP plan-check`, or `EP adjust` answer, build a short evidence pass from repository reality.
+
+At minimum, answer these four questions first:
+
+1. what is the latest non-doc-only code slice at `HEAD` or immediately below it
+2. what phase or milestone the current tag baseline actually records
+3. whether the most recent default regression pass succeeded, and when that happened
+4. whether `project-status`, `roadmap`, or `project-plan` still describe an old near-term next step as if it were unfinished
+
+Preferred evidence sources:
+
+- latest non-doc-only commit from `git log`
+- current tag baseline from git plus [../project-status.md](../project-status.md)
+- latest default regression result from the current shell session, CI evidence, or a fresh local run when needed
+- current public contract from code and Swagger-visible controller interfaces
+
+Use this pass to anchor the phase readout before comparing milestone text.
+
 ## Execution Planning Workflow
 
-1. determine the current phase from [../project-status.md](../project-status.md) first
-2. compare the current implementation and public API surface against [../roadmap.md](../roadmap.md) and [../project-plan.md](../project-plan.md)
-3. separate findings into `completed`, `in progress`, `internal groundwork`, and `not started`
-4. identify the smallest sensible next slice that moves the current phase forward
-5. describe the next tasks in implementation order
-6. list the validation, documentation, or planning follow-up that should happen with that slice
-7. decide whether the current plan or architecture should stay as-is or be adjusted
+1. run the Phase Evidence Pass first
+2. determine the current phase from [../project-status.md](../project-status.md)
+3. compare the current implementation and public API surface against [../roadmap.md](../roadmap.md) and [../project-plan.md](../project-plan.md)
+4. separate findings into `completed`, `in progress`, `internal groundwork`, and `not started`
+5. identify the smallest sensible next slice that moves the current phase forward
+6. describe the next tasks in implementation order
+7. list the validation, documentation, or planning follow-up that should happen with that slice
+8. decide whether the current plan or architecture should stay as-is or be adjusted
 
 ## Output Shape
 
@@ -81,6 +102,19 @@ Recommend a plan adjustment when:
 - a later milestone depends on prerequisites that are still missing
 - repeated work reveals that the current milestone split is awkward or misleading
 - a planned AI item no longer fits workflow-first value, tenant isolation, RBAC, audit, or evaluation constraints
+
+### When `EP next` Becomes `EP adjust`
+
+Do not keep reusing old roadmap wording when the code, tests, and public contract have already consumed that near-term slice.
+
+If the current implementation has effectively completed the roadmap's old `next slice`, do this instead:
+
+1. run a small `EP plan-check`
+2. confirm whether the drift is mainly in `project-status`, `roadmap`, or related reference wording
+3. recommend `EP adjust` or phase-doc sync first
+4. only after the near-term framing is corrected, give the new `EP next`
+
+This is especially important when slice lettering or naming has moved forward in code reality but the roadmap still points at the prior slice.
 
 Recommend an architecture adjustment when:
 

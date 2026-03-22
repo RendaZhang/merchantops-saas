@@ -2,6 +2,9 @@ package com.renda.merchantops.api.service;
 
 import com.renda.merchantops.api.ai.TicketAiPromptContext;
 import com.renda.merchantops.api.ai.TicketAiPromptSupport;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionListItemResponse;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.ticket.query.TicketAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketCommentResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketDetailResponse;
 import com.renda.merchantops.api.dto.ticket.query.TicketListItemResponse;
@@ -10,10 +13,12 @@ import com.renda.merchantops.api.dto.ticket.query.TicketPageQuery;
 import com.renda.merchantops.api.dto.ticket.query.TicketPageResponse;
 import com.renda.merchantops.common.exception.BizException;
 import com.renda.merchantops.common.exception.ErrorCode;
+import com.renda.merchantops.infra.persistence.entity.AiInteractionRecordEntity;
 import com.renda.merchantops.infra.persistence.entity.TicketCommentEntity;
 import com.renda.merchantops.infra.persistence.entity.TicketEntity;
 import com.renda.merchantops.infra.persistence.entity.TicketOperationLogEntity;
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
+import com.renda.merchantops.infra.repository.AiInteractionRecordRepository;
 import com.renda.merchantops.infra.repository.TicketCommentRepository;
 import com.renda.merchantops.infra.repository.TicketOperationLogRepository;
 import com.renda.merchantops.infra.repository.TicketRepository;
@@ -41,8 +46,10 @@ public class TicketQueryService {
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 100;
+    private static final String ENTITY_TYPE_TICKET = "TICKET";
 
     private final TicketRepository ticketRepository;
+    private final AiInteractionRecordRepository aiInteractionRecordRepository;
     private final TicketCommentRepository ticketCommentRepository;
     private final TicketOperationLogRepository ticketOperationLogRepository;
     private final UserRepository userRepository;
@@ -75,6 +82,37 @@ public class TicketQueryService {
         return new TicketPageResponse(
                 resultPage.getContent().stream()
                         .map(ticket -> toListItemResponse(ticket, usernamesById))
+                        .toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements(),
+                resultPage.getTotalPages()
+        );
+    }
+
+    public TicketAiInteractionPageResponse pageTicketAiInteractions(Long tenantId,
+                                                                    Long ticketId,
+                                                                    TicketAiInteractionPageQuery query) {
+        requireTicket(tenantId, ticketId);
+        TicketAiInteractionPageQuery normalizedQuery = normalizeQuery(query);
+        PageRequest pageable = PageRequest.of(
+                normalizePage(normalizedQuery.getPage()),
+                normalizeSize(normalizedQuery.getSize()),
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+        );
+
+        Page<AiInteractionRecordEntity> resultPage = aiInteractionRecordRepository.searchPageByTenantIdAndEntity(
+                tenantId,
+                ENTITY_TYPE_TICKET,
+                ticketId,
+                normalizeFilter(normalizedQuery.getInteractionType()),
+                normalizeFilter(normalizedQuery.getStatus()),
+                pageable
+        );
+
+        return new TicketAiInteractionPageResponse(
+                resultPage.getContent().stream()
+                        .map(this::toAiInteractionListItemResponse)
                         .toList(),
                 resultPage.getNumber(),
                 resultPage.getSize(),
@@ -180,8 +218,8 @@ public class TicketQueryService {
 
     private TicketPageQuery normalizeQuery(TicketPageQuery query) {
         TicketPageQuery normalized = query == null ? new TicketPageQuery() : query;
-        normalized.setPage(normalizePage(query));
-        normalized.setSize(normalizeSize(query));
+        normalized.setPage(normalizePage(normalized.getPage()));
+        normalized.setSize(normalizeSize(normalized.getSize()));
         normalized.setStatus(normalizeFilter(normalized.getStatus()));
         normalized.setKeyword(normalizeFilter(normalized.getKeyword()));
         normalized.setUnassignedOnly(Boolean.TRUE.equals(normalized.getUnassignedOnly()));
@@ -191,18 +229,27 @@ public class TicketQueryService {
         return normalized;
     }
 
-    private int normalizePage(TicketPageQuery query) {
-        if (query == null || query.getPage() == null || query.getPage() < 0) {
-            return DEFAULT_PAGE;
-        }
-        return query.getPage();
+    private TicketAiInteractionPageQuery normalizeQuery(TicketAiInteractionPageQuery query) {
+        TicketAiInteractionPageQuery normalized = query == null ? new TicketAiInteractionPageQuery() : query;
+        normalized.setPage(normalizePage(normalized.getPage()));
+        normalized.setSize(normalizeSize(normalized.getSize()));
+        normalized.setInteractionType(normalizeFilter(normalized.getInteractionType()));
+        normalized.setStatus(normalizeFilter(normalized.getStatus()));
+        return normalized;
     }
 
-    private int normalizeSize(TicketPageQuery query) {
-        if (query == null || query.getSize() == null || query.getSize() <= 0) {
+    private int normalizePage(Integer page) {
+        if (page == null || page < 0) {
+            return DEFAULT_PAGE;
+        }
+        return page;
+    }
+
+    private int normalizeSize(Integer size) {
+        if (size == null || size <= 0) {
             return DEFAULT_SIZE;
         }
-        return Math.min(query.getSize(), MAX_SIZE);
+        return Math.min(size, MAX_SIZE);
     }
 
     private String normalizeFilter(String value) {
@@ -222,6 +269,20 @@ public class TicketQueryService {
                 assigneeId == null ? null : usernamesById.get(assigneeId),
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt()
+        );
+    }
+
+    private TicketAiInteractionListItemResponse toAiInteractionListItemResponse(AiInteractionRecordEntity record) {
+        return new TicketAiInteractionListItemResponse(
+                record.getId(),
+                record.getInteractionType(),
+                record.getStatus(),
+                record.getOutputSummary(),
+                record.getPromptVersion(),
+                record.getModelId(),
+                record.getLatencyMs(),
+                record.getRequestId(),
+                record.getCreatedAt()
         );
     }
 

@@ -137,6 +137,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Ground execution guidance in code, tests, Swagger, staged changes, and status docs before trusting milestone text alone.
 - Output concrete next tasks, validation steps, and doc-update expectations without dropping into code unless the requester asks for implementation.
 - If the current plan, architecture, or milestone sequencing no longer matches repository reality, call that out explicitly and point to the docs that should change.
+- When code, tests, and the current public contract have already consumed the roadmap's old near-term next step, prefer `EP adjust` or phase-doc sync before issuing a fresh `EP next`.
 - Use [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) when the task is centered on keeping `docs/project-status.md`, `docs/roadmap.md`, and `docs/project-plan.md` aligned without repeating the same current-state text across all three files.
 - Shortcut prefix: `EP`
 - Supported shortcuts include:

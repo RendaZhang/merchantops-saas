@@ -34,6 +34,24 @@ Use this skill when the same implementation change affects status, roadmap, and 
    - no section in `project-plan` duplicates `project-status`
    - no section in `roadmap` duplicates release history or detailed public contract text
 
+## Slice Advancement Rule
+
+When the previous roadmap next-step has already been consumed by code, tests, and reference docs, use the phase sync to advance the active slice explicitly rather than leaving the roadmap one step behind.
+
+Apply this rule when:
+
+- the active phase is unchanged
+- the last near-term `roadmap` next-step is now part of the current baseline
+- the remaining drift is mostly in `project-status` and `roadmap` wording rather than long-range milestone intent
+
+In that case, sync the files this way:
+
+- [docs/project-status.md](../../../docs/project-status.md): absorb the newly-stable hardening or support work into the current baseline
+- [docs/roadmap.md](../../../docs/roadmap.md): promote the real next slice, next letter, or next narrow workflow step
+- [docs/project-plan.md](../../../docs/project-plan.md): leave unchanged unless the long-range milestone shape itself changed
+
+Do not leave an already-completed hardening step described as the current next slice just because the active phase has not changed.
+
 ## Repo Anchors
 
 - [docs/project-status.md](../../../docs/project-status.md)
