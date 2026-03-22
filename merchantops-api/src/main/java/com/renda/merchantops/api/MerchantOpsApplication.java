@@ -1,6 +1,7 @@
 package com.renda.merchantops.api;
 
 import com.renda.merchantops.api.config.AiProperties;
+import com.renda.merchantops.api.config.DotenvBootstrap;
 import com.renda.merchantops.api.config.ImportProcessingProperties;
 import com.renda.merchantops.api.config.JwtProperties;
 import org.springframework.boot.SpringApplication;
@@ -18,6 +19,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class MerchantOpsApplication {
 
     public static void main(String[] args) {
+        DotenvBootstrap.loadFromRepositoryRootForLocalDev();
         SpringApplication.run(MerchantOpsApplication.class, args);
     }
 

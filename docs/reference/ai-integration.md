@@ -230,21 +230,29 @@ Tenant scoping is inherited from the existing ticket query path. The AI slice do
 
 The current runtime keeps AI plumbing narrow rather than introducing a general chat framework:
 
-- a ticket-summary-specific prompt builder and provider adapter
-- a ticket-triage-specific prompt builder and provider adapter
-- a ticket-reply-draft-specific prompt builder and provider adapter
+- a ticket-summary-specific prompt builder and output validator
+- a ticket-triage-specific prompt builder and output validator
+- a ticket-reply-draft-specific prompt builder and output validator
+- a shared provider-normalized structured-output client
 - instance-level provider configuration under `merchantops.ai.*`
 - an enable/disable flag plus provider-configuration guard
 - timeout-based controlled degradation
 
-The current provider adapters call an OpenAI-compatible Responses API shape and request strict JSON schemas:
+The current provider-normalized client supports two protocol paths:
+
+- `OPENAI`: `POST /v1/responses` with strict `json_schema`
+- `DEEPSEEK`: `POST /chat/completions` with `response_format={type=json_object}` plus provider-aware JSON-only instructions and a minimal example JSON payload
+
+Endpoint-specific output policy remains strict across both providers:
 
 - summary requires `summary`
 - triage requires `classification`, `priority`, and `reasoning`
 - reply draft requires `opening`, `body`, `nextStep`, and `closing`
-- request tests lock `Authorization`, `X-Client-Request-Id`, model id, `input` roles, and `text.format` schema wiring for all three adapters
-- response parsing now scans all `output[].content[]` parts, concatenates later `output_text` fragments in order, and ignores earlier non-text parts when valid text exists
+- request tests lock `Authorization`, `X-Client-Request-Id`, model id, system or user roles, and provider-specific structured-output wiring for both protocol paths
+- OpenAI response parsing scans all `output[].content[]` parts, concatenates later `output_text` fragments in order, and ignores earlier non-text parts when valid text exists
+- DeepSeek response parsing extracts the message content string, then applies the same endpoint-specific JSON validation and failure mapping
 - upstream `408` and `504` HTTP responses are classified as provider timeouts so the timeout degradation path and `ai_interaction_record.status=PROVIDER_TIMEOUT` stay aligned
+- usage tokens and resolved `modelId` are normalized before the service records `ai_interaction_record`
 
 The current implementation does not include:
 
@@ -292,7 +300,8 @@ The current public AI slices establish a minimal eval and visibility path:
 - explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, and `ticket-reply-draft-v1`
 - golden-sample ticket inputs at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, and `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
 - checked-in provider-response fixtures per workflow that drive the real provider parser and service path in automated golden tests
-- focused automated tests for generation-endpoint happy path, permission failure, tenant isolation, symmetric degraded-mode coverage, request-contract assertions, multi-part `output_text` parsing, endpoint-specific required-field validation, and history-endpoint filter/sort/non-leakage coverage
+- focused automated tests for generation-endpoint happy path, permission failure, tenant isolation, symmetric degraded-mode coverage, provider-normalized request-contract assertions, OpenAI and DeepSeek structured-output client coverage, endpoint-specific required-field validation, and history-endpoint filter/sort/non-leakage coverage
+- the local provider live smoke path in [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md)
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
 
 ## Failure And Safety Expectations
@@ -335,6 +344,7 @@ Later roadmap areas remain:
 - [ticket-workflow.md](ticket-workflow.md): current ticket endpoint surface and workflow details
 - [authentication-and-rbac.md](authentication-and-rbac.md): auth and permission boundaries
 - [ai-provider-configuration.md](ai-provider-configuration.md): active provider-key ownership and config keys
+- [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md): local provider live smoke path for `.env`-driven AI verification
 - [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md): rollout checklist for current and future AI endpoint changes
 - [../architecture/adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md](../architecture/adr/0007-embed-ai-into-tenant-scoped-workflows-with-human-oversight.md): architecture decision for AI workflow placement and governance
 - [../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md](../architecture/adr/0008-establish-ai-audit-and-evaluation-baseline-before-public-ai-apis.md): minimum audit and eval baseline for public AI APIs

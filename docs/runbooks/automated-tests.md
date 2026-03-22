@@ -36,7 +36,8 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, fresh `PROCESSING` redelivery requeue, stale-processing restart-or-fail handling, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - AI summary, AI triage, and AI reply-draft prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
-- provider adapter coverage for AI summary, AI triage, and AI reply-draft, including request-contract assertions, multi-part `output_text` parsing, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
+- provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
+- `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
 - symmetrical degraded-mode persistence coverage for AI summary, AI triage, and AI reply-draft across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
 - explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
 - ticket AI interaction-history coverage for tenant-scoped ticket existence, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, and non-leakage of raw prompt and raw provider payload fields
@@ -166,12 +167,20 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - checked-in ticket-triage samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiTriageService`
 - `TicketReplyDraftGoldenSampleTest`
   - checked-in ticket reply-draft samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiReplyDraftService`, including assembled `draftText`
+- `AiPropertiesTest`
+  - provider-neutral AI config resolution, legacy OpenAI fallback, DeepSeek alias fallback, defaults, and not-configured detection
+- `DotenvBootstrapTest`
+  - repository-root detection, dev-profile gating, comment handling, quote trimming, and non-overwrite behavior for already-set properties
+- `OpenAiResponsesStructuredOutputAiClientTest`
+  - `POST /v1/responses` request contract, strict `json_schema` wiring, OpenAI output parsing, and timeout classification
+- `DeepSeekChatCompletionsStructuredOutputAiClientTest`
+  - `POST /chat/completions` request contract, `response_format=json_object`, JSON-only instruction and example wiring, DeepSeek message-content parsing, and timeout classification
 - `OpenAiTicketSummaryProviderTest`
-  - request-contract assertions, later-part `output_text` parsing, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and missing `summary` provider-payload failures for the summary adapter
+  - summary-schema, example JSON, provider-response parsing, and missing `summary` provider-payload failures for the summary adapter
 - `OpenAiTicketTriageProviderTest`
-  - request-contract assertions, later-part `output_text` parsing, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, missing `classification`, missing `reasoning`, missing `priority`, and invalid `priority` provider-payload failures for the triage adapter
+  - triage-schema, example JSON, provider-response parsing, missing `classification`, missing `reasoning`, missing `priority`, and invalid `priority` provider-payload failures for the triage adapter
 - `OpenAiTicketReplyDraftProviderTest`
-  - request-contract assertions, later-part `output_text` parsing, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and missing `opening`, `body`, `nextStep`, or `closing` provider-payload failures for the reply-draft adapter
+  - reply-draft schema, example JSON, provider-response parsing, and missing `opening`, `body`, `nextStep`, or `closing` provider-payload failures for the reply-draft adapter
 - `TicketQueryServiceTest`
   - page defaulting, filter normalization, and invalid filter-combination rejection for ticket list
   - public ticket detail mapping for assignee, comments, and workflow logs
@@ -235,17 +244,18 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and live provider wiring for AI summary, AI triage, and AI reply draft
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
-Use [local-smoke-test.md](local-smoke-test.md) and [regression-checklist.md](regression-checklist.md) for those checks.
+Use [local-smoke-test.md](local-smoke-test.md), [ai-live-smoke-test.md](ai-live-smoke-test.md), and [regression-checklist.md](regression-checklist.md) for those checks.
 
 ## Recommended Workflow
 
 1. Run `.\mvnw.cmd -pl merchantops-api -am test`
 2. If that passes and the change touches public API flow, security wiring, SQL, or migrations, run the relevant path from [local-smoke-test.md](local-smoke-test.md)
-3. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
+3. If the change touches AI provider wiring, `.env` loading, or live vendor compatibility, add the summary-first path from [ai-live-smoke-test.md](ai-live-smoke-test.md)
+4. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
 
 ## Known Pitfalls
 

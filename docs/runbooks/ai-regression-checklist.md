@@ -28,10 +28,21 @@ The AI checklist is now active because public AI endpoints exist:
 
 ## Environment And Control
 
-- [ ] provider credentials and model configuration are loaded from the expected `merchantops.ai.*` keys
+- [ ] provider credentials and model configuration are loaded from the expected `merchantops.ai.*` keys or the documented local `.env` aliases
 - [ ] AI features can be disabled cleanly via `merchantops.ai.enabled`
 - [ ] degraded mode behavior is verified when the provider is unavailable or not configured
 - [ ] request timeout behavior is explicit and covered by a simulated timeout path
+
+## Live Provider Smoke
+
+- [ ] local `.env` is prepared through [ai-live-smoke-test.md](ai-live-smoke-test.md) with provider-neutral `MERCHANTOPS_AI_*` keys or the documented DeepSeek aliases
+- [ ] the first real provider probe is one `POST /api/v1/tickets/{id}/ai-summary` call against a fresh ticket with enough context
+- [ ] if the live summary fails, `ai-triage` and `ai-reply-draft` are not called in the same session
+- [ ] after a successful live summary, `GET /api/v1/tickets/{id}/ai-interactions` confirms a matching `SUMMARY` row with the expected `requestId`, `status`, and `modelId`
+- [ ] after summary succeeds, the approved second-stage live path is `ai-triage` plus `GET /ai-interactions?interactionType=TRIAGE`, then `ai-reply-draft` plus `GET /ai-interactions?interactionType=REPLY_DRAFT`
+- [ ] a successful live triage returns non-blank `classification`, valid `priority`, non-blank `reasoning`, and a matching `TRIAGE/SUCCEEDED` history row
+- [ ] a successful live reply draft returns non-blank `opening`, `body`, `nextStep`, `closing`, `draftText`, and a matching `REPLY_DRAFT/SUCCEEDED` history row
+- [ ] if triage fails in the second-stage live pass, reply-draft is not called in the same session
 
 ## Three-Endpoint Symmetry Checks
 
@@ -124,6 +135,8 @@ For the current Week 6 ticket AI slices, at minimum run:
 7. one invalid-response simulation
 8. one interaction-history filter, ordering, and non-leakage check when the history surface is affected
 9. one golden-sample regression check for each affected AI generation workflow
+10. when live provider wiring changed, one local summary-first provider smoke plus the matching interaction-history read through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+11. after summary succeeds and the change still needs real-vendor verification, one second-stage live triage pass plus one second-stage live reply-draft pass, each followed by the matching interaction-history read
 
 ## Related Documents
 

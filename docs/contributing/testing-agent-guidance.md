@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 ## Purpose
 
@@ -15,10 +15,11 @@ When you take over an in-flight change set, use this order:
 1. Inspect the staged scope first with `git diff --cached --name-only` and `git diff --cached --stat`.
 2. Map the staged files to the affected test layers, choose the smallest sufficient verification set, and execute enough of it to support a staged testing report.
 3. If the staged change touches controllers, security, repositories, entities, or a bug that only appears in real request flow, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`, and follow [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md).
-4. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
-5. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
-6. If the staged change affects status, roles, permissions, or JWT-claim propagation, verify both the stale-token rejection path and the refreshed-login success path before signing off.
-7. Report concrete findings first. Keep summaries and changelog-style recap secondary.
+4. If the staged change touches AI provider wiring, `.env` loading, provider selection, or live vendor compatibility, use [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md) plus [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md) after the normal non-AI smoke path when needed.
+5. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
+6. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
+7. If the staged change affects status, roles, permissions, or JWT-claim propagation, verify both the stale-token rejection path and the refreshed-login success path before signing off.
+8. Report concrete findings first. Keep summaries and changelog-style recap secondary.
 
 ## `TT staged` Expectations
 
@@ -104,6 +105,7 @@ Use the full reactor only when broader verification is needed:
 
 - Read [../runbooks/automated-tests.md](../runbooks/automated-tests.md) before suggesting or running the default regression command.
 - Use [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md) after the automated suite passes when manual validation is still required.
+- Use [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md) when AI provider wiring, `.env` bootstrap, provider normalization, or real-vendor compatibility changed. Pair it with [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md).
 - Use [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md) for broader validation after security, SQL, environment, or public API changes.
 - For `/api/v1/users` behavior, compare runtime and test expectations against [../reference/user-management.md](../reference/user-management.md) and [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md).
 - For access-change work such as status updates, role reassignment, permission-seed edits, or ticket-write promotion, compare runtime and test expectations against [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md) and the affected business reference page so stale-token versus re-login behavior stays documented and verified together.
@@ -117,6 +119,7 @@ Use the full reactor only when broader verification is needed:
 Testing-focused work commonly requires doc updates in these places:
 
 - [../runbooks/automated-tests.md](../runbooks/automated-tests.md): test command and coverage boundary
+- [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md): local provider live smoke path and `.env` setup sequence
 - [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md): manual validation expectations
 - [../project-status.md](../project-status.md): current automation status and remaining gaps
 - [documentation-maintenance.md](documentation-maintenance.md): if the routing rules themselves change
@@ -125,6 +128,7 @@ Testing-focused work commonly requires doc updates in these places:
 
 - [../runbooks/automated-tests.md](../runbooks/automated-tests.md): current automated regression entry
 - [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md): short manual verification flow
+- [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md): local provider live smoke path
 - [../runbooks/regression-checklist.md](../runbooks/regression-checklist.md): broader validation checklist
 - [../reference/user-management.md](../reference/user-management.md): current `/api/v1/users` contract
 - [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md): current auth and permission behavior

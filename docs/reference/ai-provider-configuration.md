@@ -1,6 +1,6 @@
 # AI Provider Configuration
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 
 ## Purpose
 
@@ -10,7 +10,7 @@ It answers three practical questions for the current Week 6 slice:
 
 - who owns the provider configuration
 - which config keys are active in code today
-- how the system degrades when AI is not configured or not available
+- how runtime selection and degradation behave across the supported providers
 
 ## Current Active Model
 
@@ -33,6 +33,9 @@ Current Spring configuration keys:
 - `merchantops.ai.prompt-version`
 - `merchantops.ai.triage-prompt-version`
 - `merchantops.ai.reply-draft-prompt-version`
+- `merchantops.ai.provider`
+- `merchantops.ai.base-url`
+- `merchantops.ai.api-key`
 - `merchantops.ai.model-id`
 - `merchantops.ai.timeout-ms`
 - `merchantops.ai.openai.base-url`
@@ -44,10 +47,16 @@ Current environment-variable overrides:
 - `MERCHANTOPS_AI_PROMPT_VERSION`
 - `MERCHANTOPS_AI_TRIAGE_PROMPT_VERSION`
 - `MERCHANTOPS_AI_REPLY_DRAFT_PROMPT_VERSION`
+- `MERCHANTOPS_AI_PROVIDER`
+- `MERCHANTOPS_AI_BASE_URL`
+- `MERCHANTOPS_AI_API_KEY`
 - `MERCHANTOPS_AI_MODEL_ID`
 - `MERCHANTOPS_AI_TIMEOUT_MS`
 - `MERCHANTOPS_AI_OPENAI_BASE_URL`
 - `MERCHANTOPS_AI_OPENAI_API_KEY`
+- `DEEPSEEK_API_KEY`
+- `DEEPSEEK_BASE_URL`
+- `DEEPSEEK_MODEL`
 
 Current defaults in `application.yml` keep AI optional:
 
@@ -55,18 +64,55 @@ Current defaults in `application.yml` keep AI optional:
 - `prompt-version=ticket-summary-v1`
 - `triage-prompt-version=ticket-triage-v1`
 - `reply-draft-prompt-version=ticket-reply-draft-v1`
+- `provider=OPENAI`
 - `timeout-ms=5000`
-- `openai.base-url=https://api.openai.com`
-- `model-id` and `api-key` blank until the deployment operator supplies them
+- provider-neutral `base-url`, `api-key`, and `model-id` blank until the deployment operator supplies them
+- the legacy OpenAI compatibility keys remain blank until needed
+
+Provider defaults applied at runtime are:
+
+- `OPENAI`: base URL defaults to `https://api.openai.com`
+- `DEEPSEEK`: base URL defaults to `https://api.deepseek.com` and model defaults to `deepseek-chat`
+
+## Resolution Order
+
+Runtime selection is provider-normalized rather than hard-wired to one vendor.
+
+For the active `merchantops.ai.provider`, the runtime resolves the effective values in this order:
+
+1. provider-neutral keys under `merchantops.ai.base-url`, `merchantops.ai.api-key`, and `merchantops.ai.model-id`
+2. provider-specific compatibility keys
+3. provider defaults
+
+Current compatibility rules are:
+
+- `OPENAI` falls back to `merchantops.ai.openai.base-url` and `merchantops.ai.openai.api-key`
+- `DEEPSEEK` falls back to `DEEPSEEK_BASE_URL`, `DEEPSEEK_API_KEY`, and `DEEPSEEK_MODEL`
+- the DeepSeek aliases are considered only when `merchantops.ai.provider=DEEPSEEK` and the provider-neutral key is blank
 
 ## Minimum Current Setup
 
 To enable the public ticket summary, ticket triage, and ticket reply-draft slices, the deployment must provide all of:
 
 - `merchantops.ai.enabled=true`
-- a non-blank `merchantops.ai.model-id`
-- a non-blank `merchantops.ai.openai.api-key`
-- a reachable `merchantops.ai.openai.base-url`
+- `merchantops.ai.provider=OPENAI` or `merchantops.ai.provider=DEEPSEEK`
+- a non-blank effective model id
+- a non-blank effective API key
+- a reachable effective base URL
+
+Typical minimal OpenAI setup:
+
+- `merchantops.ai.enabled=true`
+- `merchantops.ai.provider=OPENAI`
+- `merchantops.ai.model-id=<openai-model>`
+- `merchantops.ai.api-key=<openai-key>`
+
+Typical minimal DeepSeek setup:
+
+- `merchantops.ai.enabled=true`
+- `merchantops.ai.provider=DEEPSEEK`
+- `merchantops.ai.api-key=<deepseek-key>` or local `DEEPSEEK_API_KEY=<deepseek-key>`
+- optional `merchantops.ai.model-id=<deepseek-model>` or local `DEEPSEEK_MODEL=<deepseek-model>`
 
 If any required provider setting is missing, the rest of the application still works and only the public ticket AI endpoints degrade with controlled `503 SERVICE_UNAVAILABLE` responses.
 
@@ -75,10 +121,34 @@ If any required provider setting is missing, the rest of the application still w
 The current AI runtime expectation is:
 
 - provider secrets stay out of source control
-- the deployment operator chooses the provider base URL and model id
+- the deployment operator chooses the provider path, base URL, and model id
 - AI requests apply the configured timeout rather than relying on accidental client defaults
 - provider failures do not leak raw provider exceptions to API consumers
 - the ticket workflow remains manually operable when AI is disabled or unavailable
+
+Current protocol paths are:
+
+- `OPENAI`: `POST /v1/responses` with strict `json_schema`
+- `DEEPSEEK`: `POST /chat/completions` with `response_format={type=json_object}` plus provider-aware JSON-only instructions and a minimal example JSON payload
+
+Both paths still normalize:
+
+- `X-Client-Request-Id` forwarding
+- timeout versus unavailable classification
+- resolved `modelId`
+- usage token fields when the provider returns them
+- raw JSON text extraction before endpoint-specific validation
+
+## Local Development Convenience
+
+For local dev-profile `spring-boot:run`, the main app entrypoint auto-loads the repository-root `.env` before Spring Boot starts.
+
+This is intended for local operator-owned testing only:
+
+- keep real provider keys only in local `.env`
+- prefer provider-neutral `MERCHANTOPS_AI_*` keys for new setups
+- use `DEEPSEEK_*` aliases only as local convenience when testing DeepSeek compatibility
+- the bootstrap does not search outside the repository root and does not run for non-dev profile startup
 
 ## Ownership And Cost Model
 
@@ -119,4 +189,5 @@ The current Week 6 ticket summary, ticket triage, and ticket reply-draft slices 
 
 - [ai-integration.md](ai-integration.md): current AI workflow boundary and public contract
 - [configuration.md](configuration.md): active runtime keys and overrides
+- [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md): local provider live smoke path and `.env` setup sequence
 - [../architecture/adr/0009-start-with-instance-level-ai-provider-keys-before-tenant-byok.md](../architecture/adr/0009-start-with-instance-level-ai-provider-keys-before-tenant-byok.md): formal decision to start with deployment-owned provider keys

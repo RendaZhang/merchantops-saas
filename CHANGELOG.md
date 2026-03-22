@@ -6,6 +6,15 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+### Changed
+
+- The Week 6 ticket AI runtime now supports provider-normalized configuration under `merchantops.ai.*`, local `.env` auto-loading for `spring-boot:run`, OpenAI Responses plus DeepSeek Chat Completions structured-output paths, and documented provider-resolution fallback from provider-neutral keys to compatibility aliases and provider defaults.
+- Import execution hardening now requeues fresh `PROCESSING` redelivery and persists handled-row progress plus saved row errors before terminal runtime failure.
+
+### Docs
+
+- Added a dedicated local AI live-smoke runbook and updated AI provider, configuration, quick-start, testing, and status docs to match the current provider-normalized runtime and local `.env` verification path.
+
 ## [v0.3.0-beta] - 2026-03-22
 
 Tagged as `Week 6 complete: AI Copilot for Ticket Operations beta baseline`.

@@ -52,10 +52,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "jwt.secret=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                 "jwt.expire-seconds=7200",
                 "merchantops.ai.enabled=true",
+                "merchantops.ai.provider=OPENAI",
                 "merchantops.ai.prompt-version=ticket-summary-v1",
                 "merchantops.ai.model-id=gpt-4.1-mini",
                 "merchantops.ai.timeout-ms=5000",
-                "merchantops.ai.openai.api-key=test-openai-key"
+                "merchantops.ai.base-url=https://api.openai.com",
+                "merchantops.ai.api-key=test-openai-key"
         }
 )
 @AutoConfigureMockMvc
@@ -90,11 +92,12 @@ class TicketAiSummaryIntegrationTest {
 
         reset(ticketSummaryAiProvider);
         aiProperties.setEnabled(true);
+        aiProperties.setProvider(com.renda.merchantops.api.config.AiProviderType.OPENAI);
         aiProperties.setPromptVersion("ticket-summary-v1");
         aiProperties.setModelId("gpt-4.1-mini");
         aiProperties.setTimeoutMs(5000);
-        aiProperties.getOpenai().setApiKey("test-openai-key");
-        aiProperties.getOpenai().setBaseUrl("https://api.openai.com");
+        aiProperties.setApiKey("test-openai-key");
+        aiProperties.setBaseUrl("https://api.openai.com");
 
         jdbcTemplate.execute("DROP ALL OBJECTS");
         createSchema();

@@ -14,6 +14,8 @@ Copy-Item .env.example .env
 docker compose up -d
 ```
 
+The same repository-root local `.env` is also auto-loaded by the API main entrypoint during dev-profile `spring-boot:run`, so local AI provider keys belong there instead of in tracked config files.
+
 ## 2. Build Required Modules
 
 Run from the repository root:

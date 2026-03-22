@@ -41,7 +41,7 @@ public class TicketAiReplyDraftService {
         String normalizedRequestId = RequestIdPolicy.requireNormalized(requestId);
         TicketAiPromptContext ticket = ticketQueryService.getTicketPromptContext(tenantId, ticketId);
         String promptVersion = normalizePromptVersion(aiProperties.getReplyDraftPromptVersion());
-        String configuredModelId = normalizeNullable(aiProperties.getModelId());
+        String configuredModelId = normalizeNullable(aiProperties.resolveModelId());
         TicketReplyDraftPrompt prompt = ticketReplyDraftPromptBuilder.build(promptVersion, ticket);
 
         if (!aiProperties.isEnabled()) {

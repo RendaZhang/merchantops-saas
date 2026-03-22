@@ -40,7 +40,7 @@ public class TicketAiTriageService {
         String normalizedRequestId = RequestIdPolicy.requireNormalized(requestId);
         TicketAiPromptContext ticket = ticketQueryService.getTicketPromptContext(tenantId, ticketId);
         String promptVersion = normalizePromptVersion(aiProperties.getTriagePromptVersion());
-        String configuredModelId = normalizeNullable(aiProperties.getModelId());
+        String configuredModelId = normalizeNullable(aiProperties.resolveModelId());
         TicketTriagePrompt prompt = ticketTriagePromptBuilder.build(promptVersion, ticket);
 
         if (!aiProperties.isEnabled()) {

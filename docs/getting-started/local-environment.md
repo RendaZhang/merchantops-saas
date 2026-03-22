@@ -28,7 +28,7 @@ PowerShell:
 Copy-Item .env.example .env
 ```
 
-The `.env` file is gitignored and stores only local credentials and ports.
+The `.env` file is gitignored and stores local container credentials plus optional app overrides such as `MERCHANTOPS_AI_*` or `DEEPSEEK_*` values for AI live smoke. Keep real secrets only in your local `.env`.
 
 ## Start Services
 
@@ -69,3 +69,4 @@ Credential values come from `.env`:
 
 - MySQL is required for the default `dev` profile because Flyway runs on startup.
 - Redis and RabbitMQ are configured in `application-dev.yml`. Keep them available if you want local config parity with the repository defaults.
+- When you start the API through dev-profile `spring-boot:run`, the main app entrypoint auto-loads the repository-root `.env`. That local bootstrap does not change `@SpringBootTest` behavior and does not search outside the repository root.

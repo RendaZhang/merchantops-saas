@@ -83,6 +83,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Start from [docs/runbooks/automated-tests.md](docs/runbooks/automated-tests.md) for the current regression command and coverage boundary.
 - Keep tests, runbooks, and public API docs aligned when verification reality changes.
 - Use the linked testing guidance for detailed rules on smoke-scope wording, Flyway migration sign-off, and stale-token versus refreshed-login verification.
+- When AI provider wiring, `.env` loading, provider selection, or live vendor compatibility changes, use [docs/runbooks/ai-live-smoke-test.md](docs/runbooks/ai-live-smoke-test.md) plus [docs/runbooks/ai-regression-checklist.md](docs/runbooks/ai-regression-checklist.md) instead of improvising ad hoc live checks.
 - When multiple public AI endpoints share the same slice and governance model, keep adapter failure-set, degraded-mode, no-side-effect assertions, and runbook/checklist coverage symmetric instead of hardening only one endpoint.
 - Treat `TT staged` as a testing-focused staged review entry point: inspect the staged diff, run or choose the smallest sufficient verification set, and report findings ordered by urgency (`P1`, `P2`, `P3`) rather than stopping at scope mapping alone.
 - Shortcut prefix: `TT`
@@ -93,6 +94,7 @@ This repository currently organizes handoff rules around five roles plus a small
   - `TT coverage`: summarize current automated coverage, manual-only gaps, and the right next verification step
   - `TT smoke`: run or guide the local smoke flow from [docs/runbooks/local-smoke-test.md](docs/runbooks/local-smoke-test.md)
   - `TT live`: prepare live smoke prerequisites with `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, then start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`
+  - `TT ai-live`: prepare `.env`, refresh local SNAPSHOTs with `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`, then follow [docs/runbooks/ai-live-smoke-test.md](docs/runbooks/ai-live-smoke-test.md) and [docs/runbooks/ai-regression-checklist.md](docs/runbooks/ai-regression-checklist.md)
   - `TT auth`: focus verification on login, JWT, `/api/v1/users` (`GET` and `POST`), and password-rule regressions
   - `TT sql`: focus verification on native SQL and H2 `MODE=MySQL` test realism, including datasource-replacement pitfalls
   - `TT clean`: provide or execute cleanup steps for generated smoke users after manual verification

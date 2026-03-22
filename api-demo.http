@@ -223,16 +223,20 @@ GET {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-interactions?page=0&size=10&inter
 Authorization: Bearer {{token}}
 
 ### Generate tenant ticket AI summary
+# For live provider smoke, first configure local `.env` per docs/reference/ai-provider-configuration.md
+# and follow docs/runbooks/ai-live-smoke-test.md. Start with this summary call once.
 # Requires merchantops.ai.enabled=true plus a configured instance-level provider.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-summary
 Authorization: Bearer {{token}}
 
 ### Generate tenant ticket AI triage
+# Run this only after summary succeeds in docs/runbooks/ai-live-smoke-test.md.
 # Requires merchantops.ai.enabled=true plus a configured instance-level provider.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-triage
 Authorization: Bearer {{token}}
 
 ### Generate tenant ticket AI internal reply draft
+# Run this only after summary succeeds in docs/runbooks/ai-live-smoke-test.md.
 # Requires merchantops.ai.enabled=true plus a configured instance-level provider.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-reply-draft
 Authorization: Bearer {{token}}

@@ -5,12 +5,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.renda.merchantops.api.config.AiProperties;
+import com.renda.merchantops.api.config.AiProviderType;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
 import com.renda.merchantops.api.service.TicketAiReplyDraftService;
 import com.renda.merchantops.api.service.TicketQueryService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.web.client.RestClient;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -32,58 +32,57 @@ class TicketReplyDraftGoldenSampleTest {
         assertThat(samples).isNotEmpty();
 
         for (GoldenSample sample : samples) {
-            OpenAiFixtureServer.withServer(200, loadProviderResponse(sample.ticketId()), server -> {
-                TicketQueryService ticketQueryService = mock(TicketQueryService.class);
-                AiInteractionRecordService recordService = mock(AiInteractionRecordService.class);
-                when(ticketQueryService.getTicketPromptContext(sample.tenantId(), sample.ticketId()))
-                        .thenReturn(sample.toPromptContext());
+            TicketQueryService ticketQueryService = mock(TicketQueryService.class);
+            AiInteractionRecordService recordService = mock(AiInteractionRecordService.class);
+            StubStructuredOutputAiClient structuredOutputAiClient = new StubStructuredOutputAiClient();
+            structuredOutputAiClient.willReturn(loadProviderResponse(sample.ticketId()));
+            when(ticketQueryService.getTicketPromptContext(sample.tenantId(), sample.ticketId()))
+                    .thenReturn(sample.toPromptContext());
 
-                TicketAiReplyDraftService service = new TicketAiReplyDraftService(
-                        ticketQueryService,
-                        new TicketReplyDraftPromptBuilder(),
-                        newProvider(server.baseUrl()),
-                        recordService,
-                        aiProperties(server.baseUrl())
-                );
+            TicketAiReplyDraftService service = new TicketAiReplyDraftService(
+                    ticketQueryService,
+                    new TicketReplyDraftPromptBuilder(),
+                    new OpenAiTicketReplyDraftProvider(new ObjectMapper(), structuredOutputAiClient),
+                    recordService,
+                    aiProperties()
+            );
 
-                TicketAiReplyDraftResponse response = service.generateReplyDraft(
-                        sample.tenantId(),
-                        7003L,
-                        "golden-reply-draft-" + sample.ticketId(),
-                        sample.ticketId()
-                );
+            TicketAiReplyDraftResponse response = service.generateReplyDraft(
+                    sample.tenantId(),
+                    7003L,
+                    "golden-reply-draft-" + sample.ticketId(),
+                    sample.ticketId()
+            );
 
-                assertThat(response.ticketId()).isEqualTo(sample.ticketId());
-                assertThat(response.opening()).isEqualTo(sample.expectedOpening());
-                assertThat(response.body()).isEqualTo(sample.expectedBody());
-                assertThat(response.nextStep()).isEqualTo(sample.expectedNextStep());
-                assertThat(response.closing()).isEqualTo(sample.expectedClosing());
-                assertThat(response.draftText()).isEqualTo(sample.expectedDraftText());
-                assertThat(response.draftText()).contains("\n\nNext step: ");
-                assertThat(response.draftText().length()).isLessThanOrEqualTo(2000);
-                assertThat(response.promptVersion()).isEqualTo("ticket-reply-draft-v1");
-                assertThat(response.modelId()).isEqualTo("gpt-4.1-mini");
-                assertThat(response.generatedAt()).isNotNull();
-                assertThat(response.latencyMs()).isNotNegative();
-                assertThat(response.requestId()).isEqualTo("golden-reply-draft-" + sample.ticketId());
+            assertThat(response.ticketId()).isEqualTo(sample.ticketId());
+            assertThat(response.opening()).isEqualTo(sample.expectedOpening());
+            assertThat(response.body()).isEqualTo(sample.expectedBody());
+            assertThat(response.nextStep()).isEqualTo(sample.expectedNextStep());
+            assertThat(response.closing()).isEqualTo(sample.expectedClosing());
+            assertThat(response.draftText()).isEqualTo(sample.expectedDraftText());
+            assertThat(response.draftText()).contains("\n\nNext step: ");
+            assertThat(response.draftText().length()).isLessThanOrEqualTo(2000);
+            assertThat(response.promptVersion()).isEqualTo("ticket-reply-draft-v1");
+            assertThat(response.modelId()).isEqualTo("gpt-4.1-mini");
+            assertThat(response.generatedAt()).isNotNull();
+            assertThat(response.latencyMs()).isNotNegative();
+            assertThat(response.requestId()).isEqualTo("golden-reply-draft-" + sample.ticketId());
 
-                JsonNode requestBody = objectMapper.readTree(server.requireCapturedRequest().body());
-                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.title());
-                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.status());
-                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.operationLogs().getFirst().detail());
+            assertThat(structuredOutputAiClient.lastRequest().userPrompt()).contains(sample.title());
+            assertThat(structuredOutputAiClient.lastRequest().userPrompt()).contains(sample.status());
+            assertThat(structuredOutputAiClient.lastRequest().userPrompt()).contains(sample.operationLogs().getFirst().detail());
 
-                ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
-                verify(recordService).record(commandCaptor.capture());
-                assertThat(commandCaptor.getValue().tenantId()).isEqualTo(sample.tenantId());
-                assertThat(commandCaptor.getValue().userId()).isEqualTo(7003L);
-                assertThat(commandCaptor.getValue().requestId()).isEqualTo("golden-reply-draft-" + sample.ticketId());
-                assertThat(commandCaptor.getValue().entityId()).isEqualTo(sample.ticketId());
-                assertThat(commandCaptor.getValue().interactionType()).isEqualTo("REPLY_DRAFT");
-                assertThat(commandCaptor.getValue().promptVersion()).isEqualTo("ticket-reply-draft-v1");
-                assertThat(commandCaptor.getValue().modelId()).isEqualTo("gpt-4.1-mini");
-                assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.SUCCEEDED);
-                assertThat(commandCaptor.getValue().outputSummary()).isEqualTo("nextStep=" + sample.expectedNextStep());
-            });
+            ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
+            verify(recordService).record(commandCaptor.capture());
+            assertThat(commandCaptor.getValue().tenantId()).isEqualTo(sample.tenantId());
+            assertThat(commandCaptor.getValue().userId()).isEqualTo(7003L);
+            assertThat(commandCaptor.getValue().requestId()).isEqualTo("golden-reply-draft-" + sample.ticketId());
+            assertThat(commandCaptor.getValue().entityId()).isEqualTo(sample.ticketId());
+            assertThat(commandCaptor.getValue().interactionType()).isEqualTo("REPLY_DRAFT");
+            assertThat(commandCaptor.getValue().promptVersion()).isEqualTo("ticket-reply-draft-v1");
+            assertThat(commandCaptor.getValue().modelId()).isEqualTo("gpt-4.1-mini");
+            assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.SUCCEEDED);
+            assertThat(commandCaptor.getValue().outputSummary()).isEqualTo("nextStep=" + sample.expectedNextStep());
         }
     }
 
@@ -95,25 +94,32 @@ class TicketReplyDraftGoldenSampleTest {
         }
     }
 
-    private String loadProviderResponse(Long ticketId) throws Exception {
+    private StructuredOutputAiResponse loadProviderResponse(Long ticketId) throws Exception {
         try (InputStream inputStream = getClass().getResourceAsStream("/ai/ticket-reply-draft/provider-response-" + ticketId + ".json")) {
             assertThat(inputStream).isNotNull();
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            JsonNode root = objectMapper.readTree(new String(inputStream.readAllBytes(), StandardCharsets.UTF_8));
+            String rawText = AiProviderHttpSupport.extractOpenAiOutputText(root.path("output")).text();
+            JsonNode usage = root.path("usage");
+            return new StructuredOutputAiResponse(
+                    rawText,
+                    root.path("model").asText("gpt-4.1-mini"),
+                    usage.hasNonNull("input_tokens") ? usage.get("input_tokens").asInt() : null,
+                    usage.hasNonNull("output_tokens") ? usage.get("output_tokens").asInt() : null,
+                    usage.hasNonNull("total_tokens") ? usage.get("total_tokens").asInt() : null,
+                    null
+            );
         }
     }
 
-    private OpenAiTicketReplyDraftProvider newProvider(String baseUrl) {
-        return new OpenAiTicketReplyDraftProvider(RestClient.builder(), new ObjectMapper(), aiProperties(baseUrl));
-    }
-
-    private AiProperties aiProperties(String baseUrl) {
+    private AiProperties aiProperties() {
         AiProperties aiProperties = new AiProperties();
         aiProperties.setEnabled(true);
         aiProperties.setReplyDraftPromptVersion("ticket-reply-draft-v1");
         aiProperties.setModelId("gpt-4.1-mini");
         aiProperties.setTimeoutMs(1000);
-        aiProperties.getOpenai().setApiKey("test-key");
-        aiProperties.getOpenai().setBaseUrl(baseUrl);
+        aiProperties.setProvider(AiProviderType.OPENAI);
+        aiProperties.setApiKey("test-key");
+        aiProperties.setBaseUrl("https://api.openai.com");
         return aiProperties;
     }
 

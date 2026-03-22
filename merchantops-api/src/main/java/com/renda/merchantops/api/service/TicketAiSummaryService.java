@@ -39,7 +39,7 @@ public class TicketAiSummaryService {
         String normalizedRequestId = RequestIdPolicy.requireNormalized(requestId);
         TicketAiPromptContext ticket = ticketQueryService.getTicketPromptContext(tenantId, ticketId);
         String promptVersion = normalizePromptVersion(aiProperties.getPromptVersion());
-        String configuredModelId = normalizeNullable(aiProperties.getModelId());
+        String configuredModelId = normalizeNullable(aiProperties.resolveModelId());
         TicketSummaryPrompt prompt = ticketSummaryPromptBuilder.build(promptVersion, ticket);
 
         if (!aiProperties.isEnabled()) {

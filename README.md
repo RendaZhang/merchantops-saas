@@ -45,6 +45,8 @@ docker compose up -d
 .\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 
+The API also auto-loads the repository-root local `.env` during dev-profile `spring-boot:run`, so local AI provider keys should stay there instead of in tracked files.
+
 After startup:
 
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`

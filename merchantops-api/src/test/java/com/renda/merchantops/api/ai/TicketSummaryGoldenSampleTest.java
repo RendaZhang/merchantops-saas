@@ -10,7 +10,6 @@ import com.renda.merchantops.api.service.TicketAiSummaryService;
 import com.renda.merchantops.api.service.TicketQueryService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.web.client.RestClient;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -32,55 +31,54 @@ class TicketSummaryGoldenSampleTest {
         assertThat(samples).isNotEmpty();
 
         for (GoldenSample sample : samples) {
-            OpenAiFixtureServer.withServer(200, loadProviderResponse(sample.ticketId()), server -> {
-                TicketQueryService ticketQueryService = mock(TicketQueryService.class);
-                AiInteractionRecordService recordService = mock(AiInteractionRecordService.class);
-                when(ticketQueryService.getTicketPromptContext(sample.tenantId(), sample.ticketId()))
-                        .thenReturn(sample.toPromptContext());
+            TicketQueryService ticketQueryService = mock(TicketQueryService.class);
+            AiInteractionRecordService recordService = mock(AiInteractionRecordService.class);
+            StubStructuredOutputAiClient structuredOutputAiClient = new StubStructuredOutputAiClient();
+            structuredOutputAiClient.willReturn(loadProviderResponse(sample.ticketId()));
+            when(ticketQueryService.getTicketPromptContext(sample.tenantId(), sample.ticketId()))
+                    .thenReturn(sample.toPromptContext());
 
-                TicketAiSummaryService service = new TicketAiSummaryService(
-                        ticketQueryService,
-                        new TicketSummaryPromptBuilder(),
-                        newProvider(server.baseUrl()),
-                        recordService,
-                        aiProperties(server.baseUrl())
-                );
+            TicketAiSummaryService service = new TicketAiSummaryService(
+                    ticketQueryService,
+                    new TicketSummaryPromptBuilder(),
+                    new OpenAiTicketSummaryProvider(new ObjectMapper(), structuredOutputAiClient),
+                    recordService,
+                    aiProperties()
+            );
 
-                TicketAiSummaryResponse response = service.generateSummary(
-                        sample.tenantId(),
-                        7001L,
-                        "golden-summary-" + sample.ticketId(),
-                        sample.ticketId()
-                );
+            TicketAiSummaryResponse response = service.generateSummary(
+                    sample.tenantId(),
+                    7001L,
+                    "golden-summary-" + sample.ticketId(),
+                    sample.ticketId()
+            );
 
-                assertThat(response.ticketId()).isEqualTo(sample.ticketId());
-                assertThat(response.summary()).isEqualTo(sample.expectedSummary());
-                assertThat(response.summary()).startsWith("Issue:");
-                assertThat(response.summary()).contains("Current:");
-                assertThat(response.summary()).contains("Next:");
-                assertThat(response.promptVersion()).isEqualTo("ticket-summary-v1");
-                assertThat(response.modelId()).isEqualTo("gpt-4.1-mini");
-                assertThat(response.generatedAt()).isNotNull();
-                assertThat(response.latencyMs()).isNotNegative();
-                assertThat(response.requestId()).isEqualTo("golden-summary-" + sample.ticketId());
+            assertThat(response.ticketId()).isEqualTo(sample.ticketId());
+            assertThat(response.summary()).isEqualTo(sample.expectedSummary());
+            assertThat(response.summary()).startsWith("Issue:");
+            assertThat(response.summary()).contains("Current:");
+            assertThat(response.summary()).contains("Next:");
+            assertThat(response.promptVersion()).isEqualTo("ticket-summary-v1");
+            assertThat(response.modelId()).isEqualTo("gpt-4.1-mini");
+            assertThat(response.generatedAt()).isNotNull();
+            assertThat(response.latencyMs()).isNotNegative();
+            assertThat(response.requestId()).isEqualTo("golden-summary-" + sample.ticketId());
 
-                JsonNode requestBody = objectMapper.readTree(server.requireCapturedRequest().body());
-                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.title());
-                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.status());
-                assertThat(requestBody.path("input").get(1).path("content").asText()).contains(sample.operationLogs().getFirst().detail());
+            assertThat(structuredOutputAiClient.lastRequest().userPrompt()).contains(sample.title());
+            assertThat(structuredOutputAiClient.lastRequest().userPrompt()).contains(sample.status());
+            assertThat(structuredOutputAiClient.lastRequest().userPrompt()).contains(sample.operationLogs().getFirst().detail());
 
-                ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
-                verify(recordService).record(commandCaptor.capture());
-                assertThat(commandCaptor.getValue().tenantId()).isEqualTo(sample.tenantId());
-                assertThat(commandCaptor.getValue().userId()).isEqualTo(7001L);
-                assertThat(commandCaptor.getValue().requestId()).isEqualTo("golden-summary-" + sample.ticketId());
-                assertThat(commandCaptor.getValue().entityId()).isEqualTo(sample.ticketId());
-                assertThat(commandCaptor.getValue().interactionType()).isEqualTo("SUMMARY");
-                assertThat(commandCaptor.getValue().promptVersion()).isEqualTo("ticket-summary-v1");
-                assertThat(commandCaptor.getValue().modelId()).isEqualTo("gpt-4.1-mini");
-                assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.SUCCEEDED);
-                assertThat(commandCaptor.getValue().outputSummary()).isEqualTo(sample.expectedSummary());
-            });
+            ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
+            verify(recordService).record(commandCaptor.capture());
+            assertThat(commandCaptor.getValue().tenantId()).isEqualTo(sample.tenantId());
+            assertThat(commandCaptor.getValue().userId()).isEqualTo(7001L);
+            assertThat(commandCaptor.getValue().requestId()).isEqualTo("golden-summary-" + sample.ticketId());
+            assertThat(commandCaptor.getValue().entityId()).isEqualTo(sample.ticketId());
+            assertThat(commandCaptor.getValue().interactionType()).isEqualTo("SUMMARY");
+            assertThat(commandCaptor.getValue().promptVersion()).isEqualTo("ticket-summary-v1");
+            assertThat(commandCaptor.getValue().modelId()).isEqualTo("gpt-4.1-mini");
+            assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.SUCCEEDED);
+            assertThat(commandCaptor.getValue().outputSummary()).isEqualTo(sample.expectedSummary());
         }
     }
 
@@ -92,25 +90,32 @@ class TicketSummaryGoldenSampleTest {
         }
     }
 
-    private String loadProviderResponse(Long ticketId) throws Exception {
+    private StructuredOutputAiResponse loadProviderResponse(Long ticketId) throws Exception {
         try (InputStream inputStream = getClass().getResourceAsStream("/ai/ticket-summary/provider-response-" + ticketId + ".json")) {
             assertThat(inputStream).isNotNull();
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            JsonNode root = objectMapper.readTree(new String(inputStream.readAllBytes(), StandardCharsets.UTF_8));
+            String rawText = AiProviderHttpSupport.extractOpenAiOutputText(root.path("output")).text();
+            JsonNode usage = root.path("usage");
+            return new StructuredOutputAiResponse(
+                    rawText,
+                    root.path("model").asText("gpt-4.1-mini"),
+                    usage.hasNonNull("input_tokens") ? usage.get("input_tokens").asInt() : null,
+                    usage.hasNonNull("output_tokens") ? usage.get("output_tokens").asInt() : null,
+                    usage.hasNonNull("total_tokens") ? usage.get("total_tokens").asInt() : null,
+                    null
+            );
         }
     }
 
-    private OpenAiTicketSummaryProvider newProvider(String baseUrl) {
-        return new OpenAiTicketSummaryProvider(RestClient.builder(), new ObjectMapper(), aiProperties(baseUrl));
-    }
-
-    private AiProperties aiProperties(String baseUrl) {
+    private AiProperties aiProperties() {
         AiProperties aiProperties = new AiProperties();
         aiProperties.setEnabled(true);
         aiProperties.setPromptVersion("ticket-summary-v1");
         aiProperties.setModelId("gpt-4.1-mini");
         aiProperties.setTimeoutMs(1000);
-        aiProperties.getOpenai().setApiKey("test-key");
-        aiProperties.getOpenai().setBaseUrl(baseUrl);
+        aiProperties.setProvider(com.renda.merchantops.api.config.AiProviderType.OPENAI);
+        aiProperties.setApiKey("test-key");
+        aiProperties.setBaseUrl("https://api.openai.com");
         return aiProperties;
     }
 

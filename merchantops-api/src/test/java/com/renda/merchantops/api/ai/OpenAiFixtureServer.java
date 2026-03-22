@@ -21,9 +21,16 @@ final class OpenAiFixtureServer {
     static void withServer(int statusCode,
                            String responseBody,
                            ThrowingConsumer<ServerHandle> consumer) throws Exception {
+        withServer("/v1/responses", statusCode, responseBody, consumer);
+    }
+
+    static void withServer(String contextPath,
+                           int statusCode,
+                           String responseBody,
+                           ThrowingConsumer<ServerHandle> consumer) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         AtomicReference<CapturedRequest> capturedRequest = new AtomicReference<>();
-        server.createContext("/v1/responses", exchange -> {
+        server.createContext(contextPath, exchange -> {
             byte[] requestBytes = exchange.getRequestBody().readAllBytes();
             capturedRequest.set(new CapturedRequest(
                     exchange.getRequestMethod(),
