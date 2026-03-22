@@ -8,34 +8,30 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 
 ## Current Tagged Milestone
 
-- current tag: `v0.2.0-alpha`
-- tag date: 2026-03-19
-- tag message: `Week 5 complete: async import and data operations preview`
+- current tag: `v0.3.0-beta`
+- tag date: 2026-03-22
+- tag message: `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
 
-This tag records the completed Week 5 async import and data operations baseline and opens the first explicit preview line beyond the early `v0.1.x` milestones.
-
-## Prepared Next Tag
-
-- prepared next tag: `v0.3.0-beta`
-- intended meaning: `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
-
-This is the intended next release-cut tag for the current Week 6 completion-ready worktree baseline. It is not the current tag until Git proves it exists.
+This tag records the completed Week 6 AI Copilot for Ticket Operations baseline and marks the first broader AI-enhanced beta line beyond the earlier workflow-only preview tags.
 
 ## Previous Tagged Milestone
 
-- previous tag: `v0.1.3`
+- previous tag: `v0.2.0-alpha`
+- tag date: 2026-03-19
+- tag message: `Week 5 complete: async import and data operations preview`
+
+This tag records the completed Week 5 async import and data operations baseline before Week 6 broadened the public story into a visible AI-assisted workflow line.
+
+## Earlier Tagged Milestones
+
+- earlier tag: `v0.1.3`
 - tag date: 2026-03-12
 - tag message: `Week 4 complete: audit and approval baseline`
-
-This tag records the first reusable governance baseline before Week 5 broadened the public story into async import and data operations.
-
-## Earlier Tagged Milestone
-
 - earlier tag: `v0.1.2`
 - tag date: 2026-03-11
 - tag message: `Week 3 complete: ticket workflow baseline`
 
-This tag records the first completed workflow module before Week 4 broadened the project into reusable governance patterns.
+These tags record the first reusable governance baseline and the first completed workflow baseline before Week 5 broadened the project into async import and data operations.
 
 ## Initial Tagged Baseline
 
@@ -94,7 +90,7 @@ Recommended direction:
 - `v0.1.2`: Week 3 ticket workflow baseline complete milestone
 - `v0.1.3`: Week 4 audit and approval baseline complete milestone
 - `v0.2.0-alpha`: Week 5 async import and data operations preview line
-- `v0.3.0-beta`: prepared next tag for the Week 6 AI Copilot for Ticket Operations release cut
+- `v0.3.0-beta`: Week 6 AI Copilot for Ticket Operations beta baseline
 - later `v0.x` releases: governance, usage tracking, hardening, and packaging milestones
 
 ## Practical Rules

@@ -41,6 +41,8 @@ Equivalent plain-language requests are also valid, for example "review the stage
 - Generate commit messages from the staged diff only, not from the whole working tree
 - Prefer Conventional Commit style such as `feat(...)`, `fix(...)`, `docs(...)`, `test(...)`, `refactor(...)`, or `chore(...)`
 - If the staged diff mixes unrelated scopes, call that out before suggesting a single commit message
+- For a release-cut commit that already rewrites docs into tagged-state wording, prefer an explicit release-oriented subject such as `chore(release): cut <tag>` or `docs(release): cut <tag>`, depending on whether the staged diff is broader than docs
+- If a commit is intentionally written as tagged-state release documentation, the matching Git tag must be created on that same commit immediately after it lands
 
 ## Release And Tag Guidance
 
@@ -49,6 +51,8 @@ Equivalent plain-language requests are also valid, for example "review the stage
 - Prefer annotated tags (`git tag -a`) over lightweight tags
 - Do not tag a feature or topic branch unless the requester explicitly asks for it
 - Before creating or suggesting a new tag, verify that [../../CHANGELOG.md](../../CHANGELOG.md) and [release-versioning.md](release-versioning.md) are aligned with that milestone
+- Treat tag-ready docs as a checklist, not a best-effort hint: [../../CHANGELOG.md](../../CHANGELOG.md), [release-versioning.md](release-versioning.md), [../project-status.md](../project-status.md), and [../roadmap.md](../roadmap.md) are the minimum required doc set
+- Also require [../../README.md](../../README.md) and [../project-plan.md](../project-plan.md) when the current tagged baseline summary, active-phase framing, or release cadence changed
 
 ## Branch Guidance
 
@@ -60,8 +64,10 @@ Review and release work commonly requires doc updates in these places:
 
 - [../../CHANGELOG.md](../../CHANGELOG.md): release-level notable changes
 - [release-versioning.md](release-versioning.md): current tag baseline and next-version rules
-- [../project-status.md](../project-status.md): if the current tagged milestone changed
-- [../roadmap.md](../roadmap.md): if the planned release sequence changed
+- [../project-status.md](../project-status.md): current tagged milestone and active phase
+- [../roadmap.md](../roadmap.md): post-milestone handoff and near-term sequence
+- [../../README.md](../../README.md): current tagged milestone summary and high-level release baseline
+- [../project-plan.md](../project-plan.md): planning anchor and release cadence when milestone framing changed
 
 ## Related Documents
 

@@ -188,6 +188,18 @@ Before a new tag is created:
 - update `README.md` and `docs/contributing/release-versioning.md` only up to the prepared next-tag state unless the same release-cut commit will be tagged immediately
 - if using a release-cut commit that already reflects the tagged state, create the Git tag immediately after that commit so docs and Git do not drift
 
+Treat the following as the minimum tag-ready doc checklist:
+
+- `CHANGELOG.md`
+- `docs/contributing/release-versioning.md`
+- `docs/project-status.md`
+- `docs/roadmap.md`
+
+Also update when the tagged baseline summary or milestone framing changed:
+
+- `README.md`
+- `docs/project-plan.md`
+
 ## Update Matrix By Phase Or Node
 
 ### Week Or Phase Still In Progress

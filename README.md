@@ -6,13 +6,11 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 ## Status
 
-- Current tagged milestone: `v0.2.0-alpha`
-- Milestone meaning: `Week 5 complete: async import and data operations preview`
-- Current worktree milestone: Week 6 AI Copilot for Ticket Operations (`completion-ready`)
-- Prepared next tag: `v0.3.0-beta`
-- Next active phase after tag cut: Week 7 AI Copilot for Import and Data Quality
-- Release maturity: pre-tag beta candidate, not production-ready
-- Prior baseline: `v0.1.3` for the completed Week 4 audit and approval baseline
+- Current tagged milestone: `v0.3.0-beta`
+- Milestone meaning: `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
+- Current active phase: Week 7 AI Copilot for Import and Data Quality
+- Release maturity: beta preview, not production-ready
+- Prior baseline: `v0.2.0-alpha` for the completed Week 5 async import and data operations preview
 
 ## Current Capabilities
 

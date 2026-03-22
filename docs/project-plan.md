@@ -142,11 +142,10 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 当前计划锚点
 
-- 当前执行已经把 Week 6 AI Copilot for Ticket Operations 推进到 completion-ready。
-- Week 1-5 已构成当前稳定 workflow baseline，其中 Week 5 已完成导入提交、错误报告、顺序 chunk 执行、处理中计数推进、失败行 replay、whole-file replay、按精确 errorCode 的 selective replay、edited failed-row replay，以及队列恢复与 stale-processing runtime hardening。
-- 当前 tagged baseline 已是 `v0.2.0-alpha`，对应 `Week 5 complete: async import and data operations preview`。
-- 当前准备中的下一枚 tag 是 `v0.3.0-beta`，意图记录 Week 6 AI Copilot for Ticket Operations 的第一个较正式 AI-enhanced release cut；在 tag 真正创建前，它仍然只是 prepared next tag。
-- Week 6 tag cut 之后，近期待办会切到 Week 7 import and data-quality AI。
+- 当前执行已经完成 Week 6 AI Copilot for Ticket Operations。
+- Week 1-6 已构成当前稳定 workflow + first public AI baseline，其中 Week 6 已完成 ticket interaction history、summary、triage 和 internal reply draft 四条公开 AI slice。
+- 当前 tagged baseline 已是 `v0.3.0-beta`，对应 `Week 6 complete: AI Copilot for Ticket Operations beta baseline`。
+- 当前近期待办已经切到 Week 7 import and data-quality AI。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -569,10 +568,9 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 推荐发布时间点
 
-- 当前 tagged baseline：`v0.2.0-alpha`，对应 `Week 5 complete: async import and data operations preview`
-- prepared next tag：`v0.3.0-beta`，目标是记录 Week 6 AI Copilot for Ticket Operations 的 release-cut baseline；在 tag 创建前不要把它写成 current tag
+- 当前 tagged baseline：`v0.3.0-beta`，对应 `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
 - 详细版本历史以 `CHANGELOG.md` 和 `docs/contributing/release-versioning.md` 为准
-- Week 7 后：继续把公开叙事从 ticket AI 扩到 import/data-quality AI，而不是把 `v0.3.0-beta` 继续拖成更晚的 tag
+- Week 7 后：继续把公开叙事从 ticket AI 扩到 import/data-quality AI，并再判断下一条 `v0.x` 版本线，而不是继续把 Week 6 baseline 当成未发布状态
 - Week 10 后：更稳定的开源参考实现，可作为商业探索起点
 
 ### 开源前最低准备项

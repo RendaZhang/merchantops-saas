@@ -6,6 +6,10 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+## [v0.3.0-beta] - 2026-03-22
+
+Tagged as `Week 6 complete: AI Copilot for Ticket Operations beta baseline`.
+
 ### Added
 
 - Added a fourth public Week 6 AI Copilot slice through `GET /api/v1/tickets/{id}/ai-interactions`, a tenant-scoped narrowed read endpoint for stored ticket AI interaction history with `interactionType` and `status` filters.
@@ -18,7 +22,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Week 6 AI runtime now persists dedicated `ai_interaction_record` rows instead of overloading generic business audit rows, capturing prompt version, model id, status, latency, request id, and output metadata for the public ticket interaction-history, summary, triage, and reply-draft slices.
 - `GET /api/v1/tickets/{id}/ai-interactions` now exposes operator-visible usage tokens and raw micros cost metadata when available while still hiding raw prompt text and raw provider payloads.
 - Import execution now requeues fresh `PROCESSING` redelivery and preserves handled chunk progress before terminal runtime failure through an internal execution service path.
-- AI configuration, ticket workflow docs, API examples, automated coverage notes, quick-start/build guidance, and AI regression guidance now reflect the Week 6 ticket AI release-cut baseline plus the latest import execution hardening.
+- AI configuration, ticket workflow docs, API examples, automated coverage notes, quick-start/build guidance, and AI regression guidance now reflect the Week 6 ticket AI beta baseline plus the latest import execution hardening.
 
 ## [v0.2.0-alpha] - 2026-03-19
 

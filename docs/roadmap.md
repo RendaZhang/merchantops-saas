@@ -11,26 +11,25 @@ Last updated: 2026-03-22
 - Week 3 Ticket Workflow - System of Action is complete.
 - Week 4 Audit Trail And Approval Patterns is complete.
 - Week 5 Async Import And Data Operations is complete.
-- Week 6 AI Copilot For Ticket Operations is completion-ready for a release cut.
-- Week 7 AI Copilot For Import And Data Quality becomes the next active phase after the Week 6 tag cut.
+- Week 6 AI Copilot For Ticket Operations is complete.
+- Week 7 AI Copilot For Import And Data Quality is the current active phase.
 - Week 5 still provides the current async-operations baseline: import submission/list/detail/errors, narrowed `USER_CSV` business-row execution, replay variants, queued-job recovery, stale-processing handling, and throughput guardrails.
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 
 ## Current Focus
 
-The current Week 6 release-cut state should stay narrow and workflow-oriented:
+The current Week 7 start should stay narrow and workflow-oriented:
 
-- the current public AI slices are ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft: `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
-- keep the public AI surface read-only, and keep the generation slices suggestion-only, tenant-scoped, RBAC-scoped, and failure-tolerant
-- preserve explicit prompt versioning, model tracking, latency capture, separate AI interaction persistence, and narrowed operator-visible interaction history with runtime usage/cost visibility across the public ticket AI slices
-- treat symmetric degraded-mode, provider-adapter, golden-sample, and no-side-effect coverage across the three endpoints as part of the current Week 6 baseline, not as the next missing slice
-- keep the completed Week 5 import baseline stable while Week 6 AI work expands carefully
+- keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
+- keep the existing public ticket AI surface read-only, and keep the generation slices suggestion-only, tenant-scoped, RBAC-scoped, and failure-tolerant
+- start Week 7 from the existing import baseline instead of reopening Week 6 ticket-AI contract work
+- keep Week 7 focused on import/data-quality AI guidance rather than widening into write-back, billing, ledger semantics, or generic chat tooling
 
 ## Recommended Next Steps
 
 - start Week 7 with a read-only, tenant-scoped import AI error-summary slice on top of the current import job detail, item-error, and replay baseline
-- keep the Week 6 ticket interaction-history, ticket summary, ticket triage, and ticket reply-draft contracts stable rather than widening them into write-back, billing, or ledger semantics
-- avoid turning the Week 7 start into a generic chatbot shell, agent loop, or tenant-BYOK project before the narrow import/data-quality slices are proven
+- follow that with narrow import mapping-suggestion and fix-recommendation slices only if the error-summary baseline proves stable
+- keep the completed Week 6 ticket interaction-history, ticket summary, ticket triage, and ticket reply-draft contracts stable rather than widening them into write-back, billing, or ledger semantics
 
 ## Near-Term Sequence
 
@@ -50,11 +49,10 @@ The current Week 6 release-cut state should stay narrow and workflow-oriented:
 
 ## Open-Source Track
 
-- Current tagged milestone: `v0.2.0-alpha` marks the completed Week 5 async import and data operations preview on 2026-03-19.
-- Prepared next tag: `v0.3.0-beta` is the intended Week 6 AI Copilot for Ticket Operations release-cut tag; current Git reality remains `v0.2.0-alpha` until that tag is created.
-- Previous tagged milestone: `v0.1.3` marks the completed Week 4 audit and approval baseline on 2026-03-12.
-- Earlier tagged milestones: `v0.1.2` marks the completed Week 3 ticket workflow baseline on 2026-03-11, `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11, and `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09.
-- Current release-cut target: make the first public open-source release that can honestly present the project as an AI-enhanced vertical SaaS through the prepared `v0.3.0-beta` Week 6 tag.
+- Current tagged milestone: `v0.3.0-beta` marks the completed Week 6 AI Copilot for Ticket Operations beta baseline on 2026-03-22.
+- Previous tagged milestone: `v0.2.0-alpha` marks the completed Week 5 async import and data operations preview on 2026-03-19.
+- Earlier tagged milestones: `v0.1.3` marks the completed Week 4 audit and approval baseline on 2026-03-12, `v0.1.2` marks the completed Week 3 ticket workflow baseline on 2026-03-11, `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11, and `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09.
+- The current open-source line can now honestly present the project as a workflow-first, AI-enhanced vertical SaaS backend through the Week 6 tag.
 - Week 10 target: reach a more stable open-source reference-implementation milestone and gather input for later commercial discovery.
 
 ## Notes

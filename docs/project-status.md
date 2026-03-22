@@ -6,24 +6,23 @@ Last updated: 2026-03-22
 
 ## Overview
 
-MerchantOps SaaS now sits on a completed Week 1-5 baseline plus a completion-ready Week 6 AI Copilot baseline. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, and read-only ticket AI summary, triage, internal reply-draft, and interaction-history endpoints that prove the project has moved from async workflow infrastructure into a credible AI-assisted business path.
+MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilot for Import and Data Quality becoming the next active phase. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, and read-only ticket AI summary, triage, internal reply-draft, and interaction-history endpoints that prove the project has moved from async workflow infrastructure into a credible AI-assisted business path.
 
 ## Current Phase Summary
 
-- Current phase: Week 6 AI Copilot For Ticket Operations, now in a completion-ready release-cut state.
-- Stable completed tagged baselines: Week 2 tenant user management, Week 3 ticket workflow, Week 4 audit/approval, and Week 5 async import and data operations.
+- Current phase: Week 7 AI Copilot For Import And Data Quality.
+- Stable completed tagged baselines: Week 2 tenant user management, Week 3 ticket workflow, Week 4 audit/approval, Week 5 async import and data operations, and Week 6 AI Copilot for Ticket Operations.
 - Week 5 remains complete with import submission/list/detail/error reporting, narrowed `USER_CSV` business-row execution, filtered queue reads, failed-row replay variants, whole-file replay for full-failure sources, and derived-job lineage.
-- The current worktree has brought Week 6 to four public suggestion-only or read-only ticket AI slices exposed as `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` under tenant scope, `TICKET_READ`, explicit prompt versioning, controlled provider degradation, dedicated AI interaction persistence, and operator-visible runtime usage/cost metadata on interaction history.
-- Next active phase after the Week 6 tag cut: Week 7 AI Copilot For Import And Data Quality.
+- Week 6 is now complete with four public suggestion-only or read-only ticket AI slices exposed as `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` under tenant scope, `TICKET_READ`, explicit prompt versioning, controlled provider degradation, dedicated AI interaction persistence, and operator-visible runtime usage/cost metadata on interaction history.
+- The next active phase is Week 7 AI Copilot For Import And Data Quality.
 - Exact endpoint contracts live in [reference/README.md](reference/README.md); this page keeps the phase-level truth and current limits.
 
 ## Release Baseline
 
-- Current tagged milestone: `v0.2.0-alpha` on 2026-03-19, recorded as `Week 5 complete: async import and data operations preview`.
-- Prepared next tag: `v0.3.0-beta`, intended for the Week 6 AI Copilot for Ticket Operations release cut. This tag is not created yet and should not be treated as current Git reality until the tag exists.
-- Previous tagged milestone: `v0.1.3` on 2026-03-12, recorded as `Week 4 complete: audit and approval baseline`.
-- Earlier milestones: `v0.1.2` on 2026-03-11 (`Week 3 complete: ticket workflow baseline`), `v0.1.1` on 2026-03-11 (`Week 2 complete: tenant user management loop`), and `v0.1.0` on 2026-03-09 (`Week 1 complete: foundation phase`).
-- The current worktree baseline has reached a Week 6 completion-ready state, but no Week 6 tag has been cut yet.
+- Current tagged milestone: `v0.3.0-beta` on 2026-03-22, recorded as `Week 6 complete: AI Copilot for Ticket Operations beta baseline`.
+- Previous tagged milestone: `v0.2.0-alpha` on 2026-03-19, recorded as `Week 5 complete: async import and data operations preview`.
+- Earlier milestones: `v0.1.3` on 2026-03-12 (`Week 4 complete: audit and approval baseline`), `v0.1.2` on 2026-03-11 (`Week 3 complete: ticket workflow baseline`), `v0.1.1` on 2026-03-11 (`Week 2 complete: tenant user management loop`), and `v0.1.0` on 2026-03-09 (`Week 1 complete: foundation phase`).
+- The current tagged baseline now includes the full Week 6 public ticket AI surface and its latest runtime/documentation hardening.
 
 ## Current Repository Baseline
 
@@ -55,7 +54,7 @@ MerchantOps SaaS now sits on a completed Week 1-5 baseline plus a completion-rea
 - The interaction-history surface returns both successful and controlled-failure records with exact-match `interactionType` and `status` filters plus stable `createdAt DESC, id DESC` ordering.
 - The interaction-history surface now exposes ticket-scoped runtime usage/cost metadata when present, returns those fields as `null` when unavailable, and still does not expose raw prompt text or raw provider payload.
 - The current provider ownership model is instance-level configuration rather than tenant BYOK.
-- The Week 6 public ticket AI baseline should now stay stable while Week 7 import and data-quality AI becomes the next active implementation phase after the Week 6 tag cut; automatic write-back remains out of scope.
+- The Week 6 public ticket AI baseline should now stay stable while Week 7 import and data-quality AI becomes the current active implementation phase; automatic write-back remains out of scope.
 
 ## Current Limitations
 

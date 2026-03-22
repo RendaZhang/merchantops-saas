@@ -114,6 +114,8 @@ This repository currently organizes handoff rules around five roles plus a small
 - Default review scope is the staged diff only.
 - Treat pasted findings from earlier review rounds as hints, not as still-open facts. Re-check whether they still apply to the current staged diff before repeating or carrying them forward.
 - Keep changelog, release versioning, and milestone docs aligned with the reviewed change set.
+- For tag readiness, treat `CHANGELOG.md`, `docs/contributing/release-versioning.md`, `docs/project-status.md`, and `docs/roadmap.md` as the minimum release-doc set; include `README.md` and `docs/project-plan.md` when the current tagged baseline summary or milestone framing changed.
+- If a staged release-cut commit already moves docs to tagged-state wording, that same commit must be tagged immediately after it lands; do not leave tagged-state docs untagged across later commits.
 - Use [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md) when the task is centered on tag readiness, release-note drafting, or pre-tag / post-tag doc alignment.
 - Shortcut prefix: `RR`
 - Supported shortcuts include:

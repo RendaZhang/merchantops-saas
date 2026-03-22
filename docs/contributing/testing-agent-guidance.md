@@ -47,7 +47,7 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-5 public workflow surface plus the active Week 6 ticket AI path.
+The current automated baseline is centered on the completed Week 2-6 public workflow surface, including the Week 6 ticket AI path.
 
 Today it covers:
 

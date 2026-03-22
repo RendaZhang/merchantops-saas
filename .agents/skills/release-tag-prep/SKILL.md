@@ -30,6 +30,9 @@ Use this skill to keep tag-related docs consistent without mixing release histor
    - keep `Unreleased` limited to release-level changes supported by the current diff
    - align phase completion and next active phase in status and roadmap
    - update high-level baseline text without claiming the tag already exists unless the user explicitly confirmed it or git proves it
+   - treat the tag-ready minimum doc set as mandatory: `CHANGELOG.md`, `docs/contributing/release-versioning.md`, `docs/project-status.md`, and `docs/roadmap.md`
+   - also update `README.md` when the current tagged milestone summary changed
+   - also update `docs/project-plan.md` when milestone framing, release cadence, or the current planning anchor changed
 5. Handle open-source release-cut work when the same commit will be tagged immediately:
    - allow tagged-state wording only when the user explicitly confirmed the release-cut flow
    - ensure changelog, release-versioning, README, status, roadmap, and plan all reflect the same current tag and prior baseline
@@ -54,10 +57,33 @@ Use this skill to keep tag-related docs consistent without mixing release histor
 - [docs/project-plan.md](../../../docs/project-plan.md)
 - [../../../README.md](../../../README.md)
 
+## Tag-Ready Minimum Doc Set
+
+Treat these checks as required, not optional, whenever a tag is being prepared or confirmed:
+
+- [../../../CHANGELOG.md](../../../CHANGELOG.md): the release-worthy notes must be in the correct version section for the tag state you are using
+- [docs/contributing/release-versioning.md](../../../docs/contributing/release-versioning.md): current tag, previous baseline, and progression wording must match the intended cut
+- [docs/project-status.md](../../../docs/project-status.md): current tagged baseline and active phase must match repository reality
+- [docs/roadmap.md](../../../docs/roadmap.md): next active phase and near-term sequencing must match the post-milestone handoff
+
+Review and update when the change supports it:
+
+- [../../../README.md](../../../README.md): current tagged milestone summary and high-level capability baseline
+- [docs/project-plan.md](../../../docs/project-plan.md): planning anchor, release cadence, and milestone framing
+
+For open-source release cuts, also confirm:
+
+- `LICENSE`
+- `CONTRIBUTING.md`
+- `CODE_OF_CONDUCT.md`
+- `SECURITY.md`
+- `.github` issue and PR templates
+
 ## Output Shape
 
 - State whether the work is pre-tag, post-tag, open-source release-cut, or a consistency pass.
 - State the current tagged baseline and the target or confirmed next tag when relevant.
 - List the files updated.
+- State whether the tag-ready minimum doc set is complete, and name any missing file explicitly.
 - Call out whether any open-source entry file is still missing when the task is a release cut.
 - Call out any remaining pre-tag or post-tag gaps.

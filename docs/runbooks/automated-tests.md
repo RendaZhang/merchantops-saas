@@ -28,7 +28,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-5 public workflow baseline plus the active Week 6 ticket AI summary, ticket AI triage, ticket AI reply-draft, and ticket AI interaction-history paths. Today that means:
+Current automated coverage is centered on the completed Week 2-6 public workflow baseline, including the Week 6 ticket AI summary, ticket AI triage, ticket AI reply-draft, and ticket AI interaction-history paths. Today that means:
 
 - auth and permission checks for the current public user-management, ticket, AI interaction-history, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
