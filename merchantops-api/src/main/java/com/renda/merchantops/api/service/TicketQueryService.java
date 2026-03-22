@@ -282,6 +282,10 @@ public class TicketQueryService {
                 record.getModelId(),
                 record.getLatencyMs(),
                 record.getRequestId(),
+                record.getUsagePromptTokens(),
+                record.getUsageCompletionTokens(),
+                record.getUsageTotalTokens(),
+                record.getUsageCostMicros(),
                 record.getCreatedAt()
         );
     }

@@ -21,14 +21,14 @@ Week 6 should stay narrow and workflow-oriented:
 
 - the current public AI slices are ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft: `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the public AI surface read-only, and keep the generation slices suggestion-only, tenant-scoped, RBAC-scoped, and failure-tolerant
-- preserve explicit prompt versioning, model tracking, latency capture, separate AI interaction persistence, and narrowed operator-visible interaction history across the public ticket AI slices
+- preserve explicit prompt versioning, model tracking, latency capture, separate AI interaction persistence, and narrowed operator-visible interaction history with runtime usage/cost visibility across the public ticket AI slices
 - treat symmetric degraded-mode, provider-adapter, golden-sample, and no-side-effect coverage across the three endpoints as part of the current Week 6 baseline, not as the next missing slice
 - keep the completed Week 5 import baseline stable while Week 6 AI work expands carefully
 
 ## Recommended Next Steps
 
-- add a narrow public AI usage / cost read surface on top of existing `ai_interaction_record` data, still under tenant scope and without widening Week 6 into write-back
-- keep the ticket interaction-history, ticket summary, ticket triage, and ticket reply-draft contracts stable while layering operator-visible usage / cost visibility on top of the current Week 6 baseline
+- move the next new workflow slice to Week 7 import and data-quality AI after stabilizing the current Week 6 ticket AI baseline, including history-side usage / cost visibility
+- keep the ticket interaction-history, ticket summary, ticket triage, and ticket reply-draft contracts stable rather than widening Week 6 into write-back, billing, or ledger semantics
 - avoid turning Week 6 into a generic chatbot shell, agent loop, or tenant-BYOK project before the narrow ticket slices are proven
 
 ## Near-Term Sequence

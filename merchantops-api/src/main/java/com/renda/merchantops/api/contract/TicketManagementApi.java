@@ -236,7 +236,7 @@ public interface TicketManagementApi {
 
     @Operation(
             summary = "Page AI interaction history for one current-tenant ticket",
-            description = "Requires TICKET_READ permission. Returns current-tenant ai_interaction_record history for one ticket with optional page/size plus exact interactionType and status filters. This endpoint is read-only and does not expose raw prompts, raw provider payloads, token counts, or cost fields."
+            description = "Requires TICKET_READ permission. Returns current-tenant ai_interaction_record history for one ticket with optional page/size plus exact interactionType and status filters. This endpoint is read-only, exposes narrowed runtime metadata including usage and raw micros cost values when available, does not expose raw prompts or raw provider payloads, and is not a billing or ledger contract."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

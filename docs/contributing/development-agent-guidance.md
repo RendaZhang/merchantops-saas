@@ -42,6 +42,13 @@ Use it when changing code or development-facing documentation.
 - Unimplemented business flows must throw unified business exceptions, not raw framework or JDK exceptions.
 - If a write can change effective access state such as user status, roles, or permissions, request-time authentication must revalidate that state and reject stale JWT claims instead of relying on login-time checks alone.
 
+### Multi-Module Build Rules
+
+- This repository is a multi-module Maven build. `merchantops-api` depends on sibling modules such as `merchantops-infra`, so API-only commands can accidentally resolve stale local SNAPSHOT artifacts.
+- For API-focused automated verification, prefer `.\mvnw.cmd -pl merchantops-api -am test` from the repository root over `-pl merchantops-api test` alone.
+- Before local `spring-boot:run` after changing sibling-module signatures, JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` from the repository root first.
+- If a standalone `merchantops-api` run fails with missing sibling classes or repository methods, refresh the reactor modules before treating it as an application-code failure.
+
 ### Large-Scale Edit Strategy
 
 - Use `apply_patch` for localized manual edits and small review-friendly diffs.

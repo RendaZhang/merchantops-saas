@@ -112,6 +112,10 @@ class TicketQueryServiceTest {
                 "gpt-4.1-mini",
                 412L,
                 "ticket-ai-summary-req-1",
+                120,
+                52,
+                172,
+                1900L,
                 LocalDateTime.of(2026, 3, 22, 8, 30)
         );
 
@@ -150,6 +154,10 @@ class TicketQueryServiceTest {
         assertThat(response.getItems().getFirst().getModelId()).isEqualTo("gpt-4.1-mini");
         assertThat(response.getItems().getFirst().getLatencyMs()).isEqualTo(412L);
         assertThat(response.getItems().getFirst().getRequestId()).isEqualTo("ticket-ai-summary-req-1");
+        assertThat(response.getItems().getFirst().getUsagePromptTokens()).isEqualTo(120);
+        assertThat(response.getItems().getFirst().getUsageCompletionTokens()).isEqualTo(52);
+        assertThat(response.getItems().getFirst().getUsageTotalTokens()).isEqualTo(172);
+        assertThat(response.getItems().getFirst().getUsageCostMicros()).isEqualTo(1900L);
         assertThat(response.getPage()).isEqualTo(0);
         assertThat(response.getSize()).isEqualTo(100);
         assertThat(response.getTotal()).isEqualTo(1);
@@ -358,6 +366,10 @@ class TicketQueryServiceTest {
                                                           String modelId,
                                                           Long latencyMs,
                                                           String requestId,
+                                                          Integer usagePromptTokens,
+                                                          Integer usageCompletionTokens,
+                                                          Integer usageTotalTokens,
+                                                          Long usageCostMicros,
                                                           LocalDateTime createdAt) {
         AiInteractionRecordEntity record = new AiInteractionRecordEntity();
         record.setId(id);
@@ -372,6 +384,10 @@ class TicketQueryServiceTest {
         record.setModelId(modelId);
         record.setLatencyMs(latencyMs);
         record.setRequestId(requestId);
+        record.setUsagePromptTokens(usagePromptTokens);
+        record.setUsageCompletionTokens(usageCompletionTokens);
+        record.setUsageTotalTokens(usageTotalTokens);
+        record.setUsageCostMicros(usageCostMicros);
         record.setCreatedAt(createdAt);
         return record;
     }

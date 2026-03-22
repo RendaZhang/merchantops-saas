@@ -211,11 +211,14 @@ GET {{baseUrl}}/api/v1/tickets/{{ticketId}}
 Authorization: Bearer {{token}}
 
 ### Get tenant ticket AI interaction history
+# Response includes operator-visible runtime usage/cost metadata when present.
+# Failed or otherwise unmetered rows return the usage/cost fields as null.
 GET {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-interactions?page=0&size=10
 Authorization: Bearer {{token}}
 
 ### Get tenant ticket AI interaction history - filtered
 # Canonical filter values are uppercase exact matches such as SUMMARY, TRIAGE, REPLY_DRAFT and SUCCEEDED, INVALID_RESPONSE.
+# The filtered history response still includes usage/cost metadata on each returned row.
 GET {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-interactions?page=0&size=10&interactionType=SUMMARY&status=SUCCEEDED
 Authorization: Bearer {{token}}
 

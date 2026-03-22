@@ -30,7 +30,7 @@ Current Week 6 scope is intentionally narrow:
 - the generation endpoints use no request body; the server derives the prompt from the current tenant-scoped ticket detail context
 - the history endpoint supports `page`, `size`, `interactionType`, and `status` query params over stored `ai_interaction_record` rows
 - no ticket status change, comment write, approval trigger, or other workflow mutation
-- no public raw prompt, raw provider response, token breakdown, or cost breakdown in the response body
+- no public raw prompt or raw provider response in the response body, and no billing or ledger semantics on the history response
 
 ## Public Response Contract
 
@@ -148,6 +148,10 @@ Each `items[]` record includes:
 - `modelId`
 - `latencyMs`
 - `requestId`
+- `usagePromptTokens`
+- `usageCompletionTokens`
+- `usageTotalTokens`
+- `usageCostMicros`
 - `createdAt`
 
 Example:
@@ -167,6 +171,10 @@ Example:
         "modelId": "gpt-4.1-mini",
         "latencyMs": 251,
         "requestId": "ticket-ai-triage-invalid-response-1",
+        "usagePromptTokens": null,
+        "usageCompletionTokens": null,
+        "usageTotalTokens": null,
+        "usageCostMicros": null,
         "createdAt": "2026-03-22T09:00:00"
       },
       {
@@ -178,6 +186,10 @@ Example:
         "modelId": "gpt-4.1-mini",
         "latencyMs": 436,
         "requestId": "ticket-ai-reply-draft-req-1",
+        "usagePromptTokens": 140,
+        "usageCompletionTokens": 88,
+        "usageTotalTokens": 228,
+        "usageCostMicros": 2100,
         "createdAt": "2026-03-22T09:00:00"
       }
     ],
@@ -260,7 +272,7 @@ Instead, AI invocations now persist a dedicated `ai_interaction_record` row with
 - `status`
 - `latencyMs`
 - `outputSummary`
-- optional usage and cost placeholders when available
+- optional runtime metadata `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, and `usageCostMicros`
 
 Current status values include:
 
@@ -271,7 +283,7 @@ Current status values include:
 - `PROVIDER_UNAVAILABLE`
 - `INVALID_RESPONSE`
 
-This record is still the governance-facing source of truth. The public history endpoint now exposes only a narrowed read shape over those rows and intentionally does not expose raw prompt text, raw provider payloads, token counts, or cost fields.
+This record is still the governance-facing source of truth. The public history endpoint now exposes a narrowed read shape over those rows, including runtime usage/cost metadata when available, while still not exposing raw prompt text or raw provider payloads and while remaining outside billing or ledger semantics.
 
 ## Evaluation Baseline
 
@@ -303,19 +315,18 @@ Not implemented yet:
 - any AI-driven ticket write-back flow
 - approval-integrated AI execution
 - tenant-level BYOK
-- public AI usage or cost reporting
+- tenant billing, ledger, or invoice-style AI usage/cost reporting
 - attachments or external-system context enrichment
 
 ## Planned Next Workflow Areas
 
-Near-term Week 6 follow-up work should stay in the ticket workflow lane:
+The current ticket-scoped public AI baseline should stay stable while the next new workflow slice moves forward:
 
-- a ticket-scoped public AI usage or cost read surface over existing `ai_interaction_record` data, still without exposing raw prompt or raw provider payload
+- Week 7 import and data-quality AI workflows
 - future approval-aware write-back only after the suggestion-only slices are stable
 
 Later roadmap areas remain:
 
-- Week 7 import and data-quality AI workflows
 - Week 8 agentic workflows with human oversight
 - Week 9 broader AI governance, cost, and usage reporting
 

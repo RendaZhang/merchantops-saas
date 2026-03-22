@@ -28,6 +28,12 @@ PowerShell:
 mvnw.cmd -pl merchantops-api -am -DskipTests install
 ```
 
+Why this step matters:
+
+- `merchantops-api` depends on sibling modules from the same repository, including `merchantops-infra`
+- `-am` rebuilds those modules in the same reactor instead of relying on whatever SNAPSHOT jars are already in your local Maven cache
+- if later local runs fail with missing repository classes, missing entity fields, or stale signatures, rerun this step before debugging the API module itself
+
 ## 3. Start the API Module
 
 Use the module POM so Maven resolves the Spring Boot plugin correctly:
@@ -41,6 +47,8 @@ PowerShell:
 ```powershell
 mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
+
+If you changed sibling-module signatures, JPA entities, or repositories, rerun step 2 before starting again so `spring-boot:run` does not pick up stale local SNAPSHOT artifacts.
 
 Profile override example:
 

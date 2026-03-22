@@ -8,12 +8,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.ImmediateRequeueAmqpException;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -44,7 +46,8 @@ class ImportJobWorkerTest {
     void consumeShouldSplitRowsIntoConfiguredChunksAndCompleteJob() throws Exception {
         ImportJobExecutionService.ImportJobExecutionContext context =
                 new ImportJobExecutionService.ImportJobExecutionContext(7001L, 1L, "USER_CSV", "1/key.csv", 101L, "req-1");
-        when(importJobExecutionService.startProcessing(7001L, 1L)).thenReturn(context);
+        when(importJobExecutionService.startProcessing(7001L, 1L))
+                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/key.csv")).thenReturn(new ByteArrayInputStream(
                 ("""
                         username,displayName,email,password,roleCodes
@@ -76,7 +79,8 @@ class ImportJobWorkerTest {
     void consumeShouldFailUnsupportedImportTypeBeforeChunkProcessing() throws Exception {
         ImportJobExecutionService.ImportJobExecutionContext context =
                 new ImportJobExecutionService.ImportJobExecutionContext(7002L, 1L, "TICKET_CSV", "1/key.csv", 101L, "req-2");
-        when(importJobExecutionService.startProcessing(7002L, 1L)).thenReturn(context);
+        when(importJobExecutionService.startProcessing(7002L, 1L))
+                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/key.csv")).thenReturn(new ByteArrayInputStream(
                 "username,displayName,email,password,roleCodes\nvalid,Valid User,valid@example.com,123456,READ_ONLY"
                         .getBytes(StandardCharsets.UTF_8)
@@ -97,7 +101,8 @@ class ImportJobWorkerTest {
         importProcessingProperties.setChunkSize(1);
         ImportJobExecutionService.ImportJobExecutionContext context =
                 new ImportJobExecutionService.ImportJobExecutionContext(7003L, 1L, "USER_CSV", "1/quoted.csv", 101L, "req-3");
-        when(importJobExecutionService.startProcessing(7003L, 1L)).thenReturn(context);
+        when(importJobExecutionService.startProcessing(7003L, 1L))
+                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/quoted.csv")).thenReturn(new ByteArrayInputStream(
                 ("""
                         username,displayName,email,password,roleCodes
@@ -138,7 +143,8 @@ class ImportJobWorkerTest {
     void consumeShouldAcceptUtf8BomInFirstHeaderColumn() throws Exception {
         ImportJobExecutionService.ImportJobExecutionContext context =
                 new ImportJobExecutionService.ImportJobExecutionContext(7004L, 1L, "USER_CSV", "1/bom.csv", 101L, "req-4");
-        when(importJobExecutionService.startProcessing(7004L, 1L)).thenReturn(context);
+        when(importJobExecutionService.startProcessing(7004L, 1L))
+                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/bom.csv")).thenReturn(new ByteArrayInputStream(
                 ("\uFEFFusername,displayName,email,password,roleCodes\n" +
                         "bomuser,Bom User,bom@example.com,123456,READ_ONLY").getBytes(StandardCharsets.UTF_8)
@@ -167,7 +173,8 @@ class ImportJobWorkerTest {
         importProcessingProperties.setMaxRowsPerJob(5);
         ImportJobExecutionService.ImportJobExecutionContext context =
                 new ImportJobExecutionService.ImportJobExecutionContext(7005L, 1L, "USER_CSV", "1/limit.csv", 101L, "req-5");
-        when(importJobExecutionService.startProcessing(7005L, 1L)).thenReturn(context);
+        when(importJobExecutionService.startProcessing(7005L, 1L))
+                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/limit.csv")).thenReturn(new ByteArrayInputStream(
                 ("""
                         username,displayName,email,password,roleCodes
@@ -199,5 +206,19 @@ class ImportJobWorkerTest {
         assertThat(failureCaptor.getValue().errorSummary()).isEqualTo("import job exceeded max row limit");
         assertThat(failureCaptor.getValue().rawPayload()).isEqualTo("u6,User Six,u6@example.com,123456,READ_ONLY");
         verify(importJobExecutionService, never()).completeJob(any());
+    }
+
+    @Test
+    void consumeShouldRequeueFreshProcessingRedelivery() {
+        when(importJobExecutionService.startProcessing(7006L, 1L))
+                .thenReturn(ImportJobExecutionService.ImportJobStartResult.requeue());
+
+        assertThatThrownBy(() -> importJobWorker.consume(new ImportJobMessage(7006L, 1L)))
+                .isInstanceOf(ImmediateRequeueAmqpException.class)
+                .hasMessage("import job is already processing");
+
+        verify(importJobExecutionService, never()).processChunk(any(), any());
+        verify(importJobExecutionService, never()).completeJob(any());
+        verify(importJobExecutionService, never()).failJob(any(), any());
     }
 }

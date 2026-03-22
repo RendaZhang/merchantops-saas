@@ -35,6 +35,18 @@ public class TicketAiInteractionListItemResponse {
     @Schema(description = "Request id linked to the interaction", example = "ticket-ai-summary-req-1")
     private String requestId;
 
+    @Schema(description = "Provider-reported prompt token count when available for operator-visible runtime metadata", example = "140")
+    private Integer usagePromptTokens;
+
+    @Schema(description = "Provider-reported completion token count when available for operator-visible runtime metadata", example = "88")
+    private Integer usageCompletionTokens;
+
+    @Schema(description = "Provider-reported total token count when available for operator-visible runtime metadata", example = "228")
+    private Integer usageTotalTokens;
+
+    @Schema(description = "Provider-reported runtime cost in raw micros when available; null for failed or unmetered records", example = "2100")
+    private Long usageCostMicros;
+
     @Schema(description = "Record creation time", example = "2026-03-22T09:00:00")
     private LocalDateTime createdAt;
 }

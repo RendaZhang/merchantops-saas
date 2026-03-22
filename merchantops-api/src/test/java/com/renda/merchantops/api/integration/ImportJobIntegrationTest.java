@@ -20,6 +20,7 @@ import com.renda.merchantops.api.messaging.ImportJobExecutionService;
 import com.renda.merchantops.api.messaging.ImportJobPublisher;
 import com.renda.merchantops.api.messaging.ImportJobQueueRecoveryService;
 import com.renda.merchantops.api.messaging.ImportJobWorker;
+import com.renda.merchantops.api.messaging.UserCsvImportProcessor;
 import com.renda.merchantops.api.service.AuditEventService;
 import com.renda.merchantops.api.service.ImportJobCommandService;
 import com.renda.merchantops.api.service.ImportJobQueryService;
@@ -99,6 +100,8 @@ class ImportJobIntegrationTest {
     private ImportJobPublisher importJobPublisher;
     @SpyBean
     private ImportJobExecutionService importJobExecutionService;
+    @SpyBean
+    private UserCsvImportProcessor userCsvImportProcessor;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -220,7 +223,7 @@ class ImportJobIntegrationTest {
                 });
             }
         }
-        Mockito.reset(importJobPublisher, importJobExecutionService);
+        Mockito.reset(importJobPublisher, importJobExecutionService, userCsvImportProcessor);
         importProcessingProperties.setChunkSize(2);
         importProcessingProperties.setMaxRowsPerJob(1000);
         importProcessingProperties.setStaleProcessingThresholdSeconds(300);
@@ -360,6 +363,40 @@ class ImportJobIntegrationTest {
     }
 
     @Test
+    void startProcessingShouldRequestRequeueForFreshProcessingRedelivery() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-fresh-redelivery.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                fresh,Fresh User,fresh@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-fresh-redelivery", request, file);
+        jdbcTemplate.update(
+                "UPDATE import_job SET status = 'PROCESSING', started_at = CURRENT_TIMESTAMP, finished_at = NULL WHERE id = ?",
+                created.id()
+        );
+
+        ImportJobExecutionService.ImportJobStartResult result = importJobExecutionService.startProcessing(created.id(), 1L);
+
+        assertThat(result.action()).isEqualTo(ImportJobExecutionService.ImportJobStartAction.REQUEUE);
+        assertThat(result.context()).isNull();
+
+        ImportJobDetailResponse current = importJobQueryService.getJobDetail(1L, created.id());
+        assertThat(current.status()).isEqualTo("PROCESSING");
+        assertThat(current.totalCount()).isZero();
+        assertThat(current.successCount()).isZero();
+        assertThat(current.failureCount()).isZero();
+
+        Integer processingStartedAuditCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_PROCESSING_STARTED'",
+                Integer.class,
+                created.id()
+        );
+        assertThat(processingStartedAuditCount).isZero();
+    }
+
+    @Test
     void workerShouldIgnoreDuplicateImportMessagesAfterFirstSuccessfulRun() {
         ImportJobCreateRequest request = new ImportJobCreateRequest();
         request.setImportType("USER_CSV");
@@ -413,6 +450,61 @@ class ImportJobIntegrationTest {
         assertThat(userCountAfterSecondRun).isEqualTo(userCountAfterFirstRun);
         assertThat(processingStartedAuditAfterSecondRun).isEqualTo(processingStartedAuditAfterFirstRun);
         assertThat(completedAuditAfterSecondRun).isEqualTo(completedAuditAfterFirstRun);
+    }
+
+    @Test
+    void workerShouldPersistChunkProgressBeforeFailingUnexpectedRowCrash() {
+        importProcessingProperties.setChunkSize(3);
+        Mockito.doAnswer(invocation -> {
+            Integer rowNumber = invocation.getArgument(1, Integer.class);
+            if (rowNumber != null && rowNumber == 4) {
+                throw new IllegalStateException("synthetic row crash");
+            }
+            return invocation.callRealMethod();
+        }).when(userCsvImportProcessor).processRow(Mockito.any(), Mockito.anyInt(), Mockito.anyList());
+
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-unexpected-row-crash.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                alpha,Alpha User,alpha@example.com,abc123,READ_ONLY
+                invalid,Invalid User,not-an-email,abc123,READ_ONLY
+                omega,Omega User,omega@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-row-crash", request, file);
+        importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
+
+        ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
+        assertThat(processed.status()).isEqualTo("FAILED");
+        assertThat(processed.totalCount()).isEqualTo(3);
+        assertThat(processed.successCount()).isEqualTo(1);
+        assertThat(processed.failureCount()).isEqualTo(2);
+        assertThat(processed.errorSummary()).isEqualTo("import job processing failed");
+        assertThat(processed.errorCodeCounts()).containsExactlyInAnyOrder(
+                new ImportJobErrorCodeCountResponse("INVALID_EMAIL", 1),
+                new ImportJobErrorCodeCountResponse("PROCESSING_ERROR", 1)
+        );
+
+        ImportJobErrorPageResponse invalidEmailPage =
+                importJobQueryService.pageJobErrors(1L, created.id(), new ImportJobErrorPageQuery(0, 10, "INVALID_EMAIL"));
+        assertThat(invalidEmailPage.items()).singleElement().satisfies(item -> {
+            assertThat(item.rowNumber()).isEqualTo(3);
+            assertThat(item.errorCode()).isEqualTo("INVALID_EMAIL");
+        });
+
+        ImportJobErrorPageResponse processingErrorPage =
+                importJobQueryService.pageJobErrors(1L, created.id(), new ImportJobErrorPageQuery(0, 10, "PROCESSING_ERROR"));
+        assertThat(processingErrorPage.items()).singleElement().satisfies(item -> {
+            assertThat(item.rowNumber()).isNull();
+            assertThat(item.errorCode()).isEqualTo("PROCESSING_ERROR");
+        });
+
+        Integer createdUsers = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username IN ('alpha','omega')",
+                Integer.class
+        );
+        assertThat(createdUsers).isEqualTo(1);
     }
 
     @Test

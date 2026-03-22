@@ -103,7 +103,7 @@ Ticket Workflow tag note:
 - `GET /api/v1/tickets` supports `page`, `size`, `status`, `assigneeId`, `keyword` (title/description), and `unassignedOnly`.
 - `GET /api/v1/tickets/{id}` includes current comments and workflow-level operation logs.
 - `GET /api/v1/tickets/{id}/ai-interactions` supports `page`, `size`, `interactionType`, and `status`, with stable ordering `createdAt DESC, id DESC`.
-- `GET /api/v1/tickets/{id}/ai-interactions` exposes a narrowed read shape only and does not expose raw prompt text, raw provider payload, token counts, or cost fields.
+- `GET /api/v1/tickets/{id}/ai-interactions` exposes narrowed runtime metadata including `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, and `usageCostMicros`, while still not exposing raw prompt text or raw provider payload and while remaining outside billing or ledger semantics.
 - `POST /api/v1/tickets/{id}/ai-reply-draft` exposes no request body and returns a structured internal comment draft plus assembled `draftText`.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.

@@ -24,7 +24,7 @@ The AI checklist is now active because public AI endpoints exist:
 - suggestion-only summary, triage, internal reply-draft results, and narrowed interaction-history visibility for one current-tenant ticket
 - read permission inherited from `TICKET_READ`
 - no write-back, no comment creation, and no approval execution in the current slice
-- interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`, but do not expose raw prompt, raw provider payload, usage, or cost
+- interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`, but do not expose raw prompt or raw provider payload and do not establish billing semantics
 
 ## Environment And Control
 
@@ -68,8 +68,8 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] `interactionType` filtering is exact-match on stored canonical values such as `SUMMARY`, `TRIAGE`, and `REPLY_DRAFT`
 - [ ] `status` filtering is exact-match on stored canonical values such as `SUCCEEDED`, `FEATURE_DISABLED`, `PROVIDER_NOT_CONFIGURED`, `PROVIDER_TIMEOUT`, `PROVIDER_UNAVAILABLE`, and `INVALID_RESPONSE`
 - [ ] history results are ordered by `createdAt DESC, id DESC`, including stable same-timestamp tie breaks
-- [ ] history responses stay paged and return only `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`
-- [ ] history responses do not leak raw prompt text, raw provider payload, usage tokens, or cost fields
+- [ ] history responses stay paged and return `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`
+- [ ] history responses expose usage/cost values only as ticket-scoped runtime metadata, return `null` when unavailable, and do not leak raw prompt text or raw provider payload
 - [ ] history reads do not create new `ai_interaction_record` rows or mutate ticket workflow state, approvals, or business `audit_event`
 
 ## Output Quality
@@ -86,7 +86,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] the public summary response shape remains stable for `ticketId`, `summary`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public triage response shape remains stable for `ticketId`, `classification`, `priority`, `reasoning`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public reply-draft response shape remains stable for `ticketId`, `draftText`, `opening`, `body`, `nextStep`, `closing`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
-- [ ] the public interaction-history response shape remains stable for `items`, `page`, `size`, `total`, `totalPages`, and item fields `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`
+- [ ] the public interaction-history response shape remains stable for `items`, `page`, `size`, `total`, `totalPages`, and item fields `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`
 - [ ] the reply-draft `draftText` still equals `opening + "\n\n" + body + "\n\nNext step: " + nextStep + "\n\n" + closing`
 - [ ] assembled reply drafts still fit the current ticket comment length limit
 - [ ] the summary, triage, and reply-draft slices stay suggestion-only and do not imply unsupported automatic execution

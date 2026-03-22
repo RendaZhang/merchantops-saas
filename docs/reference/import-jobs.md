@@ -1,6 +1,6 @@
 # Import Jobs
 
-Last updated: 2026-03-19
+Last updated: 2026-03-22
 
 ## Public API Surface
 
@@ -43,16 +43,17 @@ Worker and runtime behavior (Week 5 runtime hardening):
 
 1. create requests persist a `QUEUED` job and schedule the first MQ publish after transaction commit
 2. if after-commit publish fails and the job remains `QUEUED`, the scheduled recovery loop republishes aged queued jobs in bounded batches; this is a best-effort recovery path, not a new public API
-3. worker startup accepts either a fresh `QUEUED` job or a stale `PROCESSING` job that crossed the configured stale threshold
-4. a stale `PROCESSING` job with no recorded progress is restarted from `PROCESSING`; the processing-started audit snapshot adds `recoveredFromStale=true`
-5. a stale `PROCESSING` job that already has `totalCount`, `successCount`, or `failureCount` progress is failed in place with job summary `import job processing expired after partial progress` and audit error `PROCESSING_STALE`
-6. the worker parses the file through the current CSV parser, strips a UTF-8 BOM on the first header cell when present, and validates fixed header + row shape
-7. one worker still owns one job and processes the file in internal sequential chunks; chunking is not a public API concept and does not change the current status model
-8. each row executes in its own transaction through the existing user-create service chain, so row-level partial success still holds across chunk boundaries
-9. row errors are recorded in `import_job_item_error` for both parse-level and business-level failures
-10. `totalCount`, `successCount`, and `failureCount` are flushed back to `import_job` after each chunk so `GET /api/v1/import-jobs/{id}` can show real progress during `PROCESSING`
-11. files that exceed the configured row guardrail fail with `MAX_ROWS_EXCEEDED`
-12. terminal transitions still write job-level audit events such as `IMPORT_JOB_COMPLETED` and `IMPORT_JOB_FAILED`
+3. worker startup claims a fresh `QUEUED` job for processing
+4. a fresh redelivery for a still-active `PROCESSING` job is explicitly requeued so the in-flight worker keeps ownership; it is not treated as stale and does not emit a duplicate processing-started audit
+5. a stale `PROCESSING` job with no recorded progress is restarted from `PROCESSING`; the processing-started audit snapshot adds `recoveredFromStale=true`
+6. a stale `PROCESSING` job that already has `totalCount`, `successCount`, or `failureCount` progress is failed in place with job summary `import job processing expired after partial progress` and audit error `PROCESSING_STALE`
+7. the worker parses the file through the current CSV parser, strips a UTF-8 BOM on the first header cell when present, and validates fixed header + row shape
+8. one worker still owns one job and processes the file in internal sequential chunks; chunking is not a public API concept and does not change the current status model
+9. each row executes in its own transaction through the existing user-create service chain, so row-level partial success still holds across chunk boundaries
+10. row errors are recorded in `import_job_item_error` for both parse-level and business-level failures
+11. `totalCount`, `successCount`, and `failureCount` are flushed back to `import_job` after each chunk so `GET /api/v1/import-jobs/{id}` can show real progress during `PROCESSING`; handled-row progress and saved row errors are still persisted before an unexpected runtime failure writes the terminal job failure
+12. files that exceed the configured row guardrail fail with `MAX_ROWS_EXCEEDED`
+13. terminal transitions still write job-level audit events such as `IMPORT_JOB_COMPLETED` and `IMPORT_JOB_FAILED`
 
 Current internal processing controls:
 

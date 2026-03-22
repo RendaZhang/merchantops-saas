@@ -100,6 +100,7 @@ This repository currently organizes handoff rules around five roles plus a small
 ## Development Role
 
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before changing tenant-scoped repositories, services, DTOs, or user-management internals.
+- This is a multi-module Maven repository. When `merchantops-api` depends on sibling-module changes, prefer reactor commands with `-am`; before standalone `spring-boot:run` or API-only verification after repository/entity/signature changes, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first so local SNAPSHOT dependencies are current.
 - Keep tenant scoping explicit and keep query/write models separated.
 - Use the linked development guidance for detailed rules on `operatorId` / `requestId` propagation, internal attribution fields, and request-time access revalidation.
 - For large repetitive or cross-file edits, prefer scoped Python or Node transforms over a single giant `apply_patch`; keep the detailed execution guidance in the linked development guidance page.

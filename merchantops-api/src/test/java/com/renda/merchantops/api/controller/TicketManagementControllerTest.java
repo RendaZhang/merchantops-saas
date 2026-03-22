@@ -238,6 +238,10 @@ class TicketManagementControllerTest {
                         "gpt-4.1-mini",
                         251L,
                         "ticket-ai-triage-invalid-response-1",
+                        null,
+                        null,
+                        null,
+                        null,
                         LocalDateTime.of(2026, 3, 22, 9, 0)
                 )),
                 1,
@@ -261,7 +265,11 @@ class TicketManagementControllerTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.items[0].interactionType").value("TRIAGE"))
-                .andExpect(jsonPath("$.data.items[0].status").value("INVALID_RESPONSE"));
+                .andExpect(jsonPath("$.data.items[0].status").value("INVALID_RESPONSE"))
+                .andExpect(jsonPath("$.data.items[0].usagePromptTokens").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageCompletionTokens").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageTotalTokens").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageCostMicros").value(org.hamcrest.Matchers.nullValue()));
 
         ArgumentCaptor<TicketAiInteractionPageQuery> queryCaptor = ArgumentCaptor.forClass(TicketAiInteractionPageQuery.class);
         verify(ticketQueryService).pageTicketAiInteractions(eq(9L), eq(11L), queryCaptor.capture());

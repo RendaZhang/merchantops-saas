@@ -35,32 +35,32 @@ public class ImportJobExecutionService {
     private final ImportProcessingProperties importProcessingProperties;
 
     @Transactional
-    public ImportJobExecutionContext startProcessing(Long jobId, Long tenantId) {
+    public ImportJobStartResult startProcessing(Long jobId, Long tenantId) {
         if (jobId == null || tenantId == null) {
-            return null;
+            return ImportJobStartResult.ignore();
         }
         ImportJobEntity job = importJobRepository.findByIdAndTenantIdForUpdate(jobId, tenantId).orElse(null);
         if (job == null) {
-            return null;
+            return ImportJobStartResult.ignore();
         }
         if (STATUS_QUEUED.equals(job.getStatus())) {
-            return transitionToProcessing(job, false);
+            return ImportJobStartResult.started(transitionToProcessing(job, false));
         }
         if (STATUS_PROCESSING.equals(job.getStatus())) {
             return recoverOrFailStaleProcessing(job);
         }
-        return null;
+        return ImportJobStartResult.ignore();
     }
 
-    private ImportJobExecutionContext recoverOrFailStaleProcessing(ImportJobEntity job) {
+    private ImportJobStartResult recoverOrFailStaleProcessing(ImportJobEntity job) {
         if (!isStaleProcessing(job)) {
-            return null;
+            return ImportJobStartResult.requeue();
         }
         if (hasProgress(job)) {
             failStaleProcessingJob(job);
-            return null;
+            return ImportJobStartResult.ignore();
         }
-        return transitionToProcessing(job, true);
+        return ImportJobStartResult.started(transitionToProcessing(job, true));
     }
 
     private ImportJobExecutionContext transitionToProcessing(ImportJobEntity job, boolean recoveredFromStale) {
@@ -135,7 +135,7 @@ public class ImportJobExecutionService {
         );
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RuntimeException.class)
     public void processChunk(ImportJobExecutionContext context, List<ImportJobChunkRow> rows) {
         if (rows == null || rows.isEmpty()) {
             return;
@@ -148,6 +148,7 @@ public class ImportJobExecutionService {
         int totalDelta = 0;
         int successDelta = 0;
         int failureDelta = 0;
+        RuntimeException unexpectedFailure = null;
         for (ImportJobChunkRow row : rows) {
             totalDelta++;
             if (row.columns().size() != ImportCsvSupport.USER_CSV_HEADERS.size()) {
@@ -161,6 +162,9 @@ public class ImportJobExecutionService {
             } catch (ImportRowProcessingException ex) {
                 failureDelta++;
                 saveError(job, row.rowNumber(), ex.code(), ex.getMessage(), row.rawPayload());
+            } catch (RuntimeException ex) {
+                unexpectedFailure = ex;
+                break;
             }
         }
 
@@ -168,6 +172,9 @@ public class ImportJobExecutionService {
         job.setSuccessCount(safeInt(job.getSuccessCount()) + successDelta);
         job.setFailureCount(safeInt(job.getFailureCount()) + failureDelta);
         importJobRepository.save(job);
+        if (unexpectedFailure != null) {
+            throw unexpectedFailure;
+        }
     }
 
     @Transactional
@@ -273,6 +280,29 @@ public class ImportJobExecutionService {
             Long requestedBy,
             String requestId
     ) {
+    }
+
+    public record ImportJobStartResult(
+            ImportJobStartAction action,
+            ImportJobExecutionContext context
+    ) {
+        public static ImportJobStartResult started(ImportJobExecutionContext context) {
+            return new ImportJobStartResult(ImportJobStartAction.STARTED, context);
+        }
+
+        public static ImportJobStartResult ignore() {
+            return new ImportJobStartResult(ImportJobStartAction.IGNORE, null);
+        }
+
+        public static ImportJobStartResult requeue() {
+            return new ImportJobStartResult(ImportJobStartAction.REQUEUE, null);
+        }
+    }
+
+    public enum ImportJobStartAction {
+        STARTED,
+        IGNORE,
+        REQUEUE
     }
 
     public record ImportJobChunkRow(

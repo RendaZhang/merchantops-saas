@@ -116,8 +116,8 @@ Current behavior:
 - supports `page`, `size`, `interactionType`, and `status`
 - reads only `ai_interaction_record` rows for `entityType=TICKET` and the target `entityId`
 - returns a page ordered by `createdAt DESC`, then `id DESC`
-- exposes only `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, and `createdAt`
-- does not expose raw prompt text, raw provider payloads, token counts, or cost fields
+- exposes `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`
+- does not expose raw prompt text or raw provider payloads, and the runtime usage/cost fields are not a billing or ledger contract
 - does not create new AI records, mutate ticket state, write comments, or trigger approvals
 
 Response example:
@@ -137,6 +137,10 @@ Response example:
         "modelId": "gpt-4.1-mini",
         "latencyMs": 251,
         "requestId": "ticket-ai-triage-invalid-response-1",
+        "usagePromptTokens": null,
+        "usageCompletionTokens": null,
+        "usageTotalTokens": null,
+        "usageCostMicros": null,
         "createdAt": "2026-03-22T09:00:00"
       },
       {
@@ -148,6 +152,10 @@ Response example:
         "modelId": "gpt-4.1-mini",
         "latencyMs": 436,
         "requestId": "ticket-ai-reply-draft-req-1",
+        "usagePromptTokens": 140,
+        "usageCompletionTokens": 88,
+        "usageTotalTokens": 228,
+        "usageCostMicros": 2100,
         "createdAt": "2026-03-22T09:00:00"
       }
     ],
@@ -337,7 +345,7 @@ Current ticket-related tracking is intentionally split by concern:
 - ticket writes persist workflow history into `ticket_operation_log`
 - ticket writes also emit governance-oriented `audit_event` rows where applicable
 - AI summary, triage, and reply-draft calls persist runtime traceability into `ai_interaction_record`
-- AI history reads expose a narrowed page over `ai_interaction_record` without exposing raw prompt, provider payload, usage, or cost columns
+- AI history reads expose a narrowed page over `ai_interaction_record`, including ticket-scoped runtime usage/cost metadata, while still not exposing raw prompt or provider payload columns
 - the public ticket and AI response shapes do not expose raw provider payloads or internal audit tables directly
 
 ## Demo Roles

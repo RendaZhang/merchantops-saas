@@ -30,7 +30,7 @@ MerchantOps SaaS now sits on a completed Week 1-5 baseline plus four public Week
 - Auth and context: `POST /api/v1/auth/login`, `GET /api/v1/user/me`, and `GET /api/v1/context`.
 - User management: tenant-scoped list/detail/create/update/status/role-assignment plus role lookup and disable-request initiation.
 - Ticket workflow: tenant-scoped list/detail/create/assignee/status/comment flow with queue filters and reopen support.
-- AI-assisted ticket read path: `GET /api/v1/tickets/{id}/ai-interactions` for narrowed interaction-history visibility, `POST /api/v1/tickets/{id}/ai-summary` for suggestion-only summaries, `POST /api/v1/tickets/{id}/ai-triage` for suggestion-only classification and priority guidance, and `POST /api/v1/tickets/{id}/ai-reply-draft` for internal comment-style reply drafts from ticket detail context.
+- AI-assisted ticket read path: `GET /api/v1/tickets/{id}/ai-interactions` for narrowed interaction-history visibility plus operator-visible runtime usage/cost metadata, `POST /api/v1/tickets/{id}/ai-summary` for suggestion-only summaries, `POST /api/v1/tickets/{id}/ai-triage` for suggestion-only classification and priority guidance, and `POST /api/v1/tickets/{id}/ai-reply-draft` for internal comment-style reply drafts from ticket detail context.
 - Governance: entity-scoped `GET /api/v1/audit-events` plus minimal approval request queue/detail/approve/reject flow for `USER_STATUS_DISABLE`.
 - Import jobs: tenant-scoped create/list/detail/replay/replay-file/selective-replay/edited-replay/error-page flow with `USER_CSV` processing, filtered queue reads, quoted CSV record parsing, `errorCodeCounts`, row-level item errors, replay-derived job lineage, scope-only replay audit metadata, and the current Week 5 reporting/replay surface.
 
@@ -51,9 +51,9 @@ MerchantOps SaaS now sits on a completed Week 1-5 baseline plus four public Week
 - Reply-draft semantics are explicitly internal and comment-style: the endpoint returns a structured draft plus `draftText`, but still does not create a comment or send an external message.
 - The current AI context is limited to the target current-tenant ticket's core fields plus the most recent comments and workflow logs, with prompt-time truncation and explicit `earlier ... omitted` markers when older history exists.
 - The interaction-history surface returns both successful and controlled-failure records with exact-match `interactionType` and `status` filters plus stable `createdAt DESC, id DESC` ordering.
-- The interaction-history surface deliberately does not expose raw prompt text, raw provider payload, usage tokens, or cost fields.
+- The interaction-history surface now exposes ticket-scoped runtime usage/cost metadata when present, returns those fields as `null` when unavailable, and still does not expose raw prompt text or raw provider payload.
 - The current provider ownership model is instance-level configuration rather than tenant BYOK.
-- Near-term Week 6 follow-up should stay narrow: add a public AI usage/cost read surface on top of the existing history plus generation slices, and keep automatic write-back out of scope.
+- The Week 6 public ticket AI baseline should now stay stable while the next new workflow slice moves into Week 7 import and data-quality AI; automatic write-back remains out of scope.
 
 ## Current Limitations
 
@@ -64,8 +64,7 @@ MerchantOps SaaS now sits on a completed Week 1-5 baseline plus four public Week
 - `UserCommandService#updatePassword` remains a placeholder business error, not a completed write flow.
 - There is no refresh-token flow, logout flow, or token revocation flow yet.
 - Public AI is still limited to interaction history, summary, triage, and internal reply draft; import AI and agentic write paths are still pending.
-- There is no public AI usage or cost read surface yet.
-- The interaction-history endpoint does not expose raw prompt text, raw provider payload, usage tokens, or cost fields.
+- The interaction-history endpoint exposes ticket-scoped runtime usage/cost metadata only; it is not a tenant billing, ledger, or invoice surface.
 - AI runtime still uses instance-level provider configuration only; there is no tenant BYOK, streaming, tool calling, model routing, or automatic write-back loop.
 - Ticket enrichments such as priority, SLA, attachments, and notifications remain post-Week-3 follow-up work.
 - Deployment-ready manifests, production secret-management guidance, and performance artifacts are still pending.

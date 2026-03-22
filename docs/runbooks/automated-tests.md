@@ -34,12 +34,12 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, stale-processing redelivery handling, sequential chunked worker execution, processing-progress counters, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
+- import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, fresh `PROCESSING` redelivery requeue, stale-processing restart-or-fail handling, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
 - AI summary, AI triage, and AI reply-draft prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
 - provider adapter coverage for AI summary, AI triage, and AI reply-draft, including request-contract assertions, multi-part `output_text` parsing, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - symmetrical degraded-mode persistence coverage for AI summary, AI triage, and AI reply-draft across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
 - explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
-- ticket AI interaction-history coverage for tenant-scoped ticket existence, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, narrowed response mapping, and non-leakage of raw prompt, raw provider payload, usage, and cost fields
+- ticket AI interaction-history coverage for tenant-scoped ticket existence, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, and non-leakage of raw prompt and raw provider payload fields
 - explicit read-only assertions for `GET /api/v1/tickets/{id}/ai-interactions` against ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
 - stale-token rejection after status, role, or permission changes
 
@@ -107,7 +107,7 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
   - `404` for cross-tenant or missing ticket access
   - exact-match `interactionType` and `status` filters plus pagination
   - stable `createdAt DESC, id DESC` ordering, including same-timestamp tie breaks
-  - narrowed response shape with no leakage of raw prompt, raw provider payload, usage, or cost fields
+  - widened response shape with correct usage/cost visibility, nullability for failed rows, and no leakage of raw prompt or raw provider payload
   - read-only assertions for ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
@@ -200,11 +200,15 @@ Current automated coverage is centered on the completed Week 2-5 public workflow
 - `ImportJobQueryServiceTest`
   - import-job page normalization, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `sourceJobId`, `errorCodeCounts`, and item-error hydration
 - `ImportJobIntegrationTest`
-  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, stale `PROCESSING` redelivery handling, failed-row replay as a derived job, whole-file replay for full-failure jobs, rejection when a source job already has successful rows, selective replay by exact `errorCode`, edited replay by exact `errorId`, replay rejection cases, summary semantics, and import audit events including replay-scope metadata
+  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, fresh `PROCESSING` redelivery requeue behavior, stale `PROCESSING` redelivery handling, unexpected row-crash handling that preserves handled progress plus `PROCESSING_ERROR`, failed-row replay as a derived job, whole-file replay for full-failure jobs, rejection when a source job already has successful rows, selective replay by exact `errorCode`, edited replay by exact `errorId`, replay rejection cases, summary semantics, and import audit events including replay-scope metadata
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
   - scheduled queue recovery can republish aged `QUEUED` jobs when the original after-commit publish failed
+- `ImportJobExecutionServiceTest`
+  - fresh `PROCESSING` redelivery returns `REQUEUE` without duplicate processing-started side effects
+  - `processChunk` persists handled success/failure counters plus saved row errors before rethrowing an unexpected runtime failure
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
+  - fresh `PROCESSING` redelivery raises `ImmediateRequeueAmqpException` instead of duplicating local execution
   - internal sequential chunk boundaries follow the configured chunk size without changing public contract shape
   - quoted commas, escaped quotes, embedded newlines, and UTF-8 BOM headers still normalize into correct row payloads before chunk execution
   - the worker flushes pending rows before failing `MAX_ROWS_EXCEEDED`

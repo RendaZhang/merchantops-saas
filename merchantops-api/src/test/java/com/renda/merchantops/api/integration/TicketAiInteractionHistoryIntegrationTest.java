@@ -110,10 +110,10 @@ class TicketAiInteractionHistoryIntegrationTest {
                 .andExpect(jsonPath("$.data.items[0].modelId").value("gpt-4.1-mini"))
                 .andExpect(jsonPath("$.data.items[0].latencyMs").value(251))
                 .andExpect(jsonPath("$.data.items[0].requestId").value("ticket-ai-triage-invalid-response-1"))
-                .andExpect(jsonPath("$.data.items[0].usagePromptTokens").doesNotExist())
-                .andExpect(jsonPath("$.data.items[0].usageCompletionTokens").doesNotExist())
-                .andExpect(jsonPath("$.data.items[0].usageTotalTokens").doesNotExist())
-                .andExpect(jsonPath("$.data.items[0].usageCostMicros").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].usagePromptTokens").value(nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageCompletionTokens").value(nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageTotalTokens").value(nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageCostMicros").value(nullValue()))
                 .andExpect(jsonPath("$.data.items[1].id").value(9002))
                 .andExpect(jsonPath("$.data.items[1].interactionType").value("REPLY_DRAFT"))
                 .andExpect(jsonPath("$.data.items[1].status").value("SUCCEEDED"))
@@ -122,10 +122,10 @@ class TicketAiInteractionHistoryIntegrationTest {
                 .andExpect(jsonPath("$.data.items[1].modelId").value("gpt-4.1-mini"))
                 .andExpect(jsonPath("$.data.items[1].latencyMs").value(436))
                 .andExpect(jsonPath("$.data.items[1].requestId").value("ticket-ai-reply-draft-req-1"))
-                .andExpect(jsonPath("$.data.items[1].usagePromptTokens").doesNotExist())
-                .andExpect(jsonPath("$.data.items[1].usageCompletionTokens").doesNotExist())
-                .andExpect(jsonPath("$.data.items[1].usageTotalTokens").doesNotExist())
-                .andExpect(jsonPath("$.data.items[1].usageCostMicros").doesNotExist());
+                .andExpect(jsonPath("$.data.items[1].usagePromptTokens").value(140))
+                .andExpect(jsonPath("$.data.items[1].usageCompletionTokens").value(88))
+                .andExpect(jsonPath("$.data.items[1].usageTotalTokens").value(228))
+                .andExpect(jsonPath("$.data.items[1].usageCostMicros").value(2100));
 
         assertReadOnlyAndNoBusinessMutation(5);
     }
@@ -175,7 +175,11 @@ class TicketAiInteractionHistoryIntegrationTest {
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].id").value(9001))
                 .andExpect(jsonPath("$.data.items[0].interactionType").value("SUMMARY"))
-                .andExpect(jsonPath("$.data.items[0].status").value("SUCCEEDED"));
+                .andExpect(jsonPath("$.data.items[0].status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.data.items[0].usagePromptTokens").value(120))
+                .andExpect(jsonPath("$.data.items[0].usageCompletionTokens").value(52))
+                .andExpect(jsonPath("$.data.items[0].usageTotalTokens").value(172))
+                .andExpect(jsonPath("$.data.items[0].usageCostMicros").value(1900));
 
         assertReadOnlyAndNoBusinessMutation(5);
     }
@@ -192,7 +196,11 @@ class TicketAiInteractionHistoryIntegrationTest {
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items[0].id").value(9003))
                 .andExpect(jsonPath("$.data.items[0].interactionType").value("TRIAGE"))
-                .andExpect(jsonPath("$.data.items[0].status").value("INVALID_RESPONSE"));
+                .andExpect(jsonPath("$.data.items[0].status").value("INVALID_RESPONSE"))
+                .andExpect(jsonPath("$.data.items[0].usagePromptTokens").value(nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageCompletionTokens").value(nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageTotalTokens").value(nullValue()))
+                .andExpect(jsonPath("$.data.items[0].usageCostMicros").value(nullValue()));
 
         assertReadOnlyAndNoBusinessMutation(5);
     }
