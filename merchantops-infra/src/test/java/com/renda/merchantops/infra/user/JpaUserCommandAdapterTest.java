@@ -4,6 +4,7 @@ import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.domain.user.NewUserDraft;
 import com.renda.merchantops.infra.persistence.entity.UserEntity;
+import com.renda.merchantops.infra.persistence.entity.UserRoleEntity;
 import com.renda.merchantops.infra.repository.UserRepository;
 import com.renda.merchantops.infra.repository.UserRoleRepository;
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ class JpaUserCommandAdapterTest {
         adapter.replaceUserRoles(205L, java.util.List.of(12L, 13L));
 
         verify(userRoleRepository).deleteByUserId(205L);
-        ArgumentCaptor<Iterable> captor = ArgumentCaptor.forClass(Iterable.class);
+        ArgumentCaptor<Iterable<UserRoleEntity>> captor = userRoleEntitiesCaptor();
         verify(userRoleRepository).saveAll(captor.capture());
         assertThat(StreamSupport.stream(captor.getValue().spliterator(), false).toList())
                 .extracting("userId", "roleId")
@@ -68,5 +69,10 @@ class JpaUserCommandAdapterTest {
                         org.assertj.core.groups.Tuple.tuple(205L, 12L),
                         org.assertj.core.groups.Tuple.tuple(205L, 13L)
                 );
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static ArgumentCaptor<Iterable<UserRoleEntity>> userRoleEntitiesCaptor() {
+        return ArgumentCaptor.forClass((Class) Iterable.class);
     }
 }

@@ -75,6 +75,8 @@ public class JpaTicketQueryAdapter implements TicketQueryPort {
                         Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))
                 )
         );
+        // Resolve usernames in one lookup so page rendering does not devolve into per-ticket
+        // repository calls and so unassigned tickets still map cleanly to null usernames.
         Map<Long, String> usernamesById = loadUsernamesById(
                 tenantId,
                 resultPage.getContent().stream()
@@ -180,6 +182,8 @@ public class JpaTicketQueryAdapter implements TicketQueryPort {
     public Optional<TicketPromptContext> findTicketPromptContext(Long tenantId, Long ticketId) {
         return ticketRepository.findByIdAndTenantId(ticketId, tenantId)
                 .map(ticket -> {
+                    // Prompt context intentionally uses a bounded recent window instead of full
+                    // history so providers get the latest signal without unbounded token growth.
                     WindowedComments comments = loadRecentComments(ticketId, tenantId);
                     WindowedOperationLogs operationLogs = loadRecentOperationLogs(ticketId, tenantId);
 
@@ -276,6 +280,8 @@ public class JpaTicketQueryAdapter implements TicketQueryPort {
                 tenantId,
                 PageRequest.of(0, TicketPromptWindowPolicy.COMMENT_HISTORY_LIMIT + 1)
         );
+        // Fetch one extra row so the prompt can signal truncated history without having to load
+        // the full comment stream first.
         boolean olderItemsOmitted = latestComments.size() > TicketPromptWindowPolicy.COMMENT_HISTORY_LIMIT;
         List<TicketCommentEntity> window = new ArrayList<>(
                 latestComments.subList(0, Math.min(latestComments.size(), TicketPromptWindowPolicy.COMMENT_HISTORY_LIMIT))
@@ -290,6 +296,8 @@ public class JpaTicketQueryAdapter implements TicketQueryPort {
                 tenantId,
                 PageRequest.of(0, TicketPromptWindowPolicy.OPERATION_LOG_HISTORY_LIMIT + 1)
         );
+        // The same extra-row pattern keeps prompt-window truncation explicit for operation logs
+        // without paying for a second count-style query.
         boolean olderItemsOmitted = latestOperationLogs.size() > TicketPromptWindowPolicy.OPERATION_LOG_HISTORY_LIMIT;
         List<TicketOperationLogEntity> window = new ArrayList<>(
                 latestOperationLogs.subList(0, Math.min(latestOperationLogs.size(), TicketPromptWindowPolicy.OPERATION_LOG_HISTORY_LIMIT))

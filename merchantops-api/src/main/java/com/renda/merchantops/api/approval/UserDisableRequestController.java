@@ -1,11 +1,9 @@
-package com.renda.merchantops.api.controller;
+package com.renda.merchantops.api.approval;
 
 import com.renda.merchantops.api.context.ContextAccess;
 import com.renda.merchantops.api.context.RequestIdAccess;
-import com.renda.merchantops.api.contract.UserDisableRequestApi;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.security.RequirePermission;
-import com.renda.merchantops.api.approval.ApprovalRequestCommandService;
 import com.renda.merchantops.api.platform.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,5 +23,4 @@ public class UserDisableRequestController implements UserDisableRequestApi {
         String requestId = RequestIdAccess.currentRequestId();
         return ApiResponse.success(approvalRequestCommandService.createDisableRequest(tenantId, requesterId, requestId, id));
     }
-
 }

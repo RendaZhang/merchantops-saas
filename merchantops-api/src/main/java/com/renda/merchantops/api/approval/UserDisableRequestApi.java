@@ -1,4 +1,4 @@
-package com.renda.merchantops.api.contract;
+package com.renda.merchantops.api.approval;
 
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.platform.response.ApiResponse;

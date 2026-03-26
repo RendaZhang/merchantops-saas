@@ -20,6 +20,9 @@ This section stores architecture notes, technical decisions, and recorded struct
 ## Other Pages
 
 - [java-architecture-map.md](java-architecture-map.md): current Java module ownership, capability package map, and type-placement guide
+- [../../merchantops-api/README.md](../../merchantops-api/README.md): module-level ownership notes for HTTP contracts, orchestration, and platform support
+- [../../merchantops-domain/README.md](../../merchantops-domain/README.md): module-level ownership notes for use cases, ports, and shared business errors
+- [../../merchantops-infra/README.md](../../merchantops-infra/README.md): module-level ownership notes for persistence adapters, entities, and repositories
 - [../diagrams/target-architecture.md](../diagrams/target-architecture.md): visual target architecture for the modular-monolith-first path and later selective extraction
 - [import-file-storage-strategy.md](import-file-storage-strategy.md): keep Week 5 import files behind a replaceable storage abstraction while starting with local filesystem storage
 - [import-replay-derived-job-strategy.md](import-replay-derived-job-strategy.md): keep import replay as a new derived job instead of mutating an already-finished source job

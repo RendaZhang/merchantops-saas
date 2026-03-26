@@ -25,6 +25,8 @@ Use it when placing new Java types, restructuring packages, extracting shared su
 - Keep shared AI vendor/runtime code under `api.ai/...`; keep ticket-facing AI endpoint orchestration under `api.ticket.ai/...`.
 - Reserve `api.platform` for cross-cutting support such as response envelopes, config, security, request context, filters, documentation wiring, and tooling helpers.
 - Treat root `api.controller`, `api.contract`, `api.service`, and `api.messaging` as legacy or platform-only transition space. Do not place new capability code there.
+- After the current cleanup, keep root `api.controller` and `api.contract` limited to non-business platform endpoints such as context, health, or dev helpers. Business endpoints such as approval, import, ticket, and user workflows should live inside the owning capability package.
+- `api.dto` is still a shared API namespace, but every new DTO must go under a capability subpackage. Do not add flat DTO types directly under `api.dto`.
 - Keep tests close to the production package shape they validate. Shared test doubles or fixture servers should live in a dedicated test-support package instead of a flat catch-all package.
 
 ## Boundary Rules
@@ -49,6 +51,7 @@ Use it when placing new Java types, restructuring packages, extracting shared su
 - Do not add blanket JavaDoc or filler comments just to increase comment count.
 - Class-level JavaDoc is optional; add it only when a boundary, ownership rule, or non-obvious lifecycle needs a short explanation.
 - When a rule is important across files, document it here or in the relevant contributing guide instead of repeating the same long comment everywhere.
+- Good targets for short comments in this repository include ticket and approval state transitions, import replay and stale-recovery branching, prompt-window truncation, username preloading, and provider output-validation paths.
 
 ## Local Checks
 

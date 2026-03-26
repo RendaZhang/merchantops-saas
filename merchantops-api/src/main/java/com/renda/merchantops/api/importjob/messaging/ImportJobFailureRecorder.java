@@ -19,6 +19,8 @@ class ImportJobFailureRecorder {
     private final AuditEventService auditEventService;
 
     void saveRowError(ImportJobRecord job, Integer rowNumber, String code, String message, String rawPayload) {
+        // Row-level failure detail is persisted separately so operators can inspect the exact
+        // bad input even when the job-level status collapses to a single FAILED summary.
         importJobCommandPort.saveJobError(new ImportJobErrorRecord(
                 null,
                 job.tenantId(),
@@ -32,6 +34,8 @@ class ImportJobFailureRecorder {
     }
 
     void recordJobFailure(ImportJobRecord saved, String errorCode) {
+        // Keep job-level failure audit compact; it summarizes outcome and counts instead of
+        // duplicating potentially large raw row payloads already stored in item-error records.
         Map<String, Object> afterValue = new LinkedHashMap<>();
         afterValue.put("status", "FAILED");
         if (errorCode != null) {

@@ -24,6 +24,8 @@ public class ImportJobCommandDomainService implements ImportJobCommandUseCase {
 
     @Override
     public ImportJobRecord createReplayJob(Long tenantId, Long operatorId, String requestId, NewImportJobDraft draft) {
+        // Replay jobs reuse the same queued lifecycle so worker, recovery, and audit flows do
+        // not need a parallel execution path just for derived files.
         return createJob(tenantId, operatorId, requestId, draft);
     }
 
@@ -69,6 +71,8 @@ public class ImportJobCommandDomainService implements ImportJobCommandUseCase {
             throw new BizException(ErrorCode.BAD_REQUEST, "importType must not be blank");
         }
         String normalized = importType.trim().toUpperCase(Locale.ROOT);
+        // The public import surface is intentionally narrow for now; keep the domain guard
+        // explicit so new import types cannot slip in through API-only validation.
         if (!SUPPORTED_IMPORT_TYPE.equals(normalized)) {
             throw new BizException(ErrorCode.BAD_REQUEST, "importType must be USER_CSV");
         }

@@ -71,6 +71,8 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         ApprovalRequestRecord approvalRequest = requirePendingForUpdate(tenantId, approvalRequestId);
         ensureNotSelfReview(approvalRequest, reviewerId);
         ensureSupportedActionType(approvalRequest.actionType());
+        // Re-check the target at approval time because the user may have been disabled or
+        // changed by another path after the request was first created.
         requireUserCanBeDisabled(tenantId, approvalRequest.entityId());
 
         approvalActionPort.disableUser(tenantId, reviewerId, resolvedRequestId, approvalRequest.entityId());
@@ -150,6 +152,8 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
     }
 
     private void ensureNotSelfReview(ApprovalRequestRecord approvalRequest, Long reviewerId) {
+        // Keep approval as a true second-person control instead of allowing a requester to
+        // satisfy workflow requirements with a self-approval.
         if (approvalRequest.requestedBy().equals(reviewerId)) {
             throw new BizException(ErrorCode.FORBIDDEN, "requester cannot approve or reject own request");
         }

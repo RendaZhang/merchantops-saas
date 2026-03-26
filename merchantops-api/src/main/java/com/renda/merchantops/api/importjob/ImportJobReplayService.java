@@ -55,6 +55,8 @@ public class ImportJobReplayService {
                                                     Long sourceJobId) {
         String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         importJobOperatorValidator.requireOperatorInTenant(tenantId, operatorId);
+        // Failed-row replay keeps the original raw rows untouched and only narrows the source
+        // set to rows that previously recorded import errors.
         var replaySource = importReplaySourceLoader.loadFailedRowReplay(tenantId, sourceJobId);
         ImportReplayFileWriter.ReplayFileBuildResult replayFile = importReplayFileWriter.writeFailedRowReplay(
                 tenantId,
@@ -71,6 +73,8 @@ public class ImportJobReplayService {
                                                    Long sourceJobId) {
         String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         importJobOperatorValidator.requireOperatorInTenant(tenantId, operatorId);
+        // Whole-file replay intentionally clones the original source so downstream audit can
+        // distinguish a full rerun from narrower failed-row retry modes.
         var replaySource = importReplaySourceLoader.loadWholeFileReplay(tenantId, sourceJobId);
         ImportReplayFileWriter.ReplayFileBuildResult replayFile = importReplayFileWriter.copyWholeFileReplay(
                 tenantId,
@@ -118,6 +122,8 @@ public class ImportJobReplayService {
                                                           ImportJobEditedReplayRequest request) {
         String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         importJobOperatorValidator.requireOperatorInTenant(tenantId, operatorId);
+        // Edited replay is the only path that mutates row payload before execution, so input
+        // normalization and duplicate-errorId protection happen before any file is written.
         List<ImportReplayFileWriter.EditedReplayRowReplacement> editedRows = normalizeEditedReplayItems(
                 request == null ? null : request.getItems()
         );
@@ -142,6 +148,8 @@ public class ImportJobReplayService {
                                                     String requestId,
                                                     ImportReplayFileWriter.ReplayFileBuildResult replayFile,
                                                     Map<String, Object> replayMetadata) {
+        // Register cleanup before saving the derived job so transaction rollback removes any
+        // staged replay file that would otherwise become an orphan in storage.
         importStoredFileCleanupSupport.registerRollbackCleanup(replayFile.storageKey());
 
         ImportJobRecord sourceJob = replayFile.sourceJob();

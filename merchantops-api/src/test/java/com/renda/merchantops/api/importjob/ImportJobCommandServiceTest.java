@@ -246,7 +246,7 @@ class ImportJobCommandServiceTest {
         ImportJobDetailResponse response = importJobReplayService.replayFailedRowsEdited(1L, 101L, "req-replay-edited-1", 7001L, request);
 
         assertThat(response.id()).isEqualTo(7004L);
-        ArgumentCaptor<List<ImportReplayFileWriter.EditedReplayRowReplacement>> rowsCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<ImportReplayFileWriter.EditedReplayRowReplacement>> rowsCaptor = editedReplayRowsCaptor();
         verify(importReplaySourceLoader).loadEditedReplay(eq(1L), eq(7001L), rowsCaptor.capture());
         assertThat(rowsCaptor.getValue()).containsExactly(normalizedRow);
         verify(importJobAuditService).recordReplayRequestedEvent(
@@ -301,5 +301,10 @@ class ImportJobCommandServiceTest {
                 id, 1L, "USER_CSV", "CSV", sourceFilename, storageKey, sourceJobId, "QUEUED", 101L, requestId,
                 0, 0, 0, null, null, null, null, List.of(), List.of()
         );
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static ArgumentCaptor<List<ImportReplayFileWriter.EditedReplayRowReplacement>> editedReplayRowsCaptor() {
+        return ArgumentCaptor.forClass((Class) List.class);
     }
 }

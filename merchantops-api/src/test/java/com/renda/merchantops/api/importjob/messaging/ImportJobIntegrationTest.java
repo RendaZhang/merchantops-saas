@@ -1367,6 +1367,10 @@ class ImportJobIntegrationTest {
                 created.id()
         );
         assertThat(queuedCount).isEqualTo(1);
+        jdbcTemplate.update(
+                "UPDATE import_job SET created_at = DATEADD('SECOND', -1, CURRENT_TIMESTAMP) WHERE id = ?",
+                created.id()
+        );
 
         Mockito.reset(importJobPublisher);
         int republished = importJobQueueRecoveryService.republishStaleQueuedJobs();

@@ -166,10 +166,14 @@ public class ImportJobExecutionCoordinator {
         if (!isStaleProcessing(job)) {
             return ImportJobStartResult.requeue();
         }
+        // Once counters move, resuming the same job risks double-processing rows and skewing
+        // totals, so stale jobs with progress are failed instead of silently resumed.
         if (hasProgress(job)) {
             failStaleProcessingJob(job);
             return ImportJobStartResult.ignore();
         }
+        // A stale job with no progress is safe to restart because nothing observable has been
+        // persisted beyond the job header itself.
         return ImportJobStartResult.started(transitionToProcessing(job, true));
     }
 
@@ -245,6 +249,8 @@ public class ImportJobExecutionCoordinator {
     private boolean isStaleProcessing(ImportJobRecord job) {
         LocalDateTime startedAt = job.startedAt();
         if (startedAt == null) {
+            // Treat missing startedAt as stale so queue recovery can heal partially-written
+            // PROCESSING rows instead of leaving them stuck forever.
             return true;
         }
         return startedAt.isBefore(LocalDateTime.now().minusSeconds(importProcessingProperties.getStaleProcessingThresholdSeconds()));

@@ -174,6 +174,8 @@ public class TicketCommandService implements TicketCommandUseCase {
                 resolvedRequestId,
                 now
         ));
+        // A new comment is also a ticket activity signal, so the ticket row gets an updatedAt
+        // refresh even though title, description, status, and assignee stay unchanged.
         ticketCommandPort.saveTicket(new TicketUpdateDraft(
                 ticket.id(),
                 ticket.tenantId(),
@@ -246,6 +248,8 @@ public class TicketCommandService implements TicketCommandUseCase {
         if (currentStatus.equals(nextStatus)) {
             throw new BizException(ErrorCode.BAD_REQUEST, "ticket is already in status " + nextStatus);
         }
+        // Keep the workflow explicit instead of inferring transitions from enum ordering;
+        // reopening a closed ticket is allowed, but skipping arbitrary states is not.
         boolean allowed = switch (currentStatus) {
             case "OPEN" -> "IN_PROGRESS".equals(nextStatus) || "CLOSED".equals(nextStatus);
             case "IN_PROGRESS" -> "CLOSED".equals(nextStatus);

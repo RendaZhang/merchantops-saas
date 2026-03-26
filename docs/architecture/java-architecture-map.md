@@ -61,7 +61,9 @@ graph LR
   - `api.doc`
   - `api.tools`
 
-Root `api.controller`, `api.contract`, `api.service`, and `api.messaging` are no longer the default placement for business code. Keep them limited to legacy leftovers or non-business platform endpoints until those classes are absorbed by a capability package.
+Root `api.controller`, `api.contract`, `api.service`, and `api.messaging` are no longer the default placement for business code. Keep them limited to non-business platform endpoints such as context, health, or dev wiring, and move any new business endpoint into its capability package from the start.
+
+`api.dto` remains API-only, but it is not a flat dumping ground. Keep DTOs inside `api.dto.<capability>` so DTO growth follows the same capability boundaries as controllers and services.
 
 ## Capability Examples
 
@@ -88,3 +90,9 @@ Root `api.controller`, `api.contract`, `api.service`, and `api.messaging` are no
 - DTOs and Swagger contracts stay in `merchantops-api`.
 - Entities and repositories stay in `merchantops-infra`.
 - Use `merchantops-api/src/test/java/com/renda/merchantops/api/ArchitectureBoundaryTest.java` plus `.\mvnw.cmd verify` as the enforcement baseline.
+
+## Related Module Notes
+
+- [../../merchantops-api/README.md](../../merchantops-api/README.md): module-level guide for HTTP contracts, orchestration, and platform support
+- [../../merchantops-domain/README.md](../../merchantops-domain/README.md): module-level guide for use cases, ports, and shared business errors
+- [../../merchantops-infra/README.md](../../merchantops-infra/README.md): module-level guide for persistence adapters, entities, and repositories

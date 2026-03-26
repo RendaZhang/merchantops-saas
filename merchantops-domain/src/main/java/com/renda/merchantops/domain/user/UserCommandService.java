@@ -65,6 +65,8 @@ public final class UserCommandService implements UserCommandUseCase {
 
         validateUsernameUnique(tenantId, username);
 
+        // Validate role membership before writing the user so create-user stays atomic
+        // from the caller's perspective and never persists a user with unresolved role codes.
         List<RoleItem> roles = roleCatalogPort.findRolesByCodes(tenantId, roleCodes);
         if (roles.size() != roleCodes.size()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must exist in current tenant");
@@ -83,6 +85,8 @@ public final class UserCommandService implements UserCommandUseCase {
                 resolvedOperatorId,
                 resolvedOperatorId
         ));
+        // Role bindings live outside the user row, so the service must complete that write
+        // explicitly before emitting the user-created audit snapshot.
         userCommandPort.replaceUserRoles(savedUser.id(), roles.stream().map(RoleItem::id).toList());
 
         userAuditPort.recordEvent(
@@ -190,12 +194,17 @@ public final class UserCommandService implements UserCommandUseCase {
         String resolvedRequestId = requireRequestId(requestId);
         Map<String, Object> before = snapshotUser(user, roleCatalogPort.findRoleCodesByUserId(tenantId, user.id()));
         List<String> roleCodes = normalizeRoleCodes(command == null ? null : command.roleCodes());
+
+        // Resolve role codes before replacing bindings so a partial role update never clears
+        // the old set first and then fails on an unknown code.
         List<RoleItem> roles = roleCatalogPort.findRolesByCodes(tenantId, roleCodes);
         if (roles.size() != roleCodes.size()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must exist in current tenant");
         }
 
         userCommandPort.replaceUserRoles(user.id(), roles.stream().map(RoleItem::id).toList());
+        // Persist the user again to refresh updatedAt/updatedBy so role changes remain visible
+        // to read models and audit trails even though the user core fields stay the same.
         ManagedUser savedUser = userCommandPort.saveManagedUser(new ManagedUser(
                 user.id(),
                 user.tenantId(),
