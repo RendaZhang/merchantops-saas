@@ -1,9 +1,8 @@
-package com.renda.merchantops.api.messaging;
+package com.renda.merchantops.api.importjob.messaging;
 
 import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.user.command.UserCreateCommand;
-import com.renda.merchantops.api.service.UserCommandService;
-import com.renda.merchantops.infra.persistence.entity.ImportJobEntity;
+import com.renda.merchantops.api.user.UserCommandService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,9 +31,9 @@ class UserCsvImportProcessorTest {
 
     @Test
     void processRowShouldBuildRowRequestIdWithinSchemaLimit() {
-        ImportJobEntity job = importJob(1L, 101L, "req-" + "x".repeat(180));
+        ImportJobExecutionContext context = importContext(1L, 101L, "req-" + "x".repeat(180));
 
-        userCsvImportProcessor.processRow(job, 27, validColumns());
+        userCsvImportProcessor.processRow(context, 27, validColumns());
 
         ArgumentCaptor<String> requestIdCaptor = ArgumentCaptor.forClass(String.class);
         verify(userCommandService).createUser(eq(1L), eq(101L), requestIdCaptor.capture(), any(UserCreateCommand.class));
@@ -44,11 +43,11 @@ class UserCsvImportProcessorTest {
 
     @Test
     void processRowShouldMapDataIntegrityViolationToRowError() {
-        ImportJobEntity job = importJob(1L, 101L, "req-import-1");
+        ImportJobExecutionContext context = importContext(1L, 101L, "req-import-1");
         when(userCommandService.createUser(eq(1L), eq(101L), any(String.class), any(UserCreateCommand.class)))
                 .thenThrow(new DataIntegrityViolationException("value too long for request_id"));
 
-        assertThatThrownBy(() -> userCsvImportProcessor.processRow(job, 2, validColumns()))
+        assertThatThrownBy(() -> userCsvImportProcessor.processRow(context, 2, validColumns()))
                 .isInstanceOf(ImportRowProcessingException.class)
                 .satisfies(ex -> {
                     ImportRowProcessingException rowException = (ImportRowProcessingException) ex;
@@ -57,12 +56,10 @@ class UserCsvImportProcessorTest {
                 });
     }
 
-    private ImportJobEntity importJob(Long tenantId, Long requestedBy, String requestId) {
-        ImportJobEntity job = new ImportJobEntity();
-        job.setTenantId(tenantId);
-        job.setRequestedBy(requestedBy);
-        job.setRequestId(requestId);
-        return job;
+    private ImportJobExecutionContext importContext(Long tenantId,
+                                                    Long requestedBy,
+                                                    String requestId) {
+        return new ImportJobExecutionContext(7001L, tenantId, "USER_CSV", "1/key.csv", requestedBy, requestId);
     }
 
     private List<String> validColumns() {

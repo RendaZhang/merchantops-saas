@@ -1,4 +1,4 @@
-package com.renda.merchantops.api.integration;
+package com.renda.merchantops.api.importjob.messaging;
 
 import com.renda.merchantops.api.MerchantOpsApplication;
 import com.renda.merchantops.api.config.ImportProcessingProperties;
@@ -15,17 +15,12 @@ import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
-import com.renda.merchantops.api.messaging.ImportJobMessage;
-import com.renda.merchantops.api.messaging.ImportJobExecutionService;
-import com.renda.merchantops.api.messaging.ImportJobPublisher;
-import com.renda.merchantops.api.messaging.ImportJobQueueRecoveryService;
-import com.renda.merchantops.api.messaging.ImportJobWorker;
-import com.renda.merchantops.api.messaging.UserCsvImportProcessor;
-import com.renda.merchantops.api.service.AuditEventService;
-import com.renda.merchantops.api.service.ImportJobCommandService;
-import com.renda.merchantops.api.service.ImportJobQueryService;
-import com.renda.merchantops.common.exception.BizException;
-import com.renda.merchantops.common.exception.ErrorCode;
+import com.renda.merchantops.api.audit.AuditEventService;
+import com.renda.merchantops.api.importjob.ImportJobReplayService;
+import com.renda.merchantops.api.importjob.ImportJobSubmissionService;
+import com.renda.merchantops.api.importjob.ImportJobQueryService;
+import com.renda.merchantops.domain.shared.error.BizException;
+import com.renda.merchantops.domain.shared.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -82,7 +77,9 @@ class ImportJobIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
     @Autowired
-    private ImportJobCommandService importJobCommandService;
+    private ImportJobSubmissionService importJobSubmissionService;
+    @Autowired
+    private ImportJobReplayService importJobReplayService;
     @Autowired
     private ImportJobQueryService importJobQueryService;
     @Autowired
@@ -99,7 +96,7 @@ class ImportJobIntegrationTest {
     @MockBean
     private ImportJobPublisher importJobPublisher;
     @SpyBean
-    private ImportJobExecutionService importJobExecutionService;
+    private ImportJobExecutionCoordinator importJobExecutionCoordinator;
     @SpyBean
     private UserCsvImportProcessor userCsvImportProcessor;
 
@@ -223,7 +220,7 @@ class ImportJobIntegrationTest {
                 });
             }
         }
-        Mockito.reset(importJobPublisher, importJobExecutionService, userCsvImportProcessor);
+        Mockito.reset(importJobPublisher, importJobExecutionCoordinator, userCsvImportProcessor);
         importProcessingProperties.setChunkSize(2);
         importProcessingProperties.setMaxRowsPerJob(1000);
         importProcessingProperties.setStaleProcessingThresholdSeconds(300);
@@ -243,7 +240,7 @@ class ImportJobIntegrationTest {
                 gamma,Gamma User,gamma@example.com,abc123,READ_ONLY
                 """).getBytes());
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-1", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-1", request, file);
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
 
         ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
@@ -305,7 +302,7 @@ class ImportJobIntegrationTest {
                 delta,Delta User,delta@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-progress", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-progress", request, file);
         AtomicInteger chunkCalls = new AtomicInteger();
         AtomicReference<ImportJobDetailResponse> progressSnapshot = new AtomicReference<>();
         Mockito.doAnswer(invocation -> {
@@ -313,7 +310,7 @@ class ImportJobIntegrationTest {
                 progressSnapshot.set(importJobQueryService.getJobDetail(1L, created.id()));
             }
             return invocation.callRealMethod();
-        }).when(importJobExecutionService).processChunk(Mockito.any(), Mockito.anyList());
+        }).when(importJobExecutionCoordinator).processChunk(Mockito.any(), Mockito.anyList());
 
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
 
@@ -340,7 +337,7 @@ class ImportJobIntegrationTest {
                 stale,Stale User,stale@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-stale-redelivery", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-stale-redelivery", request, file);
         jdbcTemplate.update(
                 "UPDATE import_job SET status = 'PROCESSING', started_at = DATEADD('SECOND', -900, CURRENT_TIMESTAMP), finished_at = NULL WHERE id = ?",
                 created.id()
@@ -371,15 +368,15 @@ class ImportJobIntegrationTest {
                 fresh,Fresh User,fresh@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-fresh-redelivery", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-fresh-redelivery", request, file);
         jdbcTemplate.update(
                 "UPDATE import_job SET status = 'PROCESSING', started_at = CURRENT_TIMESTAMP, finished_at = NULL WHERE id = ?",
                 created.id()
         );
 
-        ImportJobExecutionService.ImportJobStartResult result = importJobExecutionService.startProcessing(created.id(), 1L);
+        ImportJobStartResult result = importJobExecutionCoordinator.startProcessing(created.id(), 1L);
 
-        assertThat(result.action()).isEqualTo(ImportJobExecutionService.ImportJobStartAction.REQUEUE);
+        assertThat(result.action()).isEqualTo(ImportJobStartAction.REQUEUE);
         assertThat(result.context()).isNull();
 
         ImportJobDetailResponse current = importJobQueryService.getJobDetail(1L, created.id());
@@ -406,7 +403,7 @@ class ImportJobIntegrationTest {
                 dup2,Dup Two,dup2@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-duplicate-message", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-duplicate-message", request, file);
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
 
         ImportJobDetailResponse firstProcessed = importJobQueryService.getJobDetail(1L, created.id());
@@ -472,7 +469,7 @@ class ImportJobIntegrationTest {
                 omega,Omega User,omega@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-row-crash", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-row-crash", request, file);
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
 
         ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
@@ -518,7 +515,7 @@ class ImportJobIntegrationTest {
                 gamma,Gamma User,gamma@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -537,7 +534,7 @@ class ImportJobIntegrationTest {
                 VALUES (12, 1, 'RETRY_ROLE', 'Retry Role', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """);
 
-        ImportJobDetailResponse replayCreated = importJobCommandService.replayFailedRows(
+        ImportJobDetailResponse replayCreated = importJobReplayService.replayFailedRows(
                 1L,
                 101L,
                 "req-import-replay-derived",
@@ -608,7 +605,7 @@ class ImportJobIntegrationTest {
                 retry-b,Retry B,retry-b@example.com,abc123,RETRY_ROLE
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-file-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-file-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -623,7 +620,7 @@ class ImportJobIntegrationTest {
                 VALUES (12, 1, 'RETRY_ROLE', 'Retry Role', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """);
 
-        ImportJobDetailResponse replayCreated = importJobCommandService.replayWholeFile(
+        ImportJobDetailResponse replayCreated = importJobReplayService.replayWholeFile(
                 1L,
                 101L,
                 "req-import-replay-file-derived",
@@ -682,7 +679,7 @@ class ImportJobIntegrationTest {
                 retry,Retry User,retry@example.com,abc123,RETRY_ROLE
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-file-succeeded-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-file-succeeded-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -690,7 +687,7 @@ class ImportJobIntegrationTest {
         assertThat(sourceProcessed.successCount()).isEqualTo(1);
         assertThat(sourceProcessed.failureCount()).isEqualTo(1);
 
-        assertThatThrownBy(() -> importJobCommandService.replayWholeFile(
+        assertThatThrownBy(() -> importJobReplayService.replayWholeFile(
                 1L,
                 101L,
                 "req-import-replay-file-succeeded-derived",
@@ -716,7 +713,7 @@ class ImportJobIntegrationTest {
                 beta,Beta User,beta@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-file-partial-failed-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-file-partial-failed-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -725,7 +722,7 @@ class ImportJobIntegrationTest {
         assertThat(sourceProcessed.failureCount()).isEqualTo(1);
         assertThat(sourceProcessed.errorCodeCounts()).containsExactly(new ImportJobErrorCodeCountResponse("MAX_ROWS_EXCEEDED", 1));
 
-        assertThatThrownBy(() -> importJobCommandService.replayWholeFile(
+        assertThatThrownBy(() -> importJobReplayService.replayWholeFile(
                 1L,
                 101L,
                 "req-import-replay-file-partial-failed-derived",
@@ -748,7 +745,7 @@ class ImportJobIntegrationTest {
                 retry,Retry User,retry@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse invalidHeaderSource = importJobCommandService.createJob(
+        ImportJobDetailResponse invalidHeaderSource = importJobSubmissionService.createJob(
                 1L,
                 101L,
                 "req-import-replay-file-invalid-header-source",
@@ -757,7 +754,7 @@ class ImportJobIntegrationTest {
         );
         importJobWorker.consume(new ImportJobMessage(invalidHeaderSource.id(), 1L));
 
-        assertThatThrownBy(() -> importJobCommandService.replayWholeFile(
+        assertThatThrownBy(() -> importJobReplayService.replayWholeFile(
                 1L,
                 101L,
                 "req-import-replay-file-invalid-header-derived",
@@ -776,7 +773,7 @@ class ImportJobIntegrationTest {
                 "text/csv",
                 "\n".getBytes(StandardCharsets.UTF_8)
         );
-        ImportJobDetailResponse emptySource = importJobCommandService.createJob(
+        ImportJobDetailResponse emptySource = importJobSubmissionService.createJob(
                 1L,
                 101L,
                 "req-import-replay-file-empty-source",
@@ -785,7 +782,7 @@ class ImportJobIntegrationTest {
         );
         importJobWorker.consume(new ImportJobMessage(emptySource.id(), 1L));
 
-        assertThatThrownBy(() -> importJobCommandService.replayWholeFile(
+        assertThatThrownBy(() -> importJobReplayService.replayWholeFile(
                 1L,
                 101L,
                 "req-import-replay-file-empty-derived",
@@ -811,7 +808,7 @@ class ImportJobIntegrationTest {
                 gamma,Gamma User,gamma@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-selective-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-selective-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -829,7 +826,7 @@ class ImportJobIntegrationTest {
                 VALUES (12, 1, 'RETRY_ROLE', 'Retry Role', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """);
 
-        ImportJobDetailResponse replayCreated = importJobCommandService.replayFailedRowsSelective(
+        ImportJobDetailResponse replayCreated = importJobReplayService.replayFailedRowsSelective(
                 1L,
                 101L,
                 "req-import-replay-selective-derived",
@@ -885,10 +882,10 @@ class ImportJobIntegrationTest {
                 retry,Retry User,retry@example.com,abc123,RETRY_ROLE
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-selective-none-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-selective-none-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
-        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsSelective(
+        assertThatThrownBy(() -> importJobReplayService.replayFailedRowsSelective(
                 1L,
                 101L,
                 "req-import-replay-selective-none-derived",
@@ -912,10 +909,10 @@ class ImportJobIntegrationTest {
                 retry,Retry User,retry@example.com,abc123,RETRY_ROLE
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-selective-cross-tenant-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-selective-cross-tenant-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
-        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsSelective(
+        assertThatThrownBy(() -> importJobReplayService.replayFailedRowsSelective(
                 2L,
                 201L,
                 "req-import-replay-selective-cross-tenant-derived",
@@ -938,7 +935,7 @@ class ImportJobIntegrationTest {
                 gamma,Gamma User,gamma@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-edited-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-edited-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -973,7 +970,7 @@ class ImportJobIntegrationTest {
                 )
         ));
 
-        ImportJobDetailResponse replayCreated = importJobCommandService.replayFailedRowsEdited(
+        ImportJobDetailResponse replayCreated = importJobReplayService.replayFailedRowsEdited(
                 1L,
                 101L,
                 "req-import-replay-edited-derived",
@@ -1039,7 +1036,7 @@ class ImportJobIntegrationTest {
                 retry-email,Retry Email User,bad-email,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-edited-subset-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-edited-subset-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -1060,7 +1057,7 @@ class ImportJobIntegrationTest {
                 )
         ));
 
-        ImportJobDetailResponse replayCreated = importJobCommandService.replayFailedRowsEdited(
+        ImportJobDetailResponse replayCreated = importJobReplayService.replayFailedRowsEdited(
                 1L,
                 101L,
                 "req-import-replay-edited-subset-derived",
@@ -1096,7 +1093,7 @@ class ImportJobIntegrationTest {
                 broken,Broken User,broken@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-replay-edited-invalid-header-source", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-replay-edited-invalid-header-source", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
         ImportJobDetailResponse sourceProcessed = importJobQueryService.getJobDetail(1L, sourceCreated.id());
@@ -1113,7 +1110,7 @@ class ImportJobIntegrationTest {
                 )
         ));
 
-        assertThatThrownBy(() -> importJobCommandService.replayFailedRowsEdited(
+        assertThatThrownBy(() -> importJobReplayService.replayFailedRowsEdited(
                 1L,
                 101L,
                 "req-import-replay-edited-invalid-header-derived",
@@ -1137,10 +1134,10 @@ class ImportJobIntegrationTest {
                 clean,Clean User,clean@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-clean", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-clean", request, file);
         importJobWorker.consume(new ImportJobMessage(sourceCreated.id(), 1L));
 
-        assertThatThrownBy(() -> importJobCommandService.replayFailedRows(1L, 101L, "req-replay-none", sourceCreated.id()))
+        assertThatThrownBy(() -> importJobReplayService.replayFailedRows(1L, 101L, "req-replay-none", sourceCreated.id()))
                 .isInstanceOf(BizException.class)
                 .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST));
     }
@@ -1154,9 +1151,9 @@ class ImportJobIntegrationTest {
                 pending,Pending User,pending@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(1L, 101L, "req-import-pending", request, file);
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(1L, 101L, "req-import-pending", request, file);
 
-        assertThatThrownBy(() -> importJobCommandService.replayFailedRows(1L, 101L, "req-replay-pending", sourceCreated.id()))
+        assertThatThrownBy(() -> importJobReplayService.replayFailedRows(1L, 101L, "req-replay-pending", sourceCreated.id()))
                 .isInstanceOf(BizException.class)
                 .satisfies(ex -> {
                     BizException biz = (BizException) ex;
@@ -1176,7 +1173,7 @@ class ImportJobIntegrationTest {
                 edge,Edge User,edge@example.com, 123456,READ_ONLY
                 """).getBytes());
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-2", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-2", request, file);
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
 
         ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
@@ -1209,7 +1206,7 @@ class ImportJobIntegrationTest {
                 u6,User Six,u6@example.com,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-limit", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-limit", request, file);
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
 
         ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
@@ -1247,7 +1244,7 @@ class ImportJobIntegrationTest {
                 quoted,"Escaped ""Quote"", User",quoted@example.com,abc123,READ_ONLY
                 """).getBytes());
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-quoted", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-quoted", request, file);
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
 
         ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
@@ -1275,7 +1272,7 @@ class ImportJobIntegrationTest {
                         "bomuser,Bom User,bom@example.com,abc123,READ_ONLY\n").getBytes(StandardCharsets.UTF_8)
         );
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, longRequestId, request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, longRequestId, request, file);
         assertThat(created.requestId()).hasSizeLessThanOrEqualTo(128);
 
         importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
@@ -1317,7 +1314,7 @@ class ImportJobIntegrationTest {
         AtomicLong createdId = new AtomicLong();
 
         transactionTemplate.executeWithoutResult(status -> {
-            ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-after-commit", request, file);
+            ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-after-commit", request, file);
             createdId.set(created.id());
             verifyNoInteractions(importJobPublisher);
         });
@@ -1335,7 +1332,7 @@ class ImportJobIntegrationTest {
         AtomicLong fileCountInsideTransaction = new AtomicLong();
 
         transactionTemplate.executeWithoutResult(status -> {
-            importJobCommandService.createJob(1L, 101L, "req-import-rollback", request, file);
+            importJobSubmissionService.createJob(1L, 101L, "req-import-rollback", request, file);
             fileCountInsideTransaction.set(countStoredFiles());
             status.setRollbackOnly();
             verifyNoInteractions(importJobPublisher);
@@ -1363,7 +1360,7 @@ class ImportJobIntegrationTest {
                 .when(importJobPublisher)
                 .publish(Mockito.any(ImportJobMessage.class));
 
-        ImportJobDetailResponse created = importJobCommandService.createJob(1L, 101L, "req-import-queued-recovery", request, file);
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-queued-recovery", request, file);
         Integer queuedCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM import_job WHERE id = ? AND tenant_id = 1 AND status = 'QUEUED'",
                 Integer.class,
@@ -1388,7 +1385,7 @@ class ImportJobIntegrationTest {
                 retry-email,Retry Email,bad-email,abc123,READ_ONLY
                 """).getBytes(StandardCharsets.UTF_8));
 
-        ImportJobDetailResponse sourceCreated = importJobCommandService.createJob(
+        ImportJobDetailResponse sourceCreated = importJobSubmissionService.createJob(
                 1L,
                 101L,
                 "req-import-replay-rollback-source",
@@ -1415,15 +1412,15 @@ class ImportJobIntegrationTest {
 
         assertReplayRollbackCleansStagedFile(
                 "req-replay-rollback-failed-rows",
-                () -> importJobCommandService.replayFailedRows(1L, 101L, "req-replay-rollback-failed-rows", sourceCreated.id())
+                () -> importJobReplayService.replayFailedRows(1L, 101L, "req-replay-rollback-failed-rows", sourceCreated.id())
         );
         assertReplayRollbackCleansStagedFile(
                 "req-replay-rollback-file",
-                () -> importJobCommandService.replayWholeFile(1L, 101L, "req-replay-rollback-file", sourceCreated.id())
+                () -> importJobReplayService.replayWholeFile(1L, 101L, "req-replay-rollback-file", sourceCreated.id())
         );
         assertReplayRollbackCleansStagedFile(
                 "req-replay-rollback-selective",
-                () -> importJobCommandService.replayFailedRowsSelective(
+                () -> importJobReplayService.replayFailedRowsSelective(
                         1L,
                         101L,
                         "req-replay-rollback-selective",
@@ -1433,7 +1430,7 @@ class ImportJobIntegrationTest {
         );
         assertReplayRollbackCleansStagedFile(
                 "req-replay-rollback-edited",
-                () -> importJobCommandService.replayFailedRowsEdited(
+                () -> importJobReplayService.replayFailedRowsEdited(
                         1L,
                         101L,
                         "req-replay-rollback-edited",

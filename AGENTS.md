@@ -56,6 +56,7 @@ This repository currently organizes handoff rules around five roles plus a small
 
 - Read [docs/contributing/documentation-maintenance.md](docs/contributing/documentation-maintenance.md) before making documentation changes.
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before making development-facing documentation changes.
+- When Java package ownership, module boundaries, or shared-support placement rules change, sync [docs/contributing/java-code-style.md](docs/contributing/java-code-style.md), [docs/architecture/java-architecture-map.md](docs/architecture/java-architecture-map.md), and the relevant documentation-routing guidance together.
 - Keep root `README.md` high-level and move development detail into `docs/`.
 - Do not document an endpoint as public unless it is visible in Swagger.
 - Use the linked contributing pages for detailed wording rules around verification scope, environment-sensitive sample data, and stale-token versus re-login expectations instead of duplicating those details here.
@@ -102,6 +103,8 @@ This repository currently organizes handoff rules around five roles plus a small
 ## Development Role
 
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before changing tenant-scoped repositories, services, DTOs, or user-management internals.
+- Read [docs/contributing/java-code-style.md](docs/contributing/java-code-style.md) before large package refactors, shared-support extraction, or Java style cleanup.
+- Read [docs/architecture/java-architecture-map.md](docs/architecture/java-architecture-map.md) before moving Java types across modules or capability packages.
 - This is a multi-module Maven repository. When `merchantops-api` depends on sibling-module changes, prefer reactor commands with `-am`; before standalone `spring-boot:run` or API-only verification after repository/entity/signature changes, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first so local SNAPSHOT dependencies are current.
 - Keep tenant scoping explicit and keep query/write models separated.
 - Use the linked development guidance for detailed rules on `operatorId` / `requestId` propagation, internal attribution fields, and request-time access revalidation.

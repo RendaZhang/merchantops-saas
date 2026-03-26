@@ -3,7 +3,7 @@ package com.renda.merchantops.api.contract;
 import com.renda.merchantops.api.dto.EchoRequest;
 import com.renda.merchantops.api.dto.dev.DevPingResponse;
 import com.renda.merchantops.api.dto.dev.EchoResponse;
-import com.renda.merchantops.common.response.ApiResponse;
+import com.renda.merchantops.api.platform.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;

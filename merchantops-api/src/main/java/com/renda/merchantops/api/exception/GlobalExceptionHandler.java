@@ -1,8 +1,8 @@
 package com.renda.merchantops.api.exception;
 
-import com.renda.merchantops.common.exception.BizException;
-import com.renda.merchantops.common.exception.ErrorCode;
-import com.renda.merchantops.common.response.ApiResponse;
+import com.renda.merchantops.domain.shared.error.BizException;
+import com.renda.merchantops.domain.shared.error.ErrorCode;
+import com.renda.merchantops.api.platform.response.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

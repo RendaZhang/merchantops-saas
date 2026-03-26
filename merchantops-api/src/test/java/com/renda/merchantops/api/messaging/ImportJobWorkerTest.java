@@ -1,7 +1,7 @@
-package com.renda.merchantops.api.messaging;
+package com.renda.merchantops.api.importjob.messaging;
 
 import com.renda.merchantops.api.config.ImportProcessingProperties;
-import com.renda.merchantops.api.service.ImportFileStorageService;
+import com.renda.merchantops.api.importjob.ImportFileStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,7 +29,7 @@ class ImportJobWorkerTest {
     @Mock
     private ImportFileStorageService importFileStorageService;
     @Mock
-    private ImportJobExecutionService importJobExecutionService;
+    private ImportJobExecutionCoordinator importJobExecutionCoordinator;
 
     private ImportProcessingProperties importProcessingProperties;
     private ImportJobWorker importJobWorker;
@@ -39,15 +39,14 @@ class ImportJobWorkerTest {
         importProcessingProperties = new ImportProcessingProperties();
         importProcessingProperties.setChunkSize(2);
         importProcessingProperties.setMaxRowsPerJob(100);
-        importJobWorker = new ImportJobWorker(importFileStorageService, importJobExecutionService, importProcessingProperties);
+        importJobWorker = new ImportJobWorker(importFileStorageService, importJobExecutionCoordinator, importProcessingProperties);
     }
 
     @Test
     void consumeShouldSplitRowsIntoConfiguredChunksAndCompleteJob() throws Exception {
-        ImportJobExecutionService.ImportJobExecutionContext context =
-                new ImportJobExecutionService.ImportJobExecutionContext(7001L, 1L, "USER_CSV", "1/key.csv", 101L, "req-1");
-        when(importJobExecutionService.startProcessing(7001L, 1L))
-                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7001L, 1L, "USER_CSV", "1/key.csv", 101L, "req-1");
+        when(importJobExecutionCoordinator.startProcessing(7001L, 1L))
+                .thenReturn(ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/key.csv")).thenReturn(new ByteArrayInputStream(
                 ("""
                         username,displayName,email,password,roleCodes
@@ -62,36 +61,36 @@ class ImportJobWorkerTest {
         importJobWorker.consume(new ImportJobMessage(7001L, 1L));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<ImportJobExecutionService.ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
-        verify(importJobExecutionService, times(3)).processChunk(eq(context), chunkCaptor.capture());
+        ArgumentCaptor<List<ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
+        verify(importJobExecutionCoordinator, times(3)).processChunk(eq(context), chunkCaptor.capture());
         assertThat(chunkCaptor.getAllValues()).hasSize(3);
-        assertThat(chunkCaptor.getAllValues().get(0)).extracting(ImportJobExecutionService.ImportJobChunkRow::rowNumber)
+        assertThat(chunkCaptor.getAllValues().get(0)).extracting(ImportJobChunkRow::rowNumber)
                 .containsExactly(2, 3);
-        assertThat(chunkCaptor.getAllValues().get(1)).extracting(ImportJobExecutionService.ImportJobChunkRow::rowNumber)
+        assertThat(chunkCaptor.getAllValues().get(1)).extracting(ImportJobChunkRow::rowNumber)
                 .containsExactly(4, 5);
-        assertThat(chunkCaptor.getAllValues().get(2)).extracting(ImportJobExecutionService.ImportJobChunkRow::rowNumber)
+        assertThat(chunkCaptor.getAllValues().get(2)).extracting(ImportJobChunkRow::rowNumber)
                 .containsExactly(6);
-        verify(importJobExecutionService).completeJob(context);
-        verify(importJobExecutionService, never()).failJob(any(), any());
+        verify(importJobExecutionCoordinator).completeJob(context);
+        verify(importJobExecutionCoordinator, never()).failJob(any(), any());
     }
 
     @Test
     void consumeShouldFailUnsupportedImportTypeBeforeChunkProcessing() throws Exception {
-        ImportJobExecutionService.ImportJobExecutionContext context =
-                new ImportJobExecutionService.ImportJobExecutionContext(7002L, 1L, "TICKET_CSV", "1/key.csv", 101L, "req-2");
-        when(importJobExecutionService.startProcessing(7002L, 1L))
-                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7002L, 1L, "TICKET_CSV", "1/key.csv", 101L, "req-2");
+        when(importJobExecutionCoordinator.startProcessing(7002L, 1L))
+                .thenReturn(ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/key.csv")).thenReturn(new ByteArrayInputStream(
-                "username,displayName,email,password,roleCodes\nvalid,Valid User,valid@example.com,123456,READ_ONLY"
-                        .getBytes(StandardCharsets.UTF_8)
+                ("""
+                        username,displayName,email,password,roleCodes
+                        valid,Valid User,valid@example.com,123456,READ_ONLY
+                        """).getBytes(StandardCharsets.UTF_8)
         ));
 
         importJobWorker.consume(new ImportJobMessage(7002L, 1L));
 
-        verify(importJobExecutionService, never()).processChunk(any(), any());
-        ArgumentCaptor<ImportJobExecutionService.ImportJobFailure> failureCaptor =
-                ArgumentCaptor.forClass(ImportJobExecutionService.ImportJobFailure.class);
-        verify(importJobExecutionService).failJob(eq(context), failureCaptor.capture());
+        verify(importJobExecutionCoordinator, never()).processChunk(any(), any());
+        ArgumentCaptor<ImportJobFailure> failureCaptor = ArgumentCaptor.forClass(ImportJobFailure.class);
+        verify(importJobExecutionCoordinator).failJob(eq(context), failureCaptor.capture());
         assertThat(failureCaptor.getValue().errorCode()).isEqualTo("UNSUPPORTED_IMPORT_TYPE");
         assertThat(failureCaptor.getValue().errorSummary()).isEqualTo("unsupported import type");
     }
@@ -99,10 +98,9 @@ class ImportJobWorkerTest {
     @Test
     void consumeShouldPreserveQuotedCommaEscapedQuoteAndEmbeddedNewlineAcrossChunks() throws Exception {
         importProcessingProperties.setChunkSize(1);
-        ImportJobExecutionService.ImportJobExecutionContext context =
-                new ImportJobExecutionService.ImportJobExecutionContext(7003L, 1L, "USER_CSV", "1/quoted.csv", 101L, "req-3");
-        when(importJobExecutionService.startProcessing(7003L, 1L))
-                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7003L, 1L, "USER_CSV", "1/quoted.csv", 101L, "req-3");
+        when(importJobExecutionCoordinator.startProcessing(7003L, 1L))
+                .thenReturn(ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/quoted.csv")).thenReturn(new ByteArrayInputStream(
                 ("""
                         username,displayName,email,password,roleCodes
@@ -115,8 +113,8 @@ class ImportJobWorkerTest {
         importJobWorker.consume(new ImportJobMessage(7003L, 1L));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<ImportJobExecutionService.ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
-        verify(importJobExecutionService, times(2)).processChunk(eq(context), chunkCaptor.capture());
+        ArgumentCaptor<List<ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
+        verify(importJobExecutionCoordinator, times(2)).processChunk(eq(context), chunkCaptor.capture());
         assertThat(chunkCaptor.getAllValues().get(0)).singleElement().satisfies(row -> {
             assertThat(row.rowNumber()).isEqualTo(2);
             assertThat(row.columns()).containsExactly(
@@ -141,10 +139,9 @@ class ImportJobWorkerTest {
 
     @Test
     void consumeShouldAcceptUtf8BomInFirstHeaderColumn() throws Exception {
-        ImportJobExecutionService.ImportJobExecutionContext context =
-                new ImportJobExecutionService.ImportJobExecutionContext(7004L, 1L, "USER_CSV", "1/bom.csv", 101L, "req-4");
-        when(importJobExecutionService.startProcessing(7004L, 1L))
-                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7004L, 1L, "USER_CSV", "1/bom.csv", 101L, "req-4");
+        when(importJobExecutionCoordinator.startProcessing(7004L, 1L))
+                .thenReturn(ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/bom.csv")).thenReturn(new ByteArrayInputStream(
                 ("\uFEFFusername,displayName,email,password,roleCodes\n" +
                         "bomuser,Bom User,bom@example.com,123456,READ_ONLY").getBytes(StandardCharsets.UTF_8)
@@ -153,8 +150,8 @@ class ImportJobWorkerTest {
         importJobWorker.consume(new ImportJobMessage(7004L, 1L));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<ImportJobExecutionService.ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
-        verify(importJobExecutionService).processChunk(eq(context), chunkCaptor.capture());
+        ArgumentCaptor<List<ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
+        verify(importJobExecutionCoordinator).processChunk(eq(context), chunkCaptor.capture());
         assertThat(chunkCaptor.getValue()).singleElement().satisfies(row -> {
             assertThat(row.rowNumber()).isEqualTo(2);
             assertThat(row.columns()).containsExactly(
@@ -165,16 +162,15 @@ class ImportJobWorkerTest {
                     "READ_ONLY"
             );
         });
-        verify(importJobExecutionService).completeJob(context);
+        verify(importJobExecutionCoordinator).completeJob(context);
     }
 
     @Test
     void consumeShouldFlushPendingChunkBeforeFailingMaxRowsExceeded() throws Exception {
         importProcessingProperties.setMaxRowsPerJob(5);
-        ImportJobExecutionService.ImportJobExecutionContext context =
-                new ImportJobExecutionService.ImportJobExecutionContext(7005L, 1L, "USER_CSV", "1/limit.csv", 101L, "req-5");
-        when(importJobExecutionService.startProcessing(7005L, 1L))
-                .thenReturn(ImportJobExecutionService.ImportJobStartResult.started(context));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7005L, 1L, "USER_CSV", "1/limit.csv", 101L, "req-5");
+        when(importJobExecutionCoordinator.startProcessing(7005L, 1L))
+                .thenReturn(ImportJobStartResult.started(context));
         when(importFileStorageService.openStream("1/limit.csv")).thenReturn(new ByteArrayInputStream(
                 ("""
                         username,displayName,email,password,roleCodes
@@ -190,35 +186,34 @@ class ImportJobWorkerTest {
         importJobWorker.consume(new ImportJobMessage(7005L, 1L));
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<ImportJobExecutionService.ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
-        verify(importJobExecutionService, times(3)).processChunk(eq(context), chunkCaptor.capture());
-        assertThat(chunkCaptor.getAllValues().get(0)).extracting(ImportJobExecutionService.ImportJobChunkRow::rowNumber)
+        ArgumentCaptor<List<ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
+        verify(importJobExecutionCoordinator, times(3)).processChunk(eq(context), chunkCaptor.capture());
+        assertThat(chunkCaptor.getAllValues().get(0)).extracting(ImportJobChunkRow::rowNumber)
                 .containsExactly(2, 3);
-        assertThat(chunkCaptor.getAllValues().get(1)).extracting(ImportJobExecutionService.ImportJobChunkRow::rowNumber)
+        assertThat(chunkCaptor.getAllValues().get(1)).extracting(ImportJobChunkRow::rowNumber)
                 .containsExactly(4, 5);
-        assertThat(chunkCaptor.getAllValues().get(2)).extracting(ImportJobExecutionService.ImportJobChunkRow::rowNumber)
+        assertThat(chunkCaptor.getAllValues().get(2)).extracting(ImportJobChunkRow::rowNumber)
                 .containsExactly(6);
 
-        ArgumentCaptor<ImportJobExecutionService.ImportJobFailure> failureCaptor =
-                ArgumentCaptor.forClass(ImportJobExecutionService.ImportJobFailure.class);
-        verify(importJobExecutionService).failJob(eq(context), failureCaptor.capture());
+        ArgumentCaptor<ImportJobFailure> failureCaptor = ArgumentCaptor.forClass(ImportJobFailure.class);
+        verify(importJobExecutionCoordinator).failJob(eq(context), failureCaptor.capture());
         assertThat(failureCaptor.getValue().errorCode()).isEqualTo("MAX_ROWS_EXCEEDED");
         assertThat(failureCaptor.getValue().errorSummary()).isEqualTo("import job exceeded max row limit");
         assertThat(failureCaptor.getValue().rawPayload()).isEqualTo("u6,User Six,u6@example.com,123456,READ_ONLY");
-        verify(importJobExecutionService, never()).completeJob(any());
+        verify(importJobExecutionCoordinator, never()).completeJob(any());
     }
 
     @Test
     void consumeShouldRequeueFreshProcessingRedelivery() {
-        when(importJobExecutionService.startProcessing(7006L, 1L))
-                .thenReturn(ImportJobExecutionService.ImportJobStartResult.requeue());
+        when(importJobExecutionCoordinator.startProcessing(7006L, 1L))
+                .thenReturn(ImportJobStartResult.requeue());
 
         assertThatThrownBy(() -> importJobWorker.consume(new ImportJobMessage(7006L, 1L)))
                 .isInstanceOf(ImmediateRequeueAmqpException.class)
                 .hasMessage("import job is already processing");
 
-        verify(importJobExecutionService, never()).processChunk(any(), any());
-        verify(importJobExecutionService, never()).completeJob(any());
-        verify(importJobExecutionService, never()).failJob(any(), any());
+        verify(importJobExecutionCoordinator, never()).processChunk(any(), any());
+        verify(importJobExecutionCoordinator, never()).completeJob(any());
+        verify(importJobExecutionCoordinator, never()).failJob(any(), any());
     }
 }

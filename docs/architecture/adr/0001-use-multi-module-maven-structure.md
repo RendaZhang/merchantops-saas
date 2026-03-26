@@ -9,12 +9,12 @@ The project needs to demonstrate a realistic backend structure that can grow acr
 
 ## Decision
 
-Use a multi-module Maven structure with separate modules for API, domain, infrastructure, and common concerns.
+Use a multi-module Maven structure with separate modules for API, domain, and infrastructure concerns.
 
 ## Consequences
 
-- API bootstrap, controllers, and security stay in `merchantops-api`
+- API bootstrap, controllers, HTTP DTOs, and response-envelope concerns stay in `merchantops-api`
 - persistence and repository concerns stay in `merchantops-infra`
-- shared responses, exceptions, and utilities stay in `merchantops-common`
-- business growth in later phases has a clearer place to land
+- shared business errors, use cases, and ports stay in `merchantops-domain`
+- business growth lands behind domain use-case and port seams instead of adding more direct `api -> infra` coupling
 - build and dependency management is slightly more complex than a single-module setup

@@ -1,4 +1,4 @@
-package com.renda.merchantops.api.controller;
+package com.renda.merchantops.api.ticket;
 
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
@@ -8,11 +8,9 @@ import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.RequirePermissionInterceptor;
-import com.renda.merchantops.api.service.TicketAiReplyDraftService;
-import com.renda.merchantops.api.service.TicketAiTriageService;
-import com.renda.merchantops.api.service.TicketAiSummaryService;
-import com.renda.merchantops.api.service.TicketCommandService;
-import com.renda.merchantops.api.service.TicketQueryService;
+import com.renda.merchantops.api.ticket.ai.TicketAiReplyDraftService;
+import com.renda.merchantops.api.ticket.ai.TicketAiSummaryService;
+import com.renda.merchantops.api.ticket.ai.TicketAiTriageService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +19,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
@@ -59,9 +56,6 @@ class TicketAiTriageControllerTest {
     private TicketQueryService ticketQueryService;
 
     @Mock
-    private TicketCommandService ticketCommandService;
-
-    @Mock
     private TicketAiSummaryService ticketAiSummaryService;
 
     @Mock
@@ -70,14 +64,13 @@ class TicketAiTriageControllerTest {
     @Mock
     private TicketAiReplyDraftService ticketAiReplyDraftService;
 
-    @InjectMocks
-    private TicketController ticketController;
-
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(ticketController)
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new TicketAiController(ticketQueryService, ticketAiSummaryService, ticketAiTriageService, ticketAiReplyDraftService)
+                )
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addInterceptors(new RequirePermissionInterceptor())
                 .addFilters(new TestAuthenticationFilter())

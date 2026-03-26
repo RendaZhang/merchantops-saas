@@ -1,12 +1,14 @@
 # Development Agent Guidance
 
-Last updated: 2026-03-22
+Last updated: 2026-03-26
 
 ## Purpose
 
 This page records the current implementation guidance for developers and coding agents working inside this repository.
 
 Use it when changing code or development-facing documentation.
+
+For Java package reshaping, shared support extraction, or style cleanup, pair this page with [java-code-style.md](java-code-style.md) and [../architecture/java-architecture-map.md](../architecture/java-architecture-map.md).
 
 ## Documentation Concerns
 
@@ -29,6 +31,10 @@ Use it when changing code or development-facing documentation.
 
 ### Core Rules
 
+- Prefer package splits that reflect stable responsibility boundaries over growing one large flat package.
+- Default to capability-first package placement inside `merchantops-api`.
+- Keep new business code out of root `api.controller`, `api.contract`, `api.service`, and `api.messaging`; treat those as legacy or platform-only transition space.
+- Keep `api.platform` focused on cross-cutting support such as response envelopes, request context, filters, security, config, and documentation wiring.
 - Query model and write model must stay separate.
 - Repository methods for tenant business data must always include `tenantId`.
 - Service-layer public methods for tenant business data must always accept `tenantId` explicitly.
@@ -91,7 +97,7 @@ Request-tracing note:
 Current user-management query model lives under:
 
 - `merchantops-api/src/main/java/com/renda/merchantops/api/dto/user/query`
-- `merchantops-api/src/main/java/com/renda/merchantops/api/service/UserQueryService.java`
+- `merchantops-api/src/main/java/com/renda/merchantops/api/user/UserQueryService.java`
 
 Use query DTOs for:
 
@@ -124,6 +130,7 @@ Current `/api/v1/tickets` contract is the baseline workflow-module example:
 - write entrypoints at `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
 - explicit `tenantId`, `operatorId`, and `requestId` forwarding from controller to write service
 - workflow-level log persistence without exposing raw `requestId` in the current public contract
+- ticket-facing AI endpoint orchestration belongs under `api.ticket.ai`, while shared provider/runtime code stays under `api.ai.*`
 
 Workflow-module baseline for future slices:
 
@@ -137,7 +144,7 @@ Workflow-module baseline for future slices:
 Current user-management write model lives under:
 
 - `merchantops-api/src/main/java/com/renda/merchantops/api/dto/user/command`
-- `merchantops-api/src/main/java/com/renda/merchantops/api/service/UserCommandService.java`
+- `merchantops-api/src/main/java/com/renda/merchantops/api/user/UserCommandService.java`
 
 Write DTOs should be split by intent rather than using one mutable all-fields object.
 
@@ -207,6 +214,7 @@ When extending user-management or another tenant-scoped module:
 
 - [../reference/user-management.md](../reference/user-management.md): current public `/api/v1/users` contract
 - [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md): authentication and permission behavior
+- [../architecture/java-architecture-map.md](../architecture/java-architecture-map.md): current Java module ownership and type-placement guide
 - [documentation-maintenance.md](documentation-maintenance.md): which docs must change for which change type
 - [testing-agent-guidance.md](testing-agent-guidance.md): verification and regression guidance for testing-focused work
 - [review-release-agent-guidance.md](review-release-agent-guidance.md): staged review and release guidance

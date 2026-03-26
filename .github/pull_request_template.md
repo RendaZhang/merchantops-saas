@@ -9,6 +9,12 @@
 - [ ] Local smoke or manual verification, if needed
 - [ ] Not run, with reason explained below
 
+## Java Structure
+
+- [ ] Capability package placement checked for new or moved Java types
+- [ ] No new direct `merchantops-api -> merchantops-infra` dependency or capability logic under `api.platform`
+- [ ] `docs/contributing/java-code-style.md` and `docs/architecture/java-architecture-map.md` updated if Java structure rules changed
+
 ## Documentation
 
 - [ ] README updated if repository entry-point messaging changed

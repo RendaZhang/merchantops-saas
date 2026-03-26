@@ -1,32 +1,25 @@
-package com.renda.merchantops.api.service;
+package com.renda.merchantops.api.approval;
 
+import com.renda.merchantops.api.audit.AuditEventService;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
-import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
-import com.renda.merchantops.common.exception.BizException;
-import com.renda.merchantops.common.exception.ErrorCode;
-import com.renda.merchantops.infra.persistence.entity.ApprovalRequestEntity;
-import com.renda.merchantops.infra.persistence.entity.UserEntity;
-import com.renda.merchantops.infra.repository.ApprovalRequestRepository;
-import com.renda.merchantops.infra.repository.UserRepository;
+import com.renda.merchantops.domain.approval.ApprovalRequestPageCriteria;
+import com.renda.merchantops.domain.approval.ApprovalRequestPageResult;
+import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
+import com.renda.merchantops.domain.approval.ApprovalRequestUseCase;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,152 +27,102 @@ import static org.mockito.Mockito.when;
 class ApprovalRequestServiceTest {
 
     @Mock
-    private ApprovalRequestRepository approvalRequestRepository;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private UserCommandService userCommandService;
+    private ApprovalRequestUseCase approvalRequestUseCase;
 
     @Mock
     private AuditEventService auditEventService;
 
-    @InjectMocks
-    private ApprovalRequestService approvalRequestService;
+    private ApprovalRequestCommandService approvalRequestCommandService;
+    private ApprovalRequestQueryService approvalRequestQueryService;
+
+    @BeforeEach
+    void setUp() {
+        ApprovalRequestResponseMapper mapper = new ApprovalRequestResponseMapper();
+        approvalRequestCommandService = new ApprovalRequestCommandService(approvalRequestUseCase, auditEventService, mapper);
+        approvalRequestQueryService = new ApprovalRequestQueryService(approvalRequestUseCase, mapper);
+    }
 
     @Test
-    void createDisableRequestShouldLockTargetUserBeforeSavingRequest() {
-        when(userRepository.findByIdAndTenantIdForUpdate(103L, 1L)).thenReturn(Optional.of(activeUser(103L, 1L, "viewer")));
-        when(approvalRequestRepository.existsByTenantIdAndActionTypeAndEntityTypeAndEntityIdAndStatus(
-                1L, "USER_STATUS_DISABLE", "USER", 103L, "PENDING"
-        )).thenReturn(false);
-        when(approvalRequestRepository.save(any(ApprovalRequestEntity.class))).thenAnswer(invocation -> {
-            ApprovalRequestEntity entity = invocation.getArgument(0);
-            entity.setId(901L);
-            return entity;
-        });
+    void createDisableRequestShouldDelegateToUseCaseAndRecordAudit() {
+        when(approvalRequestUseCase.createDisableRequest(1L, 101L, "disable-req-1", 103L))
+                .thenReturn(record(901L, "PENDING", 103L, 101L));
 
-        ApprovalRequestResponse response = approvalRequestService.createDisableRequest(1L, 101L, "disable-req-1", 103L);
+        var response = approvalRequestCommandService.createDisableRequest(1L, 101L, "disable-req-1", 103L);
 
         assertThat(response.id()).isEqualTo(901L);
-        assertThat(response.tenantId()).isEqualTo(1L);
-        assertThat(response.entityId()).isEqualTo(103L);
         assertThat(response.status()).isEqualTo("PENDING");
-        verify(userRepository).findByIdAndTenantIdForUpdate(103L, 1L);
-
-        ArgumentCaptor<ApprovalRequestEntity> entityCaptor = ArgumentCaptor.forClass(ApprovalRequestEntity.class);
-        verify(approvalRequestRepository).save(entityCaptor.capture());
-        assertThat(entityCaptor.getValue().getActionType()).isEqualTo("USER_STATUS_DISABLE");
-        assertThat(entityCaptor.getValue().getRequestedBy()).isEqualTo(101L);
-        assertThat(entityCaptor.getValue().getPayloadJson()).isEqualTo("{\"status\":\"DISABLED\"}");
+        verify(approvalRequestUseCase).createDisableRequest(1L, 101L, "disable-req-1", 103L);
+        verify(auditEventService).recordEvent(eq(1L), eq("APPROVAL_REQUEST"), eq(901L), eq("APPROVAL_REQUEST_CREATED"), eq(101L), eq("disable-req-1"), eq(null), any());
     }
 
     @Test
-    void createDisableRequestShouldRejectDuplicatePendingRequest() {
-        when(userRepository.findByIdAndTenantIdForUpdate(103L, 1L)).thenReturn(Optional.of(activeUser(103L, 1L, "viewer")));
-        when(approvalRequestRepository.existsByTenantIdAndActionTypeAndEntityTypeAndEntityIdAndStatus(
-                1L, "USER_STATUS_DISABLE", "USER", 103L, "PENDING"
-        )).thenReturn(true);
+    void getByIdShouldMapDomainRecordToResponse() {
+        when(approvalRequestUseCase.getById(1L, 901L)).thenReturn(record(901L, "PENDING", 103L, 101L));
 
-        assertBizException(
-                () -> approvalRequestService.createDisableRequest(1L, 101L, "disable-req-1", 103L),
-                ErrorCode.BAD_REQUEST,
-                "pending disable request already exists for user"
-        );
+        var response = approvalRequestQueryService.getById(1L, 901L);
 
-        verify(userRepository).findByIdAndTenantIdForUpdate(103L, 1L);
+        assertThat(response.id()).isEqualTo(901L);
+        assertThat(response.entityId()).isEqualTo(103L);
+        assertThat(response.requestedBy()).isEqualTo(101L);
     }
 
     @Test
-    void approveShouldLockPendingRequestBeforeExecutingDisable() {
-        ApprovalRequestEntity pending = pendingRequest(901L, 1L, 103L, 101L);
-        when(approvalRequestRepository.findByIdAndTenantIdForUpdate(901L, 1L)).thenReturn(Optional.of(pending));
-        when(userRepository.findByIdAndTenantIdForUpdate(103L, 1L)).thenReturn(Optional.of(activeUser(103L, 1L, "viewer")));
-        when(approvalRequestRepository.save(any(ApprovalRequestEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    void pageShouldMapCriteriaAndDomainPage() {
+        when(approvalRequestUseCase.page(eq(1L), any()))
+                .thenReturn(new ApprovalRequestPageResult(List.of(record(901L, "PENDING", 103L, 101L)), 0, 10, 1, 1));
 
-        ApprovalRequestResponse response = approvalRequestService.approve(1L, 105L, "approve-req-1", 901L);
+        var response = approvalRequestQueryService.page(1L, new ApprovalRequestPageQuery(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L));
+
+        ArgumentCaptor<ApprovalRequestPageCriteria> criteriaCaptor = ArgumentCaptor.forClass(ApprovalRequestPageCriteria.class);
+        verify(approvalRequestUseCase).page(eq(1L), criteriaCaptor.capture());
+        assertThat(criteriaCaptor.getValue().page()).isEqualTo(-1);
+        assertThat(criteriaCaptor.getValue().size()).isEqualTo(0);
+        assertThat(criteriaCaptor.getValue().status()).isEqualTo("  PENDING  ");
+        assertThat(criteriaCaptor.getValue().actionType()).isEqualTo(" USER_STATUS_DISABLE ");
+        assertThat(criteriaCaptor.getValue().requestedBy()).isEqualTo(101L);
+        assertThat(response.getTotal()).isEqualTo(1);
+        assertThat(response.getItems()).hasSize(1);
+    }
+
+    @Test
+    void approveShouldDelegateAndEmitApprovalAndExecutionAuditEvents() {
+        when(approvalRequestUseCase.approve(1L, 105L, "approve-req-1", 901L))
+                .thenReturn(record(901L, "APPROVED", 103L, 101L));
+
+        var response = approvalRequestCommandService.approve(1L, 105L, "approve-req-1", 901L);
 
         assertThat(response.status()).isEqualTo("APPROVED");
-        assertThat(response.reviewedBy()).isEqualTo(105L);
-        assertThat(response.reviewedAt()).isNotNull();
-        assertThat(response.executedAt()).isNotNull();
-        verify(approvalRequestRepository).findByIdAndTenantIdForUpdate(901L, 1L);
-        verify(userRepository).findByIdAndTenantIdForUpdate(103L, 1L);
-        verify(userCommandService).updateStatus(eq(1L), eq(105L), eq("approve-req-1"), eq(103L), any());
+        verify(approvalRequestUseCase).approve(1L, 105L, "approve-req-1", 901L);
+        verify(auditEventService, times(2)).recordEvent(eq(1L), eq("APPROVAL_REQUEST"), eq(901L), any(), eq(105L), eq("approve-req-1"), eq(null), any());
     }
 
     @Test
-    void rejectShouldLockPendingRequestBeforeUpdatingStatus() {
-        ApprovalRequestEntity pending = pendingRequest(901L, 1L, 103L, 101L);
-        when(approvalRequestRepository.findByIdAndTenantIdForUpdate(901L, 1L)).thenReturn(Optional.of(pending));
-        when(approvalRequestRepository.save(any(ApprovalRequestEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    void rejectShouldDelegateAndEmitRejectedAuditEvent() {
+        when(approvalRequestUseCase.reject(1L, 105L, "reject-req-1", 901L))
+                .thenReturn(record(901L, "REJECTED", 103L, 101L));
 
-        ApprovalRequestResponse response = approvalRequestService.reject(1L, 105L, "reject-req-1", 901L);
+        var response = approvalRequestCommandService.reject(1L, 105L, "reject-req-1", 901L);
 
         assertThat(response.status()).isEqualTo("REJECTED");
-        assertThat(response.reviewedBy()).isEqualTo(105L);
-        assertThat(response.reviewedAt()).isNotNull();
-        verify(approvalRequestRepository).findByIdAndTenantIdForUpdate(901L, 1L);
+        verify(approvalRequestUseCase).reject(1L, 105L, "reject-req-1", 901L);
+        verify(auditEventService).recordEvent(eq(1L), eq("APPROVAL_REQUEST"), eq(901L), eq("APPROVAL_REQUEST_REJECTED"), eq(105L), eq("reject-req-1"), eq(null), any());
     }
 
-    @Test
-    void pageShouldNormalizeQueryAndUseStableCreatedAtIdDescSort() {
-        ApprovalRequestEntity first = pendingRequest(902L, 1L, 103L, 101L);
-        first.setStatus("APPROVED");
-        first.setReviewedBy(105L);
-        first.setReviewedAt(LocalDateTime.now());
-        Page<ApprovalRequestEntity> page = new PageImpl<>(List.of(first));
-        when(approvalRequestRepository.searchPageByTenantId(eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), any(Pageable.class)))
-                .thenReturn(page);
-
-        approvalRequestService.page(1L, new ApprovalRequestPageQuery(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L));
-
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(approvalRequestRepository).searchPageByTenantId(eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), pageableCaptor.capture());
-        Pageable pageable = pageableCaptor.getValue();
-        assertThat(pageable.getPageNumber()).isEqualTo(0);
-        assertThat(pageable.getPageSize()).isEqualTo(10);
-        assertThat(pageable.getSort().getOrderFor("createdAt")).extracting(Sort.Order::getDirection).isEqualTo(Sort.Direction.DESC);
-        assertThat(pageable.getSort().getOrderFor("id")).extracting(Sort.Order::getDirection).isEqualTo(Sort.Direction.DESC);
-    }
-
-    private void assertBizException(ThrowingCall call, ErrorCode errorCode, String message) {
-        assertThatThrownBy(call::run)
-                .isInstanceOf(BizException.class)
-                .satisfies(ex -> {
-                    BizException bizException = (BizException) ex;
-                    assertThat(bizException.getErrorCode()).isEqualTo(errorCode);
-                    assertThat(bizException.getMessage()).isEqualTo(message);
-                });
-    }
-
-    @FunctionalInterface
-    private interface ThrowingCall {
-        void run();
-    }
-
-    private UserEntity activeUser(Long id, Long tenantId, String username) {
-        UserEntity user = new UserEntity();
-        user.setId(id);
-        user.setTenantId(tenantId);
-        user.setUsername(username);
-        user.setStatus("ACTIVE");
-        return user;
-    }
-
-    private ApprovalRequestEntity pendingRequest(Long id, Long tenantId, Long entityId, Long requestedBy) {
-        ApprovalRequestEntity entity = new ApprovalRequestEntity();
-        entity.setId(id);
-        entity.setTenantId(tenantId);
-        entity.setActionType("USER_STATUS_DISABLE");
-        entity.setEntityType("USER");
-        entity.setEntityId(entityId);
-        entity.setRequestedBy(requestedBy);
-        entity.setStatus("PENDING");
-        entity.setPayloadJson("{\"status\":\"DISABLED\"}");
-        entity.setRequestId("disable-req-create-1");
-        entity.setCreatedAt(LocalDateTime.now());
-        return entity;
+    private ApprovalRequestRecord record(Long id, String status, Long entityId, Long requestedBy) {
+        return new ApprovalRequestRecord(
+                id,
+                1L,
+                "USER_STATUS_DISABLE",
+                "USER",
+                entityId,
+                requestedBy,
+                "APPROVED".equals(status) ? 105L : null,
+                status,
+                "{\"status\":\"DISABLED\"}",
+                "disable-req-1",
+                LocalDateTime.of(2026, 3, 26, 10, 0),
+                "PENDING".equals(status) ? null : LocalDateTime.of(2026, 3, 26, 10, 5),
+                "APPROVED".equals(status) ? LocalDateTime.of(2026, 3, 26, 10, 5) : null
+        );
     }
 }

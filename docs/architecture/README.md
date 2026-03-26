@@ -4,7 +4,7 @@ This section stores architecture notes, technical decisions, and recorded struct
 
 ## ADRs
 
-- [adr/0001-use-multi-module-maven-structure.md](adr/0001-use-multi-module-maven-structure.md): separate API, domain, infrastructure, and common concerns
+- [adr/0001-use-multi-module-maven-structure.md](adr/0001-use-multi-module-maven-structure.md): separate API, domain, and infrastructure concerns, with shared business seams in `merchantops-domain`
 - [adr/0002-use-flyway-for-schema-management.md](adr/0002-use-flyway-for-schema-management.md): manage schema changes through migrations
 - [adr/0003-put-tenant-identity-in-jwt-and-request-context.md](adr/0003-put-tenant-identity-in-jwt-and-request-context.md): propagate tenant identity through authentication and request context
 - [adr/0004-enforce-endpoint-permissions-with-require-permission.md](adr/0004-enforce-endpoint-permissions-with-require-permission.md): keep permission rules explicit at endpoint level
@@ -19,6 +19,7 @@ This section stores architecture notes, technical decisions, and recorded struct
 
 ## Other Pages
 
+- [java-architecture-map.md](java-architecture-map.md): current Java module ownership, capability package map, and type-placement guide
 - [../diagrams/target-architecture.md](../diagrams/target-architecture.md): visual target architecture for the modular-monolith-first path and later selective extraction
 - [import-file-storage-strategy.md](import-file-storage-strategy.md): keep Week 5 import files behind a replaceable storage abstraction while starting with local filesystem storage
 - [import-replay-derived-job-strategy.md](import-replay-derived-job-strategy.md): keep import replay as a new derived job instead of mutating an already-finished source job

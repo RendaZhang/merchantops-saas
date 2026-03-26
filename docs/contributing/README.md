@@ -10,6 +10,7 @@ If a rule starts turning into implementation detail, runbook nuance, or verifica
 
 - [documentation-maintenance.md](documentation-maintenance.md): routing rules for which docs must change when implementation, API, release, or architecture changes happen
 - [development-agent-guidance.md](development-agent-guidance.md): tenant-scoped implementation and contributor guidance for coding work
+- [java-code-style.md](java-code-style.md): Java package organization, comment strategy, and style gate baseline
 - [testing-agent-guidance.md](testing-agent-guidance.md): verification, regression, and coverage guidance for testing-focused work
 - [review-release-agent-guidance.md](review-release-agent-guidance.md): staged review, commit, and release guidance for review-focused work
 - [execution-planning-agent-guidance.md](execution-planning-agent-guidance.md): current-phase assessment, next-step planning, and plan-adjustment guidance
@@ -25,6 +26,8 @@ If a rule starts turning into implementation detail, runbook nuance, or verifica
 - start with [../../AGENTS.md](../../AGENTS.md) if you are new to the repository
 - read [documentation-maintenance.md](documentation-maintenance.md) before changing multiple docs or updating documentation structure
 - read [development-agent-guidance.md](development-agent-guidance.md) before changing tenant-scoped code or development-facing docs
+- read [java-code-style.md](java-code-style.md) before large package refactors, style cleanup, or shared-support extraction
+- read [../architecture/java-architecture-map.md](../architecture/java-architecture-map.md) before placing new Java types, moving package ownership, or reviewing module boundaries
 - read [testing-agent-guidance.md](testing-agent-guidance.md) before changing tests, automated coverage notes, or regression guidance
 - read [review-release-agent-guidance.md](review-release-agent-guidance.md) before staged review, commit-message suggestion, or release/tag work
 - read [execution-planning-agent-guidance.md](execution-planning-agent-guidance.md) before deciding what the current phase means, what remains unfinished, or whether the plan should change

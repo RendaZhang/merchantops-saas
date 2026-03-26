@@ -14,9 +14,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.renda</groupId>
-            <artifactId>merchantops-common</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

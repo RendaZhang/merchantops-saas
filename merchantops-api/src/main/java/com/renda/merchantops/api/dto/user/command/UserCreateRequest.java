@@ -1,6 +1,6 @@
 package com.renda.merchantops.api.dto.user.command;
 
-import com.renda.merchantops.api.validation.PasswordRules;
+import com.renda.merchantops.domain.auth.PasswordPolicy;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -37,8 +37,8 @@ public class UserCreateRequest {
 
     @NotBlank(message = "password must not be blank")
     @Pattern(
-            regexp = PasswordRules.NO_BOUNDARY_WHITESPACE_REGEX,
-            message = PasswordRules.NO_BOUNDARY_WHITESPACE_MESSAGE
+            regexp = PasswordPolicy.NO_BOUNDARY_WHITESPACE_REGEX,
+            message = PasswordPolicy.NO_BOUNDARY_WHITESPACE_MESSAGE
     )
     @Size(max = 128, message = "password length must be less than or equal to 128")
     @Schema(description = "Raw password; server stores BCrypt hash. Internal spaces are allowed, but leading and trailing whitespace are rejected.", example = "123456")

@@ -11,7 +11,7 @@ MerchantOps SaaS is being built to support three goals in sequence:
 2. an open-source reference implementation
 3. later commercial exploration if the workflow, AI, and governance layers become credible
 
-The current repository already uses a multi-module Maven structure to separate API, domain, infrastructure, and common concerns. The next phases will add ticket workflow, audit and approval patterns, async import, and AI-assisted operations on top of shared tenant isolation, RBAC, request tracing, and audit expectations.
+The current repository uses a multi-module Maven structure to separate API, domain, and infrastructure concerns. Shared business errors, use cases, and ports now live in `merchantops-domain`, while HTTP response-envelope concerns stay in `merchantops-api`. The next phases will add ticket workflow, audit and approval patterns, async import, and AI-assisted operations on top of shared tenant isolation, RBAC, request tracing, and audit expectations.
 
 At this stage, a service-per-entity split such as `user-service`, `ticket-service`, or similar microservices would introduce distributed authentication, cross-service authorization, data-consistency, deployment, and observability complexity before the workflow boundaries have been proven by real business modules.
 

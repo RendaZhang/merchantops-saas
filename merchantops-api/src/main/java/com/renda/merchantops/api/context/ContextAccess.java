@@ -1,7 +1,7 @@
 package com.renda.merchantops.api.context;
 
-import com.renda.merchantops.common.exception.BizException;
-import com.renda.merchantops.common.exception.ErrorCode;
+import com.renda.merchantops.domain.shared.error.BizException;
+import com.renda.merchantops.domain.shared.error.ErrorCode;
 
 public final class ContextAccess {
 

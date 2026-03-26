@@ -1,6 +1,6 @@
 # Documentation Maintenance
 
-Last updated: 2026-03-22
+Last updated: 2026-03-26
 
 ## Purpose
 
@@ -45,6 +45,8 @@ Use it as the routing table for answering two questions:
 - `docs/reference/`: stable technical reference pages for the system itself
 - `docs/contributing/`: contributor and agent workflow guidance
 - `docs/contributing/development-agent-guidance.md`: tenant-scoped implementation and contributor guidance for coding work
+- `docs/contributing/java-code-style.md`: Java package organization, shared-support extraction, comment strategy, and style gate baseline
+- `docs/architecture/java-architecture-map.md`: current Java module ownership, capability package map, and type-placement guide
 - `docs/contributing/testing-agent-guidance.md`: verification and regression rules for testing-focused work
 - `docs/contributing/review-release-agent-guidance.md`: staged review, commit, and release rules
 - `docs/contributing/execution-planning-agent-guidance.md`: current-phase assessment and next-step planning rules
@@ -102,10 +104,24 @@ Update:
 Update when the internal rule or boundary changed:
 
 - `docs/contributing/development-agent-guidance.md`
+- `docs/contributing/java-code-style.md` when package organization, shared-support extraction, or style gate expectations changed
+- `docs/architecture/java-architecture-map.md` when Java module ownership, capability package placement, or type-placement guidance changed
 - `docs/contributing/testing-agent-guidance.md`
 - `docs/contributing/review-release-agent-guidance.md`
 - `docs/contributing/execution-planning-agent-guidance.md`
 - `AGENTS.md` if the rule should guide future agents by default
+
+Also update these when Java architecture rules changed materially:
+
+- `docs/README.md`
+- the relevant index page under `docs/architecture/` or `docs/contributing/`
+
+Examples:
+
+- capability-first package reshaping
+- moving a type between `api`, `domain`, and `infra`
+- changing where shared support should live
+- changing comment or PR review expectations for Java structure work
 
 Do not update as current public API:
 

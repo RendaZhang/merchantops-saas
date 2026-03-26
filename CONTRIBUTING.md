@@ -58,6 +58,7 @@ For the full routing rules, see:
 Repository-specific contribution guidance lives in:
 
 - [docs/contributing/README.md](docs/contributing/README.md)
+- [docs/contributing/java-code-style.md](docs/contributing/java-code-style.md)
 - [AGENTS.md](AGENTS.md)
 
 These pages define the repository's role-based workflow, documentation rules, testing expectations, and release-note alignment rules.

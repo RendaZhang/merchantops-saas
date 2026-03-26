@@ -5,8 +5,8 @@ import com.renda.merchantops.api.context.RequestIdAccess;
 import com.renda.merchantops.api.contract.UserDisableRequestApi;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.security.RequirePermission;
-import com.renda.merchantops.api.service.ApprovalRequestService;
-import com.renda.merchantops.common.response.ApiResponse;
+import com.renda.merchantops.api.approval.ApprovalRequestCommandService;
+import com.renda.merchantops.api.platform.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserDisableRequestController implements UserDisableRequestApi {
 
-    private final ApprovalRequestService approvalRequestService;
+    private final ApprovalRequestCommandService approvalRequestCommandService;
 
     @Override
     @RequirePermission("USER_WRITE")
@@ -23,7 +23,7 @@ public class UserDisableRequestController implements UserDisableRequestApi {
         Long tenantId = ContextAccess.requireTenantId();
         Long requesterId = ContextAccess.requireUserId();
         String requestId = RequestIdAccess.currentRequestId();
-        return ApiResponse.success(approvalRequestService.createDisableRequest(tenantId, requesterId, requestId, id));
+        return ApiResponse.success(approvalRequestCommandService.createDisableRequest(tenantId, requesterId, requestId, id));
     }
 
 }

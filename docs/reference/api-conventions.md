@@ -24,7 +24,8 @@ Example:
 
 ## Error Model
 
-- `ErrorCode` in `merchantops-common`
+- `ApiResponse<T>` in `merchantops-api`
+- `ErrorCode` in `merchantops-domain`
 - `BizException` for business-layer failures
 - `GlobalExceptionHandler` in `merchantops-api` for HTTP mapping
 

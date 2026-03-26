@@ -1,4 +1,4 @@
-package com.renda.merchantops.api.controller;
+package com.renda.merchantops.api.importjob;
 
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
@@ -12,8 +12,6 @@ import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.RequirePermissionInterceptor;
-import com.renda.merchantops.api.service.ImportJobCommandService;
-import com.renda.merchantops.api.service.ImportJobQueryService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,7 +61,9 @@ class ImportJobControllerTest {
     private static final String HEADER_REQUEST_ID = "X-Test-Request-Id";
 
     @Mock
-    private ImportJobCommandService importJobCommandService;
+    private ImportJobSubmissionService importJobSubmissionService;
+    @Mock
+    private ImportJobReplayService importJobReplayService;
     @Mock
     private ImportJobQueryService importJobQueryService;
 
@@ -71,7 +71,7 @@ class ImportJobControllerTest {
 
     @BeforeEach
     void setUp() {
-        ImportJobController controller = new ImportJobController(importJobCommandService, importJobQueryService);
+        ImportJobController controller = new ImportJobController(importJobSubmissionService, importJobReplayService, importJobQueryService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addInterceptors(new RequirePermissionInterceptor())
@@ -95,7 +95,7 @@ class ImportJobControllerTest {
 
     @Test
     void createShouldBindMultipartAndForwardContext() throws Exception {
-        when(importJobCommandService.createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any()))
+        when(importJobSubmissionService.createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any()))
                 .thenReturn(new ImportJobDetailResponse(1L, 9L, "USER_CSV", "CSV", "users.csv", "9/key.csv", null, "QUEUED", 9001L,
                         "req-import-1", 0, 0, 0, null, null, null, null, List.of(), List.of()));
 
@@ -114,12 +114,12 @@ class ImportJobControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"));
 
-        verify(importJobCommandService).createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any());
+        verify(importJobSubmissionService).createJob(eq(9L), eq(9001L), eq("req-import-1"), any(), any());
     }
 
     @Test
     void replayShouldForwardContextAndReturnDerivedJobDetail() throws Exception {
-        when(importJobCommandService.replayFailedRows(9L, 9001L, "req-replay-1", 88L))
+        when(importJobReplayService.replayFailedRows(9L, 9001L, "req-replay-1", 88L))
                 .thenReturn(new ImportJobDetailResponse(
                         89L, 9L, "USER_CSV", "CSV", "replay-failures-job-88.csv", "9/replay.csv", 88L,
                         "QUEUED", 9001L, "req-replay-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
@@ -136,12 +136,12 @@ class ImportJobControllerTest {
                 .andExpect(jsonPath("$.data.id").value(89))
                 .andExpect(jsonPath("$.data.sourceJobId").value(88));
 
-        verify(importJobCommandService).replayFailedRows(9L, 9001L, "req-replay-1", 88L);
+        verify(importJobReplayService).replayFailedRows(9L, 9001L, "req-replay-1", 88L);
     }
 
     @Test
     void replayWholeFileShouldForwardContextAndReturnDerivedJobDetail() throws Exception {
-        when(importJobCommandService.replayWholeFile(9L, 9001L, "req-replay-file-1", 88L))
+        when(importJobReplayService.replayWholeFile(9L, 9001L, "req-replay-file-1", 88L))
                 .thenReturn(new ImportJobDetailResponse(
                         92L, 9L, "USER_CSV", "CSV", "replay-file-job-88.csv", "9/replay-file.csv", 88L,
                         "QUEUED", 9001L, "req-replay-file-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
@@ -158,12 +158,12 @@ class ImportJobControllerTest {
                 .andExpect(jsonPath("$.data.id").value(92))
                 .andExpect(jsonPath("$.data.sourceJobId").value(88));
 
-        verify(importJobCommandService).replayWholeFile(9L, 9001L, "req-replay-file-1", 88L);
+        verify(importJobReplayService).replayWholeFile(9L, 9001L, "req-replay-file-1", 88L);
     }
 
     @Test
     void replaySelectiveShouldBindRequestAndForwardContext() throws Exception {
-        when(importJobCommandService.replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), any()))
+        when(importJobReplayService.replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), any()))
                 .thenReturn(new ImportJobDetailResponse(
                         90L, 9L, "USER_CSV", "CSV", "replay-failures-job-88.csv", "9/replay-selective.csv", 88L,
                         "QUEUED", 9001L, "req-replay-selective-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
@@ -184,7 +184,7 @@ class ImportJobControllerTest {
 
         ArgumentCaptor<ImportJobSelectiveReplayRequest> requestCaptor =
                 ArgumentCaptor.forClass(ImportJobSelectiveReplayRequest.class);
-        verify(importJobCommandService).replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), requestCaptor.capture());
+        verify(importJobReplayService).replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), requestCaptor.capture());
         assertThat(requestCaptor.getValue().getErrorCodes()).containsExactly("UNKNOWN_ROLE", "INVALID_EMAIL");
     }
 
@@ -203,12 +203,12 @@ class ImportJobControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.message").value("errorCodes: errorCodes must not be empty"));
 
-        verifyNoInteractions(importJobCommandService);
+        verifyNoInteractions(importJobReplayService);
     }
 
     @Test
     void replayEditedShouldBindRequestAndForwardContext() throws Exception {
-        when(importJobCommandService.replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), any()))
+        when(importJobReplayService.replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), any()))
                 .thenReturn(new ImportJobDetailResponse(
                         91L, 9L, "USER_CSV", "CSV", "replay-edited-job-88.csv", "9/replay-edited.csv", 88L,
                         "QUEUED", 9001L, "req-replay-edited-1", 0, 0, 0, null, null, null, null, List.of(), List.of()
@@ -242,7 +242,7 @@ class ImportJobControllerTest {
 
         ArgumentCaptor<ImportJobEditedReplayRequest> requestCaptor =
                 ArgumentCaptor.forClass(ImportJobEditedReplayRequest.class);
-        verify(importJobCommandService).replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), requestCaptor.capture());
+        verify(importJobReplayService).replayFailedRowsEdited(eq(9L), eq(9001L), eq("req-replay-edited-1"), eq(88L), requestCaptor.capture());
         assertThat(requestCaptor.getValue().getItems()).singleElement().satisfies(item -> {
             assertThat(item.getErrorId()).isEqualTo(701L);
             assertThat(item.getUsername()).isEqualTo("retry-user");
@@ -265,7 +265,7 @@ class ImportJobControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.message").value("items: items must not be empty"));
 
-        verifyNoInteractions(importJobCommandService);
+        verifyNoInteractions(importJobReplayService);
     }
 
     @Test

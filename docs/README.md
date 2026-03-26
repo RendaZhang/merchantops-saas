@@ -19,6 +19,8 @@ This directory contains the detailed project documentation that sits behind the 
 
 - [Release Versioning](contributing/release-versioning.md): current tag baseline and release sources of truth
 - [Documentation Maintenance](contributing/documentation-maintenance.md): which docs must change when API, planning, release, or architecture changes happen
+- [Java Code Style](contributing/java-code-style.md): package boundaries, comment strategy, and Java review baseline
+- [Java Architecture Map](architecture/java-architecture-map.md): module ownership, capability package map, and Java type placement guide
 - [Authentication and RBAC](reference/authentication-and-rbac.md): login flow, JWT usage, context propagation, and RBAC expectations
 - [User Management Reference](reference/user-management.md): current `/api/v1/users` contract and validation path
 - [Ticket Workflow Reference](reference/ticket-workflow.md): current `/api/v1/tickets` contract, state rules, and workflow-log behavior

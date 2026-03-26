@@ -1,8 +1,8 @@
 package com.renda.merchantops.api.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.renda.merchantops.common.exception.ErrorCode;
-import com.renda.merchantops.common.response.ApiResponse;
+import com.renda.merchantops.domain.shared.error.ErrorCode;
+import com.renda.merchantops.api.platform.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
