@@ -11,7 +11,7 @@ import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.config.AiProviderType;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
 import com.renda.merchantops.api.ticket.ai.TicketAiReplyDraftService;
-import com.renda.merchantops.api.ticket.ai.TicketAiExecutionSupport;
+import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.domain.ai.AiInteractionRecordCommand;
 import com.renda.merchantops.domain.ai.AiInteractionRecordUseCase;
 import com.renda.merchantops.domain.ai.AiInteractionStatus;
@@ -51,7 +51,7 @@ class TicketReplyDraftGoldenSampleTest {
                     ticketQueryUseCase,
                     new TicketReplyDraftPromptBuilder(),
                     new OpenAiTicketReplyDraftProvider(new ObjectMapper(), structuredOutputAiClient),
-                    new TicketAiExecutionSupport(recordUseCase),
+                    new AiInteractionExecutionSupport(recordUseCase),
                     aiProperties()
             );
 

@@ -1,8 +1,8 @@
 # AI Live Smoke Test
 
-Last updated: 2026-03-22
+Last updated: 2026-03-27
 
-> Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public Week 6 ticket AI surface. It is intentionally summary-first and budget-limited, with triage and reply-draft treated as a second-stage expansion only after summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
+> Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
 
 Use this runbook when local AI provider wiring, `.env` loading, provider normalization, or vendor compatibility changed and you need one real local provider pass.
 
@@ -17,14 +17,14 @@ This runbook is intentionally narrow:
 - create one fresh smoke ticket and add enough context for summary generation
 - call `POST /api/v1/tickets/{id}/ai-summary` exactly once
 - if that succeeds, immediately call `GET /api/v1/tickets/{id}/ai-interactions`
-- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, and `GET /ai-interactions?interactionType=REPLY_DRAFT`
+- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, and one import `ai-error-summary` call against a known failed import job
 - if any live endpoint fails, stop immediately and do not continue to the next endpoint
 
 Budget guard for the first live pass:
 
 - keep spend at or below `1 RMB`
 - use one summary call only
-- expand to `ai-triage` or `ai-reply-draft` only after the summary path is proven locally
+- expand to `ai-triage`, `ai-reply-draft`, or import `ai-error-summary` only after the summary path is proven locally
 
 ## 1. Run Automated Tests First
 
@@ -263,7 +263,37 @@ Expected reply-draft result:
 
 Stop immediately if triage fails. Do not continue to reply-draft in the same session.
 
-## 11. What Counts As A Stop Condition
+## 11. Optional Import Error-Summary Pass
+
+Use this stage only after the summary call and the matching `SUMMARY` interaction-history read both succeed.
+
+Pick a current-tenant import job that already has row-level failures or a partial-failure terminal result. The existing import requests in [../../api-demo.http](../../api-demo.http) are the fastest way to create one locally if needed.
+
+```powershell
+$importJobId = 1201
+$importSummaryRequestId = "$smokePrefix-import-error-summary"
+$importSummaryHeaders = @{
+  Authorization = "Bearer $token"
+  "X-Request-Id" = $importSummaryRequestId
+}
+
+$importSummaryResponse = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$baseUrl/api/v1/import-jobs/$importJobId/ai-error-summary" `
+  -Headers $importSummaryHeaders
+```
+
+Expected result:
+
+- HTTP `200`
+- non-blank `data.summary`
+- non-empty `data.topErrorPatterns`
+- non-empty `data.recommendedNextSteps`
+- `data.requestId` equals `$importSummaryRequestId`
+
+If this request fails, stop here. Do not keep spending tokens on more live AI calls in the same session.
+
+## 12. What Counts As A Stop Condition
 
 Stop the live pass immediately if any of these happen:
 
@@ -275,6 +305,7 @@ Stop the live pass immediately if any of these happen:
 - the interaction-history read does not show the matching `TRIAGE/SUCCEEDED` row after a successful triage call
 - reply draft returns a non-`200` response or is missing any of `opening`, `body`, `nextStep`, `closing`, or `draftText`
 - the interaction-history read does not show the matching `REPLY_DRAFT/SUCCEEDED` row after a successful reply-draft call
+- import error summary returns a non-`200` response or is missing `summary`, `topErrorPatterns`, or `recommendedNextSteps`
 
 When that happens, capture the response or log evidence, update the relevant AI docs if the behavior changed, and do not spend more tokens by continuing to the next live endpoint.
 

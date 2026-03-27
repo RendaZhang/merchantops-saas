@@ -2,6 +2,7 @@ package com.renda.merchantops.api.ticket.ai;
 
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
+import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryAiProvider;
 import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryPrompt;
 import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryPromptBuilder;
@@ -9,7 +10,6 @@ import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryProviderRequest;
 import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
-import com.renda.merchantops.api.ticket.ai.TicketAiExecutionSupport;
 import com.renda.merchantops.domain.ticket.TicketPromptContext;
 import com.renda.merchantops.domain.ticket.TicketQueryUseCase;
 import lombok.RequiredArgsConstructor;
@@ -22,25 +22,27 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TicketAiSummaryService {
 
+    private static final String ENTITY_TYPE_TICKET = "TICKET";
     private static final String INTERACTION_TYPE_SUMMARY = "SUMMARY";
 
     private final TicketQueryUseCase ticketQueryUseCase;
     private final TicketSummaryPromptBuilder ticketSummaryPromptBuilder;
     private final TicketSummaryAiProvider ticketSummaryAiProvider;
-    private final TicketAiExecutionSupport ticketAiExecutionSupport;
+    private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
     private final AiProperties aiProperties;
 
     public TicketAiSummaryResponse generateSummary(Long tenantId, Long userId, String requestId, Long ticketId) {
-        String normalizedRequestId = ticketAiExecutionSupport.normalizeRequestId(requestId);
+        String normalizedRequestId = aiInteractionExecutionSupport.normalizeRequestId(requestId);
         TicketPromptContext ticket = ticketQueryUseCase.getTicketPromptContext(tenantId, ticketId);
-        String promptVersion = ticketAiExecutionSupport.normalizePromptVersion(aiProperties.getPromptVersion(), "ticket-summary-v1");
-        String configuredModelId = ticketAiExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
+        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(aiProperties.getPromptVersion(), "ticket-summary-v1");
+        String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         TicketSummaryPrompt prompt = ticketSummaryPromptBuilder.build(promptVersion, ticket);
 
-        ticketAiExecutionSupport.assertAvailable(
+        aiInteractionExecutionSupport.assertAvailable(
                 tenantId,
                 userId,
                 normalizedRequestId,
+                ENTITY_TYPE_TICKET,
                 ticketId,
                 INTERACTION_TYPE_SUMMARY,
                 promptVersion,
@@ -61,14 +63,15 @@ public class TicketAiSummaryService {
                             prompt
                     )
             );
-            long latencyMs = ticketAiExecutionSupport.elapsedMillis(startedAt);
-            String resolvedModelId = ticketAiExecutionSupport.normalizeNullable(providerResult.modelId());
+            long latencyMs = aiInteractionExecutionSupport.elapsedMillis(startedAt);
+            String resolvedModelId = aiInteractionExecutionSupport.normalizeNullable(providerResult.modelId());
             String summary = normalizeRequiredSummary(providerResult.summary());
 
-            ticketAiExecutionSupport.recordSuccess(
+            aiInteractionExecutionSupport.recordSuccess(
                     tenantId,
                     userId,
                     normalizedRequestId,
+                    ENTITY_TYPE_TICKET,
                     ticketId,
                     INTERACTION_TYPE_SUMMARY,
                     promptVersion,
@@ -88,11 +91,12 @@ public class TicketAiSummaryService {
                     normalizedRequestId
             );
         } catch (AiProviderException ex) {
-            long latencyMs = ticketAiExecutionSupport.elapsedMillis(startedAt);
-            ticketAiExecutionSupport.recordFailure(
+            long latencyMs = aiInteractionExecutionSupport.elapsedMillis(startedAt);
+            aiInteractionExecutionSupport.recordFailure(
                     tenantId,
                     userId,
                     normalizedRequestId,
+                    ENTITY_TYPE_TICKET,
                     ticketId,
                     INTERACTION_TYPE_SUMMARY,
                     promptVersion,
@@ -100,7 +104,7 @@ public class TicketAiSummaryService {
                     ex.getFailureType(),
                     latencyMs
             );
-            throw ticketAiExecutionSupport.toBizException(ex, "ticket ai summary timed out", "ticket ai summary is unavailable");
+            throw aiInteractionExecutionSupport.toBizException(ex, "ticket ai summary timed out", "ticket ai summary is unavailable");
         }
     }
 

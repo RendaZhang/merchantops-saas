@@ -1,0 +1,26 @@
+{
+  "id": "resp_import_error_summary_9301",
+  "object": "response",
+  "created_at": 1774600000,
+  "status": "completed",
+  "model": "gpt-4.1-mini",
+  "output": [
+    {
+      "id": "msg_import_error_summary_9301",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"summary\": \"The import job is dominated by tenant role validation failures, with a smaller duplicate-username segment across structurally complete rows.\",\n  \"topErrorPatterns\": [\n    \"UNKNOWN_ROLE appears on structurally complete rows where roleCodes is present but invalid for the current tenant.\",\n    \"A smaller DUPLICATE_USERNAME segment suggests the CSV also collides with existing tenant usernames.\"\n  ],\n  \"recommendedNextSteps\": [\n    \"Review tenant role mappings and correct invalid roleCodes before replaying failures.\",\n    \"Decide whether duplicate usernames should be renamed or skipped before running edited or selective replay.\"\n  ]\n}"
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 180,
+    "output_tokens": 76,
+    "total_tokens": 256
+  }
+}

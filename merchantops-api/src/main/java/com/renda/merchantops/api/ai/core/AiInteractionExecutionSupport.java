@@ -1,13 +1,10 @@
-package com.renda.merchantops.api.ticket.ai;
+package com.renda.merchantops.api.ai.core;
 
-import com.renda.merchantops.api.ai.core.AiProviderException;
-import com.renda.merchantops.api.ai.core.AiProviderFailureType;
-import com.renda.merchantops.api.ai.core.AiUsageAwareResult;
+import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.domain.ai.AiInteractionRecordCommand;
 import com.renda.merchantops.domain.ai.AiInteractionRecordUseCase;
 import com.renda.merchantops.domain.ai.AiInteractionStatus;
-import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -15,14 +12,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Keeps the ticket AI service flows explicit while centralizing the shared
- * request normalization, degraded-mode recording, and provider failure mapping.
+ * Centralizes the shared AI endpoint mechanics while keeping per-capability
+ * prompt building and output validation explicit in the owning service.
  */
 @Component
 @RequiredArgsConstructor
-public class TicketAiExecutionSupport {
-
-    private static final String ENTITY_TYPE_TICKET = "TICKET";
+public class AiInteractionExecutionSupport {
 
     private final AiInteractionRecordUseCase aiInteractionRecordUseCase;
 
@@ -47,7 +42,8 @@ public class TicketAiExecutionSupport {
     public void assertAvailable(Long tenantId,
                                 Long userId,
                                 String requestId,
-                                Long ticketId,
+                                String entityType,
+                                Long entityId,
                                 String interactionType,
                                 String promptVersion,
                                 String modelId,
@@ -55,12 +51,12 @@ public class TicketAiExecutionSupport {
                                 String disabledMessage,
                                 String unavailableMessage) {
         if (!aiProperties.isEnabled()) {
-            record(tenantId, userId, requestId, ticketId, interactionType, promptVersion, modelId,
+            record(tenantId, userId, requestId, entityType, entityId, interactionType, promptVersion, modelId,
                     AiInteractionStatus.FEATURE_DISABLED, 0L, null, null);
             throw new BizException(ErrorCode.SERVICE_UNAVAILABLE, disabledMessage);
         }
         if (!aiProperties.hasProviderConfiguration()) {
-            record(tenantId, userId, requestId, ticketId, interactionType, promptVersion, modelId,
+            record(tenantId, userId, requestId, entityType, entityId, interactionType, promptVersion, modelId,
                     AiInteractionStatus.PROVIDER_NOT_CONFIGURED, 0L, null, null);
             throw new BizException(ErrorCode.SERVICE_UNAVAILABLE, unavailableMessage);
         }
@@ -88,34 +84,37 @@ public class TicketAiExecutionSupport {
     public void recordSuccess(Long tenantId,
                               Long userId,
                               String requestId,
-                              Long ticketId,
+                              String entityType,
+                              Long entityId,
                               String interactionType,
                               String promptVersion,
                               String modelId,
                               long latencyMs,
                               String outputSummary,
                               AiUsageAwareResult usageResult) {
-        record(tenantId, userId, requestId, ticketId, interactionType, promptVersion, modelId,
+        record(tenantId, userId, requestId, entityType, entityId, interactionType, promptVersion, modelId,
                 AiInteractionStatus.SUCCEEDED, latencyMs, outputSummary, usageResult);
     }
 
     public void recordFailure(Long tenantId,
                               Long userId,
                               String requestId,
-                              Long ticketId,
+                              String entityType,
+                              Long entityId,
                               String interactionType,
                               String promptVersion,
                               String modelId,
                               AiProviderFailureType failureType,
                               long latencyMs) {
-        record(tenantId, userId, requestId, ticketId, interactionType, promptVersion, modelId,
+        record(tenantId, userId, requestId, entityType, entityId, interactionType, promptVersion, modelId,
                 mapFailure(failureType), latencyMs, null, null);
     }
 
     private void record(Long tenantId,
                         Long userId,
                         String requestId,
-                        Long ticketId,
+                        String entityType,
+                        Long entityId,
                         String interactionType,
                         String promptVersion,
                         String modelId,
@@ -127,8 +126,8 @@ public class TicketAiExecutionSupport {
                 tenantId,
                 userId,
                 requestId,
-                ENTITY_TYPE_TICKET,
-                ticketId,
+                entityType,
+                entityId,
                 interactionType,
                 promptVersion,
                 modelId,

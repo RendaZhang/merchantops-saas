@@ -1,8 +1,6 @@
-package com.renda.merchantops.api.ticket.ai;
+package com.renda.merchantops.api.ai.core;
 
 import com.renda.merchantops.api.ai.client.StructuredOutputAiResponse;
-import com.renda.merchantops.api.ai.core.AiProviderException;
-import com.renda.merchantops.api.ai.core.AiProviderFailureType;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.domain.ai.AiInteractionRecordCommand;
 import com.renda.merchantops.domain.ai.AiInteractionRecordUseCase;
@@ -16,10 +14,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-class TicketAiExecutionSupportTest {
+class AiInteractionExecutionSupportTest {
 
     private final AiInteractionRecordUseCase recordUseCase = mock(AiInteractionRecordUseCase.class);
-    private final TicketAiExecutionSupport support = new TicketAiExecutionSupport(recordUseCase);
+    private final AiInteractionExecutionSupport support = new AiInteractionExecutionSupport(recordUseCase);
 
     @Test
     void assertAvailableShouldRecordFeatureDisabledBeforeThrowing() {
@@ -27,7 +25,7 @@ class TicketAiExecutionSupportTest {
         aiProperties.setEnabled(false);
 
         assertThatThrownBy(() -> support.assertAvailable(
-                11L, 22L, "req-1", 33L, "SUMMARY", "ticket-summary-v1", "gpt-4.1-mini",
+                11L, 22L, "req-1", "TICKET", 33L, "SUMMARY", "ticket-summary-v1", "gpt-4.1-mini",
                 aiProperties, "disabled", "unavailable"
         ))
                 .isInstanceOf(BizException.class)
@@ -35,6 +33,7 @@ class TicketAiExecutionSupportTest {
 
         ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
         verify(recordUseCase).record(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().entityType()).isEqualTo("TICKET");
         assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.FEATURE_DISABLED);
         assertThat(commandCaptor.getValue().interactionType()).isEqualTo("SUMMARY");
     }
@@ -45,7 +44,7 @@ class TicketAiExecutionSupportTest {
         aiProperties.setEnabled(true);
 
         assertThatThrownBy(() -> support.assertAvailable(
-                11L, 22L, "req-2", 33L, "TRIAGE", "ticket-triage-v1", "gpt-4.1-mini",
+                11L, 22L, "req-2", "IMPORT_JOB", 33L, "ERROR_SUMMARY", "import-error-summary-v1", "gpt-4.1-mini",
                 aiProperties, "disabled", "unavailable"
         ))
                 .isInstanceOf(BizException.class)
@@ -53,8 +52,9 @@ class TicketAiExecutionSupportTest {
 
         ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
         verify(recordUseCase).record(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().entityType()).isEqualTo("IMPORT_JOB");
         assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.PROVIDER_NOT_CONFIGURED);
-        assertThat(commandCaptor.getValue().interactionType()).isEqualTo("TRIAGE");
+        assertThat(commandCaptor.getValue().interactionType()).isEqualTo("ERROR_SUMMARY");
     }
 
     @Test
@@ -63,18 +63,19 @@ class TicketAiExecutionSupportTest {
                 11L,
                 22L,
                 "req-3",
+                "IMPORT_JOB",
                 33L,
-                "SUMMARY",
-                "ticket-summary-v1",
+                "ERROR_SUMMARY",
+                "import-error-summary-v1",
                 "gpt-4.1-mini",
                 45L,
-                "Issue: summary",
+                "summary",
                 new StructuredOutputAiResponse("{}", "gpt-4.1-mini", 120, 44, 164, 900L)
         );
 
         ArgumentCaptor<AiInteractionRecordCommand> commandCaptor = ArgumentCaptor.forClass(AiInteractionRecordCommand.class);
         verify(recordUseCase).record(commandCaptor.capture());
-        assertThat(commandCaptor.getValue().entityType()).isEqualTo("TICKET");
+        assertThat(commandCaptor.getValue().entityType()).isEqualTo("IMPORT_JOB");
         assertThat(commandCaptor.getValue().status()).isEqualTo(AiInteractionStatus.SUCCEEDED);
         assertThat(commandCaptor.getValue().usagePromptTokens()).isEqualTo(120);
         assertThat(commandCaptor.getValue().usageCompletionTokens()).isEqualTo(44);
@@ -88,9 +89,10 @@ class TicketAiExecutionSupportTest {
                 11L,
                 22L,
                 "req-4",
+                "IMPORT_JOB",
                 33L,
-                "REPLY_DRAFT",
-                "ticket-reply-draft-v1",
+                "ERROR_SUMMARY",
+                "import-error-summary-v1",
                 "gpt-4.1-mini",
                 AiProviderFailureType.INVALID_RESPONSE,
                 19L

@@ -1,0 +1,60 @@
+[
+  {
+    "importJobId": 9301,
+    "tenantId": 1,
+    "job": {
+      "importType": "USER_CSV",
+      "sourceType": "CSV",
+      "sourceFilename": "week7-import-errors.csv",
+      "storageKey": "1/week7-import-errors.csv",
+      "sourceJobId": null,
+      "status": "FAILED",
+      "requestedBy": 101,
+      "requestId": "req-import-golden-9301",
+      "totalCount": 3,
+      "successCount": 0,
+      "failureCount": 3,
+      "errorSummary": "all rows failed validation",
+      "createdAt": "2026-03-27T09:00:00",
+      "startedAt": "2026-03-27T09:00:02",
+      "finishedAt": "2026-03-27T09:00:05"
+    },
+    "errorCodeCounts": [
+      {
+        "errorCode": "UNKNOWN_ROLE",
+        "count": 2
+      },
+      {
+        "errorCode": "DUPLICATE_USERNAME",
+        "count": 1
+      }
+    ],
+    "errors": [
+      {
+        "id": 93011,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "retry-role,Retry Role,retry-role@example.com,abc123,RETRY_ROLE",
+        "createdAt": "2026-03-27T09:00:04"
+      },
+      {
+        "id": 93012,
+        "rowNumber": 3,
+        "errorCode": "DUPLICATE_USERNAME",
+        "errorMessage": "username already exists in current tenant",
+        "rawPayload": "existing-user,Existing User,existing-user@example.com,abc123,READ_ONLY",
+        "createdAt": "2026-03-27T09:00:04"
+      }
+    ],
+    "expectedSummary": "The import job is dominated by tenant role validation failures, with a smaller duplicate-username segment across structurally complete rows.",
+    "expectedTopErrorPatterns": [
+      "UNKNOWN_ROLE appears on structurally complete rows where roleCodes is present but invalid for the current tenant.",
+      "A smaller DUPLICATE_USERNAME segment suggests the CSV also collides with existing tenant usernames."
+    ],
+    "expectedRecommendedNextSteps": [
+      "Review tenant role mappings and correct invalid roleCodes before replaying failures.",
+      "Decide whether duplicate usernames should be renamed or skipped before running edited or selective replay."
+    ]
+  }
+]

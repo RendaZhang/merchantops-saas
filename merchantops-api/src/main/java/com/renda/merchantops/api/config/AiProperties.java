@@ -24,6 +24,8 @@ public class AiProperties {
 
     private String replyDraftPromptVersion = "ticket-reply-draft-v1";
 
+    private String importErrorSummaryPromptVersion = "import-error-summary-v1";
+
     private AiProviderType provider = AiProviderType.OPENAI;
 
     private String baseUrl;

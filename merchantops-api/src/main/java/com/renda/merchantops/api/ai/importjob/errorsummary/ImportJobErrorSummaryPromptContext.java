@@ -1,0 +1,49 @@
+package com.renda.merchantops.api.ai.importjob.errorsummary;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public record ImportJobErrorSummaryPromptContext(
+        Long importJobId,
+        String importType,
+        String sourceType,
+        String sourceFilename,
+        String status,
+        String errorSummary,
+        Integer totalCount,
+        Integer successCount,
+        Integer failureCount,
+        Long sourceJobId,
+        LocalDateTime createdAt,
+        LocalDateTime startedAt,
+        LocalDateTime finishedAt,
+        List<ErrorCodeCount> errorCodeCounts,
+        List<ErrorRowContext> promptWindowErrors
+) {
+    public record ErrorCodeCount(
+            String errorCode,
+            long count
+    ) {
+    }
+
+    public record ErrorRowContext(
+            Integer rowNumber,
+            String errorCode,
+            String errorMessage,
+            SanitizedRowSummary rowSummary
+    ) {
+    }
+
+    public record SanitizedRowSummary(
+            boolean rawPayloadPresent,
+            boolean rawPayloadParsed,
+            Integer columnCount,
+            boolean usernamePresent,
+            boolean displayNamePresent,
+            boolean emailPresent,
+            boolean passwordPresent,
+            boolean roleCodesPresent,
+            int roleCodeCount
+    ) {
+    }
+}

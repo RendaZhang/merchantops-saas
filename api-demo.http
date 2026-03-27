@@ -379,6 +379,12 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}
 Authorization: Bearer {{token}}
 
+### Generate import AI error summary
+# Read-only and suggestion-only. The server uses import detail, errorCodeCounts, and
+# the first 20 failed rows after local sanitization; it does not send raw CSV payload values to the model.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-error-summary
+Authorization: Bearer {{token}}
+
 ### Replay failed rows from import job
 # Set importJobId to a terminal source job that has failed rows; the response returns a new derived replay job id.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures

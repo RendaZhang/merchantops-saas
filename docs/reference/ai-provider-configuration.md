@@ -1,12 +1,12 @@
 # AI Provider Configuration
 
-Last updated: 2026-03-22
+Last updated: 2026-03-27
 
 ## Purpose
 
 This page records the active ownership and rollout model for AI provider configuration.
 
-It answers three practical questions for the current Week 6 slice:
+It answers three practical questions for the current public AI slices:
 
 - who owns the provider configuration
 - which config keys are active in code today
@@ -20,10 +20,11 @@ Definition:
 
 - one MerchantOps deployment owns one provider configuration for its public AI features
 - the configuration is managed by the operator of that deployment, not by ordinary tenant users
-- the current provider-driven AI generation surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
+- the current provider-driven AI generation surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, and `POST /api/v1/import-jobs/{id}/ai-error-summary`
 - the ticket AI interaction history endpoint `GET /api/v1/tickets/{id}/ai-interactions` reuses stored records and does not trigger a provider call
+- the current import AI slice has no public import interaction-history endpoint; it reuses the same provider/runtime configuration and only persists `ai_interaction_record`
 
-This means the current Week 6 slice does not support tenant-specific model keys or tenant-managed provider setup.
+This means the current public AI slices do not support tenant-specific model keys or tenant-managed provider setup.
 
 ## Active Config Keys
 
@@ -33,6 +34,7 @@ Current Spring configuration keys:
 - `merchantops.ai.prompt-version`
 - `merchantops.ai.triage-prompt-version`
 - `merchantops.ai.reply-draft-prompt-version`
+- `merchantops.ai.import-error-summary-prompt-version`
 - `merchantops.ai.provider`
 - `merchantops.ai.base-url`
 - `merchantops.ai.api-key`
@@ -47,6 +49,7 @@ Current environment-variable overrides:
 - `MERCHANTOPS_AI_PROMPT_VERSION`
 - `MERCHANTOPS_AI_TRIAGE_PROMPT_VERSION`
 - `MERCHANTOPS_AI_REPLY_DRAFT_PROMPT_VERSION`
+- `MERCHANTOPS_AI_IMPORT_ERROR_SUMMARY_PROMPT_VERSION`
 - `MERCHANTOPS_AI_PROVIDER`
 - `MERCHANTOPS_AI_BASE_URL`
 - `MERCHANTOPS_AI_API_KEY`
@@ -64,6 +67,7 @@ Current defaults in `application.yml` keep AI optional:
 - `prompt-version=ticket-summary-v1`
 - `triage-prompt-version=ticket-triage-v1`
 - `reply-draft-prompt-version=ticket-reply-draft-v1`
+- `import-error-summary-prompt-version=import-error-summary-v1`
 - `provider=OPENAI`
 - `timeout-ms=5000`
 - provider-neutral `base-url`, `api-key`, and `model-id` blank until the deployment operator supplies them
@@ -92,7 +96,7 @@ Current compatibility rules are:
 
 ## Minimum Current Setup
 
-To enable the public ticket summary, ticket triage, and ticket reply-draft slices, the deployment must provide all of:
+To enable the public ticket summary, ticket triage, ticket reply-draft, and import AI error-summary slices, the deployment must provide all of:
 
 - `merchantops.ai.enabled=true`
 - `merchantops.ai.provider=OPENAI` or `merchantops.ai.provider=DEEPSEEK`
@@ -114,7 +118,7 @@ Typical minimal DeepSeek setup:
 - `merchantops.ai.api-key=<deepseek-key>` or local `DEEPSEEK_API_KEY=<deepseek-key>`
 - optional `merchantops.ai.model-id=<deepseek-model>` or local `DEEPSEEK_MODEL=<deepseek-model>`
 
-If any required provider setting is missing, the rest of the application still works and only the public ticket AI endpoints degrade with controlled `503 SERVICE_UNAVAILABLE` responses.
+If any required provider setting is missing, the rest of the application still works and only the public AI generation endpoints degrade with controlled `503 SERVICE_UNAVAILABLE` responses.
 
 ## Current Runtime Behavior
 
@@ -124,7 +128,7 @@ The current AI runtime expectation is:
 - the deployment operator chooses the provider path, base URL, and model id
 - AI requests apply the configured timeout rather than relying on accidental client defaults
 - provider failures do not leak raw provider exceptions to API consumers
-- the ticket workflow remains manually operable when AI is disabled or unavailable
+- the ticket and import workflows remain manually operable when AI is disabled or unavailable
 
 Current protocol paths are:
 
@@ -183,7 +187,7 @@ If that model is introduced later, it should add all of the following before bec
 - tenant-level usage and failure visibility
 - explicit quota and support boundaries
 
-The current Week 6 ticket summary, ticket triage, and ticket reply-draft slices do not implement any of those pieces yet.
+The current ticket summary, ticket triage, ticket reply-draft, and import error-summary slices do not implement any of those pieces yet.
 
 ## Related Documents
 

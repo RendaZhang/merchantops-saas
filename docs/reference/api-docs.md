@@ -75,6 +75,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Yes + `USER_WRITE` | Create a new derived import job from caller-provided full replacement rows keyed by replayable failed-row `errorId` |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
+| `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | Yes + `USER_READ` | Generate a suggestion-only AI error summary for one current-tenant import job |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -133,11 +134,13 @@ Approval Requests tag note:
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
 - `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` require `USER_WRITE`.
-- `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, and `GET /api/v1/import-jobs/{id}/errors` require `USER_READ`.
+- `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, and `POST /api/v1/import-jobs/{id}/ai-error-summary` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
 - `GET /api/v1/import-jobs/{id}` detail now exposes nullable `sourceJobId` for replay-derived jobs.
+- `POST /api/v1/import-jobs/{id}/ai-error-summary` exposes no request body and returns suggestion-only fields `importJobId`, `summary`, `topErrorPatterns`, `recommendedNextSteps`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`.
+- `POST /api/v1/import-jobs/{id}/ai-error-summary` derives prompt context from import detail, `errorCodeCounts`, and the first 20 failure rows after local sanitization; it does not forward raw `itemErrors.rawPayload` values.
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `POST /api/v1/import-jobs/{id}/replay-file` copies the stored source file into a new derived `QUEUED` job for current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
@@ -846,6 +849,42 @@ Current notes:
 - the current query shape exposes `page`, `size`, and exact `errorCode`
 - failure rows are ordered stably: null `rowNumber` first, then `rowNumber ASC, id ASC`
 - this is the preferred read surface for larger jobs; detail remains the overview surface
+
+### 25. Import AI Error Summary (`POST /api/v1/import-jobs/{id}/ai-error-summary`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "importJobId": 1201,
+    "summary": "The job is primarily blocked by tenant role validation failures, with a smaller duplicate-username tail. The sampled failed rows are structurally complete, so role-map cleanup should come before any replay attempt.",
+    "topErrorPatterns": [
+      "UNKNOWN_ROLE is the dominant error code in both the aggregate counts and the sampled failed rows.",
+      "Most sampled failed rows still contain all expected `USER_CSV` columns, so the failures look data-quality related rather than parser-shape related."
+    ],
+    "recommendedNextSteps": [
+      "Confirm the valid tenant role codes that should replace the invalid mappings before replay.",
+      "Review duplicate usernames separately because those rows need edits rather than role-map cleanup."
+    ],
+    "promptVersion": "import-error-summary-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-27T10:25:15",
+    "latencyMs": 512,
+    "requestId": "import-ai-error-summary-req-1"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- request body is empty
+- cross-tenant or missing jobs return `404`
+- the endpoint is read-only and suggestion-only; it does not mutate import jobs, item errors, or replay state
+- raw `itemErrors.rawPayload` stays out of the AI prompt; the service only sends row metadata plus a structural-only summary
 
 ## Stale Swagger Troubleshooting
 

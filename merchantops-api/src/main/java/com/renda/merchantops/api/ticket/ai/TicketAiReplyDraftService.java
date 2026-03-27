@@ -2,6 +2,7 @@ package com.renda.merchantops.api.ticket.ai;
 
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
+import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftAiProvider;
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftPrompt;
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftPromptBuilder;
@@ -9,7 +10,6 @@ import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftProviderRe
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
-import com.renda.merchantops.api.ticket.ai.TicketAiExecutionSupport;
 import com.renda.merchantops.domain.ticket.TicketPromptContext;
 import com.renda.merchantops.domain.ticket.TicketQueryUseCase;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TicketAiReplyDraftService {
 
+    private static final String ENTITY_TYPE_TICKET = "TICKET";
     private static final String INTERACTION_TYPE_REPLY_DRAFT = "REPLY_DRAFT";
     private static final String NEXT_STEP_LABEL = "Next step: ";
     private static final int MAX_COMMENT_LENGTH = 2000;
@@ -29,20 +30,21 @@ public class TicketAiReplyDraftService {
     private final TicketQueryUseCase ticketQueryUseCase;
     private final TicketReplyDraftPromptBuilder ticketReplyDraftPromptBuilder;
     private final TicketReplyDraftAiProvider ticketReplyDraftAiProvider;
-    private final TicketAiExecutionSupport ticketAiExecutionSupport;
+    private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
     private final AiProperties aiProperties;
 
     public TicketAiReplyDraftResponse generateReplyDraft(Long tenantId, Long userId, String requestId, Long ticketId) {
-        String normalizedRequestId = ticketAiExecutionSupport.normalizeRequestId(requestId);
+        String normalizedRequestId = aiInteractionExecutionSupport.normalizeRequestId(requestId);
         TicketPromptContext ticket = ticketQueryUseCase.getTicketPromptContext(tenantId, ticketId);
-        String promptVersion = ticketAiExecutionSupport.normalizePromptVersion(aiProperties.getReplyDraftPromptVersion(), "ticket-reply-draft-v1");
-        String configuredModelId = ticketAiExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
+        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(aiProperties.getReplyDraftPromptVersion(), "ticket-reply-draft-v1");
+        String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         TicketReplyDraftPrompt prompt = ticketReplyDraftPromptBuilder.build(promptVersion, ticket);
 
-        ticketAiExecutionSupport.assertAvailable(
+        aiInteractionExecutionSupport.assertAvailable(
                 tenantId,
                 userId,
                 normalizedRequestId,
+                ENTITY_TYPE_TICKET,
                 ticketId,
                 INTERACTION_TYPE_REPLY_DRAFT,
                 promptVersion,
@@ -63,18 +65,19 @@ public class TicketAiReplyDraftService {
                             prompt
                     )
             );
-            long latencyMs = ticketAiExecutionSupport.elapsedMillis(startedAt);
-            String resolvedModelId = ticketAiExecutionSupport.normalizeNullable(providerResult.modelId());
+            long latencyMs = aiInteractionExecutionSupport.elapsedMillis(startedAt);
+            String resolvedModelId = aiInteractionExecutionSupport.normalizeNullable(providerResult.modelId());
             String opening = normalizeRequiredSection(providerResult.opening(), "opening");
             String body = normalizeRequiredSection(providerResult.body(), "body");
             String nextStep = normalizeRequiredSection(providerResult.nextStep(), "nextStep");
             String closing = normalizeRequiredSection(providerResult.closing(), "closing");
             String draftText = assembleDraft(opening, body, nextStep, closing);
 
-            ticketAiExecutionSupport.recordSuccess(
+            aiInteractionExecutionSupport.recordSuccess(
                     tenantId,
                     userId,
                     normalizedRequestId,
+                    ENTITY_TYPE_TICKET,
                     ticketId,
                     INTERACTION_TYPE_REPLY_DRAFT,
                     promptVersion,
@@ -98,11 +101,12 @@ public class TicketAiReplyDraftService {
                     normalizedRequestId
             );
         } catch (AiProviderException ex) {
-            long latencyMs = ticketAiExecutionSupport.elapsedMillis(startedAt);
-            ticketAiExecutionSupport.recordFailure(
+            long latencyMs = aiInteractionExecutionSupport.elapsedMillis(startedAt);
+            aiInteractionExecutionSupport.recordFailure(
                     tenantId,
                     userId,
                     normalizedRequestId,
+                    ENTITY_TYPE_TICKET,
                     ticketId,
                     INTERACTION_TYPE_REPLY_DRAFT,
                     promptVersion,
@@ -110,7 +114,7 @@ public class TicketAiReplyDraftService {
                     ex.getFailureType(),
                     latencyMs
             );
-            throw ticketAiExecutionSupport.toBizException(ex, "ticket ai reply draft timed out", "ticket ai reply draft is unavailable");
+            throw aiInteractionExecutionSupport.toBizException(ex, "ticket ai reply draft timed out", "ticket ai reply draft is unavailable");
         }
     }
 

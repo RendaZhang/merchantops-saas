@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-22
+Last updated: 2026-03-27
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -18,17 +18,17 @@ Last updated: 2026-03-22
 
 ## Current Focus
 
-The current Week 7 start should stay narrow and workflow-oriented:
+The current Week 7 implementation should stay narrow and workflow-oriented:
 
 - keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the existing public ticket AI surface read-only, and keep the generation slices suggestion-only, tenant-scoped, RBAC-scoped, and failure-tolerant
-- start Week 7 from the existing import baseline instead of reopening Week 6 ticket-AI contract work
+- keep the new Week 7 Slice A import AI summary surface narrow: `POST /api/v1/import-jobs/{id}/ai-error-summary` stays `USER_READ`, read-only, tenant-scoped, and suggestion-only
 - keep Week 7 focused on import/data-quality AI guidance rather than widening into write-back, billing, ledger semantics, or generic chat tooling
 
 ## Recommended Next Steps
 
-- start Week 7 with a read-only, tenant-scoped import AI error-summary slice on top of the current import job detail, item-error, and replay baseline
-- follow that with narrow import mapping-suggestion and fix-recommendation slices only if the error-summary baseline proves stable
+- keep the new import AI error-summary slice stable and use it as the Week 7 baseline
+- follow it with narrow import mapping-suggestion and fix-recommendation slices in that order only if the error-summary baseline proves stable
 - keep the completed Week 6 ticket interaction-history, ticket summary, ticket triage, and ticket reply-draft contracts stable rather than widening them into write-back, billing, or ledger semantics
 
 ## Near-Term Sequence

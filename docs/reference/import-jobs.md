@@ -4,7 +4,7 @@ Last updated: 2026-03-27
 
 ## Public API Surface
 
-Week 5 now exposes eight async import endpoints:
+Week 7 now exposes nine import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -16,6 +16,7 @@ Week 5 now exposes eight async import endpoints:
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from caller-provided full replacement rows that target replayable failed-row `errorId` values only |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
+| `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only AI summary from current import detail, `errorCodeCounts`, and the first sanitized failed-row window |
 
 ## Current Week 5 Contract (`USER_CSV` + Reporting + Replay Surface)
 
@@ -91,6 +92,49 @@ Detail semantics for reporting:
 - detail still returns backward-compatible `itemErrors`
 - detail counters now update during `PROCESSING` after each committed chunk
 - `GET /api/v1/import-jobs/{id}/errors` is the paged failure-item read surface for larger jobs
+
+## Read-Only Import AI Error Summary (`POST /api/v1/import-jobs/{id}/ai-error-summary`)
+
+Current Week 7 Slice A stays intentionally narrow:
+
+- request body is empty
+- permission is `USER_READ`
+- tenant scope and not-found behavior match the existing import read path
+- the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, or replay state
+- the endpoint does not add a public import AI history surface in this slice
+
+Current prompt context is assembled from:
+
+- current `GET /api/v1/import-jobs/{id}`-equivalent detail fields
+- current `errorCodeCounts`
+- the first 20 failure rows from the existing error-page query ordering
+
+Current prompt-safety rules are hard-coded:
+
+- raw `itemErrors.rawPayload` is never sent to the provider
+- each failed row contributes only `rowNumber`, `errorCode`, `errorMessage`, and a structural-only summary such as `columnCount`, `usernamePresent`, `displayNamePresent`, `emailPresent`, `passwordPresent`, `roleCodesPresent`, and `roleCodeCount`
+- raw username, display name, email, password, and role-code text are intentionally excluded
+- if local CSV parsing fails, the prompt falls back to structural metadata only rather than forwarding raw row text
+
+See [../architecture/import-ai-sanitized-context-strategy.md](../architecture/import-ai-sanitized-context-strategy.md) for the reusable architecture rule behind this Week 7 prompt boundary.
+
+Current response shape is:
+
+- `importJobId`
+- `summary`
+- `topErrorPatterns`
+- `recommendedNextSteps`
+- `promptVersion`
+- `modelId`
+- `generatedAt`
+- `latencyMs`
+- `requestId`
+
+Current failure behavior:
+
+- `403` when `USER_READ` is missing
+- `404` for cross-tenant or missing import jobs
+- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled, not configured, unavailable, times out, or returns an invalid structured payload
 
 ## Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures`)
 
@@ -305,6 +349,39 @@ POST /api/v1/import-jobs/1201/replay-failures
 Authorization: Bearer <admin-token>
 ```
 
+Example import AI error-summary request:
+
+```http
+POST /api/v1/import-jobs/1201/ai-error-summary
+Authorization: Bearer <admin-token>
+```
+
+Example import AI error-summary response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "importJobId": 1201,
+    "summary": "The job is primarily blocked by tenant role validation failures, with a smaller duplicate-username tail. The sampled failed rows are structurally complete, so role-map cleanup should come before any replay attempt.",
+    "topErrorPatterns": [
+      "UNKNOWN_ROLE is the dominant error code in both the aggregate counts and the sampled failed rows.",
+      "Most sampled failed rows still contain all expected `USER_CSV` columns, so the failures look data-quality related rather than parser-shape related."
+    ],
+    "recommendedNextSteps": [
+      "Confirm the valid tenant role codes that should replace the invalid mappings before replay.",
+      "Review duplicate usernames separately because those rows need edits rather than role-map cleanup."
+    ],
+    "promptVersion": "import-error-summary-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-27T10:25:15",
+    "latencyMs": 512,
+    "requestId": "import-ai-error-summary-req-1"
+  }
+}
+```
+
 Example selective replay request:
 
 ```http
@@ -455,6 +532,7 @@ Current semantics:
 ## Notes
 
 - this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay, exact error-code selective replay, and edited failed-row replay are implemented.
+- the current AI guidance slice is intentionally narrower still: only read-only import error summary is public; mapping suggestion, fix recommendation, and import AI history remain out of scope.
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.
@@ -463,6 +541,7 @@ Current semantics:
 - list paging now supports `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`; default size is `10` and max size is `100`.
 - error paging now supports `page`, `size`, and `errorCode`; default size is `10` and max size is `100`.
 - list items expose `requestedBy` and derived `hasFailures`; detail exposes `sourceJobId`, `errorCodeCounts`, and backward-compatible `itemErrors`; `/errors` pages the same failure rows for larger jobs.
+- `itemErrors.rawPayload` remains visible on the import detail and `/errors` read surfaces for replay/reporting, but `POST /api/v1/import-jobs/{id}/ai-error-summary` does not forward those raw values to the provider.
 - current list ordering remains `createdAt DESC, id DESC`.
 - current failure-item ordering remains stable: null `rowNumber` first, then `rowNumber ASC, id ASC`.
 - see [configuration.md](configuration.md) for the current import chunking, stale-processing, and queue-recovery controls.

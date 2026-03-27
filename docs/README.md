@@ -27,6 +27,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Ticket Workflow Reference](reference/ticket-workflow.md): current `/api/v1/tickets` contract, state rules, and workflow-log behavior
 - [Import Jobs Reference](reference/import-jobs.md): current `/api/v1/import-jobs` contract, `USER_CSV` row execution, and status/error model
 - [Import Replay Strategy](architecture/import-replay-derived-job-strategy.md): keep failed-row replay as a new derived import job instead of resetting an existing one
+- [Import AI Sanitized Context](architecture/import-ai-sanitized-context-strategy.md): keep import AI prompts on structural, sanitized context instead of forwarding raw failed-row payloads
 - [Automated Test Runbook](runbooks/automated-tests.md): preferred Maven test commands and current automated coverage
 - [Regression Checklist](runbooks/regression-checklist.md): broader sign-off checklist before merge, release, or phase close
 - [Non-Blocking Backlog](architecture/non-blocking-backlog.md): tracked follow-up items that should stay visible without blocking the active phase
