@@ -107,6 +107,7 @@ Password handling note:
 - send `Authorization: Bearer <accessToken>`
 - missing/invalid token returns `401 UNAUTHORIZED`
 - missing required permission returns `403 FORBIDDEN`
+- protected requests re-check the current tenant row, so a token issued before the tenant was disabled is rejected with `403 tenant is not active`
 - protected requests re-check the current user row, so a token issued before a user was disabled is rejected with `403 user is not active`
 - protected requests also re-check current roles and permissions, so a token issued before role or permission changes is rejected with `403 token claims are stale, please login again`
 - run [../runbooks/automated-tests.md](../runbooks/automated-tests.md) before manual RBAC smoke checks when code changed
@@ -453,7 +454,7 @@ Current notes:
 
 ## Context Propagation
 
-- `JwtAuthenticationFilter` parses JWT, re-checks the current user status, roles, and permissions from the database, and writes `TenantContext` and `CurrentUserContext`
+- `JwtAuthenticationFilter` parses JWT, re-checks the current tenant status, user status, roles, and permissions from the database, and writes `TenantContext` and `CurrentUserContext`
 - context is cleared in `finally` for every request
 - business code reads context through `ContextAccess`
 
@@ -467,7 +468,7 @@ Current notes:
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
 - after `viewer` is promoted and logs in again, the refreshed token can access `/api/v1/rbac/users/manage`, `/api/v1/rbac/feature-flags`, and ticket write endpoints
 
-The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`) and `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, and `POST /comments`) permission paths end to end, including disabled-user rejection, stale-claim rejection, ticket status-transition rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
+The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`) and `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, and `POST /comments`) permission paths end to end, including inactive-tenant rejection, disabled-user rejection, stale-claim rejection, ticket status-transition rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
 
 ## Current User Management Boundary
 

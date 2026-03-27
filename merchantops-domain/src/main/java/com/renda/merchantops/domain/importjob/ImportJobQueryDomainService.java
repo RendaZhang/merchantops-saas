@@ -50,6 +50,13 @@ public class ImportJobQueryDomainService implements ImportJobQueryUseCase {
         return importJobQueryPort.findQueuedJobsForRecovery(resolvedCreatedBefore, resolvedLimit);
     }
 
+    @Override
+    public java.util.List<ImportJobRecord> listStaleProcessingJobsForRecovery(LocalDateTime startedBefore, int limit) {
+        LocalDateTime resolvedStartedBefore = startedBefore == null ? LocalDateTime.now() : startedBefore;
+        int resolvedLimit = limit <= 0 ? DEFAULT_RECOVERY_BATCH_SIZE : limit;
+        return importJobQueryPort.findStaleProcessingJobsForRecovery(resolvedStartedBefore, resolvedLimit);
+    }
+
     private ImportJobPageCriteria normalize(ImportJobPageCriteria criteria) {
         if (criteria == null) {
             return new ImportJobPageCriteria(DEFAULT_PAGE, DEFAULT_SIZE, null, null, null, false);

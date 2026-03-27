@@ -51,4 +51,15 @@ public interface ImportJobRepository extends JpaRepository<ImportJobEntity, Long
     List<ImportJobEntity> findQueuedJobsForEnqueueRecovery(@Param("status") String status,
                                                            @Param("createdBefore") LocalDateTime createdBefore,
                                                            Pageable pageable);
+
+    @Query("""
+            SELECT j
+            FROM ImportJobEntity j
+            WHERE j.status = :status
+              AND (j.startedAt IS NULL OR j.startedAt <= :startedBefore)
+            ORDER BY j.startedAt ASC, j.id ASC
+            """)
+    List<ImportJobEntity> findStaleProcessingJobsForRecovery(@Param("status") String status,
+                                                             @Param("startedBefore") LocalDateTime startedBefore,
+                                                             Pageable pageable);
 }

@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-03-22
+Last updated: 2026-03-27
 
 > Maintenance note: keep this page as the source of truth for current implementation reality, current public baseline, and known gaps. If the active phase, public endpoints, automated coverage, or current limitations change, update this page before mirroring the change into [roadmap.md](roadmap.md) or [project-plan.md](project-plan.md).
 
@@ -39,10 +39,10 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 
 - Multi-module Spring Boot backend with MySQL, Redis, RabbitMQ, Flyway, request tracing, and unified API response / exception handling.
 - Tenant-aware query and command services for users, tickets, approvals, import jobs, and the current ticket interaction-history, ticket-summary, ticket-triage, and ticket reply-draft AI read paths.
-- JWT claim revalidation against current user status, roles, and permissions on protected requests.
+- JWT claim revalidation against current tenant status, user status, roles, and permissions on protected requests.
 - Instance-level AI provider configuration under `merchantops.ai.*`, repository-root `.env` bootstrap for local dev-profile `spring-boot:run`, explicit summary, triage, and reply-draft prompt versions, timeout-based degradation, and provider-normalized adapters that support OpenAI Responses plus DeepSeek Chat Completions JSON-output paths for the current ticket AI slices.
 - Dedicated `ai_interaction_record` persistence for AI runtime metadata, separate from `ticket_operation_log` and generic `audit_event`.
-- Local import file storage abstraction with after-commit queue publish, scheduled queued-job recovery, worker consumption, stale-processing restart/fail handling, system-generated replay-file writes, and configurable chunk / recovery / row-limit controls.
+- Local import file storage abstraction with after-commit queue publish, scheduled queued/stale-processing recovery, worker consumption, stale-processing restart/fail handling, system-generated replay-file writes, and configurable chunk / recovery / row-limit controls.
 - Focused automated coverage for auth, user management, ticket workflow, AI interaction history, AI summary, AI triage, AI reply draft, import jobs, audit, and approval behavior.
 
 ## Current Week 6 Public AI Baseline

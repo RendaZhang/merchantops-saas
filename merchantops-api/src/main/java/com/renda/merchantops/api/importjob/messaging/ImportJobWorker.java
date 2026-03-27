@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
-import org.springframework.amqp.ImmediateRequeueAmqpException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -44,9 +43,9 @@ public class ImportJobWorker {
         ImportJobStartResult startResult =
                 importJobExecutionCoordinator.startProcessing(message.jobId(), message.tenantId());
         if (startResult.action() == ImportJobStartAction.REQUEUE) {
-            log.debug("requeueing import job message for job {} tenant {} while job is still processing",
+            log.debug("acknowledged duplicate import job message for job {} tenant {} while job is still processing",
                     message.jobId(), message.tenantId());
-            throw new ImmediateRequeueAmqpException("import job is already processing");
+            return;
         }
         ImportJobExecutionContext context = startResult.context();
         if (context == null) {

@@ -10,6 +10,8 @@ Use it when changing code or development-facing documentation.
 
 For Java package reshaping, shared support extraction, or style cleanup, pair this page with [java-code-style.md](java-code-style.md) and [../architecture/java-architecture-map.md](../architecture/java-architecture-map.md).
 
+For module-local ownership questions, also read the module notes in [../../merchantops-api/README.md](../../merchantops-api/README.md), [../../merchantops-domain/README.md](../../merchantops-domain/README.md), and [../../merchantops-infra/README.md](../../merchantops-infra/README.md).
+
 ## Documentation Concerns
 
 - Root `README.md` stays high-level. Do not use it as the place for detailed development rules.
@@ -215,6 +217,9 @@ When extending user-management or another tenant-scoped module:
 - [../reference/user-management.md](../reference/user-management.md): current public `/api/v1/users` contract
 - [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md): authentication and permission behavior
 - [../architecture/java-architecture-map.md](../architecture/java-architecture-map.md): current Java module ownership and type-placement guide
+- [../../merchantops-api/README.md](../../merchantops-api/README.md): module-level guide for HTTP contracts, orchestration, and platform support
+- [../../merchantops-domain/README.md](../../merchantops-domain/README.md): module-level guide for use cases, ports, and shared business errors
+- [../../merchantops-infra/README.md](../../merchantops-infra/README.md): module-level guide for persistence adapters, entities, and repositories
 - [documentation-maintenance.md](documentation-maintenance.md): which docs must change for which change type
 - [testing-agent-guidance.md](testing-agent-guidance.md): verification and regression guidance for testing-focused work
 - [review-release-agent-guidance.md](review-release-agent-guidance.md): staged review and release guidance

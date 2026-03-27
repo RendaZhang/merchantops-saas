@@ -20,6 +20,8 @@ class AccessValidationServiceTest {
     @Test
     void validateShouldDetectStaleClaims() {
         AccessValidationService service = new AccessValidationService(authAccessPort);
+        when(authAccessPort.findTenantById(1L))
+                .thenReturn(Optional.of(new TenantAccount(1L, "demo-shop", "ACTIVE")));
         when(authAccessPort.findUserByIdAndTenantId(101L, 1L))
                 .thenReturn(Optional.of(new AccessUserAccount(101L, 1L, "admin", "bcrypt-hash", "ACTIVE")));
         when(authAccessPort.findRoleCodes(101L, 1L)).thenReturn(List.of("TENANT_ADMIN"));
@@ -41,6 +43,8 @@ class AccessValidationServiceTest {
     @Test
     void validateShouldReturnUpdatedPrincipalWhenClaimsMatch() {
         AccessValidationService service = new AccessValidationService(authAccessPort);
+        when(authAccessPort.findTenantById(1L))
+                .thenReturn(Optional.of(new TenantAccount(1L, "demo-shop", "ACTIVE")));
         when(authAccessPort.findUserByIdAndTenantId(101L, 1L))
                 .thenReturn(Optional.of(new AccessUserAccount(101L, 1L, "admin", "bcrypt-hash", "ACTIVE")));
         when(authAccessPort.findRoleCodes(101L, 1L)).thenReturn(List.of("TENANT_ADMIN"));
@@ -57,5 +61,24 @@ class AccessValidationServiceTest {
 
         assertThat(result.status()).isEqualTo(AccessValidationStatus.USER_ACTIVE);
         assertThat(result.currentUser().username()).isEqualTo("admin");
+    }
+
+    @Test
+    void validateShouldRejectInactiveTenant() {
+        AccessValidationService service = new AccessValidationService(authAccessPort);
+        when(authAccessPort.findTenantById(1L))
+                .thenReturn(Optional.of(new TenantAccount(1L, "demo-shop", "DISABLED")));
+
+        AccessValidationResult result = service.validate(new AccessPrincipal(
+                101L,
+                1L,
+                "demo-shop",
+                "admin",
+                List.of("TENANT_ADMIN"),
+                List.of("USER_READ", "USER_WRITE")
+        ));
+
+        assertThat(result.status()).isEqualTo(AccessValidationStatus.TENANT_INACTIVE);
+        assertThat(result.currentUser()).isNull();
     }
 }

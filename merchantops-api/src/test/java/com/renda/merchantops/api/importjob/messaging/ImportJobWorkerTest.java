@@ -8,14 +8,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.amqp.ImmediateRequeueAmqpException;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -204,13 +202,11 @@ class ImportJobWorkerTest {
     }
 
     @Test
-    void consumeShouldRequeueFreshProcessingRedelivery() {
+    void consumeShouldAcknowledgeFreshProcessingRedeliveryWithoutLocalExecution() {
         when(importJobExecutionCoordinator.startProcessing(7006L, 1L))
                 .thenReturn(ImportJobStartResult.requeue());
 
-        assertThatThrownBy(() -> importJobWorker.consume(new ImportJobMessage(7006L, 1L)))
-                .isInstanceOf(ImmediateRequeueAmqpException.class)
-                .hasMessage("import job is already processing");
+        importJobWorker.consume(new ImportJobMessage(7006L, 1L));
 
         verify(importJobExecutionCoordinator, never()).processChunk(any(), any());
         verify(importJobExecutionCoordinator, never()).completeJob(any());

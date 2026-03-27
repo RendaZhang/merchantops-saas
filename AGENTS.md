@@ -102,6 +102,7 @@ This repository currently organizes handoff rules around five roles plus a small
 
 ## Development Role
 
+- If you are a new coding agent in this repository, read [docs/contributing/new-coding-agent-start-here.md](docs/contributing/new-coding-agent-start-here.md) first, then continue into the development, Java style, and architecture guidance pages.
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before changing tenant-scoped repositories, services, DTOs, or user-management internals.
 - Read [docs/contributing/java-code-style.md](docs/contributing/java-code-style.md) before large package refactors, shared-support extraction, or Java style cleanup.
 - Read [docs/architecture/java-architecture-map.md](docs/architecture/java-architecture-map.md) before moving Java types across modules or capability packages.

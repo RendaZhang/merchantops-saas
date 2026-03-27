@@ -17,4 +17,6 @@ public interface ImportJobQueryPort {
     List<ImportJobErrorRecord> listJobErrors(Long tenantId, Long importJobId);
 
     List<ImportJobRecord> findQueuedJobsForRecovery(LocalDateTime createdBefore, int limit);
+
+    List<ImportJobRecord> findStaleProcessingJobsForRecovery(LocalDateTime startedBefore, int limit);
 }

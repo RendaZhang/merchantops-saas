@@ -23,24 +23,42 @@ public class ImportJobQueueRecoveryService {
             fixedDelayString = "${merchantops.import.processing.enqueue-recovery-delay-ms:300000}",
             initialDelayString = "${merchantops.import.processing.enqueue-recovery-delay-ms:300000}"
     )
-    public void recoverQueuedJobs() {
-        republishStaleQueuedJobs();
+    public void recoverJobs() {
+        republishRecoverableJobs();
     }
 
-    public int republishStaleQueuedJobs() {
+    public int republishRecoverableJobs() {
+        return republishQueuedJobs() + republishStaleProcessingJobs();
+    }
+
+    private int republishQueuedJobs() {
         LocalDateTime createdBefore = LocalDateTime.now()
                 .minusSeconds(importProcessingProperties.getEnqueueRecoveryMinAgeSeconds());
         var queuedJobs = importJobQueryUseCase.listQueuedJobsForRecovery(
                 createdBefore,
                 importProcessingProperties.getEnqueueRecoveryBatchSize()
         );
+        return republish(queuedJobs, "queued");
+    }
+
+    private int republishStaleProcessingJobs() {
+        LocalDateTime startedBefore = LocalDateTime.now()
+                .minusSeconds(importProcessingProperties.getStaleProcessingThresholdSeconds());
+        var processingJobs = importJobQueryUseCase.listStaleProcessingJobsForRecovery(
+                startedBefore,
+                importProcessingProperties.getEnqueueRecoveryBatchSize()
+        );
+        return republish(processingJobs, "stale processing");
+    }
+
+    private int republish(Iterable<ImportJobRecord> jobs, String recoveryType) {
         int publishedCount = 0;
-        for (ImportJobRecord job : queuedJobs) {
+        for (ImportJobRecord job : jobs) {
             try {
                 importJobPublisher.publish(new ImportJobMessage(job.id(), job.tenantId()));
                 publishedCount++;
             } catch (RuntimeException ex) {
-                log.warn("failed to republish queued import job {}", job.id(), ex);
+                log.warn("failed to republish {} import job {}", recoveryType, job.id(), ex);
             }
         }
         return publishedCount;

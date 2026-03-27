@@ -72,6 +72,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 try {
                     CurrentUser currentUser = jwtTokenService.parseCurrentUser(token);
                     CurrentUserAccessValidator.ValidationResult validationResult = currentUserAccessValidator.validate(currentUser);
+                    if (validationResult.status() == CurrentUserAccessValidator.Status.TENANT_INACTIVE) {
+                        writeForbiddenResponse(response, "tenant is not active");
+                        return;
+                    }
                     if (validationResult.status() == CurrentUserAccessValidator.Status.USER_INACTIVE) {
                         writeForbiddenResponse(response, "user is not active");
                         return;

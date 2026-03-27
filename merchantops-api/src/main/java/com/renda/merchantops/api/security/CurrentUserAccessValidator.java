@@ -43,6 +43,7 @@ public class CurrentUserAccessValidator {
     private Status toStatus(AccessValidationStatus status) {
         return switch (status) {
             case USER_ACTIVE -> Status.USER_ACTIVE;
+            case TENANT_INACTIVE -> Status.TENANT_INACTIVE;
             case USER_INACTIVE -> Status.USER_INACTIVE;
             case USER_MISSING -> Status.USER_MISSING;
             case CLAIMS_STALE -> Status.CLAIMS_STALE;
@@ -51,6 +52,7 @@ public class CurrentUserAccessValidator {
 
     public enum Status {
         USER_ACTIVE,
+        TENANT_INACTIVE,
         USER_INACTIVE,
         USER_MISSING,
         CLAIMS_STALE

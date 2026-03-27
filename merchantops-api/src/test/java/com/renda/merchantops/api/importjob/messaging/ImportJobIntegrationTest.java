@@ -360,6 +360,35 @@ class ImportJobIntegrationTest {
     }
 
     @Test
+    void recoveryServiceShouldRepublishStaleProcessingJobsWithoutWritingDuplicateStartAudit() {
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-stale-processing-recovery.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                stale-recovery,Stale Recovery User,stale-recovery@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-stale-processing-recovery", request, file);
+        jdbcTemplate.update(
+                "UPDATE import_job SET status = 'PROCESSING', started_at = DATEADD('SECOND', -900, CURRENT_TIMESTAMP), finished_at = NULL WHERE id = ?",
+                created.id()
+        );
+
+        Mockito.reset(importJobPublisher);
+        int republished = importJobQueueRecoveryService.republishRecoverableJobs();
+
+        assertThat(republished).isEqualTo(1);
+        verify(importJobPublisher).publish(new ImportJobMessage(created.id(), 1L));
+
+        Integer processingStartedAuditCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_PROCESSING_STARTED'",
+                Integer.class,
+                created.id()
+        );
+        assertThat(processingStartedAuditCount).isZero();
+    }
+
+    @Test
     void startProcessingShouldRequestRequeueForFreshProcessingRedelivery() {
         ImportJobCreateRequest request = new ImportJobCreateRequest();
         request.setImportType("USER_CSV");
@@ -1373,9 +1402,9 @@ class ImportJobIntegrationTest {
         );
 
         Mockito.reset(importJobPublisher);
-        int republished = importJobQueueRecoveryService.republishStaleQueuedJobs();
+        int republished = importJobQueueRecoveryService.republishRecoverableJobs();
 
-        assertThat(republished).isGreaterThanOrEqualTo(1);
+        assertThat(republished).isEqualTo(1);
         verify(importJobPublisher).publish(new ImportJobMessage(created.id(), 1L));
     }
 

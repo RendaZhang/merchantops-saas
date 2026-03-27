@@ -12,4 +12,6 @@ public interface ImportJobQueryUseCase {
     ImportJobErrorPageResult pageJobErrors(Long tenantId, Long importJobId, ImportJobErrorPageCriteria criteria);
 
     List<ImportJobRecord> listQueuedJobsForRecovery(LocalDateTime createdBefore, int limit);
+
+    List<ImportJobRecord> listStaleProcessingJobsForRecovery(LocalDateTime startedBefore, int limit);
 }

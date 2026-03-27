@@ -18,6 +18,7 @@ This directory contains the detailed project documentation that sits behind the 
 ## Common Jump Targets
 
 - [Release Versioning](contributing/release-versioning.md): current tag baseline and release sources of truth
+- [New Coding Agent Start Here](contributing/new-coding-agent-start-here.md): shortest onboarding checklist before deeper development, style, and architecture guidance
 - [Documentation Maintenance](contributing/documentation-maintenance.md): which docs must change when API, planning, release, or architecture changes happen
 - [Java Code Style](contributing/java-code-style.md): package boundaries, comment strategy, and Java review baseline
 - [Java Architecture Map](architecture/java-architecture-map.md): module ownership, capability package map, and Java type placement guide

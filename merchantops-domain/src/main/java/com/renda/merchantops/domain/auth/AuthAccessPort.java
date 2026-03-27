@@ -7,6 +7,8 @@ public interface AuthAccessPort {
 
     Optional<TenantAccount> findTenantByCode(String tenantCode);
 
+    Optional<TenantAccount> findTenantById(Long tenantId);
+
     Optional<AccessUserAccount> findUserByTenantIdAndUsername(Long tenantId, String username);
 
     Optional<AccessUserAccount> findUserByIdAndTenantId(Long userId, Long tenantId);

@@ -665,6 +665,25 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void inactiveTenantOldTokenShouldBeRejectedOnProtectedEndpoint() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        jdbcTemplate.update(
+                "UPDATE tenant SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                "DISABLED",
+                1L
+        );
+
+        mockMvc.perform(get("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("page", "0")
+                        .queryParam("size", "10"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("tenant is not active"));
+    }
+
+    @Test
     void assignRolesShouldReplaceRolesInvalidateOldTokenAndGrantNewPermissionsAfterRelogin() throws Exception {
         String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");

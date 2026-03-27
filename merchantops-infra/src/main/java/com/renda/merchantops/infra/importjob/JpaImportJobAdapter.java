@@ -110,6 +110,18 @@ public class JpaImportJobAdapter implements ImportJobQueryPort, ImportJobCommand
     }
 
     @Override
+    public List<ImportJobRecord> findStaleProcessingJobsForRecovery(LocalDateTime startedBefore, int limit) {
+        return importJobRepository.findStaleProcessingJobsForRecovery(
+                        "PROCESSING",
+                        startedBefore,
+                        PageRequest.of(0, limit)
+                )
+                .stream()
+                .map(this::toImportJobRecord)
+                .toList();
+    }
+
+    @Override
     public ImportJobRecord saveJob(ImportJobRecord job) {
         ImportJobEntity entity = new ImportJobEntity();
         entity.setId(job.id());

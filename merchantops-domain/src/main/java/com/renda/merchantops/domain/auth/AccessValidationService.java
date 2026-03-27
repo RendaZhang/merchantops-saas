@@ -14,6 +14,11 @@ public final class AccessValidationService implements AccessValidationUseCase {
 
     @Override
     public AccessValidationResult validate(AccessPrincipal tokenUser) {
+        TenantAccount tenant = authAccessPort.findTenantById(tokenUser.tenantId()).orElse(null);
+        if (tenant == null || !"ACTIVE".equalsIgnoreCase(tenant.status())) {
+            return new AccessValidationResult(AccessValidationStatus.TENANT_INACTIVE, null);
+        }
+
         AccessUserAccount user = authAccessPort.findUserByIdAndTenantId(tokenUser.userId(), tokenUser.tenantId()).orElse(null);
         if (user == null) {
             return new AccessValidationResult(AccessValidationStatus.USER_MISSING, null);

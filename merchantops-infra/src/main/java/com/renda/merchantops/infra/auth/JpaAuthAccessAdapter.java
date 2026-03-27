@@ -41,6 +41,16 @@ public class JpaAuthAccessAdapter implements AuthAccessPort {
     }
 
     @Override
+    public Optional<TenantAccount> findTenantById(Long tenantId) {
+        return tenantRepository.findById(tenantId)
+                .map(tenant -> new TenantAccount(
+                        tenant.getId(),
+                        tenant.getTenantCode(),
+                        tenant.getStatus()
+                ));
+    }
+
+    @Override
     public Optional<AccessUserAccount> findUserByTenantIdAndUsername(Long tenantId, String username) {
         return userRepository.findByTenantIdAndUsername(tenantId, username)
                 .map(user -> new AccessUserAccount(

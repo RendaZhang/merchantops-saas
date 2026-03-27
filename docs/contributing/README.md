@@ -8,6 +8,7 @@ If a rule starts turning into implementation detail, runbook nuance, or verifica
 
 ## Pages
 
+- [new-coding-agent-start-here.md](new-coding-agent-start-here.md): shortest onboarding checklist for a new coding agent before deeper development and style guidance
 - [documentation-maintenance.md](documentation-maintenance.md): routing rules for which docs must change when implementation, API, release, or architecture changes happen
 - [development-agent-guidance.md](development-agent-guidance.md): tenant-scoped implementation and contributor guidance for coding work
 - [java-code-style.md](java-code-style.md): Java package organization, comment strategy, and style gate baseline
@@ -24,6 +25,7 @@ If a rule starts turning into implementation detail, runbook nuance, or verifica
 ## Suggested Entry Points
 
 - start with [../../AGENTS.md](../../AGENTS.md) if you are new to the repository
+- read [new-coding-agent-start-here.md](new-coding-agent-start-here.md) if you are a new coding agent and need the shortest safe onboarding path before deeper guidance
 - read [documentation-maintenance.md](documentation-maintenance.md) before changing multiple docs or updating documentation structure
 - read [development-agent-guidance.md](development-agent-guidance.md) before changing tenant-scoped code or development-facing docs
 - read [java-code-style.md](java-code-style.md) before large package refactors, style cleanup, or shared-support extraction

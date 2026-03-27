@@ -66,5 +66,10 @@ class ImportJobQueryDomainServiceTest {
         public List<ImportJobRecord> findQueuedJobsForRecovery(LocalDateTime createdBefore, int limit) {
             return List.of();
         }
+
+        @Override
+        public List<ImportJobRecord> findStaleProcessingJobsForRecovery(LocalDateTime startedBefore, int limit) {
+            return List.of();
+        }
     }
 }
