@@ -34,6 +34,7 @@ class ArchitectureBoundaryTest {
                     .or().haveFullyQualifiedName("com.renda.merchantops.api.importjob.ImportJobReplayService")
                     .or().haveFullyQualifiedName("com.renda.merchantops.api.importjob.ImportJobQueryService")
                     .or().haveFullyQualifiedName("com.renda.merchantops.api.importjob.ai.ImportJobAiErrorSummaryService")
+                    .or().haveFullyQualifiedName("com.renda.merchantops.api.importjob.ai.ImportJobAiMappingSuggestionService")
                     .or().haveFullyQualifiedName("com.renda.merchantops.api.importjob.messaging.ImportJobExecutionCoordinator")
                     .or().haveFullyQualifiedName("com.renda.merchantops.api.importjob.messaging.ImportJobQueueRecoveryService")
                     .or().haveFullyQualifiedName("com.renda.merchantops.api.importjob.messaging.UserCsvImportProcessor")

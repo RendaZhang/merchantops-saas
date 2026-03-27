@@ -2,7 +2,7 @@
 
 Last updated: 2026-03-27
 
-> Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
+> Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary plus mapping suggestion treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
 
 Use this runbook when local AI provider wiring, `.env` loading, provider normalization, or vendor compatibility changed and you need one real local provider pass.
 
@@ -17,14 +17,14 @@ This runbook is intentionally narrow:
 - create one fresh smoke ticket and add enough context for summary generation
 - call `POST /api/v1/tickets/{id}/ai-summary` exactly once
 - if that succeeds, immediately call `GET /api/v1/tickets/{id}/ai-interactions`
-- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, and one import `ai-error-summary` call against a known failed import job
+- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, one import `ai-error-summary` call, and when eligible one import `ai-mapping-suggestion` call against known failed import jobs
 - if any live endpoint fails, stop immediately and do not continue to the next endpoint
 
 Budget guard for the first live pass:
 
 - keep spend at or below `1 RMB`
 - use one summary call only
-- expand to `ai-triage`, `ai-reply-draft`, or import `ai-error-summary` only after the summary path is proven locally
+- expand to `ai-triage`, `ai-reply-draft`, import `ai-error-summary`, or import `ai-mapping-suggestion` only after the summary path is proven locally
 
 ## 1. Run Automated Tests First
 
@@ -263,7 +263,7 @@ Expected reply-draft result:
 
 Stop immediately if triage fails. Do not continue to reply-draft in the same session.
 
-## 11. Optional Import Error-Summary Pass
+## 11. Optional Import AI Pass
 
 Use this stage only after the summary call and the matching `SUMMARY` interaction-history read both succeed.
 
@@ -292,6 +292,30 @@ Expected result:
 - `data.requestId` equals `$importSummaryRequestId`
 
 If this request fails, stop here. Do not keep spending tokens on more live AI calls in the same session.
+
+If the selected import job also has parseable sanitized header/global signal, an optional follow-up mapping-suggestion call is:
+
+```powershell
+$importMappingRequestId = "$smokePrefix-import-mapping-suggestion"
+$importMappingHeaders = @{
+  Authorization = "Bearer $token"
+  "X-Request-Id" = $importMappingRequestId
+}
+
+$importMappingResponse = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$baseUrl/api/v1/import-jobs/$importJobId/ai-mapping-suggestion" `
+  -Headers $importMappingHeaders
+```
+
+Expected result:
+
+- HTTP `200`
+- non-blank `data.summary`
+- exactly five canonical `data.suggestedFieldMappings`
+- non-empty `data.confidenceNotes`
+- non-empty `data.recommendedOperatorChecks`
+- `data.requestId` equals `$importMappingRequestId`
 
 ## 12. What Counts As A Stop Condition
 

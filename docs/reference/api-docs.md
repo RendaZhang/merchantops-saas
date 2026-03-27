@@ -76,6 +76,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Yes + `USER_WRITE` | Create a new derived import job from caller-provided full replacement rows keyed by replayable failed-row `errorId` |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
 | `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | Yes + `USER_READ` | Generate a suggestion-only AI error summary for one current-tenant import job |
+| `POST` | `/api/v1/import-jobs/{id}/ai-mapping-suggestion` | Yes + `USER_READ` | Generate a suggestion-only AI mapping proposal for one current-tenant import job |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
 | `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
@@ -134,13 +135,15 @@ Approval Requests tag note:
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
 - `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` require `USER_WRITE`.
-- `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, and `POST /api/v1/import-jobs/{id}/ai-error-summary` require `USER_READ`.
+- `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, and `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
 - `GET /api/v1/import-jobs/{id}` detail now exposes nullable `sourceJobId` for replay-derived jobs.
 - `POST /api/v1/import-jobs/{id}/ai-error-summary` exposes no request body and returns suggestion-only fields `importJobId`, `summary`, `topErrorPatterns`, `recommendedNextSteps`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`.
 - `POST /api/v1/import-jobs/{id}/ai-error-summary` derives prompt context from import detail, `errorCodeCounts`, and the first 20 failure rows after local sanitization; it does not forward raw `itemErrors.rawPayload` values.
+- `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` exposes no request body and returns suggestion-only fields `importJobId`, `summary`, `suggestedFieldMappings`, `confidenceNotes`, `recommendedOperatorChecks`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`.
+- `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` is currently limited to `USER_CSV` jobs that already have failure signal plus parseable sanitized header/global signal; it does not rescan the source file or forward raw row values.
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `POST /api/v1/import-jobs/{id}/replay-file` copies the stored source file into a new derived `QUEUED` job for current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
@@ -885,6 +888,51 @@ Current notes:
 - cross-tenant or missing jobs return `404`
 - the endpoint is read-only and suggestion-only; it does not mutate import jobs, item errors, or replay state
 - raw `itemErrors.rawPayload` stays out of the AI prompt; the service only sends row metadata plus a structural-only summary
+
+### 26. Import AI Mapping Suggestion (`POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "importJobId": 1202,
+    "summary": "The failed header still looks close to the canonical USER_CSV schema, so the safest next step is to confirm the proposed field mappings before preparing any replay input.",
+    "suggestedFieldMappings": [
+      {
+        "canonicalField": "username",
+        "observedColumnSignal": {
+          "headerName": "login",
+          "headerPosition": 1
+        },
+        "reasoning": "`login` is the closest observed header for the canonical username field.",
+        "reviewRequired": false
+      }
+    ],
+    "confidenceNotes": [
+      "The source file failed header validation, so each suggested mapping should be reviewed before reuse."
+    ],
+    "recommendedOperatorChecks": [
+      "Confirm the source header order before editing any replay input."
+    ],
+    "promptVersion": "import-mapping-suggestion-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-27T10:30:15",
+    "latencyMs": 544,
+    "requestId": "import-ai-mapping-suggestion-req-1"
+  }
+}
+```
+
+Current notes:
+
+- requires `USER_READ`
+- request body is empty
+- the endpoint is read-only and suggestion-only; it does not mutate import jobs, item errors, source files, or replay state
+- eligibility is intentionally narrow: the job must already have failure signal plus parseable sanitized header/global signal from existing `rowNumber=null` errors, otherwise it returns `400`
+- the service sends normalized header tokens and bounded structural row summaries only; it does not rescan the source file or forward raw row values
 
 ## Stale Swagger Troubleshooting
 

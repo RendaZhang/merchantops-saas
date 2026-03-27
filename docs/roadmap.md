@@ -22,13 +22,13 @@ The current Week 7 implementation should stay narrow and workflow-oriented:
 
 - keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the existing public ticket AI surface read-only, and keep the generation slices suggestion-only, tenant-scoped, RBAC-scoped, and failure-tolerant
-- keep the new Week 7 Slice A import AI summary surface narrow: `POST /api/v1/import-jobs/{id}/ai-error-summary` stays `USER_READ`, read-only, tenant-scoped, and suggestion-only
+- keep the new Week 7 import AI read surface narrow: `POST /api/v1/import-jobs/{id}/ai-error-summary` and `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
 - keep Week 7 focused on import/data-quality AI guidance rather than widening into write-back, billing, ledger semantics, or generic chat tooling
 
 ## Recommended Next Steps
 
-- keep the new import AI error-summary slice stable and use it as the Week 7 baseline
-- follow it with narrow import mapping-suggestion and fix-recommendation slices in that order only if the error-summary baseline proves stable
+- keep the new import AI error-summary plus mapping-suggestion slices stable as the Week 7 baseline
+- follow them with a narrow import fix-recommendation slice next, without widening into replay execution or source-file mutation in the same step
 - keep the completed Week 6 ticket interaction-history, ticket summary, ticket triage, and ticket reply-draft contracts stable rather than widening them into write-back, billing, or ledger semantics
 
 ## Near-Term Sequence

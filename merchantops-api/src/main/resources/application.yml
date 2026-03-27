@@ -35,6 +35,7 @@ merchantops:
     triage-prompt-version: ${MERCHANTOPS_AI_TRIAGE_PROMPT_VERSION:ticket-triage-v1}
     reply-draft-prompt-version: ${MERCHANTOPS_AI_REPLY_DRAFT_PROMPT_VERSION:ticket-reply-draft-v1}
     import-error-summary-prompt-version: ${MERCHANTOPS_AI_IMPORT_ERROR_SUMMARY_PROMPT_VERSION:import-error-summary-v1}
+    import-mapping-suggestion-prompt-version: ${MERCHANTOPS_AI_IMPORT_MAPPING_SUGGESTION_PROMPT_VERSION:import-mapping-suggestion-v1}
     provider: ${MERCHANTOPS_AI_PROVIDER:OPENAI}
     base-url: ${MERCHANTOPS_AI_BASE_URL:}
     api-key: ${MERCHANTOPS_AI_API_KEY:}

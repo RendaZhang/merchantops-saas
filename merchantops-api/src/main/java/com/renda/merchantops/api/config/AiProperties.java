@@ -26,6 +26,8 @@ public class AiProperties {
 
     private String importErrorSummaryPromptVersion = "import-error-summary-v1";
 
+    private String importMappingSuggestionPromptVersion = "import-mapping-suggestion-v1";
+
     private AiProviderType provider = AiProviderType.OPENAI;
 
     private String baseUrl;

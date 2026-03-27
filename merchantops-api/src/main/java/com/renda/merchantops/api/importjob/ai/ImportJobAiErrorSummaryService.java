@@ -11,21 +11,15 @@ import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummary
 import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummaryProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
-import com.renda.merchantops.api.importjob.ImportCsvSupport;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
 import com.renda.merchantops.domain.importjob.ImportJobErrorRecord;
 import com.renda.merchantops.domain.importjob.ImportJobQueryUseCase;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.io.StringReader;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -156,60 +150,23 @@ public class ImportJobAiErrorSummaryService {
     }
 
     private ImportJobErrorSummaryPromptContext.ErrorRowContext toErrorRowContext(ImportJobErrorRecord error) {
+        ImportJobAiSanitizationSupport.SanitizedRowSummary rowSummary = ImportJobAiSanitizationSupport.summarizeRowPayload(error.rawPayload());
         return new ImportJobErrorSummaryPromptContext.ErrorRowContext(
                 error.rowNumber(),
                 error.errorCode(),
                 error.errorMessage(),
-                summarizeRawPayload(error.rawPayload())
+                new ImportJobErrorSummaryPromptContext.SanitizedRowSummary(
+                        rowSummary.rawPayloadPresent(),
+                        rowSummary.rawPayloadParsed(),
+                        rowSummary.columnCount(),
+                        rowSummary.usernamePresent(),
+                        rowSummary.displayNamePresent(),
+                        rowSummary.emailPresent(),
+                        rowSummary.passwordPresent(),
+                        rowSummary.roleCodesPresent(),
+                        rowSummary.roleCodeCount()
+                )
         );
-    }
-
-    private ImportJobErrorSummaryPromptContext.SanitizedRowSummary summarizeRawPayload(String rawPayload) {
-        if (!StringUtils.hasText(rawPayload)) {
-            return new ImportJobErrorSummaryPromptContext.SanitizedRowSummary(false, false, null, false, false, false, false, false, 0);
-        }
-        try (CSVParser parser = ImportCsvSupport.RAW_PAYLOAD_CSV_FORMAT.parse(new StringReader(rawPayload))) {
-            List<CSVRecord> records = parser.getRecords();
-            if (records.size() != 1) {
-                return new ImportJobErrorSummaryPromptContext.SanitizedRowSummary(true, false, null, false, false, false, false, false, 0);
-            }
-            CSVRecord record = records.getFirst();
-            String username = column(record, 0);
-            String displayName = column(record, 1);
-            String email = column(record, 2);
-            String password = column(record, 3);
-            String roleCodes = column(record, 4);
-            return new ImportJobErrorSummaryPromptContext.SanitizedRowSummary(
-                    true,
-                    true,
-                    record.size(),
-                    StringUtils.hasText(username),
-                    StringUtils.hasText(displayName),
-                    StringUtils.hasText(email),
-                    StringUtils.hasText(password),
-                    StringUtils.hasText(roleCodes),
-                    countRoleCodes(roleCodes)
-            );
-        } catch (IOException | RuntimeException ex) {
-            return new ImportJobErrorSummaryPromptContext.SanitizedRowSummary(true, false, null, false, false, false, false, false, 0);
-        }
-    }
-
-    private String column(CSVRecord record, int index) {
-        if (record == null || index < 0 || index >= record.size()) {
-            return null;
-        }
-        return record.get(index);
-    }
-
-    private int countRoleCodes(String roleCodes) {
-        if (!StringUtils.hasText(roleCodes)) {
-            return 0;
-        }
-        return (int) Arrays.stream(roleCodes.split("\\|", -1))
-                .map(String::trim)
-                .filter(StringUtils::hasText)
-                .count();
     }
 
     private String normalizeRequiredText(String value, String fieldName) {

@@ -6,7 +6,7 @@ Last updated: 2026-03-27
 
 ## Overview
 
-MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilot for Import and Data Quality active. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, read-only ticket AI summary, triage, internal reply-draft, interaction-history endpoints, and the first read-only import AI error-summary endpoint that proves the project has moved from async workflow infrastructure into a credible AI-assisted business path.
+MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilot for Import and Data Quality active. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, read-only ticket AI summary, triage, internal reply-draft, interaction-history endpoints, and the first two read-only import AI endpoints: error summary plus narrow mapping suggestion.
 
 ## Current Phase Summary
 
@@ -15,7 +15,8 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 - Week 5 remains complete with import submission/list/detail/error reporting, narrowed `USER_CSV` business-row execution, filtered queue reads, failed-row replay variants, whole-file replay for full-failure sources, and derived-job lineage.
 - Week 6 is now complete with four public suggestion-only or read-only ticket AI slices exposed as `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` under tenant scope, `TICKET_READ`, explicit prompt versioning, controlled provider degradation, dedicated AI interaction persistence, and operator-visible runtime usage/cost metadata on interaction history.
 - Week 7 Slice A is now live as `POST /api/v1/import-jobs/{id}/ai-error-summary` under tenant scope and `USER_READ`, with read-only suggestion-only behavior, prompt-time row sanitization, controlled provider degradation, and dedicated `ai_interaction_record` persistence as `entityType=IMPORT_JOB` plus `interactionType=ERROR_SUMMARY`.
-- The current active phase remains Week 7 AI Copilot For Import And Data Quality, with mapping suggestion and fix recommendation still queued behind the new error-summary baseline.
+- Week 7 Slice B is now live as `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` under tenant scope and `USER_READ`, reusing the same import AI runtime, sanitized-context rule, and degraded-mode model while staying read-only and suggestion-only.
+- The current active phase remains Week 7 AI Copilot For Import And Data Quality, with fix recommendation still queued behind the new import AI read baseline.
 - Exact endpoint contracts live in [reference/README.md](reference/README.md); this page keeps the phase-level truth and current limits.
 
 ## Release Baseline
@@ -33,9 +34,9 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 - User management: tenant-scoped list/detail/create/update/status/role-assignment plus role lookup and disable-request initiation.
 - Ticket workflow: tenant-scoped list/detail/create/assignee/status/comment flow with queue filters and reopen support.
 - AI-assisted ticket read path: `GET /api/v1/tickets/{id}/ai-interactions` for narrowed interaction-history visibility plus operator-visible runtime usage/cost metadata, `POST /api/v1/tickets/{id}/ai-summary` for suggestion-only summaries, `POST /api/v1/tickets/{id}/ai-triage` for suggestion-only classification and priority guidance, and `POST /api/v1/tickets/{id}/ai-reply-draft` for internal comment-style reply drafts from ticket detail context.
-- AI-assisted import read path: `POST /api/v1/import-jobs/{id}/ai-error-summary` for a suggestion-only summary built from current-tenant import detail, `errorCodeCounts`, and the first sanitized failed-row window without forwarding raw CSV payload values to the provider.
+- AI-assisted import read path: `POST /api/v1/import-jobs/{id}/ai-error-summary` for a suggestion-only summary built from current-tenant import detail, `errorCodeCounts`, and the first sanitized failed-row window without forwarding raw CSV payload values to the provider, plus `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` for a suggestion-only canonical-field mapping proposal built from sanitized header/global parse signal plus the same bounded row-summary context.
 - Governance: entity-scoped `GET /api/v1/audit-events` plus minimal approval request queue/detail/approve/reject flow for `USER_STATUS_DISABLE`.
-- Import jobs: tenant-scoped create/list/detail/ai-error-summary/replay/replay-file/selective-replay/edited-replay/error-page flow with `USER_CSV` processing, filtered queue reads, quoted CSV record parsing, `errorCodeCounts`, row-level item errors, replay-derived job lineage, scope-only replay audit metadata, and the current Week 5 plus Week 7 Slice A reporting/guidance surface.
+- Import jobs: tenant-scoped create/list/detail/ai-error-summary/ai-mapping-suggestion/replay/replay-file/selective-replay/edited-replay/error-page flow with `USER_CSV` processing, filtered queue reads, quoted CSV record parsing, `errorCodeCounts`, row-level item errors, replay-derived job lineage, scope-only replay audit metadata, and the current Week 5 plus Week 7 Slice A/B reporting/guidance surface.
 
 ### Shared runtime and internal baseline
 
@@ -49,16 +50,16 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 
 ## Current Public AI Baseline
 
-- The current public AI slices are `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, and `POST /api/v1/import-jobs/{id}/ai-error-summary`.
-- All five slices are read-only. The four `POST` endpoints remain suggestion-only: they do not change ticket status, write comments, mutate import jobs, mutate import error rows, or trigger approvals or replay flows, and the `GET` history endpoint only exposes narrowed stored metadata.
+- The current public AI slices are `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, and `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`.
+- All six slices are read-only. The five `POST` endpoints remain suggestion-only: they do not change ticket status, write comments, mutate import jobs, mutate import error rows, or trigger approvals or replay flows, and the `GET` history endpoint only exposes narrowed stored metadata.
 - Reply-draft semantics are explicitly internal and comment-style: the endpoint returns a structured draft plus `draftText`, but still does not create a comment or send an external message.
 - The current AI context is limited to the target current-tenant ticket's core fields plus the most recent comments and workflow logs, with prompt-time truncation and explicit `earlier ... omitted` markers when older history exists.
-- The import AI context is limited to current-tenant import detail, `errorCodeCounts`, and the first 20 failed rows after local structural sanitization; raw `itemErrors.rawPayload` values, including `USER_CSV.password`, are not forwarded to the provider.
+- The import AI context is limited to current-tenant import detail, `errorCodeCounts`, sanitized header/global parse-error signal, and the first 20 failed rows after local structural sanitization; raw `itemErrors.rawPayload` values, including `USER_CSV.password`, are not forwarded to the provider.
 - The interaction-history surface returns both successful and controlled-failure records with exact-match `interactionType` and `status` filters plus stable `createdAt DESC, id DESC` ordering.
 - The interaction-history surface now exposes ticket-scoped runtime usage/cost metadata when present, returns those fields as `null` when unavailable, and still does not expose raw prompt text or raw provider payload.
-- The import error-summary slice persists `ai_interaction_record` rows for traceability but intentionally does not add a public import AI history endpoint yet.
+- The import error-summary and mapping-suggestion slices persist `ai_interaction_record` rows for traceability but intentionally do not add a public import AI history endpoint yet.
 - The current provider ownership model is instance-level configuration rather than tenant BYOK.
-- The completed Week 6 ticket AI baseline should now stay stable while Week 7 continues with import mapping suggestion and fix recommendation; automatic write-back remains out of scope.
+- The completed Week 6 ticket AI baseline should now stay stable while Week 7 continues with import fix recommendation; automatic write-back remains out of scope.
 
 ## Current Limitations
 
@@ -68,7 +69,7 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 - Audit reads are still minimal and entity-scoped by `entityType + entityId`.
 - `UserCommandService#updatePassword` remains a placeholder business error, not a completed write flow.
 - There is no refresh-token flow, logout flow, or token revocation flow yet.
-- Public AI now includes ticket interaction history, ticket summary/triage/internal reply draft, and import AI error summary; import mapping suggestion, fix recommendation, public import AI history, and agentic write paths are still pending.
+- Public AI now includes ticket interaction history, ticket summary/triage/internal reply draft, and import AI error summary plus mapping suggestion; fix recommendation, public import AI history, and agentic write paths are still pending.
 - The interaction-history endpoint exposes ticket-scoped runtime usage/cost metadata only; it is not a tenant billing, ledger, or invoice surface.
 - AI runtime still uses instance-level provider configuration only; there is no tenant BYOK, streaming, tool calling, model routing, or automatic write-back loop.
 - Ticket enrichments such as priority, SLA, attachments, and notifications remain post-Week-3 follow-up work.
@@ -80,7 +81,7 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 - `user_role` tenant consistency is not yet enforced at the database layer.
 - Ticket assignee / creator / operator tenant consistency is enforced in service logic today, not yet at the database-constraint level.
 - RBAC endpoints under `/api/v1/rbac/**` are still demo-oriented rather than production-oriented business APIs.
-- Focused automated coverage now includes the public AI interaction-history, AI summary, AI triage, AI reply-draft, and import AI error-summary slices: happy path, permission failure, cross-tenant not-found behavior, history `interactionType` and `status` filters, stable `createdAt DESC, id DESC` ordering, history non-leakage assertions, symmetrical degraded-mode coverage for feature-disabled, provider-not-configured, provider-unavailable, timeout, and invalid-response paths, provider request-contract assertions, full `output[].content[]` scanning with multi-part `output_text` parsing, endpoint-specific required-field validation including import-array blank-item rejection, real-provider-path golden-sample regression checks, AI-context-window guards, import prompt sanitization checks against raw `USER_CSV` values, and no-business-side-effect assertions across all public AI endpoints.
+- Focused automated coverage now includes the public AI interaction-history, AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion slices: happy path, permission failure, cross-tenant not-found behavior, history `interactionType` and `status` filters, stable `createdAt DESC, id DESC` ordering, history non-leakage assertions, symmetrical degraded-mode coverage for feature-disabled, provider-not-configured, provider-unavailable, timeout, and invalid-response paths, provider request-contract assertions, full `output[].content[]` scanning with multi-part `output_text` parsing, endpoint-specific required-field validation including import-array blank-item rejection, real-provider-path golden-sample regression checks, AI-context-window guards, import prompt sanitization checks against raw `USER_CSV` values, import `400` eligibility checks for no-failure and no-header-signal jobs, and no-business-side-effect assertions across all public AI endpoints.
 - Live provider verification still needs manual local smoke through `.env` plus [runbooks/ai-live-smoke-test.md](runbooks/ai-live-smoke-test.md); Swagger rendering, real infra health, and modules outside the current focused path still need manual verification.
 - Use [runbooks/automated-tests.md](runbooks/automated-tests.md), [runbooks/regression-checklist.md](runbooks/regression-checklist.md), and [runbooks/ai-regression-checklist.md](runbooks/ai-regression-checklist.md) for the current verification baseline.
 - Use [architecture/non-blocking-backlog.md](architecture/non-blocking-backlog.md) for tracked non-blocking follow-up items that should not be lost between phases.

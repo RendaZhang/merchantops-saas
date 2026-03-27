@@ -1,0 +1,106 @@
+[
+  {
+    "importJobId": 9301,
+    "tenantId": 1,
+    "job": {
+      "importType": "USER_CSV",
+      "sourceType": "CSV",
+      "sourceFilename": "week7-header-errors.csv",
+      "storageKey": "1/week7-header-errors.csv",
+      "sourceJobId": null,
+      "status": "FAILED",
+      "requestedBy": 101,
+      "requestId": "req-import-golden-9301",
+      "totalCount": 2,
+      "successCount": 0,
+      "failureCount": 2,
+      "errorSummary": "header validation failed before row fixes were possible",
+      "createdAt": "2026-03-27T09:00:00",
+      "startedAt": "2026-03-27T09:00:02",
+      "finishedAt": "2026-03-27T09:00:05"
+    },
+    "errorCodeCounts": [
+      {
+        "errorCode": "INVALID_HEADER",
+        "count": 1
+      },
+      {
+        "errorCode": "UNKNOWN_ROLE",
+        "count": 1
+      }
+    ],
+    "errors": [
+      {
+        "id": 93011,
+        "rowNumber": null,
+        "errorCode": "INVALID_HEADER",
+        "errorMessage": "header columns do not match USER_CSV",
+        "rawPayload": "login,display_name,email_address,passwd,roles",
+        "createdAt": "2026-03-27T09:00:03"
+      },
+      {
+        "id": 93012,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "retry-role,Retry Role,retry-role@example.com,abc123,RETRY_ROLE",
+        "createdAt": "2026-03-27T09:00:04"
+      }
+    ],
+    "expectedSummary": "The failed header still looks close to the canonical USER_CSV schema, so the safest next step is to confirm the proposed field mappings before preparing any replay input.",
+    "expectedSuggestedFieldMappings": [
+      {
+        "canonicalField": "username",
+        "observedColumnSignal": {
+          "headerName": "login",
+          "headerPosition": 1
+        },
+        "reasoning": "`login` is the closest observed header for the canonical username field.",
+        "reviewRequired": false
+      },
+      {
+        "canonicalField": "displayName",
+        "observedColumnSignal": {
+          "headerName": "display_name",
+          "headerPosition": 2
+        },
+        "reasoning": "`display_name` is the closest semantic match for displayName.",
+        "reviewRequired": false
+      },
+      {
+        "canonicalField": "email",
+        "observedColumnSignal": {
+          "headerName": "email_address",
+          "headerPosition": 3
+        },
+        "reasoning": "`email_address` is the most likely email column.",
+        "reviewRequired": false
+      },
+      {
+        "canonicalField": "password",
+        "observedColumnSignal": {
+          "headerName": "passwd",
+          "headerPosition": 4
+        },
+        "reasoning": "`passwd` should be manually confirmed.",
+        "reviewRequired": true
+      },
+      {
+        "canonicalField": "roleCodes",
+        "observedColumnSignal": {
+          "headerName": "roles",
+          "headerPosition": 5
+        },
+        "reasoning": "`roles` is the closest available signal for roleCodes.",
+        "reviewRequired": true
+      }
+    ],
+    "expectedConfidenceNotes": [
+      "The source file failed header validation, so each suggested mapping should be reviewed before reuse."
+    ],
+    "expectedRecommendedOperatorChecks": [
+      "Confirm the source header order before editing any replay input.",
+      "Verify that the observed `roles` column really contains tenant role codes in the expected delimiter format."
+    ]
+  }
+]

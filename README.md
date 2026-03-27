@@ -17,14 +17,14 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 - Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
 - Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, narrowed AI interaction-history reads with runtime usage/cost metadata, and suggestion-only AI summary, triage, and internal reply-draft generation paths
 - Audit-event query backbone plus minimal approval flow for `USER_STATUS_DISABLE`
-- Async import jobs with create, list, detail, paged error reporting, suggestion-only AI error summary from sanitized failed-row context, failed-row replay, whole-file replay, selective replay, edited replay, queued-job recovery, and stale-processing safeguards
+- Async import jobs with create, list, detail, paged error reporting, suggestion-only AI error summary plus mapping suggestion from sanitized failed-row context, failed-row replay, whole-file replay, selective replay, edited replay, queued-job recovery, and stale-processing safeguards
 - JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
 
 ## Known Limits
 
 - The public import surface currently supports one business import type only: `USER_CSV`
 - There is no frontend or tenant admin UI in this repository
-- The current public AI surface is limited to one narrowed ticket AI interaction-history read endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, and one suggestion-only import AI error-summary endpoint; import mapping suggestion, fix recommendation, public import AI history, broader ticket AI flows, and any AI write-back remain pending
+- The current public AI surface is limited to one narrowed ticket AI interaction-history read endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, and two suggestion-only import AI endpoints for error summary plus mapping suggestion; import fix recommendation, public import AI history, broader ticket AI flows, and any AI write-back remain pending
 - This release line is intended for evaluation and contribution, not production deployment
 
 ## Quick Start

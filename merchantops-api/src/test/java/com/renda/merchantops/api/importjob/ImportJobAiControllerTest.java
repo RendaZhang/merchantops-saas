@@ -3,9 +3,11 @@ package com.renda.merchantops.api.importjob;
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiMappingSuggestionResponse;
 import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import com.renda.merchantops.api.importjob.ai.ImportJobAiErrorSummaryService;
+import com.renda.merchantops.api.importjob.ai.ImportJobAiMappingSuggestionService;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.RequirePermissionInterceptor;
 import jakarta.servlet.FilterChain;
@@ -52,11 +54,17 @@ class ImportJobAiControllerTest {
     @Mock
     private ImportJobAiErrorSummaryService importJobAiErrorSummaryService;
 
+    @Mock
+    private ImportJobAiMappingSuggestionService importJobAiMappingSuggestionService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ImportJobAiController(importJobAiErrorSummaryService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ImportJobAiController(
+                        importJobAiErrorSummaryService,
+                        importJobAiMappingSuggestionService
+                ))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addInterceptors(new RequirePermissionInterceptor())
                 .addFilters(new TestAuthenticationFilter())
@@ -117,6 +125,89 @@ class ImportJobAiControllerTest {
                 .andExpect(jsonPath("$.data.requestId").value("import-ai-error-summary-req-1"));
 
         verify(importJobAiErrorSummaryService).generateErrorSummary(eq(9L), eq(9001L), eq("import-ai-error-summary-req-1"), eq(11L));
+    }
+
+    @Test
+    void aiMappingSuggestionShouldReturnUnauthorizedWhenAuthenticationIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/11/ai-mapping-suggestion"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void aiMappingSuggestionShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/11/ai-mapping-suggestion")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void aiMappingSuggestionShouldForwardTenantUserAndRequestId() throws Exception {
+        ImportJobAiMappingSuggestionResponse response = new ImportJobAiMappingSuggestionResponse(
+                11L,
+                "The failed header still looks close to USER_CSV, so the operator should confirm the proposed mappings before any replay preparation.",
+                List.of(
+                        new ImportJobAiMappingSuggestionResponse.SuggestedFieldMapping(
+                                "username",
+                                new ImportJobAiMappingSuggestionResponse.ObservedColumnSignal("login", 1),
+                                "`login` is the closest username signal.",
+                                false
+                        ),
+                        new ImportJobAiMappingSuggestionResponse.SuggestedFieldMapping(
+                                "displayName",
+                                new ImportJobAiMappingSuggestionResponse.ObservedColumnSignal("display_name", 2),
+                                "`display_name` is the closest displayName signal.",
+                                false
+                        ),
+                        new ImportJobAiMappingSuggestionResponse.SuggestedFieldMapping(
+                                "email",
+                                new ImportJobAiMappingSuggestionResponse.ObservedColumnSignal("email_address", 3),
+                                "`email_address` is the closest email signal.",
+                                false
+                        ),
+                        new ImportJobAiMappingSuggestionResponse.SuggestedFieldMapping(
+                                "password",
+                                new ImportJobAiMappingSuggestionResponse.ObservedColumnSignal("passwd", 4),
+                                "`passwd` should be manually confirmed.",
+                                true
+                        ),
+                        new ImportJobAiMappingSuggestionResponse.SuggestedFieldMapping(
+                                "roleCodes",
+                                new ImportJobAiMappingSuggestionResponse.ObservedColumnSignal("roles", 5),
+                                "`roles` likely maps to roleCodes.",
+                                true
+                        )
+                ),
+                List.of("The source file failed header validation, so each mapping should be reviewed before reuse."),
+                List.of("Confirm the observed header order before editing any replay input."),
+                "import-mapping-suggestion-v1",
+                "gpt-4.1-mini",
+                LocalDateTime.of(2026, 3, 27, 10, 30, 15),
+                544L,
+                "import-ai-mapping-suggestion-req-1"
+        );
+        when(importJobAiMappingSuggestionService.generateMappingSuggestion(9L, 9001L, "import-ai-mapping-suggestion-req-1", 11L))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/import-jobs/11/ai-mapping-suggestion")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ")
+                        .header(HEADER_REQUEST_ID, "import-ai-mapping-suggestion-req-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.importJobId").value(11))
+                .andExpect(jsonPath("$.data.suggestedFieldMappings[0].canonicalField").value("username"))
+                .andExpect(jsonPath("$.data.requestId").value("import-ai-mapping-suggestion-req-1"));
+
+        verify(importJobAiMappingSuggestionService)
+                .generateMappingSuggestion(eq(9L), eq(9001L), eq("import-ai-mapping-suggestion-req-1"), eq(11L));
     }
 
     private static final class TestAuthenticationFilter extends OncePerRequestFilter {

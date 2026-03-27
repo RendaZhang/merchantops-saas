@@ -1,0 +1,30 @@
+{
+  "id": "resp_import_mapping_suggestion_9301",
+  "object": "response",
+  "created_at": 1774600000,
+  "status": "completed",
+  "model": "gpt-4.1-mini",
+  "output": [
+    {
+      "id": "msg_import_mapping_suggestion_9301",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"summary\": \"The failed header still looks close to the canonical USER_CSV schema, "
+        },
+        {
+          "type": "output_text",
+          "text": "so the safest next step is to confirm the proposed field mappings before preparing any replay input.\",\n  \"suggestedFieldMappings\": [\n    {\n      \"canonicalField\": \"username\",\n      \"observedColumnSignal\": {\n        \"headerName\": \"login\",\n        \"headerPosition\": 1\n      },\n      \"reasoning\": \"`login` is the closest observed header for the canonical username field.\",\n      \"reviewRequired\": false\n    },\n    {\n      \"canonicalField\": \"displayName\",\n      \"observedColumnSignal\": {\n        \"headerName\": \"display_name\",\n        \"headerPosition\": 2\n      },\n      \"reasoning\": \"`display_name` is the closest semantic match for displayName.\",\n      \"reviewRequired\": false\n    },\n    {\n      \"canonicalField\": \"email\",\n      \"observedColumnSignal\": {\n        \"headerName\": \"email_address\",\n        \"headerPosition\": 3\n      },\n      \"reasoning\": \"`email_address` is the most likely email column.\",\n      \"reviewRequired\": false\n    },\n    {\n      \"canonicalField\": \"password\",\n      \"observedColumnSignal\": {\n        \"headerName\": \"passwd\",\n        \"headerPosition\": 4\n      },\n      \"reasoning\": \"`passwd` should be manually confirmed.\",\n      \"reviewRequired\": true\n    },\n    {\n      \"canonicalField\": \"roleCodes\",\n      \"observedColumnSignal\": {\n        \"headerName\": \"roles\",\n        \"headerPosition\": 5\n      },\n      \"reasoning\": \"`roles` is the closest available signal for roleCodes.\",\n      \"reviewRequired\": true\n    }\n  ],\n  \"confidenceNotes\": [\n    \"The source file failed header validation, so each suggested mapping should be reviewed before reuse.\"\n  ],\n  \"recommendedOperatorChecks\": [\n    \"Confirm the source header order before editing any replay input.\",\n    \"Verify that the observed `roles` column really contains tenant role codes in the expected delimiter format.\"\n  ]\n}"
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 180,
+    "output_tokens": 92,
+    "total_tokens": 272
+  }
+}

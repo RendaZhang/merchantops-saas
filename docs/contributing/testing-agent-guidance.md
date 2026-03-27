@@ -111,6 +111,7 @@ Use the full reactor only when broader verification is needed:
 - For access-change work such as status updates, role reassignment, permission-seed edits, or ticket-write promotion, compare runtime and test expectations against [../reference/authentication-and-rbac.md](../reference/authentication-and-rbac.md) and the affected business reference page so stale-token versus re-login behavior stays documented and verified together.
 - When a slice exposes multiple parallel public AI endpoints, keep the hardening symmetric across them rather than letting one endpoint become the only fully hardened reference.
 - That symmetry should explicitly cover adapter failure tests, integration degraded-mode coverage, workflow-safety or no-side-effect assertions, AI runbook/checklist expectations, provider-not-configured and provider-unavailable paths, timeout behavior, invalid-response or output-policy-validation failures, `ai_interaction_record.status` assertions, and response-shape / golden-sample parity.
+- When an AI response includes grounded identifiers or observed signals, output-policy coverage should prove those values belong to the local sanitized input or other known tenant-scoped facts, not just that they are present and well-typed.
 - If a public API contract changes, update the related automated tests, runbooks, and public reference docs in the same change.
 - If automated coverage meaningfully expands or narrows, update [../project-status.md](../project-status.md) so the current testing reality stays accurate.
 
