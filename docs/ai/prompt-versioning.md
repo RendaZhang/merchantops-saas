@@ -1,20 +1,20 @@
 # Prompt Versioning
 
-Last updated: 2026-03-21
+Last updated: 2026-03-28
 
 ## Goal
 
 Prompt changes should be reviewable and traceable in the same way code changes are reviewable and traceable.
 
-This document defines the lightweight prompt-versioning approach used by the current ticket-summary, ticket-triage, and ticket-reply-draft AI slices and expected for future AI workflow features.
+This document defines the lightweight prompt-versioning approach used by the current ticket and import AI generation slices and expected for future AI workflow features.
 
 ## Current Boundary
 
 As of today:
 
-- three public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
-- the current prompt versions are `ticket-summary-v1`, `ticket-triage-v1`, and `ticket-reply-draft-v1`
-- the public response returns `promptVersion`
+- eight public AI endpoints exist: two history read endpoints plus six generation endpoints across ticket and import workflows
+- the current generation prompt versions are `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, `import-mapping-suggestion-v1`, and `import-fix-recommendation-v1`
+- public generation responses return `promptVersion`, and the history endpoints reuse the stored prompt version from previous AI invocations
 - `ai_interaction_record` persists the prompt version for each AI invocation
 - prompt text still lives in code-side prompt builders rather than a separate prompt registry
 
@@ -42,6 +42,8 @@ Suggested format:
 - `ticket-triage-v1`
 - `ticket-reply-draft-v1`
 - `import-error-summary-v1`
+- `import-mapping-suggestion-v1`
+- `import-fix-recommendation-v1`
 
 Keep version ids stable and human-readable. Avoid storing `latest` as a production reference.
 
@@ -52,9 +54,12 @@ Today the live prompt version is carried by configuration and code together:
 - `merchantops.ai.prompt-version` stores the public and persisted summary version identifier
 - `merchantops.ai.triage-prompt-version` stores the public and persisted triage version identifier
 - `merchantops.ai.reply-draft-prompt-version` stores the public and persisted reply-draft version identifier
-- the current prompt text lives in `TicketSummaryPromptBuilder`, `TicketTriagePromptBuilder`, and `TicketReplyDraftPromptBuilder`
+- `merchantops.ai.import-error-summary-prompt-version` stores the public and persisted import error-summary version identifier
+- `merchantops.ai.import-mapping-suggestion-prompt-version` stores the public and persisted import mapping-suggestion version identifier
+- `merchantops.ai.import-fix-recommendation-prompt-version` stores the public and persisted import fix-recommendation version identifier
+- the current prompt text lives in `TicketSummaryPromptBuilder`, `TicketTriagePromptBuilder`, `TicketReplyDraftPromptBuilder`, `ImportJobErrorSummaryPromptBuilder`, `ImportJobMappingSuggestionPromptBuilder`, and `ImportJobFixRecommendationPromptBuilder`
 
-That is acceptable for the first slice because the public contract and stored audit record already expose an explicit version id.
+That is acceptable for the current baseline because the public contract and stored audit record already expose an explicit version id.
 
 If prompt files move into resources later, prefer a structure that stays easy to diff, for example:
 
@@ -64,6 +69,8 @@ merchantops-api/
     ticket-summary/
       v1.md
       v2.md
+    import-error-summary/
+      v1.md
 ```
 
 ## Logging Requirements

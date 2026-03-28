@@ -1,5 +1,8 @@
 package com.renda.merchantops.infra.importjob;
 
+import com.renda.merchantops.domain.importjob.ImportJobAiInteractionItem;
+import com.renda.merchantops.domain.importjob.ImportJobAiInteractionPageCriteria;
+import com.renda.merchantops.domain.importjob.ImportJobAiInteractionPageResult;
 import com.renda.merchantops.domain.importjob.ImportJobCommandPort;
 import com.renda.merchantops.domain.importjob.ImportJobErrorCount;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
@@ -9,8 +12,10 @@ import com.renda.merchantops.domain.importjob.ImportJobPageCriteria;
 import com.renda.merchantops.domain.importjob.ImportJobPageResult;
 import com.renda.merchantops.domain.importjob.ImportJobQueryPort;
 import com.renda.merchantops.domain.importjob.ImportJobRecord;
+import com.renda.merchantops.infra.persistence.entity.AiInteractionRecordEntity;
 import com.renda.merchantops.infra.persistence.entity.ImportJobEntity;
 import com.renda.merchantops.infra.persistence.entity.ImportJobItemErrorEntity;
+import com.renda.merchantops.infra.repository.AiInteractionRecordRepository;
 import com.renda.merchantops.infra.repository.ImportJobItemErrorRepository;
 import com.renda.merchantops.infra.repository.ImportJobRepository;
 import org.springframework.data.domain.PageRequest;
@@ -24,13 +29,18 @@ import java.util.Optional;
 @Component
 public class JpaImportJobAdapter implements ImportJobQueryPort, ImportJobCommandPort {
 
+    private static final String ENTITY_TYPE_IMPORT_JOB = "IMPORT_JOB";
+
     private final ImportJobRepository importJobRepository;
     private final ImportJobItemErrorRepository importJobItemErrorRepository;
+    private final AiInteractionRecordRepository aiInteractionRecordRepository;
 
     public JpaImportJobAdapter(ImportJobRepository importJobRepository,
-                               ImportJobItemErrorRepository importJobItemErrorRepository) {
+                               ImportJobItemErrorRepository importJobItemErrorRepository,
+                               AiInteractionRecordRepository aiInteractionRecordRepository) {
         this.importJobRepository = importJobRepository;
         this.importJobItemErrorRepository = importJobItemErrorRepository;
+        this.aiInteractionRecordRepository = aiInteractionRecordRepository;
     }
 
     @Override
@@ -60,6 +70,31 @@ public class JpaImportJobAdapter implements ImportJobQueryPort, ImportJobCommand
     @Override
     public Optional<ImportJobRecord> findJob(Long tenantId, Long importJobId) {
         return importJobRepository.findByIdAndTenantId(importJobId, tenantId).map(this::toImportJobRecord);
+    }
+
+    @Override
+    public ImportJobAiInteractionPageResult pageJobAiInteractions(Long tenantId,
+                                                                  Long importJobId,
+                                                                  ImportJobAiInteractionPageCriteria criteria) {
+        var page = aiInteractionRecordRepository.searchPageByTenantIdAndEntity(
+                tenantId,
+                ENTITY_TYPE_IMPORT_JOB,
+                importJobId,
+                criteria.interactionType(),
+                criteria.status(),
+                PageRequest.of(
+                        criteria.page(),
+                        criteria.size(),
+                        Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+                )
+        );
+        return new ImportJobAiInteractionPageResult(
+                page.getContent().stream().map(this::toImportJobAiInteractionItem).toList(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages()
+        );
     }
 
     @Override
@@ -194,6 +229,24 @@ public class JpaImportJobAdapter implements ImportJobQueryPort, ImportJobCommand
                 entity.getErrorCode(),
                 entity.getErrorMessage(),
                 entity.getRawPayload(),
+                entity.getCreatedAt()
+        );
+    }
+
+    private ImportJobAiInteractionItem toImportJobAiInteractionItem(AiInteractionRecordEntity entity) {
+        return new ImportJobAiInteractionItem(
+                entity.getId(),
+                entity.getInteractionType(),
+                entity.getStatus(),
+                entity.getOutputSummary(),
+                entity.getPromptVersion(),
+                entity.getModelId(),
+                entity.getLatencyMs(),
+                entity.getRequestId(),
+                entity.getUsagePromptTokens(),
+                entity.getUsageCompletionTokens(),
+                entity.getUsageTotalTokens(),
+                entity.getUsageCostMicros(),
                 entity.getCreatedAt()
         );
     }

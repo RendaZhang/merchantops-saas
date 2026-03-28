@@ -1,9 +1,11 @@
 package com.renda.merchantops.api.importjob;
 
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionListItemResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorCodeCountResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobListItemResponse;
+import com.renda.merchantops.domain.importjob.ImportJobAiInteractionItem;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorRecord;
 import com.renda.merchantops.domain.importjob.ImportJobRecord;
@@ -67,6 +69,24 @@ class ImportJobResponseMapper {
                 error.errorMessage(),
                 error.rawPayload(),
                 error.createdAt()
+        );
+    }
+
+    ImportJobAiInteractionListItemResponse toAiInteractionItem(ImportJobAiInteractionItem item) {
+        return new ImportJobAiInteractionListItemResponse(
+                item.id(),
+                item.interactionType(),
+                item.status(),
+                item.outputSummary(),
+                item.promptVersion(),
+                item.modelId(),
+                item.latencyMs(),
+                item.requestId(),
+                item.usagePromptTokens(),
+                item.usageCompletionTokens(),
+                item.usageTotalTokens(),
+                item.usageCostMicros(),
+                item.createdAt()
         );
     }
 }

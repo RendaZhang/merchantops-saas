@@ -48,7 +48,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md): staged or recent diff to documentation-routing and documentation-sync workflow, plus repo-wide doc maintenance when no diff exists
 - [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md): align `project-status`, `roadmap`, and `project-plan` without mixing current reality, near-term work, and long-range milestones
 - [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md): milestone and release-tag documentation preparation, open-source release-cut work, and post-tag cleanup
-- [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md): align import API docs, examples, runbooks, and milestone text with current import implementation
+- [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md): align import workflow docs, import AI docs, examples, runbooks, and milestone text with current import implementation
 - [`.agents/skills/ai-ticket-surface-sync/SKILL.md`](.agents/skills/ai-ticket-surface-sync/SKILL.md): align public ticket AI docs, provider/runtime wording, runbooks, examples, and milestone text with the current Week 6 implementation
 - [`.agents/skills/tdr-last-cycle/SKILL.md`](.agents/skills/tdr-last-cycle/SKILL.md): run the `TT last`, `DOC last`, `RR last` cleanup loop against the most recent commit until no fixable findings remain
 
@@ -61,8 +61,9 @@ This repository currently organizes handoff rules around five roles plus a small
 - Do not document an endpoint as public unless it is visible in Swagger.
 - Use the linked contributing pages for detailed wording rules around verification scope, environment-sensitive sample data, and stale-token versus re-login expectations instead of duplicating those details here.
 - Follow the routing rules in the linked maintenance and development guidance pages instead of re-encoding detailed update matrices here.
+- For AI docs, keep [docs/reference/ai-integration.md](docs/reference/ai-integration.md) as the canonical current public contract page; use `docs/ai/` for prompt-versioning, eval, workflow-candidate, and high-level current-boundary guidance instead of duplicating full API reference detail there.
 - Use [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md) when the task is centered on `DOC staged`, `DOC last`, Swagger-visible doc sync, or documentation routing after implementation changes.
-- Use [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md) when the task is centered on import endpoints, replay modes, import runbooks, or import-specific doc alignment across reference, examples, and milestone pages.
+- Use [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md) when the task is centered on import endpoints, replay modes, import AI endpoints, import AI runbooks, or import-specific doc alignment across reference, AI docs, examples, and milestone pages.
 - Use [`.agents/skills/ai-ticket-surface-sync/SKILL.md`](.agents/skills/ai-ticket-surface-sync/SKILL.md) when the task is centered on public AI ticket endpoints, AI provider/runtime docs, AI runbooks, or AI reference alignment across the current Week 6 surface.
 - Use [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md) and [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) together when the task is centered on the final release-doc sync across status, roadmap, plan, changelog, README, and release-versioning.
 - Shortcut prefix: `DOC`

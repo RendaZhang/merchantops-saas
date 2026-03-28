@@ -1,6 +1,6 @@
 # Ticket Workflow
 
-Last updated: 2026-03-22
+Last updated: 2026-03-28
 
 ## Public API Surface
 
@@ -23,7 +23,7 @@ Use Swagger UI or [../../api-demo.http](../../api-demo.http) for the current req
 
 ## Minimal Workflow Model
 
-Current Week 3-6 ticket workflow keeps the business state model narrow:
+Current public ticket workflow keeps the business state model narrow:
 
 - statuses: `OPEN`, `IN_PROGRESS`, `CLOSED`
 - write permission: `TICKET_WRITE`

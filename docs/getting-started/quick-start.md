@@ -27,7 +27,7 @@ Run from the repository root:
 PowerShell:
 
 ```powershell
-mvnw.cmd -pl merchantops-api -am -DskipTests install
+.\mvnw.cmd -pl merchantops-api -am -DskipTests install
 ```
 
 Why this step matters:
@@ -47,7 +47,7 @@ Use the module POM so Maven resolves the Spring Boot plugin correctly:
 PowerShell:
 
 ```powershell
-mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
+.\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 
 If you changed sibling-module signatures, JPA entities, or repositories, rerun step 2 before starting again so `spring-boot:run` does not pick up stale local SNAPSHOT artifacts.
@@ -56,7 +56,7 @@ Profile override example:
 
 ```powershell
 $env:SPRING_PROFILES_ACTIVE="dev"
-mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
+.\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 
 ## 4. Verify Startup

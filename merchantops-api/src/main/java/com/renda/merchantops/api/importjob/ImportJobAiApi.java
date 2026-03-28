@@ -1,5 +1,7 @@
 package com.renda.merchantops.api.importjob;
 
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiFixRecommendationResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiMappingSuggestionResponse;
@@ -9,10 +11,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_IMPORT_JOB_AI_INTERACTIONS;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_IMPORT_AI_MAPPING_SUGGESTION_NO_FAILURE_SIGNAL;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_IMPORT_AI_MAPPING_SUGGESTION_NO_HEADER_SIGNAL;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_IMPORT_AI_FIX_RECOMMENDATION_NO_FAILURE_SIGNAL;
@@ -34,6 +39,33 @@ import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_UNAUTHORIZED;
 @SecurityRequirement(name = "bearerAuth")
 @RequestMapping("/api/v1/import-jobs")
 public interface ImportJobAiApi {
+
+    @Operation(summary = "Page AI interaction history for one current-tenant import job")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "AI interaction history returned",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_IMPORT_JOB_AI_INTERACTIONS))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Missing USER_READ permission",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Import job not found in current tenant",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"code\":\"NOT_FOUND\",\"message\":\"import job not found\",\"data\":null}"))
+            )
+    })
+    @GetMapping("/{id}/ai-interactions")
+    ApiResponse<ImportJobAiInteractionPageResponse> listAiInteractions(@PathVariable("id") Long id,
+                                                                       @ParameterObject ImportJobAiInteractionPageQuery query);
 
     @Operation(
             summary = "Generate AI error summary for one current-tenant import job",

@@ -385,6 +385,18 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-error-summary
 Authorization: Bearer {{token}}
 
+### Get import AI interaction history
+# Response includes operator-visible runtime usage/cost metadata when present.
+# Failed or otherwise unmetered rows return the usage/cost fields as null.
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-interactions?page=0&size=10
+Authorization: Bearer {{token}}
+
+### Get import AI interaction history - filtered
+# Canonical filter values are uppercase exact matches such as ERROR_SUMMARY, MAPPING_SUGGESTION,
+# FIX_RECOMMENDATION and SUCCEEDED, INVALID_RESPONSE.
+GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-interactions?page=0&size=10&interactionType=ERROR_SUMMARY&status=SUCCEEDED
+Authorization: Bearer {{token}}
+
 ### Generate import AI mapping suggestion
 # Read-only and suggestion-only. The server uses import detail, errorCodeCounts, sanitized
 # header/global parse signal, and bounded structural failure context; it does not rescan the

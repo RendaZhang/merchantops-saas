@@ -1,6 +1,6 @@
 # Development Agent Guidance
 
-Last updated: 2026-03-26
+Last updated: 2026-03-28
 
 ## Purpose
 
@@ -133,6 +133,13 @@ Current `/api/v1/tickets` contract is the baseline workflow-module example:
 - explicit `tenantId`, `operatorId`, and `requestId` forwarding from controller to write service
 - workflow-level log persistence without exposing raw `requestId` in the current public contract
 - ticket-facing AI endpoint orchestration belongs under `api.ticket.ai`, while shared provider/runtime code stays under `api.ai.*`
+
+Current `/api/v1/import-jobs` contract is the baseline async workflow-module example:
+
+- tenant-scoped create, list, detail, error-read, and replay operations live under the import capability rather than under generic platform packages
+- import-facing AI endpoints such as interaction history, error summary, mapping suggestion, and fix recommendation belong under `api.importjob.ai`
+- shared provider/runtime code, prompt-window helpers, and provider adapters still stay under `api.ai.*`
+- import replay rules, queue-recovery branching, stale-processing handling, CSV validation, and grounded AI sanitization stay in import-owned services instead of drifting into shared platform support
 
 Workflow-module baseline for future slices:
 

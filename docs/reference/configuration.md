@@ -20,6 +20,7 @@ The `dev` profile contains local integration settings for:
 - Redis
 - RabbitMQ
 - JWT
+- local import storage root
 
 ## `application.yml`
 
@@ -32,11 +33,14 @@ Shared application configuration currently includes:
 - Swagger UI tag sorting: alphabetical
 - Swagger authorization persistence enabled
 - Swagger try-it-out enabled by default
-- AI ticket-copilot defaults:
+- AI runtime defaults:
   - `merchantops.ai.enabled=false`
   - `merchantops.ai.prompt-version=ticket-summary-v1`
   - `merchantops.ai.triage-prompt-version=ticket-triage-v1`
   - `merchantops.ai.reply-draft-prompt-version=ticket-reply-draft-v1`
+  - `merchantops.ai.import-error-summary-prompt-version=import-error-summary-v1`
+  - `merchantops.ai.import-mapping-suggestion-prompt-version=import-mapping-suggestion-v1`
+  - `merchantops.ai.import-fix-recommendation-prompt-version=import-fix-recommendation-v1`
   - `merchantops.ai.provider=OPENAI`
   - `merchantops.ai.base-url=`
   - `merchantops.ai.api-key=`
@@ -72,6 +76,9 @@ Shared application configuration currently includes:
 - `MERCHANTOPS_AI_PROMPT_VERSION`
 - `MERCHANTOPS_AI_TRIAGE_PROMPT_VERSION`
 - `MERCHANTOPS_AI_REPLY_DRAFT_PROMPT_VERSION`
+- `MERCHANTOPS_AI_IMPORT_ERROR_SUMMARY_PROMPT_VERSION`
+- `MERCHANTOPS_AI_IMPORT_MAPPING_SUGGESTION_PROMPT_VERSION`
+- `MERCHANTOPS_AI_IMPORT_FIX_RECOMMENDATION_PROMPT_VERSION`
 - `MERCHANTOPS_AI_PROVIDER`
 - `MERCHANTOPS_AI_BASE_URL`
 - `MERCHANTOPS_AI_API_KEY`
@@ -99,8 +106,8 @@ Shared application configuration currently includes:
 
 ## AI Provider Controls
 
-- `merchantops.ai.enabled` gates the public ticket AI summary, ticket AI triage, and ticket AI reply-draft endpoints. When `false`, those endpoints return controlled `503 SERVICE_UNAVAILABLE` responses such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled`.
-- `merchantops.ai.prompt-version`, `merchantops.ai.triage-prompt-version`, and `merchantops.ai.reply-draft-prompt-version` are the explicit prompt identifiers stored into `ai_interaction_record` and returned in the public AI responses.
+- `merchantops.ai.enabled` gates the current public AI generation surface: ticket `ai-summary`, `ai-triage`, `ai-reply-draft`, plus import `ai-error-summary`, `ai-mapping-suggestion`, and `ai-fix-recommendation`. When `false`, those endpoints return controlled `503 SERVICE_UNAVAILABLE` responses such as `ticket ai summary is disabled` or `import ai error summary is disabled`.
+- `merchantops.ai.prompt-version`, `merchantops.ai.triage-prompt-version`, `merchantops.ai.reply-draft-prompt-version`, `merchantops.ai.import-error-summary-prompt-version`, `merchantops.ai.import-mapping-suggestion-prompt-version`, and `merchantops.ai.import-fix-recommendation-prompt-version` are the explicit prompt identifiers stored into `ai_interaction_record` and returned in the public AI responses.
 - `merchantops.ai.provider` selects the active provider path. Current supported values are `OPENAI` and `DEEPSEEK`.
 - `merchantops.ai.base-url`, `merchantops.ai.api-key`, and `merchantops.ai.model-id` are the provider-neutral runtime keys. Use these first for new local and deployed setups.
 - `merchantops.ai.timeout-ms` controls provider connect and read timeouts for the provider-normalized structured-output clients.
@@ -110,7 +117,7 @@ Shared application configuration currently includes:
 - Provider defaults are:
   - `OPENAI`: base URL defaults to `https://api.openai.com`
   - `DEEPSEEK`: base URL defaults to `https://api.deepseek.com` and model defaults to `deepseek-chat`
-- Leaving the required provider model or credentials blank keeps the rest of the application usable; only the public ticket AI endpoints degrade with controlled `503` responses.
+- Leaving the required provider model or credentials blank keeps the rest of the application usable; only the current public AI generation endpoints degrade with controlled `503` responses.
 
 ## Import Processing Controls
 

@@ -17,7 +17,7 @@ This runbook is intentionally narrow:
 - create one fresh smoke ticket and add enough context for summary generation
 - call `POST /api/v1/tickets/{id}/ai-summary` exactly once
 - if that succeeds, immediately call `GET /api/v1/tickets/{id}/ai-interactions`
-- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, one import `ai-error-summary` call, and when eligible one import `ai-mapping-suggestion` call plus one import `ai-fix-recommendation` call against known failed import jobs
+- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, one import `ai-error-summary` call plus `GET /api/v1/import-jobs/{id}/ai-interactions?interactionType=ERROR_SUMMARY`, and when eligible one import `ai-mapping-suggestion` call plus one import `ai-fix-recommendation` call, each followed by the matching import history read, against known failed import jobs
 - if any live endpoint fails, stop immediately and do not continue to the next endpoint
 
 Budget guard for the first live pass:
@@ -293,6 +293,22 @@ Expected result:
 
 If this request fails, stop here. Do not keep spending tokens on more live AI calls in the same session.
 
+Immediately verify the stored import history row:
+
+```powershell
+$importSummaryHistory = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$baseUrl/api/v1/import-jobs/$importJobId/ai-interactions?page=0&size=10&interactionType=ERROR_SUMMARY" `
+  -Headers $adminHeaders
+```
+
+Expected result:
+
+- the first returned item is the new import error-summary interaction
+- `status=SUCCEEDED`
+- `requestId` equals `$importSummaryRequestId`
+- `modelId` matches the resolved provider model
+
 If the selected import job also has parseable sanitized header/global signal, an optional follow-up mapping-suggestion call is:
 
 ```powershell
@@ -317,6 +333,62 @@ Expected result:
 - non-empty `data.recommendedOperatorChecks`
 - `data.requestId` equals `$importMappingRequestId`
 
+Immediately verify the stored mapping-suggestion history row:
+
+```powershell
+$importMappingHistory = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$baseUrl/api/v1/import-jobs/$importJobId/ai-interactions?page=0&size=10&interactionType=MAPPING_SUGGESTION" `
+  -Headers $adminHeaders
+```
+
+Expected result:
+
+- the first returned item is the new import mapping-suggestion interaction
+- `status=SUCCEEDED`
+- `requestId` equals `$importMappingRequestId`
+- `modelId` matches the resolved provider model
+
+If the selected import job also has grounded row-level failure signal, an optional follow-up fix-recommendation call is:
+
+```powershell
+$importFixRequestId = "$smokePrefix-import-fix-recommendation"
+$importFixHeaders = @{
+  Authorization = "Bearer $token"
+  "X-Request-Id" = $importFixRequestId
+}
+
+$importFixResponse = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$baseUrl/api/v1/import-jobs/$importJobId/ai-fix-recommendation" `
+  -Headers $importFixHeaders
+```
+
+Expected result:
+
+- HTTP `200`
+- non-blank `data.summary`
+- non-empty `data.recommendedFixes`
+- non-empty `data.confidenceNotes`
+- non-empty `data.recommendedOperatorChecks`
+- `data.requestId` equals `$importFixRequestId`
+
+Immediately verify the stored fix-recommendation history row:
+
+```powershell
+$importFixHistory = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$baseUrl/api/v1/import-jobs/$importJobId/ai-interactions?page=0&size=10&interactionType=FIX_RECOMMENDATION" `
+  -Headers $adminHeaders
+```
+
+Expected result:
+
+- the first returned item is the new import fix-recommendation interaction
+- `status=SUCCEEDED`
+- `requestId` equals `$importFixRequestId`
+- `modelId` matches the resolved provider model
+
 ## 12. What Counts As A Stop Condition
 
 Stop the live pass immediately if any of these happen:
@@ -330,6 +402,7 @@ Stop the live pass immediately if any of these happen:
 - reply draft returns a non-`200` response or is missing any of `opening`, `body`, `nextStep`, `closing`, or `draftText`
 - the interaction-history read does not show the matching `REPLY_DRAFT/SUCCEEDED` row after a successful reply-draft call
 - import error summary returns a non-`200` response or is missing `summary`, `topErrorPatterns`, or `recommendedNextSteps`
+- the import interaction-history read does not show the matching `ERROR_SUMMARY`, `MAPPING_SUGGESTION`, or `FIX_RECOMMENDATION` `SUCCEEDED` row after a successful import AI generation call
 
 When that happens, capture the response or log evidence, update the relevant AI docs if the behavior changed, and do not spend more tokens by continuing to the next live endpoint.
 

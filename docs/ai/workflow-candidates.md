@@ -1,10 +1,10 @@
 # AI Workflow Candidates
 
-Last updated: 2026-03-10
+Last updated: 2026-03-28
 
 ## Purpose
 
-This document turns the Week 6-8 AI roadmap into concrete workflow candidates that can later become public APIs.
+This document tracks which workflow-first AI candidates have already graduated into public APIs and which still remain future planning inputs.
 
 The goal is not to list every possible AI feature. The goal is to identify a small set of workflow-first candidates that:
 
@@ -17,9 +17,9 @@ The goal is not to list every possible AI feature. The goal is to identify a sma
 
 As of today:
 
-- no AI workflow endpoints are public in Swagger
-- no candidate below should be treated as committed API contract yet
-- these candidates exist to guide implementation prioritization once ticket and import workflows are in place
+- eight public AI endpoints are already live in Swagger: ticket and import interaction-history reads plus six suggestion-generating endpoints
+- ticket summary, ticket triage, ticket reply draft, import error summary, import mapping suggestion, and import fix recommendation are already committed public contracts
+- only items explicitly marked as remaining candidates below should be treated as future planning input rather than current API contract
 
 ## Selection Criteria
 
@@ -37,7 +37,7 @@ Avoid candidates that:
 - directly mutate critical business state without review
 - depend on broad agent autonomy to be useful
 
-## Ticket Workflow Candidates
+## Public Baseline Already Landed
 
 ### 1. Ticket Summary
 
@@ -54,11 +54,7 @@ Avoid candidates that:
   - next suggested action
 - Risk level: low
 - Approval required: no, if read-only
-- Why it is valuable:
-  - strong operator ROI
-  - easy to demo
-  - easy to validate manually
-- Suggested priority: implement first in Week 6
+- Current status: public suggestion-only endpoint
 
 ### 2. Ticket Triage Suggestion
 
@@ -74,10 +70,7 @@ Avoid candidates that:
   - short rationale
 - Risk level: low to medium
 - Approval required: yes, if the system later writes triage decisions automatically
-- Why it is valuable:
-  - maps well to real support and operations use cases
-  - provides visible AI value without requiring auto-execution
-- Suggested priority: implement after summary
+- Current status: public suggestion-only endpoint
 
 ### 3. Reply Draft Generation
 
@@ -91,13 +84,61 @@ Avoid candidates that:
   - draft reply
   - optional recommended follow-up question
 - Risk level: medium
-- Approval required: yes before sending or persisting as final operator response
-- Why it is valuable:
-  - clear time savings
-  - natural human-in-the-loop fit
-- Suggested priority: implemented in the current Week 6 public slice
+- Approval required: yes before using the draft as a final operator response
+- Current status: public suggestion-only endpoint
 
-### 4. Assignee Suggestion
+### 4. Import Error Summary
+
+- Workflow area: import operations
+- Primary value: explain dominant failure patterns quickly
+- Typical input:
+  - import job metadata
+  - representative error rows
+  - error messages
+- Typical output:
+  - top failure categories
+  - human-readable summary
+  - likely next steps
+- Risk level: low
+- Approval required: no, if read-only
+- Current status: public suggestion-only endpoint
+
+### 5. Field Mapping Suggestion
+
+- Workflow area: import setup and correction
+- Primary value: reduce mapping setup friction
+- Typical input:
+  - source column headers
+  - sample values
+  - target schema description
+- Typical output:
+  - suggested field mapping
+  - ambiguous fields requiring manual review
+- Risk level: medium
+- Approval required: yes before applying mappings
+- Current status: public suggestion-only endpoint
+
+### 6. Fix Recommendation
+
+- Workflow area: import error handling
+- Primary value: suggest what operators should correct
+- Typical input:
+  - failed rows
+  - validation errors
+  - schema rules
+- Typical output:
+  - grouped fix suggestions
+  - examples of corrected values
+  - rows that still require manual inspection
+- Risk level: medium
+- Approval required: yes before any downstream corrective action
+- Current status: public suggestion-only endpoint
+
+The current public baseline also includes `GET /api/v1/tickets/{id}/ai-interactions` and `GET /api/v1/import-jobs/{id}/ai-interactions` so operators can review stored AI interaction history without re-triggering generation.
+
+## Remaining Ticket Workflow Candidates
+
+### 7. Assignee Suggestion
 
 - Workflow area: ticket operations
 - Primary value: propose the right owner
@@ -112,66 +153,8 @@ Avoid candidates that:
 - Approval required: yes
 - Why it is valuable:
   - fits operations workflows
-  - more valuable once team/ownership data is richer
-- Suggested priority: later candidate, not first wave
-
-## Import and Data Quality Candidates
-
-### 5. Import Error Summary
-
-- Workflow area: import operations
-- Primary value: explain dominant failure patterns quickly
-- Typical input:
-  - import job metadata
-  - representative error rows
-  - error messages
-- Typical output:
-  - top failure categories
-  - human-readable summary
-  - likely next steps
-- Risk level: low
-- Approval required: no, if read-only
-- Why it is valuable:
-  - strong operational ROI
-  - easy to validate against known failures
-- Suggested priority: implement first in Week 7
-
-### 6. Field Mapping Suggestion
-
-- Workflow area: import setup and correction
-- Primary value: reduce mapping setup friction
-- Typical input:
-  - source column headers
-  - sample values
-  - target schema description
-- Typical output:
-  - suggested field mapping
-  - ambiguous fields requiring manual review
-- Risk level: medium
-- Approval required: yes before applying mappings
-- Why it is valuable:
-  - practical and realistic
-  - useful for demos if target schema is clear
-- Suggested priority: second-wave import AI candidate
-
-### 7. Fix Recommendation
-
-- Workflow area: import error handling
-- Primary value: suggest what operators should correct
-- Typical input:
-  - failed rows
-  - validation errors
-  - schema rules
-- Typical output:
-  - grouped fix suggestions
-  - examples of corrected values
-  - rows that still require manual inspection
-- Risk level: medium
-- Approval required: yes before any downstream corrective action
-- Why it is valuable:
-  - useful in real operations
-  - good human-in-the-loop pattern
-- Suggested priority: after error summary
+  - more valuable once team or ownership data is richer
+- Suggested priority: next ticket-focused candidate, not part of the current public baseline
 
 ## Agentic Workflow Candidates
 
@@ -208,22 +191,11 @@ Avoid these in the first AI wave:
 - any AI action that can cross tenant boundaries
 - open-ended generic assistant with broad repo or database access
 
-## Recommended Rollout Order
+## Recommended Next Candidate Order
 
-### First Wave
+The early workflow-first baseline is already public. The next realistic order is:
 
-- ticket summary
-- ticket triage suggestion
-- reply draft generation
-- import error summary
-
-### Second Wave
-
-- field mapping suggestion
-- fix recommendation
-
-### Third Wave
-
+- assignee suggestion
 - draft then approve reply
 - pre-execution recommendation plan
 
@@ -243,5 +215,5 @@ Before promoting a candidate into implementation, confirm:
 - [README.md](README.md): AI docs navigation
 - [prompt-versioning.md](prompt-versioning.md): how workflow prompts should be versioned
 - [eval-dataset-guidelines.md](eval-dataset-guidelines.md): how to prepare small eval sets
-- [../reference/ai-integration.md](../reference/ai-integration.md): AI guardrails and future endpoint direction
+- [../reference/ai-integration.md](../reference/ai-integration.md): AI guardrails and current public contract
 - [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md): validation checklist once AI endpoints land

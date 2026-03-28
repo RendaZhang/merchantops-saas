@@ -10,6 +10,10 @@ public interface ImportJobQueryPort {
 
     Optional<ImportJobRecord> findJob(Long tenantId, Long importJobId);
 
+    ImportJobAiInteractionPageResult pageJobAiInteractions(Long tenantId,
+                                                           Long importJobId,
+                                                           ImportJobAiInteractionPageCriteria criteria);
+
     ImportJobErrorPageResult pageJobErrors(Long tenantId, Long importJobId, ImportJobErrorPageCriteria criteria);
 
     List<ImportJobErrorCount> summarizeErrorCodes(Long tenantId, Long importJobId);

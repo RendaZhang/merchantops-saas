@@ -9,6 +9,10 @@ public interface ImportJobQueryUseCase {
 
     ImportJobDetail getJobDetail(Long tenantId, Long importJobId);
 
+    ImportJobAiInteractionPageResult pageJobAiInteractions(Long tenantId,
+                                                           Long importJobId,
+                                                           ImportJobAiInteractionPageCriteria criteria);
+
     ImportJobErrorPageResult pageJobErrors(Long tenantId, Long importJobId, ImportJobErrorPageCriteria criteria);
 
     List<ImportJobRecord> listQueuedJobsForRecovery(LocalDateTime createdBefore, int limit);

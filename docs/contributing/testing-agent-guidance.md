@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-03-22
+Last updated: 2026-03-28
 
 ## Purpose
 
@@ -48,13 +48,13 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-6 public workflow surface plus the active Week 7 import AI read path.
+The current automated baseline is centered on the completed Week 2-6 public workflow surface plus the active Week 7 import AI public surface.
 
 Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
-- current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, ticket AI summary/triage/reply-draft, import AI error summary/mapping suggestion/fix recommendation, and `GET /api/v1/roles`
+- current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, ticket AI interaction-history plus summary/triage/reply-draft, import AI interaction-history plus error summary/mapping suggestion/fix recommendation, and `GET /api/v1/roles`
 - controller request binding and tenant-context forwarding for the current public workflow surface
 - user, ticket, approval, and import query/command service behavior
 - repository-backed tenant-scoped user page query behavior

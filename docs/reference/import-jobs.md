@@ -4,7 +4,7 @@ Last updated: 2026-03-28
 
 ## Public API Surface
 
-Week 7 now exposes eleven import endpoints:
+Week 7 now exposes twelve import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -16,6 +16,7 @@ Week 7 now exposes eleven import endpoints:
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from caller-provided full replacement rows that target replayable failed-row `errorId` values only |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
+| `GET` | `/api/v1/import-jobs/{id}/ai-interactions` | Bearer JWT | `USER_READ` | Pages narrowed stored AI interaction history for one current-tenant import job |
 | `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only AI summary from current import detail, `errorCodeCounts`, and the first sanitized failed-row window |
 | `POST` | `/api/v1/import-jobs/{id}/ai-mapping-suggestion` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only canonical-field mapping proposal from sanitized header/global signal plus bounded structural failure context |
 | `POST` | `/api/v1/import-jobs/{id}/ai-fix-recommendation` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only fix recommendation from locally grounded row-level `errorCode` groups without returning replacement values |
@@ -95,6 +96,69 @@ Detail semantics for reporting:
 - detail counters now update during `PROCESSING` after each committed chunk
 - `GET /api/v1/import-jobs/{id}/errors` is the paged failure-item read surface for larger jobs
 
+## Read-Only Import AI Interaction History (`GET /api/v1/import-jobs/{id}/ai-interactions`)
+
+This history slice stays intentionally narrow:
+
+- request body is empty
+- permission is `USER_READ`
+- tenant scope and not-found behavior match the existing import read path, so cross-tenant or missing jobs still return `404`
+- the endpoint is read-only; it does not trigger generation, replay, approval, or any import-job mutation
+- the endpoint reuses the existing `ai_interaction_record` rows already written by import AI generation endpoints
+
+Current query surface is minimal:
+
+- `page`
+- `size`
+- exact `interactionType`
+- exact `status`
+
+Current supported canonical `interactionType` values are:
+
+- `ERROR_SUMMARY`
+- `MAPPING_SUGGESTION`
+- `FIX_RECOMMENDATION`
+
+Current stored `status` values include:
+
+- `SUCCEEDED`
+- `FEATURE_DISABLED`
+- `PROVIDER_NOT_CONFIGURED`
+- `PROVIDER_TIMEOUT`
+- `PROVIDER_UNAVAILABLE`
+- `INVALID_RESPONSE`
+
+Current response shape is:
+
+- `items`
+- `page`
+- `size`
+- `total`
+- `totalPages`
+
+Each `items[]` record includes:
+
+- `id`
+- `interactionType`
+- `status`
+- `outputSummary`
+- `promptVersion`
+- `modelId`
+- `latencyMs`
+- `requestId`
+- `usagePromptTokens`
+- `usageCompletionTokens`
+- `usageTotalTokens`
+- `usageCostMicros`
+- `createdAt`
+
+Current history behavior is fixed:
+
+- ordering is stable `createdAt DESC, id DESC`
+- usage/cost fields are returned as `null` for failed or otherwise unmetered rows
+- raw prompt text and raw provider payload are not exposed
+- this remains an operator-visible runtime and governance surface, not a billing or ledger surface
+
 ## Read-Only Import AI Error Summary (`POST /api/v1/import-jobs/{id}/ai-error-summary`)
 
 This error-summary slice stays intentionally narrow:
@@ -103,7 +167,6 @@ This error-summary slice stays intentionally narrow:
 - permission is `USER_READ`
 - tenant scope and not-found behavior match the existing import read path
 - the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, or replay state
-- the endpoint does not add a public import AI history surface in this slice
 
 Current prompt context is assembled from:
 
@@ -146,7 +209,6 @@ Current Week 7 Slice B stays intentionally narrow:
 - permission is `USER_READ`
 - tenant scope and not-found behavior match the existing import read path
 - the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, source files, replay state, approvals, or business audit rows
-- the endpoint does not add a public import AI history surface in this slice
 - the endpoint currently supports `USER_CSV` jobs only
 
 Current eligibility rules are explicit:
@@ -207,7 +269,6 @@ Current Week 7 Slice C also stays intentionally narrow:
 - permission is `USER_READ`
 - tenant scope and not-found behavior match the existing import read path
 - the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, source files, replay state, approvals, or business audit rows
-- the endpoint does not add a public import AI history surface in this slice
 - the endpoint currently supports `USER_CSV` jobs only
 
 Current eligibility rules are explicit:
@@ -787,7 +848,7 @@ Current semantics:
 ## Notes
 
 - this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay, exact error-code selective replay, and edited failed-row replay are implemented.
-- the current AI guidance slices are intentionally narrower still: only read-only import error summary, mapping suggestion, and fix recommendation are public; import AI history and any write-back flow remain out of scope.
+- the current AI guidance slices are intentionally narrower still: only read-only import interaction history, error summary, mapping suggestion, and fix recommendation are public; any write-back flow remains out of scope.
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.

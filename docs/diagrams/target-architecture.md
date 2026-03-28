@@ -1,8 +1,10 @@
 # Target Architecture
 
-Last updated: 2026-03-11
+Last updated: 2026-03-28
 
 This page visualizes the architecture direction established by [ADR-0010](../architecture/adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md).
+
+It is a target-state diagram, not a literal inventory of the current deployment topology or Java module placement. For current module boundaries, read [../architecture/java-architecture-map.md](../architecture/java-architecture-map.md). For the current public baseline and active phase, read [../project-status.md](../project-status.md).
 
 The primary target is a workflow-first modular monolith with explicit tenant, RBAC, and request-context boundaries, deployed as a small number of runtime units. Later extraction is selective and driven by workload shape, not by entity names.
 

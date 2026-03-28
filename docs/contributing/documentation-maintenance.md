@@ -1,6 +1,6 @@
 # Documentation Maintenance
 
-Last updated: 2026-03-26
+Last updated: 2026-03-28
 
 ## Purpose
 
@@ -170,7 +170,7 @@ Update when needed:
 - `docs/roadmap.md` if the decision changes near-term sequencing
 - relevant reference page if the decision affects public guidance
 
-### 6. AI Planning, AI Governance, Or Future AI API Shape Changes
+### 6. AI Public Surface, AI Governance, Or Planning Changes
 
 Update:
 
@@ -181,8 +181,23 @@ Update:
 Update when needed:
 
 - `docs/reference/ai-provider-configuration.md`
+- `docs/runbooks/ai-live-smoke-test.md` when local provider setup, `.env` bootstrap, vendor compatibility, or live smoke scope changed
 - ADRs for AI workflow, audit, eval, or provider ownership
 - `docs/project-plan.md`, `docs/project-status.md`, and `docs/roadmap.md` if AI milestones changed
+
+Use this route both for:
+
+- current public AI endpoint or runtime changes that affect prompt-version, eval, provider/runtime, degraded-mode, or AI interaction-history wording
+- future AI planning or governance changes that have not become public API yet
+
+Keep the AI doc split explicit:
+
+- `docs/reference/ai-integration.md` is the canonical current public AI contract page across ticket and import workflows
+- `docs/ai/` owns prompt-versioning, eval-dataset, workflow-candidate, and high-level current-boundary guidance
+- `docs/ai/` may summarize the current public AI scope, but should not become a duplicate endpoint-by-endpoint API reference when `docs/reference/ai-integration.md` already owns that detail
+- when an AI slice belongs to a business workflow such as ticket or import, update the owning workflow docs and runbooks first, then sync the shared AI docs
+
+If the change adds or updates a public AI endpoint, also apply the normal public API route above so reference pages, examples, runbooks, and status docs stay aligned.
 
 ### 7. Version, Tag, Or Release Milestone Changes
 

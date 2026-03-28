@@ -32,9 +32,54 @@ class ImportJobQueryDomainServiceTest {
                 .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
     }
 
+    @Test
+    void pageJobAiInteractionsShouldNormalizePagingTrimFiltersAndValidateJobExistsFirst() {
+        RecordingQueryPort port = new RecordingQueryPort();
+        port.foundJob = new ImportJobRecord(
+                7001L,
+                1L,
+                "USER_CSV",
+                "CSV",
+                "users.csv",
+                "1/users.csv",
+                null,
+                "FAILED",
+                101L,
+                "req-7001",
+                2,
+                0,
+                2,
+                "all rows failed validation",
+                LocalDateTime.of(2026, 3, 28, 9, 0),
+                LocalDateTime.of(2026, 3, 28, 9, 0, 2),
+                LocalDateTime.of(2026, 3, 28, 9, 0, 5)
+        );
+        ImportJobQueryDomainService service = new ImportJobQueryDomainService(port);
+
+        service.pageJobAiInteractions(1L, 7001L, new ImportJobAiInteractionPageCriteria(-1, 500, " ERROR_SUMMARY ", " SUCCEEDED "));
+
+        assertThat(port.pageAiInteractionTenantId).isEqualTo(1L);
+        assertThat(port.pageAiInteractionImportJobId).isEqualTo(7001L);
+        assertThat(port.pageAiInteractionCriteria)
+                .isEqualTo(new ImportJobAiInteractionPageCriteria(0, 100, "ERROR_SUMMARY", "SUCCEEDED"));
+    }
+
+    @Test
+    void pageJobAiInteractionsShouldRejectMissingJob() {
+        ImportJobQueryDomainService service = new ImportJobQueryDomainService(new RecordingQueryPort());
+
+        assertThatThrownBy(() -> service.pageJobAiInteractions(1L, 7001L, new ImportJobAiInteractionPageCriteria(0, 10, null, null)))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+    }
+
     private static final class RecordingQueryPort implements ImportJobQueryPort {
 
         private ImportJobPageCriteria pageCriteria;
+        private ImportJobRecord foundJob;
+        private Long pageAiInteractionTenantId;
+        private Long pageAiInteractionImportJobId;
+        private ImportJobAiInteractionPageCriteria pageAiInteractionCriteria;
 
         @Override
         public ImportJobPageResult pageJobs(Long tenantId, ImportJobPageCriteria criteria) {
@@ -44,7 +89,17 @@ class ImportJobQueryDomainServiceTest {
 
         @Override
         public Optional<ImportJobRecord> findJob(Long tenantId, Long importJobId) {
-            return Optional.empty();
+            return Optional.ofNullable(foundJob);
+        }
+
+        @Override
+        public ImportJobAiInteractionPageResult pageJobAiInteractions(Long tenantId,
+                                                                      Long importJobId,
+                                                                      ImportJobAiInteractionPageCriteria criteria) {
+            this.pageAiInteractionTenantId = tenantId;
+            this.pageAiInteractionImportJobId = importJobId;
+            this.pageAiInteractionCriteria = criteria;
+            return new ImportJobAiInteractionPageResult(List.of(), criteria.page(), criteria.size(), 0, 0);
         }
 
         @Override

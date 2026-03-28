@@ -24,7 +24,8 @@ The AI checklist is now active because public AI endpoints exist:
 - `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`
 - `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
 - `GET /api/v1/tickets/{id}/ai-interactions`
-- suggestion-only ticket summary, triage, internal reply-draft, and import error-summary plus mapping-suggestion plus fix-recommendation results plus narrowed interaction-history visibility for one current-tenant ticket
+- `GET /api/v1/import-jobs/{id}/ai-interactions`
+- suggestion-only ticket summary, triage, internal reply-draft, and import error-summary plus mapping-suggestion plus fix-recommendation results plus narrowed interaction-history visibility for one current-tenant ticket or import job
 - read permission inherited from `TICKET_READ`
 - import error summary, mapping suggestion, and fix recommendation inherit import read permission from `USER_READ`
 - no write-back, no comment creation, and no approval execution in the current slice
@@ -48,6 +49,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] a successful live import error summary returns non-blank `summary`, non-empty `topErrorPatterns`, non-empty `recommendedNextSteps`, and the expected `requestId`
 - [ ] a successful live import mapping suggestion returns non-blank `summary`, exactly five canonical `suggestedFieldMappings`, non-empty `confidenceNotes`, non-empty `recommendedOperatorChecks`, and the expected `requestId`
 - [ ] a successful live import fix recommendation returns non-blank `summary`, non-empty `recommendedFixes`, non-empty `confidenceNotes`, non-empty `recommendedOperatorChecks`, grounded `errorCode` values only, and the expected `requestId`
+- [ ] after each successful live import AI generation call, `GET /api/v1/import-jobs/{id}/ai-interactions` confirms the matching `interactionType`, `requestId`, `status`, and `modelId`
 - [ ] a successful live triage returns non-blank `classification`, valid `priority`, non-blank `reasoning`, and a matching `TRIAGE/SUCCEEDED` history row
 - [ ] a successful live reply draft returns non-blank `opening`, `body`, `nextStep`, `closing`, `draftText`, and a matching `REPLY_DRAFT/SUCCEEDED` history row
 - [ ] if triage fails in the second-stage live pass, reply-draft is not called in the same session
@@ -95,12 +97,16 @@ The AI checklist is now active because public AI endpoints exist:
 
 - [ ] `GET /api/v1/tickets/{id}/ai-interactions` returns `403` when `TICKET_READ` is missing
 - [ ] `GET /api/v1/tickets/{id}/ai-interactions` returns `404` for cross-tenant or missing tickets
+- [ ] `GET /api/v1/import-jobs/{id}/ai-interactions` returns `403` when `USER_READ` is missing
+- [ ] `GET /api/v1/import-jobs/{id}/ai-interactions` returns `404` for cross-tenant or missing import jobs
 - [ ] `interactionType` filtering is exact-match on stored canonical values such as `SUMMARY`, `TRIAGE`, and `REPLY_DRAFT`
+- [ ] import-history `interactionType` filtering is exact-match on stored canonical values such as `ERROR_SUMMARY`, `MAPPING_SUGGESTION`, and `FIX_RECOMMENDATION`
 - [ ] `status` filtering is exact-match on stored canonical values such as `SUCCEEDED`, `FEATURE_DISABLED`, `PROVIDER_NOT_CONFIGURED`, `PROVIDER_TIMEOUT`, `PROVIDER_UNAVAILABLE`, and `INVALID_RESPONSE`
 - [ ] history results are ordered by `createdAt DESC, id DESC`, including stable same-timestamp tie breaks
 - [ ] history responses stay paged and return `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`
-- [ ] history responses expose usage/cost values only as ticket-scoped runtime metadata, return `null` when unavailable, and do not leak raw prompt text or raw provider payload
+- [ ] history responses expose usage/cost values only as runtime metadata, return `null` when unavailable, and do not leak raw prompt text or raw provider payload
 - [ ] history reads do not create new `ai_interaction_record` rows or mutate ticket workflow state, approvals, or business `audit_event`
+- [ ] import history reads do not create new `ai_interaction_record` rows or mutate import job state, import error rows, replay lineage, approvals, or business `audit_event`
 
 ## Output Quality
 
@@ -139,6 +145,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] import AI fix-recommendation calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - [ ] AI summary, triage, and reply-draft calls do not create business `audit_event` rows
 - [ ] AI interaction-history reads do not mutate ticket status, assignee, comments, workflow logs, approvals, or business `audit_event` rows
+- [ ] import AI interaction-history reads do not mutate import job state, import error rows, replay lineage, approvals, or business `audit_event` rows
 - [ ] operators can continue the ticket workflow manually when AI is unavailable
 - [ ] ticket detail, ticket workflow log, and business audit behavior remain unchanged by AI summary or triage calls
 - [ ] import detail, import error pages, and replay behavior remain unchanged by import AI error-summary calls
@@ -169,7 +176,7 @@ For the current public AI slices, at minimum run:
 9. one interaction-history filter, ordering, and non-leakage check when the history surface is affected
 10. one golden-sample regression check for each affected AI generation workflow
 11. when live provider wiring changed, one local summary-first provider smoke plus the matching interaction-history read through [ai-live-smoke-test.md](ai-live-smoke-test.md)
-12. after summary succeeds and the change still needs real-vendor verification, one second-stage live triage pass plus one second-stage live reply-draft pass, each followed by the matching interaction-history read, plus one import error-summary live pass and, when eligible, one import mapping-suggestion live pass plus one import fix-recommendation live pass when the change touches import AI or shared AI runtime behavior
+12. after summary succeeds and the change still needs real-vendor verification, one second-stage live triage pass plus one second-stage live reply-draft pass, each followed by the matching interaction-history read, plus one import error-summary live pass and, when eligible, one import mapping-suggestion live pass plus one import fix-recommendation live pass, each followed by the matching import interaction-history read, when the change touches import AI or shared AI runtime behavior
 
 ## Related Documents
 

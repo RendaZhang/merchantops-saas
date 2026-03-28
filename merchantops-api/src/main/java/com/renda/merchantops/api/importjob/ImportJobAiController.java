@@ -2,6 +2,8 @@ package com.renda.merchantops.api.importjob;
 
 import com.renda.merchantops.api.context.ContextAccess;
 import com.renda.merchantops.api.context.RequestIdAccess;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiFixRecommendationResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiMappingSuggestionResponse;
@@ -18,9 +20,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ImportJobAiController implements ImportJobAiApi {
 
+    private final ImportJobQueryService importJobQueryService;
     private final ImportJobAiErrorSummaryService importJobAiErrorSummaryService;
     private final ImportJobAiMappingSuggestionService importJobAiMappingSuggestionService;
     private final ImportJobAiFixRecommendationService importJobAiFixRecommendationService;
+
+    @Override
+    @RequirePermission("USER_READ")
+    public ApiResponse<ImportJobAiInteractionPageResponse> listAiInteractions(@PathVariable("id") Long id,
+                                                                              ImportJobAiInteractionPageQuery query) {
+        Long tenantId = ContextAccess.requireTenantId();
+        return ApiResponse.success(importJobQueryService.pageJobAiInteractions(tenantId, id, query));
+    }
 
     @Override
     @RequirePermission("USER_READ")

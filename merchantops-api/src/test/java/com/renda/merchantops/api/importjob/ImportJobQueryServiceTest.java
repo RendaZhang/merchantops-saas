@@ -1,9 +1,14 @@
 package com.renda.merchantops.api.importjob;
 
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageQuery;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobPageResponse;
+import com.renda.merchantops.domain.importjob.ImportJobAiInteractionItem;
+import com.renda.merchantops.domain.importjob.ImportJobAiInteractionPageCriteria;
+import com.renda.merchantops.domain.importjob.ImportJobAiInteractionPageResult;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorCount;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
@@ -76,6 +81,45 @@ class ImportJobQueryServiceTest {
             assertThat(item.rowNumber()).isEqualTo(5);
             assertThat(item.errorCode()).isEqualTo("UNKNOWN_ROLE");
             assertThat(item.rawPayload()).isEqualTo("row-5");
+        });
+    }
+
+    @Test
+    void pageJobAiInteractionsShouldMapDomainPageAndForwardCriteria() {
+        ImportJobAiInteractionItem item = new ImportJobAiInteractionItem(
+                9101L,
+                "ERROR_SUMMARY",
+                "SUCCEEDED",
+                "The job is dominated by tenant role validation failures.",
+                "import-error-summary-v1",
+                "gpt-4.1-mini",
+                512L,
+                "import-ai-error-summary-req-1",
+                140,
+                72,
+                212,
+                null,
+                LocalDateTime.of(2026, 3, 28, 10, 40)
+        );
+        when(importJobQueryUseCase.pageJobAiInteractions(
+                eq(1L),
+                eq(1L),
+                eq(new ImportJobAiInteractionPageCriteria(-1, 500, " ERROR_SUMMARY ", " SUCCEEDED "))
+        )).thenReturn(new ImportJobAiInteractionPageResult(List.of(item), 0, 100, 1, 1));
+
+        ImportJobAiInteractionPageResponse response = importJobQueryService.pageJobAiInteractions(
+                1L,
+                1L,
+                new ImportJobAiInteractionPageQuery(-1, 500, " ERROR_SUMMARY ", " SUCCEEDED ")
+        );
+
+        assertThat(response.total()).isEqualTo(1);
+        assertThat(response.items()).singleElement().satisfies(mapped -> {
+            assertThat(mapped.id()).isEqualTo(9101L);
+            assertThat(mapped.interactionType()).isEqualTo("ERROR_SUMMARY");
+            assertThat(mapped.requestId()).isEqualTo("import-ai-error-summary-req-1");
+            assertThat(mapped.usageTotalTokens()).isEqualTo(212);
+            assertThat(mapped.usageCostMicros()).isNull();
         });
     }
 

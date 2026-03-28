@@ -2,6 +2,9 @@ package com.renda.merchantops.api.importjob;
 
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionListItemResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageQuery;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiInteractionPageResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiFixRecommendationResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiMappingSuggestionResponse;
@@ -39,6 +42,7 @@ import java.util.stream.Stream;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -54,6 +58,9 @@ class ImportJobAiControllerTest {
     private static final String HEADER_REQUEST_ID = "X-Test-Request-Id";
 
     @Mock
+    private ImportJobQueryService importJobQueryService;
+
+    @Mock
     private ImportJobAiErrorSummaryService importJobAiErrorSummaryService;
 
     @Mock
@@ -67,6 +74,7 @@ class ImportJobAiControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new ImportJobAiController(
+                        importJobQueryService,
                         importJobAiErrorSummaryService,
                         importJobAiMappingSuggestionService,
                         importJobAiFixRecommendationService
@@ -83,6 +91,76 @@ class ImportJobAiControllerTest {
         SecurityContextHolder.clearContext();
         TenantContext.clear();
         MDC.remove(RequestIdFilter.MDC_KEY);
+    }
+
+    @Test
+    void listAiInteractionsShouldReturnUnauthorizedWhenAuthenticationIsMissing() throws Exception {
+        mockMvc.perform(get("/api/v1/import-jobs/11/ai-interactions"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void listAiInteractionsShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        mockMvc.perform(get("/api/v1/import-jobs/11/ai-interactions")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void listAiInteractionsShouldForwardTenantIdImportJobIdAndQuery() throws Exception {
+        ImportJobAiInteractionPageResponse response = new ImportJobAiInteractionPageResponse(
+                List.of(new ImportJobAiInteractionListItemResponse(
+                        9102L,
+                        "MAPPING_SUGGESTION",
+                        "SUCCEEDED",
+                        "The failed header still looks close to USER_CSV, so the safest next step is to confirm the proposed mappings before preparing replay input.",
+                        "import-mapping-suggestion-v1",
+                        "gpt-4.1-mini",
+                        544L,
+                        "import-ai-mapping-suggestion-req-1",
+                        141,
+                        71,
+                        212,
+                        null,
+                        LocalDateTime.of(2026, 3, 28, 10, 42)
+                )),
+                0,
+                2,
+                1,
+                1
+        );
+        when(importJobQueryService.pageJobAiInteractions(
+                9L,
+                11L,
+                new ImportJobAiInteractionPageQuery(0, 2, " MAPPING_SUGGESTION ", " SUCCEEDED ")
+        )).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/import-jobs/11/ai-interactions")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ")
+                        .queryParam("page", "0")
+                        .queryParam("size", "2")
+                        .queryParam("interactionType", " MAPPING_SUGGESTION ")
+                        .queryParam("status", " SUCCEEDED "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(9102))
+                .andExpect(jsonPath("$.data.items[0].requestId").value("import-ai-mapping-suggestion-req-1"));
+
+        verify(importJobQueryService).pageJobAiInteractions(
+                eq(9L),
+                eq(11L),
+                eq(new ImportJobAiInteractionPageQuery(0, 2, " MAPPING_SUGGESTION ", " SUCCEEDED "))
+        );
     }
 
     @Test

@@ -28,7 +28,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-6 public workflow baseline plus Week 7 Slice A/B/C import AI error summary, mapping suggestion, and fix recommendation. Today that means:
+Current automated coverage is centered on the completed Week 2-6 public workflow baseline plus Week 7 Slice A/B/C/D import AI interaction history, error summary, mapping suggestion, and fix recommendation. Today that means:
 
 - auth and permission checks for the current public user-management, ticket, AI interaction-history, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
@@ -41,9 +41,11 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - shared AI interaction execution support coverage for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import entity types
 - symmetrical degraded-mode persistence coverage for AI summary, AI triage, AI reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
 - explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
-- explicit no-business-side-effect assertions for import AI error summary, mapping suggestion, and fix recommendation against `import_job`, `import_job_item_error`, replay lineage, approvals, and business audit rows plus prompt non-leakage assertions against raw `USER_CSV` values and sensitive-output rejection for fix recommendation
+- explicit no-business-side-effect assertions for import AI interaction history, error summary, mapping suggestion, and fix recommendation against `import_job`, `import_job_item_error`, replay lineage, approvals, and business audit rows plus prompt non-leakage assertions against raw `USER_CSV` values and sensitive-output rejection for fix recommendation
 - ticket AI interaction-history coverage for tenant-scoped ticket existence, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, and non-leakage of raw prompt and raw provider payload fields
 - explicit read-only assertions for `GET /api/v1/tickets/{id}/ai-interactions` against ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
+- import AI interaction-history coverage for import-scoped existence checks through the existing read path, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, non-leakage of raw prompt and raw provider payload fields, and read-after-write visibility after real import AI generation calls
+- explicit read-only assertions for `GET /api/v1/import-jobs/{id}/ai-interactions` against import job fields, import error rows, replay lineage, approvals, business audit rows, and `ai_interaction_record` row counts
 - stale-token rejection after tenant status, user status, role, or permission changes
 
 ## Suite Map
@@ -205,8 +207,9 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - `ImportJobControllerTest`
   - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, replay request validation, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
 - `ImportJobAiControllerTest`
-  - HTTP request binding for `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
+  - HTTP request binding for `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
   - `401` when authentication is missing and `403` when `USER_READ` is missing
+  - request-scoped forwarding of `tenantId` plus history query params to `ImportJobQueryService`
   - request-scoped forwarding of `tenantId`, `userId`, and `requestId` to `ImportJobAiErrorSummaryService`, `ImportJobAiMappingSuggestionService`, and `ImportJobAiFixRecommendationService`
 - `ImportJobAuthzIntegrationTest`
   - real authz enforcement for import create plus all current replay write endpoints, including tenant-scoped persistence for authorized writes and `403` rejection for read-only callers
@@ -220,7 +223,16 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - queued import-job persistence, failed-row replay as a new derived job, whole-file replay from `FAILED` zero-success sources, selective replay request normalization, edited replay request normalization, replay lineage/audit emission including `replayMode=WHOLE_FILE`, `selectedErrorCodes`, plus `editedErrorIds` / `editedRowCount` / `editedFields`, and after-commit import event publication
   - invalid `importType` rejection
 - `ImportJobQueryServiceTest`
-  - import-job page normalization, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `sourceJobId`, `errorCodeCounts`, and item-error hydration
+  - import-job page normalization, import AI interaction-history page forwarding, error-page normalization, filter trimming, `requestedBy` / `hasFailures` list mapping, detail `sourceJobId`, `errorCodeCounts`, and item-error hydration
+- `ImportJobAiInteractionHistoryIntegrationTest`
+  - real `GET /api/v1/import-jobs/{id}/ai-interactions` happy path for a `USER_READ` user with seeded `ai_interaction_record` rows
+  - `403` when `USER_READ` is missing
+  - `404` for cross-tenant or missing import jobs
+  - exact-match `interactionType` and `status` filters plus pagination
+  - stable `createdAt DESC, id DESC` ordering, including same-timestamp tie breaks
+  - widened response shape with correct usage/cost visibility, nullability for failed or unmetered rows, and no leakage of raw prompt or raw provider payload
+  - read-after-write visibility after real import AI error-summary, mapping-suggestion, and fix-recommendation calls
+  - read-only assertions for import job state, import error rows, replay lineage, approvals, business audit rows, and `ai_interaction_record` row counts
 - `ImportJobAiErrorSummaryServiceTest`
   - import prompt-version fallback, prompt sanitization against raw `USER_CSV` values, and `INVALID_RESPONSE` persistence semantics for provider-policy failures
 - `ImportJobAiMappingSuggestionServiceTest`
@@ -286,12 +298,16 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `username`, `status`, and `roleCode` filtering
   - `DISTINCT` deduplication across joined role rows
   - pagination ordering and count stability
+- `JpaImportJobAdapterTest`
+  - import AI interaction-history repository delegation with exact tenant/entity filters
+  - stable `createdAt DESC, id DESC` sort wiring
+  - nullable usage/cost mapping for failed or unmetered import AI rows
 
 ## What Still Needs Manual Verification
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

@@ -35,6 +35,15 @@ public class ImportJobQueryDomainService implements ImportJobQueryUseCase {
     }
 
     @Override
+    public ImportJobAiInteractionPageResult pageJobAiInteractions(Long tenantId,
+                                                                  Long importJobId,
+                                                                  ImportJobAiInteractionPageCriteria criteria) {
+        ImportJobRecord job = importJobQueryPort.findJob(tenantId, importJobId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
+        return importJobQueryPort.pageJobAiInteractions(job.tenantId(), job.id(), normalize(criteria));
+    }
+
+    @Override
     public ImportJobErrorPageResult pageJobErrors(Long tenantId,
                                                   Long importJobId,
                                                   ImportJobErrorPageCriteria criteria) {
@@ -79,6 +88,18 @@ public class ImportJobQueryDomainService implements ImportJobQueryUseCase {
                 normalizePage(criteria.page()),
                 normalizeSize(criteria.size()),
                 normalizeFilter(criteria.errorCode())
+        );
+    }
+
+    private ImportJobAiInteractionPageCriteria normalize(ImportJobAiInteractionPageCriteria criteria) {
+        if (criteria == null) {
+            return new ImportJobAiInteractionPageCriteria(DEFAULT_PAGE, DEFAULT_SIZE, null, null);
+        }
+        return new ImportJobAiInteractionPageCriteria(
+                normalizePage(criteria.page()),
+                normalizeSize(criteria.size()),
+                normalizeFilter(criteria.interactionType()),
+                normalizeFilter(criteria.status())
         );
     }
 

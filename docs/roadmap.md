@@ -22,13 +22,13 @@ The current Week 7 implementation should stay narrow and workflow-oriented:
 
 - keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the existing public ticket AI surface read-only, and keep the generation slices suggestion-only, tenant-scoped, RBAC-scoped, and failure-tolerant
-- keep the new Week 7 import AI read surface narrow: `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
+- keep the new Week 7 import AI read surface narrow: `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
 - keep Week 7 focused on import/data-quality AI guidance rather than widening into write-back, billing, ledger semantics, or generic chat tooling
 
 ## Recommended Next Steps
 
-- keep the new import AI error-summary plus mapping-suggestion plus fix-recommendation slices stable as the Week 7 baseline
-- after Slice C, decide whether Week 7 should add narrow public import AI history next or start Week 8 planning, without widening into replay execution or source-file mutation in the same step
+- keep the new import AI interaction-history plus error-summary plus mapping-suggestion plus fix-recommendation slices stable as the Week 7 baseline
+- stabilize the full import AI read baseline before moving to Week 8 planning, without widening into replay execution or source-file mutation in the same step
 - keep the completed Week 6 ticket interaction-history, ticket summary, ticket triage, and ticket reply-draft contracts stable rather than widening them into write-back, billing, or ledger semantics
 
 ## Near-Term Sequence

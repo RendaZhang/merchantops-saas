@@ -22,7 +22,7 @@ Definition:
 - the configuration is managed by the operator of that deployment, not by ordinary tenant users
 - the current provider-driven AI generation surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
 - the ticket AI interaction history endpoint `GET /api/v1/tickets/{id}/ai-interactions` reuses stored records and does not trigger a provider call
-- the current import AI slice has no public import interaction-history endpoint; it reuses the same provider/runtime configuration and only persists `ai_interaction_record`
+- the import AI interaction history endpoint `GET /api/v1/import-jobs/{id}/ai-interactions` also reuses stored records and does not trigger a provider call
 
 This means the current public AI slices do not support tenant-specific model keys or tenant-managed provider setup.
 

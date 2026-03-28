@@ -8,12 +8,13 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ### Added
 
-- Added the first three public Week 7 import AI Copilot slices through `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, tenant-scoped, read-only, suggestion-only endpoints over current import detail plus sanitized failure context.
+- Added the first four public Week 7 import AI Copilot slices through `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, tenant-scoped, read-only history plus suggestion-only generation endpoints over current import detail and sanitized failure context.
 
 ### Changed
 
 - The Week 6 ticket AI runtime now supports provider-normalized configuration under `merchantops.ai.*`, local `.env` auto-loading for `spring-boot:run`, OpenAI Responses plus DeepSeek Chat Completions structured-output paths, and documented provider-resolution fallback from provider-neutral keys to compatibility aliases and provider defaults.
 - AI runtime execution is now shared across ticket and import AI slices, persists import AI `ai_interaction_record` rows for `IMPORT_JOB` / `ERROR_SUMMARY`, `IMPORT_JOB` / `MAPPING_SUGGESTION`, and `IMPORT_JOB` / `FIX_RECOMMENDATION`, keeps raw import `itemErrors.rawPayload` values out of provider prompts through the new sanitized-context path, and rejects fix-recommendation responses that echo sensitive raw row values.
+- Import AI now exposes a narrowed interaction-history read surface with exact-match `interactionType` and `status` filters, stable `createdAt DESC, id DESC` ordering, and operator-visible runtime usage/cost metadata when present.
 - Protected JWT requests now revalidate current tenant status as well as user status, roles, and permissions, so tokens from newly inactive tenants are rejected immediately.
 - Import execution hardening now acknowledges fresh duplicate `PROCESSING` deliveries, relies on scheduled stale-processing recovery instead of immediate requeue, and persists handled-row progress plus saved row errors before terminal runtime failure.
 

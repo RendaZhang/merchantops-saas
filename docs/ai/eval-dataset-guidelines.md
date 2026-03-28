@@ -1,27 +1,34 @@
 # Eval Dataset Guidelines
 
-Last updated: 2026-03-21
+Last updated: 2026-03-28
 
 ## Goal
 
 AI workflow quality should not depend on intuition alone. This project should maintain small, practical evaluation datasets that make prompt or model changes easier to review.
 
-This document defines a lightweight eval dataset approach appropriate for the current ticket-summary, ticket-triage, and ticket-reply-draft slices plus future Week 6+ AI workflow features.
+This document defines a lightweight eval dataset approach appropriate for the current ticket and import AI generation slices plus future workflow candidates.
 
 ## Current Boundary
 
 As of today:
 
-- three public AI endpoints exist: `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
-- the repository now includes golden-sample fixtures at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, and `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
+- the public AI surface now includes two history read endpoints plus six generation endpoints across ticket and import workflows
+- the repository now includes golden-sample fixtures at:
+  - `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`
+  - `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`
+  - `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
+  - `merchantops-api/src/test/resources/ai/import-job-error-summary/golden-samples.json`
+  - `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/golden-samples.json`
+  - `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/golden-samples.json`
 - the current public eval baseline is still small and intentionally reviewable by humans
+- the history endpoints depend on stored interaction records and query behavior; prompt-quality eval sets are primarily needed for the generation paths
 
 ## Dataset Principles
 
 - keep datasets small enough to review manually
 - prefer realistic workflow samples over synthetic trivia
 - include both good-path and failure-path cases
-- tie each dataset to a specific workflow, not “AI in general”
+- tie each dataset to a specific workflow, not `AI in general`
 
 ## Recommended Dataset Types
 
@@ -35,6 +42,8 @@ Examples:
 - common ticket triage cases
 - common internal ticket reply-draft cases
 - common import error summary cases
+- common import mapping suggestion cases
+- common import fix recommendation cases
 
 Purpose:
 
@@ -88,7 +97,7 @@ The expected result does not always need to be one exact answer. For workflow AI
 - what must not happen
 - what quality bar is acceptable
 
-## Current Ticket Summary Expectations
+## Current Workflow Expectations Example
 
 For a ticket summary sample:
 
@@ -118,6 +127,9 @@ Current live storage:
 - ticket summary golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-summary/`
 - ticket triage golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-triage/`
 - ticket reply-draft golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-reply-draft/`
+- import error-summary golden samples are stored under `merchantops-api/src/test/resources/ai/import-job-error-summary/`
+- import mapping-suggestion golden samples are stored under `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/`
+- import fix-recommendation golden samples are stored under `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/`
 
 If broader AI automation appears later, these can expand into a structure like:
 
@@ -127,6 +139,9 @@ docs/ai/evals/
     golden.md
     failures.md
   import-error-summary/
+    golden.md
+    failures.md
+  import-mapping-suggestion/
     golden.md
     failures.md
 ```

@@ -1,22 +1,23 @@
 # AI Docs
 
-This section collects AI-specific design and operating documents that sit between roadmap intent and implementation-facing reference docs.
+This section collects AI-specific design, prompt, and evaluation documents that sit between roadmap intent and implementation-facing reference docs.
 
 ## Pages
 
-- [prompt-versioning.md](prompt-versioning.md): how the project versions the current ticket-summary, ticket-triage, and ticket-reply-draft prompts plus future workflow variants
-- [eval-dataset-guidelines.md](eval-dataset-guidelines.md): how to build and maintain lightweight evaluation datasets for current and future AI workflow features
-- [workflow-candidates.md](workflow-candidates.md): prioritized AI workflow candidates for ticket, import, and low-risk agent use cases
+- [prompt-versioning.md](prompt-versioning.md): how the project versions the current ticket and import AI generation prompts plus future workflow variants
+- [eval-dataset-guidelines.md](eval-dataset-guidelines.md): how to build and maintain lightweight evaluation datasets for current public AI workflows and future candidates
+- [workflow-candidates.md](workflow-candidates.md): which workflow-first AI candidates are already public and which remain future planning inputs
 
 ## Scope
 
-These documents now support the live Week 6 ticket summary, ticket triage, and ticket reply-draft slices plus the future AI roadmap.
+These documents now support the live ticket and import AI surfaces plus the future AI roadmap.
 
 Current reality:
 
-- `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` are public in Swagger
-- the current public AI workflows are still suggestion-only and read-only
-- prompt versioning and eval guidance already apply to the live ticket summary, ticket triage, and ticket reply-draft paths, not just future design work
+- the ticket AI public surface now includes `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
+- the import AI public surface now includes `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
+- the current public AI workflows are still read-only or suggestion-only; no public AI endpoint mutates ticket or import business state directly
+- prompt versioning and eval guidance already apply to the live ticket and import AI paths, not just future design work
 
 ## Related Documents
 
