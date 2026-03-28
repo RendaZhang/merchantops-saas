@@ -6,7 +6,7 @@ Last updated: 2026-03-28
 
 ## Overview
 
-MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilot for Import and Data Quality active. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, read-only ticket AI summary, triage, internal reply-draft, interaction-history endpoints, and four read-only import AI endpoints: interaction history, error summary, narrow mapping suggestion, and narrow fix recommendation.
+MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilot for Import and Data Quality now completion-ready as the next release-cut target. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, read-only ticket AI summary, triage, internal reply-draft, interaction-history endpoints, and four read-only import AI endpoints: interaction history, error summary, narrow mapping suggestion, and narrow fix recommendation.
 
 ## Current Phase Summary
 
@@ -18,12 +18,13 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 - Week 7 Slice B is now live as `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` under tenant scope and `USER_READ`, reusing the same import AI runtime, sanitized-context rule, and degraded-mode model while staying read-only and suggestion-only.
 - Week 7 Slice C is now live as `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` under tenant scope and `USER_READ`, reusing the same import AI runtime while staying read-only, suggestion-only, grounded in local row-level `errorCode` groups, and protected by local sensitive-output rejection.
 - Week 7 Slice D is now live as `GET /api/v1/import-jobs/{id}/ai-interactions` under tenant scope and `USER_READ`, reusing existing `ai_interaction_record` storage for narrowed, read-only, operator-visible import AI history with exact-match filters and stable ordering `createdAt DESC, id DESC`.
-- The current active phase remains Week 7 AI Copilot For Import And Data Quality, with the next near-term focus now narrowed to stabilizing the full import AI read baseline rather than deciding whether to add public import AI history.
+- Week 7 is now completion-ready as a full import AI read baseline; the next near-term move is the Week 7 release cut rather than another new import AI slice, and Week 8 becomes the next active phase only after that tag cut lands.
 - Exact endpoint contracts live in [reference/README.md](reference/README.md); this page keeps the phase-level truth and current limits.
 
 ## Release Baseline
 
 - Current tagged milestone: `v0.3.0-beta` on 2026-03-22, recorded as `Week 6 complete: AI Copilot for Ticket Operations beta baseline`.
+- Prepared next tag: `v0.4.0-beta`, intended for `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`.
 - Previous tagged milestone: `v0.2.0-alpha` on 2026-03-19, recorded as `Week 5 complete: async import and data operations preview`.
 - Earlier milestones: `v0.1.3` on 2026-03-12 (`Week 4 complete: audit and approval baseline`), `v0.1.2` on 2026-03-11 (`Week 3 complete: ticket workflow baseline`), `v0.1.1` on 2026-03-11 (`Week 2 complete: tenant user management loop`), and `v0.1.0` on 2026-03-09 (`Week 1 complete: foundation phase`).
 - The current tagged baseline now includes the full Week 6 public ticket AI surface and its latest runtime/documentation hardening.
@@ -60,7 +61,7 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 - The interaction-history surfaces return both successful and controlled-failure records with exact-match `interactionType` and `status` filters plus stable `createdAt DESC, id DESC` ordering.
 - The interaction-history surfaces now expose ticket-scoped and import-scoped runtime usage/cost metadata when present, return those fields as `null` when unavailable, and still do not expose raw prompt text or raw provider payload.
 - The current provider ownership model is instance-level configuration rather than tenant BYOK.
-- The completed Week 6 ticket AI baseline and the Week 7 import AI read baseline should now stay stable while automatic write-back remains out of scope.
+- The completed Week 6 ticket AI baseline and the completion-ready Week 7 import AI read baseline should now stay stable while automatic write-back remains out of scope.
 
 ## Current Limitations
 
@@ -71,7 +72,7 @@ MerchantOps SaaS now sits on a completed Week 1-6 baseline with Week 7 AI Copilo
 - `UserCommandService#updatePassword` remains a placeholder business error, not a completed write flow.
 - There is no refresh-token flow, logout flow, or token revocation flow yet.
 - Public AI now includes ticket interaction history, ticket summary/triage/internal reply draft, and import AI interaction history plus error summary plus mapping suggestion plus fix recommendation; agentic write paths are still pending.
-- The interaction-history endpoint exposes ticket-scoped runtime usage/cost metadata only; it is not a tenant billing, ledger, or invoice surface.
+- The interaction-history endpoints expose ticket-scoped and import-scoped runtime usage/cost metadata only; they are not tenant billing, ledger, or invoice surfaces.
 - AI runtime still uses instance-level provider configuration only; there is no tenant BYOK, streaming, tool calling, model routing, or automatic write-back loop.
 - Ticket enrichments such as priority, SLA, attachments, and notifications remain post-Week-3 follow-up work.
 - Deployment-ready manifests, production secret-management guidance, and performance artifacts are still pending.

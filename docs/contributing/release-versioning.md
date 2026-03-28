@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-03-22
+Last updated: 2026-03-28
 
 ## Purpose
 
@@ -13,6 +13,13 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 - tag message: `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
 
 This tag records the completed Week 6 AI Copilot for Ticket Operations baseline and marks the first broader AI-enhanced beta line beyond the earlier workflow-only preview tags.
+
+## Prepared Next Tag
+
+- prepared next tag: `v0.4.0-beta`
+- intended tag meaning: `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`
+
+This next tag is prepared for the completed Week 7 import AI read baseline, but it is not current Git reality yet. Keep Week 7 release notes in `Unreleased` until the release-cut commit is ready.
 
 ## Previous Tagged Milestone
 
@@ -91,6 +98,7 @@ Recommended direction:
 - `v0.1.3`: Week 4 audit and approval baseline complete milestone
 - `v0.2.0-alpha`: Week 5 async import and data operations preview line
 - `v0.3.0-beta`: Week 6 AI Copilot for Ticket Operations beta baseline
+- prepared next `v0.4.0-beta`: Week 7 AI Copilot for Import and Data Quality beta baseline
 - later `v0.x` releases: governance, usage tracking, hardening, and packaging milestones
 
 ## Practical Rules

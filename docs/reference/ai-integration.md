@@ -638,9 +638,10 @@ Not implemented yet:
 
 ## Planned Next Workflow Areas
 
-The current public AI baseline should stay stable while the next new workflow slices move forward:
+The current public AI baseline should stay stable while release-cut and next-phase work move forward:
 
-- next stabilize the full Week 7 import AI read baseline, including the new public import history path, before moving to Week 8 planning
+- keep the completed Week 7 import AI read baseline stable through the next release cut instead of widening it with another Week 7 endpoint
+- shift the next new workflow expansion to Week 8 agentic flows with human oversight after the Week 7 release cut lands
 - future approval-aware write-back only after the suggestion-only slices are stable
 
 Later roadmap areas remain:
