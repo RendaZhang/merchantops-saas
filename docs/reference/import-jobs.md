@@ -1,10 +1,10 @@
 # Import Jobs
 
-Last updated: 2026-03-27
+Last updated: 2026-03-28
 
 ## Public API Surface
 
-Week 7 now exposes ten import endpoints:
+Week 7 now exposes eleven import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -18,6 +18,7 @@ Week 7 now exposes ten import endpoints:
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
 | `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only AI summary from current import detail, `errorCodeCounts`, and the first sanitized failed-row window |
 | `POST` | `/api/v1/import-jobs/{id}/ai-mapping-suggestion` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only canonical-field mapping proposal from sanitized header/global signal plus bounded structural failure context |
+| `POST` | `/api/v1/import-jobs/{id}/ai-fix-recommendation` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only fix recommendation from locally grounded row-level `errorCode` groups without returning replacement values |
 
 ## Current Week 5 Contract (`USER_CSV` + Reporting + Replay Surface)
 
@@ -194,6 +195,71 @@ Current failure behavior:
 
 - `400` when the job has no failure signal
 - `400` when the job has no sanitized header signal
+- `403` when `USER_READ` is missing
+- `404` for cross-tenant or missing import jobs
+- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled, not configured, unavailable, times out, or returns an invalid structured payload
+
+## Read-Only Import AI Fix Recommendation (`POST /api/v1/import-jobs/{id}/ai-fix-recommendation`)
+
+Current Week 7 Slice C also stays intentionally narrow:
+
+- request body is empty
+- permission is `USER_READ`
+- tenant scope and not-found behavior match the existing import read path
+- the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, source files, replay state, approvals, or business audit rows
+- the endpoint does not add a public import AI history surface in this slice
+- the endpoint currently supports `USER_CSV` jobs only
+
+Current eligibility rules are explicit:
+
+- the source job must already have failure signal, such as `failureCount > 0`, `errorCodeCounts`, or existing `itemErrors`
+- the source job must be `USER_CSV`
+- the source job must expose at least one row-level sanitized error group from existing `rowNumber != null` item errors
+- jobs that only have header/global parse signal with no row-level sanitized group return `400`
+- clean jobs with no failure signal return `400`
+
+Current prompt context is assembled from:
+
+- current `GET /api/v1/import-jobs/{id}`-equivalent detail fields
+- current `errorCodeCounts`
+- the first 20 row-level failures from the existing error-page query ordering
+- local grounded row-level failure groups keyed by `errorCode`, each with `affectedRowsEstimate`, a bounded sample-row window, bounded sample error messages, and the same structural-only row summary used by the other import AI slices
+
+Current prompt-safety and output-safety rules are hard-coded:
+
+- raw `itemErrors.rawPayload` is never sent to the provider
+- each failed row still contributes only `rowNumber`, `errorCode`, `errorMessage`, and structural-only summary fields such as `columnCount`, `usernamePresent`, `displayNamePresent`, `emailPresent`, `passwordPresent`, `roleCodesPresent`, and `roleCodeCount`
+- the model never receives raw username, display name, email, password, or role-code text
+- the model must return recommendations keyed by grounded local `errorCode` values only; ungrounded or duplicate codes are rejected as `INVALID_RESPONSE`
+- the model does not return direct replacement values; any value edit still belongs to manual replay prep outside the AI response
+- provider output is rejected if it echoes raw CSV-like strings or sensitive local row values such as username, display name, email, password, or role-code text
+
+Current response shape is:
+
+- `importJobId`
+- `summary`
+- `recommendedFixes`
+- `confidenceNotes`
+- `recommendedOperatorChecks`
+- `promptVersion`
+- `modelId`
+- `generatedAt`
+- `latencyMs`
+- `requestId`
+
+Each `recommendedFixes[]` record includes:
+
+- `errorCode`
+- `recommendedAction`
+- `reasoning`
+- `reviewRequired`
+- `affectedRowsEstimate`
+
+Current failure behavior:
+
+- `400` when the job has no failure signal
+- `400` when the job is not `USER_CSV`
+- `400` when the job has no sanitized row-level signal
 - `403` when `USER_READ` is missing
 - `404` for cross-tenant or missing import jobs
 - controlled `503 SERVICE_UNAVAILABLE` when AI is disabled, not configured, unavailable, times out, or returns an invalid structured payload
@@ -523,6 +589,54 @@ Example import AI mapping-suggestion response:
 }
 ```
 
+Example import AI fix-recommendation request:
+
+```http
+POST /api/v1/import-jobs/1201/ai-fix-recommendation
+Authorization: Bearer <admin-token>
+```
+
+Example import AI fix-recommendation response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "importJobId": 1201,
+    "summary": "The import is mostly blocked by tenant role validation, with a smaller duplicate-username tail that should be handled as a separate cleanup step before replay.",
+    "recommendedFixes": [
+      {
+        "errorCode": "UNKNOWN_ROLE",
+        "recommendedAction": "Verify that the referenced role codes exist in the current tenant and normalize the source role-code format before preparing replay input.",
+        "reasoning": "The grouped failures point to tenant role validation rather than CSV shape corruption.",
+        "reviewRequired": true,
+        "affectedRowsEstimate": 7
+      },
+      {
+        "errorCode": "DUPLICATE_USERNAME",
+        "recommendedAction": "Review the source usernames against current-tenant users and prepare unique replacements outside the AI response before replay.",
+        "reasoning": "The grouped failures indicate a uniqueness conflict that needs an operator-reviewed edit.",
+        "reviewRequired": true,
+        "affectedRowsEstimate": 2
+      }
+    ],
+    "confidenceNotes": [
+      "The recommendations are grounded in row-level error groups, so operators should still confirm tenant-specific business rules before reuse."
+    ],
+    "recommendedOperatorChecks": [
+      "Confirm which error-code group is the highest-volume cleanup target before editing replay input.",
+      "Review the affected rows in /errors so value changes can be prepared outside the AI response."
+    ],
+    "promptVersion": "import-fix-recommendation-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-28T11:20:15",
+    "latencyMs": 548,
+    "requestId": "import-ai-fix-recommendation-req-1"
+  }
+}
+```
+
 Example selective replay request:
 
 ```http
@@ -673,7 +787,7 @@ Current semantics:
 ## Notes
 
 - this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay, exact error-code selective replay, and edited failed-row replay are implemented.
-- the current AI guidance slices are intentionally narrower still: only read-only import error summary plus mapping suggestion are public; fix recommendation and import AI history remain out of scope.
+- the current AI guidance slices are intentionally narrower still: only read-only import error summary, mapping suggestion, and fix recommendation are public; import AI history and any write-back flow remain out of scope.
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.
@@ -682,7 +796,7 @@ Current semantics:
 - list paging now supports `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`; default size is `10` and max size is `100`.
 - error paging now supports `page`, `size`, and `errorCode`; default size is `10` and max size is `100`.
 - list items expose `requestedBy` and derived `hasFailures`; detail exposes `sourceJobId`, `errorCodeCounts`, and backward-compatible `itemErrors`; `/errors` pages the same failure rows for larger jobs.
-- `itemErrors.rawPayload` remains visible on the import detail and `/errors` read surfaces for replay/reporting, but `POST /api/v1/import-jobs/{id}/ai-error-summary` and `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` do not forward those raw values to the provider.
+- `itemErrors.rawPayload` remains visible on the import detail and `/errors` read surfaces for replay/reporting, but `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` do not forward those raw values to the provider.
 - current list ordering remains `createdAt DESC, id DESC`.
 - current failure-item ordering remains stable: null `rowNumber` first, then `rowNumber ASC, id ASC`.
 - see [configuration.md](configuration.md) for the current import chunking, stale-processing, and queue-recovery controls.

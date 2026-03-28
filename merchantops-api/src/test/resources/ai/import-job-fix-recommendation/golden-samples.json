@@ -1,0 +1,75 @@
+[
+  {
+    "importJobId": 9401,
+    "tenantId": 1,
+    "job": {
+      "importType": "USER_CSV",
+      "sourceType": "CSV",
+      "sourceFilename": "week7-row-fixes.csv",
+      "storageKey": "1/week7-row-fixes.csv",
+      "sourceJobId": null,
+      "status": "FAILED",
+      "requestedBy": 101,
+      "requestId": "req-import-golden-9401",
+      "totalCount": 9,
+      "successCount": 0,
+      "failureCount": 9,
+      "errorSummary": "role validation and duplicate usernames blocked the import",
+      "createdAt": "2026-03-28T09:00:00",
+      "startedAt": "2026-03-28T09:00:02",
+      "finishedAt": "2026-03-28T09:00:05"
+    },
+    "errorCodeCounts": [
+      {
+        "errorCode": "UNKNOWN_ROLE",
+        "count": 7
+      },
+      {
+        "errorCode": "DUPLICATE_USERNAME",
+        "count": 2
+      }
+    ],
+    "errors": [
+      {
+        "id": 94011,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "retry-user,Retry User,retry-user@example.com,secret-pass-1,READ_ONLY",
+        "createdAt": "2026-03-28T09:00:03"
+      },
+      {
+        "id": 94012,
+        "rowNumber": 3,
+        "errorCode": "DUPLICATE_USERNAME",
+        "errorMessage": "username already exists in current tenant",
+        "rawPayload": "existing-user,Existing User,existing@example.com,password-2,READ_ONLY",
+        "createdAt": "2026-03-28T09:00:04"
+      }
+    ],
+    "expectedSummary": "The job is mostly blocked by tenant role validation, with a smaller duplicate-username tail that should be handled as a separate cleanup step before replay.",
+    "expectedRecommendedFixes": [
+      {
+        "errorCode": "UNKNOWN_ROLE",
+        "recommendedAction": "Verify that the referenced role codes exist in the current tenant and normalize the source role-code format before preparing replay input.",
+        "reasoning": "The grouped failures point to tenant role validation rather than CSV shape corruption.",
+        "reviewRequired": true,
+        "affectedRowsEstimate": 7
+      },
+      {
+        "errorCode": "DUPLICATE_USERNAME",
+        "recommendedAction": "Review the source usernames against current-tenant users and prepare unique replacements outside the AI response before replay.",
+        "reasoning": "The grouped failures indicate a uniqueness conflict that needs an operator-reviewed edit.",
+        "reviewRequired": true,
+        "affectedRowsEstimate": 2
+      }
+    ],
+    "expectedConfidenceNotes": [
+      "The recommendations are grounded in row-level error groups, so operators should still confirm tenant-specific business rules before reuse."
+    ],
+    "expectedRecommendedOperatorChecks": [
+      "Confirm which error-code group is the highest-volume cleanup target before editing replay input.",
+      "Review the affected rows in /errors so value changes can be prepared outside the AI response."
+    ]
+  }
+]

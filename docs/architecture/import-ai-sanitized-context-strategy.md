@@ -1,6 +1,6 @@
 # Import AI Sanitized Context Strategy
 
-Last updated: 2026-03-27
+Last updated: 2026-03-28
 
 ## Purpose
 
@@ -14,6 +14,7 @@ For the current Week 7 import AI slices:
 - `import_job_item_error.raw_payload` should never be forwarded to an AI provider as-is
 - the first import AI slice should use structural-only failed-row summaries plus import-job detail and `errorCodeCounts`
 - later import AI slices such as mapping suggestion or fix recommendation should keep the same sanitized-context rule unless an explicit narrower exception is designed
+- fix recommendation should additionally stay grounded in local row-level `errorCode` groups and reject provider output that echoes sensitive row values back into the response
 
 ## Why
 
@@ -26,9 +27,11 @@ For the current Week 7 import AI slices:
 
 - import AI prompt builders should start from current-tenant import-job detail, `errorCodeCounts`, and a bounded window of failed rows from the existing error-page ordering
 - each failed row should contribute structural metadata only, such as `rowNumber`, `errorCode`, `errorMessage`, `columnCount`, presence flags, and bounded count-style summaries
+- fix recommendation should derive grouped local facts such as `errorCode`, `affectedRowsEstimate`, sampled row numbers, and sampled error messages inside the service before building the prompt
 - raw username, display name, email, password, and role-code text should stay out of the provider prompt in the current Week 7 path
 - if local CSV parsing of a failed row is not possible, the fallback should be even narrower structural metadata rather than forwarding raw row text
 - import AI output, AI interaction records, and related audit should keep runtime metadata and narrow summaries only; they should not persist sanitized-context expansions as a backdoor raw-data log
+- import AI output validation should reject CSV-like strings, direct replacement values, and echoed username, display name, email, password, or role-code text rather than silently returning them to the caller
 - when new import types are added later, prompt-time field exposure should default to deny and be opened by an explicit per-import-type allowlist rather than by generic pass-through
 
 ## Deferred On Purpose
@@ -47,5 +50,6 @@ Those can be designed later if import AI becomes a broader governed product surf
 If import AI expands beyond the first error-summary slice:
 
 - mapping-suggestion and fix-recommendation flows should continue using the same sanitized-context baseline
+- fix recommendation should stay suggestion-only by describing operator actions per grounded failure group instead of returning raw replacement values
 - repeated prompt-sanitization logic should move into a reusable import AI context builder instead of being reimplemented per endpoint
 - if multiple import types need materially different exposure rules, promote the allowlist policy into a more explicit architecture rule or ADR

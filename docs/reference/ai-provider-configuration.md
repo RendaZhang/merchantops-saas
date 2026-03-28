@@ -1,6 +1,6 @@
 # AI Provider Configuration
 
-Last updated: 2026-03-27
+Last updated: 2026-03-28
 
 ## Purpose
 
@@ -20,7 +20,7 @@ Definition:
 
 - one MerchantOps deployment owns one provider configuration for its public AI features
 - the configuration is managed by the operator of that deployment, not by ordinary tenant users
-- the current provider-driven AI generation surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, and `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`
+- the current provider-driven AI generation surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
 - the ticket AI interaction history endpoint `GET /api/v1/tickets/{id}/ai-interactions` reuses stored records and does not trigger a provider call
 - the current import AI slice has no public import interaction-history endpoint; it reuses the same provider/runtime configuration and only persists `ai_interaction_record`
 
@@ -36,6 +36,7 @@ Current Spring configuration keys:
 - `merchantops.ai.reply-draft-prompt-version`
 - `merchantops.ai.import-error-summary-prompt-version`
 - `merchantops.ai.import-mapping-suggestion-prompt-version`
+- `merchantops.ai.import-fix-recommendation-prompt-version`
 - `merchantops.ai.provider`
 - `merchantops.ai.base-url`
 - `merchantops.ai.api-key`
@@ -52,6 +53,7 @@ Current environment-variable overrides:
 - `MERCHANTOPS_AI_REPLY_DRAFT_PROMPT_VERSION`
 - `MERCHANTOPS_AI_IMPORT_ERROR_SUMMARY_PROMPT_VERSION`
 - `MERCHANTOPS_AI_IMPORT_MAPPING_SUGGESTION_PROMPT_VERSION`
+- `MERCHANTOPS_AI_IMPORT_FIX_RECOMMENDATION_PROMPT_VERSION`
 - `MERCHANTOPS_AI_PROVIDER`
 - `MERCHANTOPS_AI_BASE_URL`
 - `MERCHANTOPS_AI_API_KEY`
@@ -71,6 +73,7 @@ Current defaults in `application.yml` keep AI optional:
 - `reply-draft-prompt-version=ticket-reply-draft-v1`
 - `import-error-summary-prompt-version=import-error-summary-v1`
 - `import-mapping-suggestion-prompt-version=import-mapping-suggestion-v1`
+- `import-fix-recommendation-prompt-version=import-fix-recommendation-v1`
 - `provider=OPENAI`
 - `timeout-ms=5000`
 - provider-neutral `base-url`, `api-key`, and `model-id` blank until the deployment operator supplies them
@@ -99,7 +102,7 @@ Current compatibility rules are:
 
 ## Minimum Current Setup
 
-To enable the public ticket summary, ticket triage, ticket reply-draft, and import AI error-summary plus mapping-suggestion slices, the deployment must provide all of:
+To enable the public ticket summary, ticket triage, ticket reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation slices, the deployment must provide all of:
 
 - `merchantops.ai.enabled=true`
 - `merchantops.ai.provider=OPENAI` or `merchantops.ai.provider=DEEPSEEK`
@@ -190,7 +193,7 @@ If that model is introduced later, it should add all of the following before bec
 - tenant-level usage and failure visibility
 - explicit quota and support boundaries
 
-The current ticket summary, ticket triage, ticket reply-draft, and import error-summary plus mapping-suggestion slices do not implement any of those pieces yet.
+The current ticket summary, ticket triage, ticket reply-draft, and import error-summary plus mapping-suggestion plus fix-recommendation slices do not implement any of those pieces yet.
 
 ## Related Documents
 

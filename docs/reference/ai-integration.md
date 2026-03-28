@@ -1,6 +1,6 @@
 # AI Integration
 
-Last updated: 2026-03-27
+Last updated: 2026-03-28
 
 ## Purpose
 
@@ -25,10 +25,11 @@ The current public AI contracts are now live:
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | `TICKET_READ` | Generate a suggestion-only internal ticket comment draft for one current-tenant ticket |
 | `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | `USER_READ` | Generate a suggestion-only error summary for one current-tenant import job |
 | `POST` | `/api/v1/import-jobs/{id}/ai-mapping-suggestion` | `USER_READ` | Generate a suggestion-only canonical-field mapping proposal for one current-tenant import job |
+| `POST` | `/api/v1/import-jobs/{id}/ai-fix-recommendation` | `USER_READ` | Generate a suggestion-only fix recommendation for one current-tenant import job from grounded row-level error groups |
 
 Current public AI scope is intentionally narrow:
 
-- six public AI endpoints only: one ticket history read endpoint plus five suggestion-generating endpoints
+- seven public AI endpoints only: one ticket history read endpoint plus six suggestion-generating endpoints
 - the generation endpoints use no request body; the server derives the prompt from current tenant-scoped ticket or import-job context
 - the history endpoint supports `page`, `size`, `interactionType`, and `status` query params over stored `ai_interaction_record` rows
 - no ticket status change, comment write, approval trigger, replay trigger, or other workflow mutation
@@ -263,6 +264,68 @@ Example:
 }
 ```
 
+`POST /api/v1/import-jobs/{id}/ai-fix-recommendation` returns a minimal suggestion shape:
+
+- `importJobId`
+- `summary`
+- `recommendedFixes`
+- `confidenceNotes`
+- `recommendedOperatorChecks`
+- `promptVersion`
+- `modelId`
+- `generatedAt`
+- `latencyMs`
+- `requestId`
+
+Each `recommendedFixes[]` record includes:
+
+- `errorCode`
+- `recommendedAction`
+- `reasoning`
+- `reviewRequired`
+- `affectedRowsEstimate`
+
+Example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "importJobId": 1201,
+    "summary": "The import is mostly blocked by tenant role validation, with a smaller duplicate-username tail that should be handled as a separate cleanup step before replay.",
+    "recommendedFixes": [
+      {
+        "errorCode": "UNKNOWN_ROLE",
+        "recommendedAction": "Verify that the referenced role codes exist in the current tenant and normalize the source role-code format before preparing replay input.",
+        "reasoning": "The grouped failures point to tenant role validation rather than CSV shape corruption.",
+        "reviewRequired": true,
+        "affectedRowsEstimate": 7
+      },
+      {
+        "errorCode": "DUPLICATE_USERNAME",
+        "recommendedAction": "Review the source usernames against current-tenant users and prepare unique replacements outside the AI response before replay.",
+        "reasoning": "The grouped failures indicate a uniqueness conflict that needs an operator-reviewed edit.",
+        "reviewRequired": true,
+        "affectedRowsEstimate": 2
+      }
+    ],
+    "confidenceNotes": [
+      "The recommendations are grounded in row-level error groups, so operators should still confirm tenant-specific business rules before reuse."
+    ],
+    "recommendedOperatorChecks": [
+      "Confirm which error-code group is the highest-volume cleanup target before editing replay input.",
+      "Review the affected rows in /errors so value changes can be prepared outside the AI response."
+    ],
+    "promptVersion": "import-fix-recommendation-v1",
+    "modelId": "gpt-4.1-mini",
+    "generatedAt": "2026-03-28T11:20:15",
+    "latencyMs": 548,
+    "requestId": "import-ai-fix-recommendation-req-1"
+  }
+}
+```
+
 `GET /api/v1/tickets/{id}/ai-interactions` returns a narrowed page shape over stored ticket AI history:
 
 - `items[]`
@@ -349,7 +412,7 @@ Current ticket prompt shaping stays intentionally narrow:
 - `description` is truncated before prompt assembly
 - each comment and workflow-log detail is truncated before prompt assembly
 
-The current import error-summary and mapping-suggestion prompts are built only from the target import job in the current tenant:
+The current import error-summary, mapping-suggestion, and fix-recommendation prompts are built only from the target import job in the current tenant:
 
 - import job core fields and counters from `ImportJobDetail`
 - aggregated `errorCodeCounts`
@@ -361,8 +424,10 @@ Current import prompt shaping stays intentionally narrow:
 
 - the server sanitizes raw failed-row CSV locally before prompt assembly and never forwards raw `itemErrors.rawPayload`
 - the mapping-suggestion slice forwards only normalized header names, header positions, header-column count, and bounded structural row summaries; it does not rescan the source file or infer from raw row values
+- the fix-recommendation slice forwards only grounded row-level `errorCode` groups, bounded sample error messages, bounded sample rows, and structural row summaries; it does not send raw row values or direct replacement values
 - the prompt includes `rowNumber`, `errorCode`, and `errorMessage`, but not raw username, displayName, email, password, or role-code text
 - if raw payload parsing fails, the prompt keeps only structural fallback metadata rather than sending the original row text
+- fix recommendation performs an extra local output-policy check after provider return and rejects responses that echo raw CSV-like strings or sensitive local row values as `INVALID_RESPONSE`
 
 The current implementation intentionally does not pull in:
 
@@ -383,6 +448,7 @@ The current runtime keeps AI plumbing narrow rather than introducing a general c
 - a ticket-reply-draft-specific prompt builder and output validator
 - an import-error-summary-specific prompt builder and output validator
 - an import-mapping-suggestion-specific prompt builder and output validator
+- an import-fix-recommendation-specific prompt builder and output validator
 - a shared AI interaction execution support layer for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import workflows
 - a shared provider-normalized structured-output client
 - instance-level provider configuration under `merchantops.ai.*`
@@ -401,6 +467,7 @@ Endpoint-specific output policy remains strict across both providers:
 - reply draft requires `opening`, `body`, `nextStep`, and `closing`
 - import error summary requires `summary`, `topErrorPatterns`, and `recommendedNextSteps`
 - import mapping suggestion requires `summary`, `suggestedFieldMappings`, `confidenceNotes`, and `recommendedOperatorChecks`
+- import fix recommendation requires `summary`, `recommendedFixes`, `confidenceNotes`, and `recommendedOperatorChecks`
 - request tests lock `Authorization`, `X-Client-Request-Id`, model id, system or user roles, and provider-specific structured-output wiring for both protocol paths
 - OpenAI response parsing scans all `output[].content[]` parts, concatenates later `output_text` fragments in order, and ignores earlier non-text parts when valid text exists
 - DeepSeek response parsing extracts the message content string, then applies the same endpoint-specific JSON validation and failure mapping
@@ -445,16 +512,16 @@ Current status values include:
 - `PROVIDER_UNAVAILABLE`
 - `INVALID_RESPONSE`
 
-This record is still the governance-facing source of truth. The public ticket history endpoint exposes a narrowed read shape over the ticket rows, including runtime usage/cost metadata when available, while still not exposing raw prompt text or raw provider payloads and while remaining outside billing or ledger semantics. The import error-summary and mapping-suggestion slices persist the same record model as `entityType=IMPORT_JOB` with `interactionType=ERROR_SUMMARY` or `MAPPING_SUGGESTION`, but do not add a public import history read surface yet.
+This record is still the governance-facing source of truth. The public ticket history endpoint exposes a narrowed read shape over the ticket rows, including runtime usage/cost metadata when available, while still not exposing raw prompt text or raw provider payloads and while remaining outside billing or ledger semantics. The import error-summary, mapping-suggestion, and fix-recommendation slices persist the same record model as `entityType=IMPORT_JOB` with `interactionType=ERROR_SUMMARY`, `MAPPING_SUGGESTION`, or `FIX_RECOMMENDATION`, but do not add a public import history read surface yet.
 
 ## Evaluation Baseline
 
 The current public AI slices establish a minimal eval and visibility path:
 
-- explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, and `import-mapping-suggestion-v1`
-- golden-sample ticket and import inputs at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`, `merchantops-api/src/test/resources/ai/import-job-error-summary/golden-samples.json`, and `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/golden-samples.json`
+- explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, `import-mapping-suggestion-v1`, and `import-fix-recommendation-v1`
+- golden-sample ticket and import inputs at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`, `merchantops-api/src/test/resources/ai/import-job-error-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/golden-samples.json`, and `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/golden-samples.json`
 - checked-in provider-response fixtures per workflow that drive the real provider parser and service path in automated golden tests
-- focused automated tests for generation-endpoint happy path, permission failure, tenant isolation, symmetric degraded-mode coverage, provider-normalized request-contract assertions, endpoint-specific required-field validation, import prompt sanitization, import no-side-effect assertions, import `400` eligibility checks for no-failure and no-header-signal jobs, and ticket history-endpoint filter/sort/non-leakage coverage
+- focused automated tests for generation-endpoint happy path, permission failure, tenant isolation, symmetric degraded-mode coverage, provider-normalized request-contract assertions, endpoint-specific required-field validation, import prompt sanitization, import no-side-effect assertions, import `400` eligibility checks for no-failure, unsupported-import-type, no-header-signal, and no-row-signal jobs, sensitive-output rejection for fix recommendation, and ticket history-endpoint filter/sort/non-leakage coverage
 - the local provider live smoke path in [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md)
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
 
@@ -463,16 +530,17 @@ The current public AI slices establish a minimal eval and visibility path:
 Current non-happy-path behavior:
 
 - missing `TICKET_READ` remains `403`
-- missing `USER_READ` remains `403` for import AI error summary and mapping suggestion
+- missing `USER_READ` remains `403` for import AI error summary, mapping suggestion, and fix recommendation
 - cross-tenant or missing tickets remain `404`
 - cross-tenant or missing import jobs remain `404`
 - `GET /api/v1/tickets/{id}/ai-interactions` is read-only and does not create new interaction rows or mutate ticket workflow state
 - disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled`
-- disabled import AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `import ai error summary is disabled` or `import ai mapping suggestion is disabled`
+- disabled import AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `import ai error summary is disabled`, `import ai mapping suggestion is disabled`, or `import ai fix recommendation is disabled`
 - missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
 - mapping suggestion returns controlled `400 BAD_REQUEST` when the job has no failure signal or no sanitized header signal
+- fix recommendation returns controlled `400 BAD_REQUEST` when the job has no failure signal, is not `USER_CSV`, or has no sanitized row-level signal
 - import AI prompt context never includes raw `itemErrors.rawPayload` text or raw `USER_CSV` password, email, username, display-name, or role-code values
-- import AI error-summary and mapping-suggestion calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
+- import AI error-summary, mapping-suggestion, and fix-recommendation calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - raw provider exceptions are not exposed to API consumers
 - the rest of the ticket workflow remains usable even when AI is unavailable
 - the rest of the import workflow remains usable even when AI is unavailable
@@ -485,7 +553,6 @@ Not implemented yet:
 - any AI-driven ticket write-back flow
 - approval-integrated AI execution
 - public import AI history
-- import fix recommendation
 - tenant-level BYOK
 - tenant billing, ledger, or invoice-style AI usage/cost reporting
 - attachments or external-system context enrichment
@@ -494,7 +561,7 @@ Not implemented yet:
 
 The current public AI baseline should stay stable while the next new workflow slices move forward:
 
-- Week 7 import fix recommendation
+- next decide whether Week 7 should add public import AI history or move to Week 8 planning once the three import AI suggestion slices are stable
 - future approval-aware write-back only after the suggestion-only slices are stable
 
 Later roadmap areas remain:

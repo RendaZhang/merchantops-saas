@@ -12,7 +12,7 @@ Contributor and agent workflow guidance now lives under [../contributing/README.
 - [authentication-and-rbac.md](authentication-and-rbac.md): login flow, JWT usage, context propagation, RBAC expectations, and the current AI interaction-history, summary, triage, and reply-draft read permission boundary
 - [user-management.md](user-management.md): current `/api/v1/users` behavior, Swagger verification, and the current Week 2 delivery boundary
 - [ticket-workflow.md](ticket-workflow.md): current `/api/v1/tickets` workflow loop, workflow-log behavior, and the public AI interaction-history, summary, triage, and reply-draft read slices
-- [import-jobs.md](import-jobs.md): current `/api/v1/import-jobs` async contract, `USER_CSV` row-execution behavior, import AI error summary plus mapping suggestion, and status/error model
+- [import-jobs.md](import-jobs.md): current `/api/v1/import-jobs` async contract, `USER_CSV` row-execution behavior, import AI error summary plus mapping suggestion plus fix recommendation, and status/error model
 - [audit-approval.md](audit-approval.md): generic audit-event backbone status, minimal audit query API, approval-scope boundary, and how AI interaction records stay separate
 - [ai-integration.md](ai-integration.md): current AI workflow placement, permission boundaries, public ticket and import AI contracts, and audit/eval expectations
 - [ai-provider-configuration.md](ai-provider-configuration.md): current instance-level provider configuration, active config keys, and the deferred tenant-BYOK boundary

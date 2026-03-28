@@ -28,6 +28,8 @@ public class AiProperties {
 
     private String importMappingSuggestionPromptVersion = "import-mapping-suggestion-v1";
 
+    private String importFixRecommendationPromptVersion = "import-fix-recommendation-v1";
+
     private AiProviderType provider = AiProviderType.OPENAI;
 
     private String baseUrl;

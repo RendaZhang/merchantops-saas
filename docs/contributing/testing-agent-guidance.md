@@ -48,22 +48,22 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-6 public workflow surface, including the Week 6 ticket AI path.
+The current automated baseline is centered on the completed Week 2-6 public workflow surface plus the active Week 7 import AI read path.
 
 Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
-- current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, ticket AI summary/triage/reply-draft, and `GET /api/v1/roles`
+- current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, ticket AI summary/triage/reply-draft, import AI error summary/mapping suggestion/fix recommendation, and `GET /api/v1/roles`
 - controller request binding and tenant-context forwarding for the current public workflow surface
 - user, ticket, approval, and import query/command service behavior
 - repository-backed tenant-scoped user page query behavior
 - operator attribution persistence on user writes
 - workflow-log persistence on `ticket_operation_log` and generic `audit_event` emission on covered write flows
 - import queue publication, worker execution, row-level failure isolation, and import migration protection
-- provider-adapter failure handling for the current public ticket AI summary, triage, and reply-draft paths
-- symmetric degraded-mode persistence and no-side-effect assertions across the current public ticket AI summary, triage, and reply-draft endpoints
-- symmetric AI hardening parity across the current public ticket AI summary, triage, and reply-draft endpoints, including provider-not-configured, provider-unavailable, timeout, invalid-response or output-policy-validation failure paths, `ai_interaction_record.status` assertions, and response-shape / golden-sample expectations
+- provider-adapter failure handling for the current public ticket AI summary, triage, and reply-draft paths plus the current public import AI error-summary, mapping-suggestion, and fix-recommendation paths
+- symmetric degraded-mode persistence and no-side-effect assertions across the current public ticket and import AI endpoints
+- symmetric AI hardening parity across the current public ticket and import AI endpoints, including provider-not-configured, provider-unavailable, timeout, invalid-response or output-policy-validation failure paths, `ai_interaction_record.status` assertions, response-shape / golden-sample expectations, import prompt sanitization, and fix-recommendation sensitive-output rejection
 - stale-token rejection after user status, role, or permission changes
 
 It does not replace manual checks for:

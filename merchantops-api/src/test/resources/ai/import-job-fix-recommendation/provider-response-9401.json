@@ -1,0 +1,26 @@
+{
+  "id": "resp_import_fix_recommendation_9401",
+  "object": "response",
+  "created_at": 1774680000,
+  "status": "completed",
+  "model": "gpt-4.1-mini",
+  "output": [
+    {
+      "id": "msg_import_fix_recommendation_9401",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\n  \"summary\": \"The job is mostly blocked by tenant role validation, with a smaller duplicate-username tail that should be handled as a separate cleanup step before replay.\",\n  \"recommendedFixes\": [\n    {\n      \"errorCode\": \"UNKNOWN_ROLE\",\n      \"recommendedAction\": \"Verify that the referenced role codes exist in the current tenant and normalize the source role-code format before preparing replay input.\",\n      \"reasoning\": \"The grouped failures point to tenant role validation rather than CSV shape corruption.\",\n      \"reviewRequired\": true\n    },\n    {\n      \"errorCode\": \"DUPLICATE_USERNAME\",\n      \"recommendedAction\": \"Review the source usernames against current-tenant users and prepare unique replacements outside the AI response before replay.\",\n      \"reasoning\": \"The grouped failures indicate a uniqueness conflict that needs an operator-reviewed edit.\",\n      \"reviewRequired\": true\n    }\n  ],\n  \"confidenceNotes\": [\n    \"The recommendations are grounded in row-level error groups, so operators should still confirm tenant-specific business rules before reuse.\"\n  ],\n  \"recommendedOperatorChecks\": [\n    \"Confirm which error-code group is the highest-volume cleanup target before editing replay input.\",\n    \"Review the affected rows in /errors so value changes can be prepared outside the AI response.\"\n  ]\n}"
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 188,
+    "output_tokens": 96,
+    "total_tokens": 284
+  }
+}

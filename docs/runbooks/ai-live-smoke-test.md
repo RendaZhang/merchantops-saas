@@ -1,8 +1,8 @@
 # AI Live Smoke Test
 
-Last updated: 2026-03-27
+Last updated: 2026-03-28
 
-> Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary plus mapping suggestion treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
+> Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
 
 Use this runbook when local AI provider wiring, `.env` loading, provider normalization, or vendor compatibility changed and you need one real local provider pass.
 
@@ -17,14 +17,14 @@ This runbook is intentionally narrow:
 - create one fresh smoke ticket and add enough context for summary generation
 - call `POST /api/v1/tickets/{id}/ai-summary` exactly once
 - if that succeeds, immediately call `GET /api/v1/tickets/{id}/ai-interactions`
-- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, one import `ai-error-summary` call, and when eligible one import `ai-mapping-suggestion` call against known failed import jobs
+- only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, one import `ai-error-summary` call, and when eligible one import `ai-mapping-suggestion` call plus one import `ai-fix-recommendation` call against known failed import jobs
 - if any live endpoint fails, stop immediately and do not continue to the next endpoint
 
 Budget guard for the first live pass:
 
 - keep spend at or below `1 RMB`
 - use one summary call only
-- expand to `ai-triage`, `ai-reply-draft`, import `ai-error-summary`, or import `ai-mapping-suggestion` only after the summary path is proven locally
+- expand to `ai-triage`, `ai-reply-draft`, import `ai-error-summary`, import `ai-mapping-suggestion`, or import `ai-fix-recommendation` only after the summary path is proven locally
 
 ## 1. Run Automated Tests First
 

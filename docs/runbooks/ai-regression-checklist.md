@@ -1,6 +1,6 @@
 # AI Regression Checklist
 
-Last updated: 2026-03-27
+Last updated: 2026-03-28
 
 > Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
@@ -11,7 +11,7 @@ Use this checklist when any of the following change:
 - provider adapter logic
 - AI feature gating or timeout behavior
 - AI-related logging, usage, or error handling
-- the public AI interaction-history, ticket summary, ticket triage, ticket reply-draft, or import AI error-summary / mapping-suggestion response shape or Swagger examples
+- the public AI interaction-history, ticket summary, ticket triage, ticket reply-draft, or import AI error-summary / mapping-suggestion / fix-recommendation response shape or Swagger examples
 
 ## Current Public Boundary
 
@@ -22,10 +22,11 @@ The AI checklist is now active because public AI endpoints exist:
 - `POST /api/v1/tickets/{id}/ai-reply-draft`
 - `POST /api/v1/import-jobs/{id}/ai-error-summary`
 - `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`
+- `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
 - `GET /api/v1/tickets/{id}/ai-interactions`
-- suggestion-only ticket summary, triage, internal reply-draft, and import error-summary plus mapping-suggestion results plus narrowed interaction-history visibility for one current-tenant ticket
+- suggestion-only ticket summary, triage, internal reply-draft, and import error-summary plus mapping-suggestion plus fix-recommendation results plus narrowed interaction-history visibility for one current-tenant ticket
 - read permission inherited from `TICKET_READ`
-- import error summary and mapping suggestion inherit import read permission from `USER_READ`
+- import error summary, mapping suggestion, and fix recommendation inherit import read permission from `USER_READ`
 - no write-back, no comment creation, and no approval execution in the current slice
 - interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`, but do not expose raw prompt or raw provider payload and do not establish billing semantics
 
@@ -43,9 +44,10 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] if the live summary fails, `ai-triage` and `ai-reply-draft` are not called in the same session
 - [ ] after a successful live summary, `GET /api/v1/tickets/{id}/ai-interactions` confirms a matching `SUMMARY` row with the expected `requestId`, `status`, and `modelId`
 - [ ] after summary succeeds, the approved second-stage live path is `ai-triage` plus `GET /ai-interactions?interactionType=TRIAGE`, then `ai-reply-draft` plus `GET /ai-interactions?interactionType=REPLY_DRAFT`
-- [ ] if the change affects import AI or shared provider/runtime behavior, one live `POST /api/v1/import-jobs/{id}/ai-error-summary` call and, when eligible header/global signal exists, one live `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` call are run against known failed import jobs after the ticket summary-first path is proven locally
+- [ ] if the change affects import AI or shared provider/runtime behavior, one live `POST /api/v1/import-jobs/{id}/ai-error-summary` call and, when eligible signal exists, one live `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` call plus one live `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` call are run against known failed import jobs after the ticket summary-first path is proven locally
 - [ ] a successful live import error summary returns non-blank `summary`, non-empty `topErrorPatterns`, non-empty `recommendedNextSteps`, and the expected `requestId`
 - [ ] a successful live import mapping suggestion returns non-blank `summary`, exactly five canonical `suggestedFieldMappings`, non-empty `confidenceNotes`, non-empty `recommendedOperatorChecks`, and the expected `requestId`
+- [ ] a successful live import fix recommendation returns non-blank `summary`, non-empty `recommendedFixes`, non-empty `confidenceNotes`, non-empty `recommendedOperatorChecks`, grounded `errorCode` values only, and the expected `requestId`
 - [ ] a successful live triage returns non-blank `classification`, valid `priority`, non-blank `reasoning`, and a matching `TRIAGE/SUCCEEDED` history row
 - [ ] a successful live reply draft returns non-blank `opening`, `body`, `nextStep`, `closing`, `draftText`, and a matching `REPLY_DRAFT/SUCCEEDED` history row
 - [ ] if triage fails in the second-stage live pass, reply-draft is not called in the same session
@@ -57,11 +59,13 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] `POST /api/v1/tickets/{id}/ai-reply-draft` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
 - [ ] `POST /api/v1/import-jobs/{id}/ai-error-summary` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
 - [ ] `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` covers `400` no-failure-signal, `400` no-sanitized-header-signal, feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response with specific `ai_interaction_record.status` only on the `503` paths
+- [ ] `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` covers `400` no-failure-signal, `400` unsupported-import-type, `400` no-sanitized-row-signal, feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response with specific `ai_interaction_record.status` only on the `503` paths
 - [ ] summary, triage, reply-draft, import error-summary, and import mapping-suggestion adapter tests all cover request-contract assertions, unsupported content, refusal, invalid JSON payload handling, later-part `output_text` parsing, and `408` or `504` timeout classification
 - [ ] summary adapter rejects missing `summary`; triage adapter rejects missing `classification`, missing `reasoning`, missing `priority`, and invalid `priority`
 - [ ] reply-draft adapter rejects missing `opening`, missing `body`, missing `nextStep`, and missing `closing`
 - [ ] import error-summary adapter rejects missing `summary`, missing `topErrorPatterns`, missing `recommendedNextSteps`, and blank array items
 - [ ] import mapping-suggestion adapter rejects missing `summary`, missing or empty `suggestedFieldMappings`, blank mapping fields, and invalid `headerPosition`
+- [ ] import fix-recommendation adapter rejects missing `summary`, missing or empty `recommendedFixes`, blank recommendation fields, and invalid `reviewRequired`
 
 ## Tenant And Permission Safety
 
@@ -71,7 +75,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] cross-tenant or missing tickets still return normal business `404`
 - [ ] cross-tenant or missing import jobs still return normal business `404`
 - [ ] the interaction-history, summary, triage, and reply-draft endpoints do not bypass the existing ticket read boundary
-- [ ] the import error-summary and mapping-suggestion endpoints do not bypass the existing import read boundary
+- [ ] the import error-summary, mapping-suggestion, and fix-recommendation endpoints do not bypass the existing import read boundary
 
 ## Audit And Traceability
 
@@ -85,6 +89,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] read-only AI calls are recorded without pretending they are normal business write `audit_event` rows
 - [ ] import error-summary persistence uses `entityType=IMPORT_JOB` and `interactionType=ERROR_SUMMARY`
 - [ ] import mapping-suggestion persistence uses `entityType=IMPORT_JOB` and `interactionType=MAPPING_SUGGESTION`
+- [ ] import fix-recommendation persistence uses `entityType=IMPORT_JOB` and `interactionType=FIX_RECOMMENDATION`
 
 ## Interaction History Read Surface
 
@@ -104,6 +109,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] golden ticket-reply-draft samples still produce the expected stable shape
 - [ ] golden import error-summary samples still produce the expected stable shape
 - [ ] golden import mapping-suggestion samples still produce the expected stable shape
+- [ ] golden import fix-recommendation samples still produce the expected stable shape
 - [ ] golden tests use checked-in provider-response fixtures and the real provider/service parsing path rather than echoing expected output fields back from the sample file
 - [ ] summary output still includes issue, current state, latest meaningful signal, and next human follow-up
 - [ ] summary output remains non-blank and does not expose raw prompt text or raw provider payload
@@ -115,19 +121,22 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] the public reply-draft response shape remains stable for `ticketId`, `draftText`, `opening`, `body`, `nextStep`, `closing`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public import error-summary response shape remains stable for `importJobId`, `summary`, `topErrorPatterns`, `recommendedNextSteps`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public import mapping-suggestion response shape remains stable for `importJobId`, `summary`, `suggestedFieldMappings`, `confidenceNotes`, `recommendedOperatorChecks`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
+- [ ] the public import fix-recommendation response shape remains stable for `importJobId`, `summary`, `recommendedFixes`, `confidenceNotes`, `recommendedOperatorChecks`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`
 - [ ] the public interaction-history response shape remains stable for `items`, `page`, `size`, `total`, `totalPages`, and item fields `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`
 - [ ] the reply-draft `draftText` still equals `opening + "\n\n" + body + "\n\nNext step: " + nextStep + "\n\n" + closing`
 - [ ] assembled reply drafts still fit the current ticket comment length limit
 - [ ] the summary, triage, and reply-draft slices stay suggestion-only and do not imply unsupported automatic execution
 - [ ] prompt or model changes are reviewed against both happy-path and known-risk samples when those samples exist
 - [ ] AI prompt context stays capped to the recent ticket history window and marks omitted older history when the window truncates
-- [ ] import AI prompt context stays capped to the allowed sanitized import context, does not include raw `itemErrors.rawPayload`, raw header lines, raw username, raw email, or raw password values, and does not rescan the source file
+- [ ] import AI prompt context stays capped to the allowed sanitized import context, does not include raw `itemErrors.rawPayload`, raw header lines, raw username, raw email, raw password, or raw role-code values, and does not rescan the source file
+- [ ] import fix recommendation stays grounded in local row-level `errorCode` groups and rejects provider output that echoes raw CSV-like strings or sensitive row values
 
 ## Workflow Safety
 
 - [ ] AI summary, triage, and reply-draft calls do not mutate ticket status, assignee, comments, workflow logs, or approvals
 - [ ] import AI error-summary calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - [ ] import AI mapping-suggestion calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
+- [ ] import AI fix-recommendation calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - [ ] AI summary, triage, and reply-draft calls do not create business `audit_event` rows
 - [ ] AI interaction-history reads do not mutate ticket status, assignee, comments, workflow logs, approvals, or business `audit_event` rows
 - [ ] operators can continue the ticket workflow manually when AI is unavailable
@@ -156,11 +165,11 @@ For the current public AI slices, at minimum run:
 5. one provider-not-configured or provider-unavailable simulation
 6. one provider-timeout simulation
 7. one invalid-response simulation
-8. one prompt-context non-leakage check when the affected workflow includes import AI error summary or mapping suggestion
+8. one prompt-context non-leakage or sensitive-output-rejection check when the affected workflow includes import AI error summary, mapping suggestion, or fix recommendation
 9. one interaction-history filter, ordering, and non-leakage check when the history surface is affected
 10. one golden-sample regression check for each affected AI generation workflow
 11. when live provider wiring changed, one local summary-first provider smoke plus the matching interaction-history read through [ai-live-smoke-test.md](ai-live-smoke-test.md)
-12. after summary succeeds and the change still needs real-vendor verification, one second-stage live triage pass plus one second-stage live reply-draft pass, each followed by the matching interaction-history read, plus one import error-summary live pass and, when eligible, one import mapping-suggestion live pass when the change touches import AI or shared AI runtime behavior
+12. after summary succeeds and the change still needs real-vendor verification, one second-stage live triage pass plus one second-stage live reply-draft pass, each followed by the matching interaction-history read, plus one import error-summary live pass and, when eligible, one import mapping-suggestion live pass plus one import fix-recommendation live pass when the change touches import AI or shared AI runtime behavior
 
 ## Related Documents
 

@@ -3,10 +3,12 @@ package com.renda.merchantops.api.importjob;
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
+import com.renda.merchantops.api.dto.importjob.query.ImportJobAiFixRecommendationResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiMappingSuggestionResponse;
 import com.renda.merchantops.api.exception.GlobalExceptionHandler;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import com.renda.merchantops.api.importjob.ai.ImportJobAiErrorSummaryService;
+import com.renda.merchantops.api.importjob.ai.ImportJobAiFixRecommendationService;
 import com.renda.merchantops.api.importjob.ai.ImportJobAiMappingSuggestionService;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.RequirePermissionInterceptor;
@@ -57,13 +59,17 @@ class ImportJobAiControllerTest {
     @Mock
     private ImportJobAiMappingSuggestionService importJobAiMappingSuggestionService;
 
+    @Mock
+    private ImportJobAiFixRecommendationService importJobAiFixRecommendationService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new ImportJobAiController(
                         importJobAiErrorSummaryService,
-                        importJobAiMappingSuggestionService
+                        importJobAiMappingSuggestionService,
+                        importJobAiFixRecommendationService
                 ))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addInterceptors(new RequirePermissionInterceptor())
@@ -208,6 +214,73 @@ class ImportJobAiControllerTest {
 
         verify(importJobAiMappingSuggestionService)
                 .generateMappingSuggestion(eq(9L), eq(9001L), eq("import-ai-mapping-suggestion-req-1"), eq(11L));
+    }
+
+    @Test
+    void aiFixRecommendationShouldReturnUnauthorizedWhenAuthenticationIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/11/ai-fix-recommendation"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void aiFixRecommendationShouldReturnForbiddenWhenPermissionIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/11/ai-fix-recommendation")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void aiFixRecommendationShouldForwardTenantUserAndRequestId() throws Exception {
+        ImportJobAiFixRecommendationResponse response = new ImportJobAiFixRecommendationResponse(
+                11L,
+                "The job is mostly blocked by tenant role validation, with a smaller duplicate-username tail that should be handled separately.",
+                List.of(
+                        new ImportJobAiFixRecommendationResponse.RecommendedFix(
+                                "UNKNOWN_ROLE",
+                                "Verify that the referenced role codes exist in the current tenant before replay.",
+                                "The sampled failures point to tenant role validation rather than CSV shape corruption.",
+                                true,
+                                7L
+                        ),
+                        new ImportJobAiFixRecommendationResponse.RecommendedFix(
+                                "DUPLICATE_USERNAME",
+                                "Review the source usernames against current-tenant users before replay.",
+                                "The sampled failures indicate a uniqueness conflict that needs operator review.",
+                                true,
+                                2L
+                        )
+                ),
+                List.of("The recommendations are grounded in row-level error groups and still require operator review."),
+                List.of("Review the affected rows in /errors before editing replay input."),
+                "import-fix-recommendation-v1",
+                "gpt-4.1-mini",
+                LocalDateTime.of(2026, 3, 28, 10, 40, 15),
+                566L,
+                "import-ai-fix-recommendation-req-1"
+        );
+        when(importJobAiFixRecommendationService.generateFixRecommendation(9L, 9001L, "import-ai-fix-recommendation-req-1", 11L))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/import-jobs/11/ai-fix-recommendation")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_READ")
+                        .header(HEADER_REQUEST_ID, "import-ai-fix-recommendation-req-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.importJobId").value(11))
+                .andExpect(jsonPath("$.data.recommendedFixes[0].errorCode").value("UNKNOWN_ROLE"))
+                .andExpect(jsonPath("$.data.requestId").value("import-ai-fix-recommendation-req-1"));
+
+        verify(importJobAiFixRecommendationService)
+                .generateFixRecommendation(eq(9L), eq(9001L), eq("import-ai-fix-recommendation-req-1"), eq(11L));
     }
 
     private static final class TestAuthenticationFilter extends OncePerRequestFilter {
