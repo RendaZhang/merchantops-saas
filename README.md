@@ -1,18 +1,16 @@
 # MerchantOps SaaS
 
-`v0.3.0-beta` | workflow-first, AI-enhanced vertical SaaS backend
+`v0.4.0-beta` | workflow-first, AI-enhanced vertical SaaS backend
 
 MerchantOps SaaS is an open-source, multi-tenant backend reference implementation for merchant operations workflows. It combines tenant isolation, JWT and RBAC security, ticket workflow execution, audit and approval patterns, and async import/data-operations flows in a modular Spring Boot codebase.
 
 ## Status
 
-- Current tagged milestone: `v0.3.0-beta`
-- Milestone meaning: `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
-- Prepared next tag: `v0.4.0-beta` for the completion-ready Week 7 import AI read baseline
-- Current active phase: Week 7 AI Copilot for Import and Data Quality (completion-ready)
-- After the next tag cut: Week 8 Agentic Workflows with Human Oversight becomes the next active phase
+- Current tagged milestone: `v0.4.0-beta`
+- Milestone meaning: `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`
+- Current active phase: Week 8 Agentic Workflows with Human Oversight
 - Release maturity: beta preview, not production-ready
-- Prior baseline: `v0.2.0-alpha` for the completed Week 5 async import and data operations preview
+- Prior baseline: `v0.3.0-beta` for the completed Week 6 AI Copilot for Ticket Operations beta baseline
 
 ## Current Capabilities
 
