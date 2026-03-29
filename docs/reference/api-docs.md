@@ -73,6 +73,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows |
 | `POST` | `/api/v1/import-jobs/{id}/replay-file` | Yes + `USER_WRITE` | Create a new derived import job by copying the stored source file from a full-failure source job |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Yes + `USER_WRITE` | Create a new derived import job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
+| `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective/proposals` | Yes + `USER_WRITE` | Create a pending approval request for a later selective replay execution of the source job |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Yes + `USER_WRITE` | Create a new derived import job from caller-provided full replacement rows keyed by replayable failed-row `errorId` |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Yes + `USER_READ` | Page one tenant-scoped import job's failure items with optional `errorCode` filter |
 | `GET` | `/api/v1/import-jobs/{id}/ai-interactions` | Yes + `USER_READ` | Page narrowed stored AI interaction history for one current-tenant import job |
@@ -131,14 +132,14 @@ Approval Requests tag note:
 - `GET /api/v1/approval-requests` requires `USER_READ` and supports `page`, `size`, `status`, `actionType`, and `requestedBy`.
 - `GET /api/v1/approval-requests/{id}` requires `USER_READ`.
 - approve/reject endpoints require `USER_WRITE`.
-- the current public approval surface supports one action type only: `USER_STATUS_DISABLE`.
+- the current public approval surface supports two action types: `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`.
 - requester cannot approve or reject the same request they created.
-- approval is synchronous in the current implementation and reuses the existing user status write flow.
+- approval is synchronous in the current implementation and reuses the existing user status write flow for `USER_STATUS_DISABLE` plus the existing import selective replay flow for `IMPORT_JOB_SELECTIVE_REPLAY`.
 
 Import Jobs tag note:
 
-- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
-- `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` require `USER_WRITE`.
+- Swagger currently exposes `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`.
+- `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` require `USER_WRITE`.
 - `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` require `USER_READ`.
 - `GET /api/v1/import-jobs` now exposes `page`, `size`, `status`, `importType`, `requestedBy`, and `hasFailuresOnly`.
 - `GET /api/v1/import-jobs/{id}` detail now exposes nullable `sourceJobId` for replay-derived jobs.
@@ -153,6 +154,7 @@ Import Jobs tag note:
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `POST /api/v1/import-jobs/{id}/replay-file` copies the stored source file into a new derived `QUEUED` job for current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
+- `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` returns the shared approval-request response shape and stores only safe proposal payload fields (`sourceJobId`, normalized `errorCodes`, optional `sourceInteractionId`, optional `proposalReason`) for later human review.
 - `POST /api/v1/import-jobs/{id}/replay-failures/edited` creates a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.

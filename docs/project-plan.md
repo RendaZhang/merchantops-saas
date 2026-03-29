@@ -145,7 +145,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - 当前执行已经完成 Week 7 AI Copilot for Import and Data Quality。
 - Week 1-7 当前已形成稳定 workflow + dual-workflow AI read baseline，其中 Week 7 已完成 import interaction history、error summary、mapping suggestion 和 fix recommendation 四条公开 AI slice。
 - 当前 tagged baseline 已是 `v0.4.0-beta`，对应 `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`。
-- 当前近期待办已经切到 Week 8 agentic workflows with human oversight。
+- 当前近期待办已经切到 Week 8 agentic workflows with human oversight，且第一条已落地的 Week 8 slice 是 import selective replay proposal -> approval -> execution。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -423,6 +423,10 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 - action proposal / approval / execution 三段式链路
 - 角色与权限校验
 - 执行失败可回退
+
+当前第一条已落地 slice：
+
+- import selective replay proposal and approval flow，使用现有 approval 基线复用现有 selective replay 执行链路，把 import AI fix recommendation 的人工判断自然推进到 human-reviewed execution
 
 ### 验收标准
 

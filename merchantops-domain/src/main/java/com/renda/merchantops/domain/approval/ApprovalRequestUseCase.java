@@ -4,6 +4,11 @@ public interface ApprovalRequestUseCase {
 
     ApprovalRequestRecord createDisableRequest(Long tenantId, Long requestedBy, String requestId, Long userId);
 
+    ApprovalRequestRecord createImportSelectiveReplayRequest(Long tenantId,
+                                                             Long requestedBy,
+                                                             String requestId,
+                                                             ImportSelectiveReplayApprovalCommand command);
+
     ApprovalRequestRecord getById(Long tenantId, Long approvalRequestId);
 
     ApprovalRequestPageResult page(Long tenantId, ApprovalRequestPageCriteria criteria);

@@ -14,6 +14,8 @@ public interface ImportJobQueryPort {
                                                            Long importJobId,
                                                            ImportJobAiInteractionPageCriteria criteria);
 
+    Optional<ImportJobAiInteractionItem> findJobAiInteraction(Long tenantId, Long importJobId, Long interactionId);
+
     ImportJobErrorPageResult pageJobErrors(Long tenantId, Long importJobId, ImportJobErrorPageCriteria criteria);
 
     List<ImportJobErrorCount> summarizeErrorCodes(Long tenantId, Long importJobId);

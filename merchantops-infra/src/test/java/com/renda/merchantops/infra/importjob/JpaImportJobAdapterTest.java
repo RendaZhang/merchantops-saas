@@ -102,4 +102,37 @@ class JpaImportJobAdapterTest {
         assertThat(result.total()).isEqualTo(1);
         assertThat(result.totalPages()).isEqualTo(1);
     }
+
+    @Test
+    void findJobAiInteractionShouldMapScopedRecordWhenPresent() {
+        JpaImportJobAdapter adapter = new JpaImportJobAdapter(
+                importJobRepository,
+                importJobItemErrorRepository,
+                aiInteractionRecordRepository
+        );
+        AiInteractionRecordEntity record = new AiInteractionRecordEntity();
+        record.setId(9103L);
+        record.setInteractionType("FIX_RECOMMENDATION");
+        record.setStatus("SUCCEEDED");
+        record.setOutputSummary("Use selective replay for role-related rows only.");
+        record.setPromptVersion("import-fix-recommendation-v1");
+        record.setModelId("gpt-4.1-mini");
+        record.setLatencyMs(566L);
+        record.setRequestId("import-ai-fix-recommendation-req-1");
+        record.setUsagePromptTokens(140);
+        record.setUsageCompletionTokens(72);
+        record.setUsageTotalTokens(212);
+        record.setUsageCostMicros(null);
+        record.setCreatedAt(LocalDateTime.of(2026, 3, 28, 10, 45));
+
+        when(aiInteractionRecordRepository.findByIdAndTenantIdAndEntityTypeAndEntityId(9103L, 1L, "IMPORT_JOB", 7001L))
+                .thenReturn(java.util.Optional.of(record));
+
+        var result = adapter.findJobAiInteraction(1L, 7001L, 9103L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().interactionType()).isEqualTo("FIX_RECOMMENDATION");
+        assertThat(result.get().status()).isEqualTo("SUCCEEDED");
+        assertThat(result.get().requestId()).isEqualTo("import-ai-fix-recommendation-req-1");
+    }
 }

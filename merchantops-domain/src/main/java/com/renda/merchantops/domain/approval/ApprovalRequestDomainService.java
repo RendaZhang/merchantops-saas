@@ -9,7 +9,9 @@ import java.util.Locale;
 public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
 
     private static final String ACTION_USER_STATUS_DISABLE = "USER_STATUS_DISABLE";
+    private static final String ACTION_IMPORT_JOB_SELECTIVE_REPLAY = "IMPORT_JOB_SELECTIVE_REPLAY";
     private static final String ENTITY_USER = "USER";
+    private static final String ENTITY_IMPORT_JOB = "IMPORT_JOB";
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_REJECTED = "REJECTED";
@@ -21,13 +23,16 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
     private final ApprovalRequestPort approvalRequestPort;
     private final ApprovalTargetUserPort approvalTargetUserPort;
     private final ApprovalActionPort approvalActionPort;
+    private final ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort;
 
     public ApprovalRequestDomainService(ApprovalRequestPort approvalRequestPort,
                                         ApprovalTargetUserPort approvalTargetUserPort,
-                                        ApprovalActionPort approvalActionPort) {
+                                        ApprovalActionPort approvalActionPort,
+                                        ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort) {
         this.approvalRequestPort = approvalRequestPort;
         this.approvalTargetUserPort = approvalTargetUserPort;
         this.approvalActionPort = approvalActionPort;
+        this.approvalImportSelectiveReplayPort = approvalImportSelectiveReplayPort;
     }
 
     @Override
@@ -55,6 +60,34 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
     }
 
     @Override
+    public ApprovalRequestRecord createImportSelectiveReplayRequest(Long tenantId,
+                                                                    Long requestedBy,
+                                                                    String requestId,
+                                                                    ImportSelectiveReplayApprovalCommand command) {
+        requireTenantAndOperator(tenantId, requestedBy);
+        String resolvedRequestId = requireRequestId(requestId);
+        PreparedImportSelectiveReplayApproval prepared = approvalImportSelectiveReplayPort.prepareProposal(
+                tenantId,
+                requireImportSelectiveReplayCommand(command)
+        );
+        return approvalRequestPort.save(new ApprovalRequestRecord(
+                null,
+                tenantId,
+                ACTION_IMPORT_JOB_SELECTIVE_REPLAY,
+                ENTITY_IMPORT_JOB,
+                prepared.sourceJobId(),
+                requestedBy,
+                null,
+                STATUS_PENDING,
+                prepared.payloadJson(),
+                resolvedRequestId,
+                LocalDateTime.now(),
+                null,
+                null
+        ));
+    }
+
+    @Override
     public ApprovalRequestRecord getById(Long tenantId, Long approvalRequestId) {
         return requireApprovalRequest(tenantId, approvalRequestId);
     }
@@ -70,12 +103,7 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         String resolvedRequestId = requireRequestId(requestId);
         ApprovalRequestRecord approvalRequest = requirePendingForUpdate(tenantId, approvalRequestId);
         ensureNotSelfReview(approvalRequest, reviewerId);
-        ensureSupportedActionType(approvalRequest.actionType());
-        // Re-check the target at approval time because the user may have been disabled or
-        // changed by another path after the request was first created.
-        requireUserCanBeDisabled(tenantId, approvalRequest.entityId());
-
-        approvalActionPort.disableUser(tenantId, reviewerId, resolvedRequestId, approvalRequest.entityId());
+        executeApprovedAction(tenantId, reviewerId, resolvedRequestId, approvalRequest);
         LocalDateTime now = LocalDateTime.now();
         return approvalRequestPort.save(new ApprovalRequestRecord(
                 approvalRequest.id(),
@@ -159,10 +187,29 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         }
     }
 
-    private void ensureSupportedActionType(String actionType) {
-        if (!ACTION_USER_STATUS_DISABLE.equals(normalizeKey(actionType))) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "unsupported approval action");
+    private void executeApprovedAction(Long tenantId,
+                                       Long reviewerId,
+                                       String requestId,
+                                       ApprovalRequestRecord approvalRequest) {
+        String actionType = normalizeKey(approvalRequest.actionType());
+        if (ACTION_USER_STATUS_DISABLE.equals(actionType)) {
+            // Re-check the target at approval time because the user may have been disabled or
+            // changed by another path after the request was first created.
+            requireUserCanBeDisabled(tenantId, approvalRequest.entityId());
+            approvalActionPort.disableUser(tenantId, reviewerId, requestId, approvalRequest.entityId());
+            return;
         }
+        if (ACTION_IMPORT_JOB_SELECTIVE_REPLAY.equals(actionType)) {
+            approvalActionPort.replayImportJobSelective(
+                    tenantId,
+                    reviewerId,
+                    requestId,
+                    approvalRequest.entityId(),
+                    approvalRequest.payloadJson()
+            );
+            return;
+        }
+        throw new BizException(ErrorCode.BAD_REQUEST, "unsupported approval action");
     }
 
     private void requireUserCanBeDisabled(Long tenantId, Long userId) {
@@ -206,5 +253,12 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
 
     private String normalizeKey(String value) {
         return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private ImportSelectiveReplayApprovalCommand requireImportSelectiveReplayCommand(ImportSelectiveReplayApprovalCommand command) {
+        if (command == null || command.sourceJobId() == null) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "sourceJobId missing");
+        }
+        return command;
     }
 }

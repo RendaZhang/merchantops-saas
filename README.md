@@ -16,15 +16,15 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 - Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
 - Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, narrowed AI interaction-history reads with runtime usage/cost metadata, and suggestion-only AI summary, triage, and internal reply-draft generation paths
-- Audit-event query backbone plus minimal approval flow for `USER_STATUS_DISABLE`
-- Async import jobs with create, list, detail, paged error reporting, narrowed AI interaction-history reads with runtime usage/cost metadata when present, suggestion-only AI error summary, mapping suggestion, and fix recommendation from sanitized failed-row context, failed-row replay, whole-file replay, selective replay, edited replay, queued-job recovery, and stale-processing safeguards
+- Audit-event query backbone plus approval-backed governance flow for `USER_STATUS_DISABLE` and import selective replay proposals
+- Async import jobs with create, list, detail, paged error reporting, narrowed AI interaction-history reads with runtime usage/cost metadata when present, suggestion-only AI error summary, mapping suggestion, and fix recommendation from sanitized failed-row context, failed-row replay, whole-file replay, selective replay, approval-backed selective replay proposals, edited replay, queued-job recovery, and stale-processing safeguards
 - JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
 
 ## Known Limits
 
 - The public import surface currently supports one business import type only: `USER_CSV`
 - There is no frontend or tenant admin UI in this repository
-- The current public AI surface is limited to one narrowed ticket AI interaction-history read endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, one narrowed import AI interaction-history read endpoint, and three suggestion-only import AI endpoints for error summary, mapping suggestion, and fix recommendation; broader ticket AI flows and any AI write-back remain pending
+- The current public AI surface is still read-only or suggestion-only: one narrowed ticket AI interaction-history endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, one narrowed import AI interaction-history endpoint, and three suggestion-only import AI endpoints for error summary, mapping suggestion, and fix recommendation. Week 8 also adds one separate human-reviewed import selective replay bridge through approval requests, but broader ticket AI flows and direct AI write-back remain pending
 - This release line is intended for evaluation and contribution, not production deployment
 
 ## Quick Start

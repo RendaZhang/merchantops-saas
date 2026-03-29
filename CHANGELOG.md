@@ -6,6 +6,15 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+### Added
+
+- Added the first Week 8 human-reviewed execution workflow through `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, creating `IMPORT_JOB_SELECTIVE_REPLAY` approval requests that can optionally reference a successful import `FIX_RECOMMENDATION` interaction before a reviewer approves execution.
+
+### Changed
+
+- Approval routing now supports both `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`, with approve-time dispatch reusing the existing selective replay execution path while keeping approval payloads narrow and free of raw CSV rows or replacement values.
+- Import docs, approval docs, API examples, phase status/roadmap/plan pages, and automated verification notes now reflect the Week 8 import selective replay proposal-plus-approval baseline and the latest fresh regression result.
+
 ## [v0.4.0-beta] - 2026-03-28
 
 Tagged as `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`.

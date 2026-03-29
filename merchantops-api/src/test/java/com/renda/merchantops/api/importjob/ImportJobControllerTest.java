@@ -1,8 +1,11 @@
 package com.renda.merchantops.api.importjob;
 
+import com.renda.merchantops.api.approval.ApprovalRequestCommandService;
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayProposalRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorItemResponse;
@@ -66,12 +69,19 @@ class ImportJobControllerTest {
     private ImportJobReplayService importJobReplayService;
     @Mock
     private ImportJobQueryService importJobQueryService;
+    @Mock
+    private ApprovalRequestCommandService approvalRequestCommandService;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        ImportJobController controller = new ImportJobController(importJobSubmissionService, importJobReplayService, importJobQueryService);
+        ImportJobController controller = new ImportJobController(
+                importJobSubmissionService,
+                importJobReplayService,
+                importJobQueryService,
+                approvalRequestCommandService
+        );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addInterceptors(new RequirePermissionInterceptor())
@@ -186,6 +196,77 @@ class ImportJobControllerTest {
                 ArgumentCaptor.forClass(ImportJobSelectiveReplayRequest.class);
         verify(importJobReplayService).replayFailedRowsSelective(eq(9L), eq(9001L), eq("req-replay-selective-1"), eq(88L), requestCaptor.capture());
         assertThat(requestCaptor.getValue().getErrorCodes()).containsExactly("UNKNOWN_ROLE", "INVALID_EMAIL");
+    }
+
+    @Test
+    void createSelectiveReplayProposalShouldBindRequestAndForwardContext() throws Exception {
+        when(approvalRequestCommandService.createImportSelectiveReplayRequest(eq(9L), eq(9001L), eq("req-replay-proposal-1"), eq(88L), any()))
+                .thenReturn(new ApprovalRequestResponse(
+                        901L,
+                        9L,
+                        "IMPORT_JOB_SELECTIVE_REPLAY",
+                        "IMPORT_JOB",
+                        88L,
+                        9001L,
+                        null,
+                        "PENDING",
+                        "{\"sourceJobId\":88,\"errorCodes\":[\"UNKNOWN_ROLE\"]}",
+                        "req-replay-proposal-1",
+                        null,
+                        null,
+                        null
+                ));
+
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/selective/proposals")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "errorCodes": ["UNKNOWN_ROLE"],
+                                  "sourceInteractionId": 9103,
+                                  "proposalReason": "Review role fixes before replay"
+                                }
+                                """)
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-proposal-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(901))
+                .andExpect(jsonPath("$.data.actionType").value("IMPORT_JOB_SELECTIVE_REPLAY"))
+                .andExpect(jsonPath("$.data.entityId").value(88));
+
+        ArgumentCaptor<ImportJobSelectiveReplayProposalRequest> requestCaptor =
+                ArgumentCaptor.forClass(ImportJobSelectiveReplayProposalRequest.class);
+        verify(approvalRequestCommandService).createImportSelectiveReplayRequest(
+                eq(9L),
+                eq(9001L),
+                eq("req-replay-proposal-1"),
+                eq(88L),
+                requestCaptor.capture()
+        );
+        assertThat(requestCaptor.getValue().getErrorCodes()).containsExactly("UNKNOWN_ROLE");
+        assertThat(requestCaptor.getValue().getSourceInteractionId()).isEqualTo(9103L);
+        assertThat(requestCaptor.getValue().getProposalReason()).isEqualTo("Review role fixes before replay");
+    }
+
+    @Test
+    void createSelectiveReplayProposalShouldRejectEmptyErrorCodes() throws Exception {
+        mockMvc.perform(post("/api/v1/import-jobs/88/replay-failures/selective/proposals")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"errorCodes\":[]}")
+                        .header(HEADER_AUTH, "true")
+                        .header(HEADER_USER_ID, "9001")
+                        .header(HEADER_TENANT_ID, "9")
+                        .header(HEADER_TENANT_CODE, "demo-shop")
+                        .header(HEADER_AUTHORITIES, "USER_WRITE")
+                        .header(HEADER_REQUEST_ID, "req-replay-proposal-invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("errorCodes: errorCodes must not be empty"));
+
+        verifyNoInteractions(approvalRequestCommandService);
     }
 
     @Test

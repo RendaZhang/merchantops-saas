@@ -79,6 +79,7 @@ class ImportJobCommandServiceTest {
                 importJobAuditService,
                 importReplaySourceLoader,
                 importReplayFileWriter,
+                new ImportSelectiveReplayNormalizer(),
                 applicationEventPublisher
         );
     }

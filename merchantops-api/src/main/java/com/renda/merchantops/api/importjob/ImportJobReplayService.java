@@ -46,6 +46,7 @@ public class ImportJobReplayService {
     private final ImportJobAuditService importJobAuditService;
     private final ImportReplaySourceLoader importReplaySourceLoader;
     private final ImportReplayFileWriter importReplayFileWriter;
+    private final ImportSelectiveReplayNormalizer importSelectiveReplayNormalizer;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
@@ -98,7 +99,7 @@ public class ImportJobReplayService {
                                                              ImportJobSelectiveReplayRequest request) {
         String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         importJobOperatorValidator.requireOperatorInTenant(tenantId, operatorId);
-        List<String> selectedErrorCodes = normalizeSelectedErrorCodes(request == null ? null : request.getErrorCodes());
+        List<String> selectedErrorCodes = importSelectiveReplayNormalizer.normalizeSelectedErrorCodes(request == null ? null : request.getErrorCodes());
         var replaySource = importReplaySourceLoader.loadSelectiveFailedRowReplay(tenantId, sourceJobId, selectedErrorCodes);
         ImportReplayFileWriter.ReplayFileBuildResult replayFile = importReplayFileWriter.writeFailedRowReplay(
                 tenantId,
@@ -179,25 +180,6 @@ public class ImportJobReplayService {
 
         applicationEventPublisher.publishEvent(new ImportJobCreatedEvent(savedReplayJob.id(), tenantId));
         return importJobQueryService.getJobDetail(tenantId, savedReplayJob.id());
-    }
-
-    private List<String> normalizeSelectedErrorCodes(List<String> errorCodes) {
-        if (errorCodes == null || errorCodes.isEmpty()) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not be empty");
-        }
-        List<String> normalized = errorCodes.stream()
-                .map(errorCode -> {
-                    if (!StringUtils.hasText(errorCode)) {
-                        throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not contain blank values");
-                    }
-                    return errorCode.trim();
-                })
-                .distinct()
-                .toList();
-        if (normalized.isEmpty()) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "errorCodes must not be empty");
-        }
-        return normalized;
     }
 
     private List<ImportReplayFileWriter.EditedReplayRowReplacement> normalizeEditedReplayItems(List<ImportJobEditedReplayItemRequest> items) {

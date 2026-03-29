@@ -98,6 +98,17 @@ public class JpaImportJobAdapter implements ImportJobQueryPort, ImportJobCommand
     }
 
     @Override
+    public Optional<ImportJobAiInteractionItem> findJobAiInteraction(Long tenantId, Long importJobId, Long interactionId) {
+        return aiInteractionRecordRepository.findByIdAndTenantIdAndEntityTypeAndEntityId(
+                        interactionId,
+                        tenantId,
+                        ENTITY_TYPE_IMPORT_JOB,
+                        importJobId
+                )
+                .map(this::toImportJobAiInteractionItem);
+    }
+
+    @Override
     public ImportJobErrorPageResult pageJobErrors(Long tenantId,
                                                   Long importJobId,
                                                   ImportJobErrorPageCriteria criteria) {

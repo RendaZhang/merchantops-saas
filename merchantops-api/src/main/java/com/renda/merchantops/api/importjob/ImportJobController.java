@@ -1,9 +1,12 @@
 package com.renda.merchantops.api.importjob;
 
+import com.renda.merchantops.api.approval.ApprovalRequestCommandService;
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.context.ContextAccess;
 import com.renda.merchantops.api.context.RequestIdAccess;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayProposalRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
@@ -27,6 +30,7 @@ public class ImportJobController implements ImportJobApi {
     private final ImportJobSubmissionService importJobSubmissionService;
     private final ImportJobReplayService importJobReplayService;
     private final ImportJobQueryService importJobQueryService;
+    private final ApprovalRequestCommandService approvalRequestCommandService;
 
     @Override
     @RequirePermission("USER_WRITE")
@@ -78,6 +82,18 @@ public class ImportJobController implements ImportJobApi {
         Long operatorId = ContextAccess.requireUserId();
         String requestId = RequestIdAccess.currentRequestId();
         return ApiResponse.success(importJobReplayService.replayFailedRowsSelective(tenantId, operatorId, requestId, id, request));
+    }
+
+    @Override
+    @RequirePermission("USER_WRITE")
+    public ApiResponse<ApprovalRequestResponse> createSelectiveReplayProposal(@PathVariable("id") Long id,
+                                                                              @Valid @RequestBody ImportJobSelectiveReplayProposalRequest request) {
+        Long tenantId = ContextAccess.requireTenantId();
+        Long operatorId = ContextAccess.requireUserId();
+        String requestId = RequestIdAccess.currentRequestId();
+        return ApiResponse.success(
+                approvalRequestCommandService.createImportSelectiveReplayRequest(tenantId, operatorId, requestId, id, request)
+        );
     }
 
     @Override

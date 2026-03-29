@@ -1,10 +1,15 @@
 # Automated Tests
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
+
+Latest local default regression result on 2026-03-29:
+
+- `BUILD SUCCESS`
+- `Tests run: 335, Failures: 0, Errors: 0, Skipped: 0`
 
 ## Recommended Commands
 
@@ -28,13 +33,14 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-6 public workflow baseline plus Week 7 Slice A/B/C/D import AI interaction history, error summary, mapping suggestion, and fix recommendation. Today that means:
+Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, and the first Week 8 human-reviewed import execution bridge. Today that means:
 
 - auth and permission checks for the current public user-management, ticket, AI interaction-history, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
+- Week 8 Slice A proposal-plus-approval coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, self-approval guard, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
 - AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
 - provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
@@ -75,6 +81,16 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - successful re-login after role reassignment with new RBAC access
   - user writes emit `audit_event` rows when `X-Request-Id` is present
   - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
+- `ImportSelectiveReplayApprovalIntegrationTest`
+  - real `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` happy path for a `USER_WRITE` user with approval-row and audit-row assertions
+  - `403` when `USER_WRITE` is missing
+  - `404` for cross-tenant or missing import jobs
+  - `400` for non-replayable `errorCodes`
+  - `400` for invalid `sourceInteractionId`
+  - safe approval payload and approval-audit snapshot assertions that exclude raw CSV rows, emails, passwords, and replacement values
+  - self-approval rejection on the new import replay approval path
+  - approve path creates exactly one derived selective replay job and reuses the existing selective replay execution chain
+  - reject path leaves the source job untouched and creates no replay job
 - `TicketWorkflowIntegrationTest`
   - real `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}` auth + tenant-isolation behavior
   - `GET /api/v1/tickets` queue filters for `status + assigneeId`, `unassignedOnly`, and `keyword` (including title-only hit, description-only hit, and tenant isolation)
@@ -205,7 +221,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - invalid status-transition rejection
   - comment persistence plus `COMMENTED` log and ticket `updatedAt` refresh
 - `ImportJobControllerTest`
-  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, replay request validation, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
+  - `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors` request binding, auth failure, permission failure, tenant-context forwarding, replay request validation, proposal request validation, and import query binding for `status`, `importType`, `requestedBy`, `hasFailuresOnly`, and `errorCode`
 - `ImportJobAiControllerTest`
   - HTTP request binding for `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
   - `401` when authentication is missing and `403` when `USER_READ` is missing
@@ -215,10 +231,11 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - real authz enforcement for import create plus all current replay write endpoints, including tenant-scoped persistence for authorized writes and `403` rejection for read-only callers
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
+  - import selective replay proposal creation delegates the normalized approval command and records approval audit
   - duplicate pending disable requests are rejected
   - approve/reject paths lock the pending request before updating review state
   - approval queue query normalization with stable `createdAt DESC, id DESC` ordering
-  - approval execution delegates to the existing tenant-scoped user status update flow
+  - approval execution delegates to the existing tenant-scoped user status update flow for `USER_STATUS_DISABLE` and to the existing selective replay flow for `IMPORT_JOB_SELECTIVE_REPLAY`
 - `ImportJobCommandServiceTest`
   - queued import-job persistence, failed-row replay as a new derived job, whole-file replay from `FAILED` zero-success sources, selective replay request normalization, edited replay request normalization, replay lineage/audit emission including `replayMode=WHOLE_FILE`, `selectedErrorCodes`, plus `editedErrorIds` / `editedRowCount` / `editedFields`, and after-commit import event publication
   - invalid `importType` rejection

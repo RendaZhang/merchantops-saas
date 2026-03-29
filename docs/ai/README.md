@@ -17,6 +17,7 @@ Current reality:
 - the ticket AI public surface now includes `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - the import AI public surface now includes `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
 - the current public AI workflows are still read-only or suggestion-only; no public AI endpoint mutates ticket or import business state directly
+- Week 8 now adds one separate human-reviewed import execution bridge through `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, but that endpoint is documented with the import workflow docs rather than as a new AI endpoint because it creates an approval request instead of generating AI output
 - prompt versioning and eval guidance already apply to the live ticket and import AI paths, not just future design work
 
 ## Related Documents

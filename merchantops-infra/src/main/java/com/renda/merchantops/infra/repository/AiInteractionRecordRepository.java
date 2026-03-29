@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 public interface AiInteractionRecordRepository extends JpaRepository<AiInteractionRecordEntity, Long> {
 
     @Query("""
@@ -23,4 +25,9 @@ public interface AiInteractionRecordRepository extends JpaRepository<AiInteracti
                                                                   @Param("interactionType") String interactionType,
                                                                   @Param("status") String status,
                                                                   Pageable pageable);
+
+    Optional<AiInteractionRecordEntity> findByIdAndTenantIdAndEntityTypeAndEntityId(Long id,
+                                                                                     Long tenantId,
+                                                                                     String entityType,
+                                                                                     Long entityId);
 }

@@ -2,6 +2,8 @@ package com.renda.merchantops.api.approval;
 
 import com.renda.merchantops.api.audit.AuditEventService;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayProposalRequest;
+import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
 import com.renda.merchantops.domain.approval.ApprovalRequestPageCriteria;
 import com.renda.merchantops.domain.approval.ApprovalRequestPageResult;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
@@ -45,7 +47,7 @@ class ApprovalRequestServiceTest {
     @Test
     void createDisableRequestShouldDelegateToUseCaseAndRecordAudit() {
         when(approvalRequestUseCase.createDisableRequest(1L, 101L, "disable-req-1", 103L))
-                .thenReturn(record(901L, "PENDING", 103L, 101L));
+                .thenReturn(record(901L, "PENDING", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}"));
 
         var response = approvalRequestCommandService.createDisableRequest(1L, 101L, "disable-req-1", 103L);
 
@@ -56,8 +58,35 @@ class ApprovalRequestServiceTest {
     }
 
     @Test
+    void createImportSelectiveReplayRequestShouldDelegateToUseCaseAndRecordAudit() {
+        ImportJobSelectiveReplayProposalRequest request = new ImportJobSelectiveReplayProposalRequest(
+                List.of("UNKNOWN_ROLE"),
+                9103L,
+                "Review role fixes before replay"
+        );
+        when(approvalRequestUseCase.createImportSelectiveReplayRequest(
+                1L,
+                101L,
+                "proposal-req-1",
+                new ImportSelectiveReplayApprovalCommand(7001L, List.of("UNKNOWN_ROLE"), 9103L, "Review role fixes before replay")
+        )).thenReturn(record(902L, "PENDING", 7001L, 101L, "IMPORT_JOB_SELECTIVE_REPLAY", "IMPORT_JOB", "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}"));
+
+        var response = approvalRequestCommandService.createImportSelectiveReplayRequest(1L, 101L, "proposal-req-1", 7001L, request);
+
+        assertThat(response.id()).isEqualTo(902L);
+        assertThat(response.actionType()).isEqualTo("IMPORT_JOB_SELECTIVE_REPLAY");
+        verify(approvalRequestUseCase).createImportSelectiveReplayRequest(
+                1L,
+                101L,
+                "proposal-req-1",
+                new ImportSelectiveReplayApprovalCommand(7001L, List.of("UNKNOWN_ROLE"), 9103L, "Review role fixes before replay")
+        );
+        verify(auditEventService).recordEvent(eq(1L), eq("APPROVAL_REQUEST"), eq(902L), eq("APPROVAL_REQUEST_CREATED"), eq(101L), eq("proposal-req-1"), eq(null), any());
+    }
+
+    @Test
     void getByIdShouldMapDomainRecordToResponse() {
-        when(approvalRequestUseCase.getById(1L, 901L)).thenReturn(record(901L, "PENDING", 103L, 101L));
+        when(approvalRequestUseCase.getById(1L, 901L)).thenReturn(record(901L, "PENDING", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}"));
 
         var response = approvalRequestQueryService.getById(1L, 901L);
 
@@ -69,7 +98,7 @@ class ApprovalRequestServiceTest {
     @Test
     void pageShouldMapCriteriaAndDomainPage() {
         when(approvalRequestUseCase.page(eq(1L), any()))
-                .thenReturn(new ApprovalRequestPageResult(List.of(record(901L, "PENDING", 103L, 101L)), 0, 10, 1, 1));
+                .thenReturn(new ApprovalRequestPageResult(List.of(record(901L, "PENDING", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}")), 0, 10, 1, 1));
 
         var response = approvalRequestQueryService.page(1L, new ApprovalRequestPageQuery(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L));
 
@@ -87,7 +116,7 @@ class ApprovalRequestServiceTest {
     @Test
     void approveShouldDelegateAndEmitApprovalAndExecutionAuditEvents() {
         when(approvalRequestUseCase.approve(1L, 105L, "approve-req-1", 901L))
-                .thenReturn(record(901L, "APPROVED", 103L, 101L));
+                .thenReturn(record(901L, "APPROVED", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}"));
 
         var response = approvalRequestCommandService.approve(1L, 105L, "approve-req-1", 901L);
 
@@ -99,7 +128,7 @@ class ApprovalRequestServiceTest {
     @Test
     void rejectShouldDelegateAndEmitRejectedAuditEvent() {
         when(approvalRequestUseCase.reject(1L, 105L, "reject-req-1", 901L))
-                .thenReturn(record(901L, "REJECTED", 103L, 101L));
+                .thenReturn(record(901L, "REJECTED", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}"));
 
         var response = approvalRequestCommandService.reject(1L, 105L, "reject-req-1", 901L);
 
@@ -108,17 +137,23 @@ class ApprovalRequestServiceTest {
         verify(auditEventService).recordEvent(eq(1L), eq("APPROVAL_REQUEST"), eq(901L), eq("APPROVAL_REQUEST_REJECTED"), eq(105L), eq("reject-req-1"), eq(null), any());
     }
 
-    private ApprovalRequestRecord record(Long id, String status, Long entityId, Long requestedBy) {
+    private ApprovalRequestRecord record(Long id,
+                                         String status,
+                                         Long entityId,
+                                         Long requestedBy,
+                                         String actionType,
+                                         String entityType,
+                                         String payloadJson) {
         return new ApprovalRequestRecord(
                 id,
                 1L,
-                "USER_STATUS_DISABLE",
-                "USER",
+                actionType,
+                entityType,
                 entityId,
                 requestedBy,
                 "APPROVED".equals(status) ? 105L : null,
                 status,
-                "{\"status\":\"DISABLED\"}",
+                payloadJson,
                 "disable-req-1",
                 LocalDateTime.of(2026, 3, 26, 10, 0),
                 "PENDING".equals(status) ? null : LocalDateTime.of(2026, 3, 26, 10, 5),

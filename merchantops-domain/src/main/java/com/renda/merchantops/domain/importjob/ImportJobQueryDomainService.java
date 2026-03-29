@@ -4,6 +4,7 @@ import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 public class ImportJobQueryDomainService implements ImportJobQueryUseCase {
 
@@ -41,6 +42,16 @@ public class ImportJobQueryDomainService implements ImportJobQueryUseCase {
         ImportJobRecord job = importJobQueryPort.findJob(tenantId, importJobId)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
         return importJobQueryPort.pageJobAiInteractions(job.tenantId(), job.id(), normalize(criteria));
+    }
+
+    @Override
+    public Optional<ImportJobAiInteractionItem> findJobAiInteraction(Long tenantId, Long importJobId, Long interactionId) {
+        if (interactionId == null) {
+            return Optional.empty();
+        }
+        ImportJobRecord job = importJobQueryPort.findJob(tenantId, importJobId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "import job not found"));
+        return importJobQueryPort.findJobAiInteraction(job.tenantId(), job.id(), interactionId);
     }
 
     @Override

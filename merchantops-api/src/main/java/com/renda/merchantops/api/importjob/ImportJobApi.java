@@ -1,7 +1,9 @@
 package com.renda.merchantops.api.importjob;
 
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobCreateRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobEditedReplayRequest;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayProposalRequest;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobDetailResponse;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobErrorPageQuery;
@@ -66,6 +68,14 @@ public interface ImportJobApi {
     @PostMapping("/{id}/replay-failures/selective")
     ApiResponse<ImportJobDetailResponse> replayFailedRowsSelective(@PathVariable("id") Long id,
                                                                    @Valid @org.springframework.web.bind.annotation.RequestBody ImportJobSelectiveReplayRequest request);
+
+    @Operation(
+            summary = "Create a human-reviewed selective replay proposal for one terminal import job",
+            description = "Creates a PENDING approval request for selective replay by exact error code. The proposal stores only scoped replay metadata, and approval later executes the existing selective replay path as a derived USER_CSV job."
+    )
+    @PostMapping("/{id}/replay-failures/selective/proposals")
+    ApiResponse<ApprovalRequestResponse> createSelectiveReplayProposal(@PathVariable("id") Long id,
+                                                                       @Valid @org.springframework.web.bind.annotation.RequestBody ImportJobSelectiveReplayProposalRequest request);
 
     @Operation(
             summary = "Replay edited failed rows from one terminal import job as a new derived job",

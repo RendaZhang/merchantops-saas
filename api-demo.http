@@ -10,6 +10,7 @@
 @createUserEmail = cashier-demo@demo-shop.local
 @targetUserId = replace-with-created-user-id
 @approvalRequestId = replace-with-created-approval-request-id
+@proposalApprovalRequestId = replace-with-created-import-proposal-approval-request-id
 @approvalRequestedBy = replace-with-requester-user-id
 @targetUserToken = replace-with-pre-change-user-access-token
 @refreshedTargetUserToken = replace-with-post-role-change-user-access-token
@@ -17,6 +18,7 @@
 @ticketId = replace-with-created-ticket-id
 @importJobId = replace-with-created-import-job-id
 @importErrorId = replace-with-row-error-id
+@importAiInteractionId = replace-with-succeeded-fix-recommendation-interaction-id
 @importRequestedBy = replace-with-import-requester-id
 
 # See docs/runbooks/regression-checklist.md for the broader regression checklist.
@@ -300,6 +302,11 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=USER_STATUS_DISABLE&requestedBy={{approvalRequestedBy}}
 Authorization: Bearer {{token}}
 
+### List pending import selective replay proposals by requester
+# Use proposalApprovalRequestId after creating a proposal from the import section below.
+GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=IMPORT_JOB_SELECTIVE_REPLAY&requestedBy={{approvalRequestedBy}}
+Authorization: Bearer {{token}}
+
 ### Get approval request detail
 GET {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}
 Authorization: Bearer {{token}}
@@ -411,6 +418,20 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-fix-recommendation
 Authorization: Bearer {{token}}
 
+### Create import selective replay proposal
+# Optional sourceInteractionId should come from a SUCCEEDED FIX_RECOMMENDATION row in
+# GET /api/v1/import-jobs/{id}/ai-interactions. The proposal creates a pending approval
+# request only; it does not create a replay job until a different reviewer approves it.
+POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/selective/proposals
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "errorCodes": ["UNKNOWN_ROLE"],
+  "sourceInteractionId": {{importAiInteractionId}},
+  "proposalReason": "Review role fixes before replay"
+}
+
 ### Replay failed rows from import job
 # Set importJobId to a terminal source job that has failed rows; the response returns a new derived replay job id.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures
@@ -432,6 +453,16 @@ Content-Type: application/json
     "UNKNOWN_ROLE"
   ]
 }
+
+### Approve import selective replay proposal
+# Use a token from a different tenant-local reviewer than the proposal requester.
+POST {{baseUrl}}/api/v1/approval-requests/{{proposalApprovalRequestId}}/approve
+Authorization: Bearer {{token}}
+
+### Reject import selective replay proposal
+# Use a token from a different tenant-local reviewer than the proposal requester.
+POST {{baseUrl}}/api/v1/approval-requests/{{proposalApprovalRequestId}}/reject
+Authorization: Bearer {{token}}
 
 ### Replay edited failed rows from import job by exact error id
 # Use importErrorId from detail `itemErrors` or `/errors`, and send a full replacement row for each edited item.

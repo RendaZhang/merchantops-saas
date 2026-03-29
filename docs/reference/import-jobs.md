@@ -1,10 +1,10 @@
 # Import Jobs
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 ## Public API Surface
 
-Week 7 now exposes twelve import endpoints:
+Week 8 now exposes thirteen import endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -14,6 +14,7 @@ Week 7 now exposes twelve import endpoints:
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows only |
 | `POST` | `/api/v1/import-jobs/{id}/replay-file` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job by copying the source file for a full-failure `FAILED` source job |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from the source job's replayable failed rows whose `errorCode` exactly matches one of the requested values |
+| `POST` | `/api/v1/import-jobs/{id}/replay-failures/selective/proposals` | Bearer JWT | `USER_WRITE` | Creates a human-reviewed approval request for a later selective replay execution; it does not create the replay job yet |
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from caller-provided full replacement rows that target replayable failed-row `errorId` values only |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
 | `GET` | `/api/v1/import-jobs/{id}/ai-interactions` | Bearer JWT | `USER_READ` | Pages narrowed stored AI interaction history for one current-tenant import job |
@@ -294,6 +295,7 @@ Current prompt-safety and output-safety rules are hard-coded:
 - the model must return recommendations keyed by grounded local `errorCode` values only; ungrounded or duplicate codes are rejected as `INVALID_RESPONSE`
 - the model does not return direct replacement values; any value edit still belongs to manual replay prep outside the AI response
 - provider output is rejected if it echoes raw CSV-like strings or sensitive local row values such as username, display name, email, password, or role-code text
+- the endpoint itself stays read-only and suggestion-only even though Week 8 now adds a separate approval-backed selective replay proposal path that can optionally reference a successful `FIX_RECOMMENDATION` interaction as provenance
 
 Current response shape is:
 
@@ -410,6 +412,42 @@ Current audit behavior:
 - the source job still writes `IMPORT_JOB_REPLAY_REQUESTED`
 - the replay job still writes `IMPORT_JOB_CREATED`
 - selective replay adds `selectedErrorCodes` to both audit snapshots instead of adding a new import-job column in this slice
+
+## Selective Replay Proposal (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`)
+
+The first Week 8 human-reviewed execution bridge stays intentionally narrow:
+
+- request body shape is `{ "errorCodes": ["UNKNOWN_ROLE"], "sourceInteractionId": 9103, "proposalReason": "Review role fixes before replay" }`
+- `errorCodes` is required and is normalized exactly like direct selective replay: trim values, reject blanks, remove duplicates while preserving caller order, and require at least one value
+- `sourceInteractionId` is optional provenance only; it does not drive execution
+- `proposalReason` is optional operator context and is trimmed before persistence
+- the endpoint is tenant-scoped and requires `USER_WRITE`
+- the endpoint does not create a replay job, mutate the source job, or execute any import work directly
+- the response shape is the existing approval-request contract, not an import-job detail contract
+
+Current proposal payload rules are explicit:
+
+- `actionType=IMPORT_JOB_SELECTIVE_REPLAY`
+- `entityType=IMPORT_JOB`
+- `entityId=<source job id>`
+- `payloadJson` stores only canonical `sourceJobId`, normalized `errorCodes`, optional `sourceInteractionId`, and optional `proposalReason`
+- raw CSV rows, replay replacement values, passwords, emails, and full `rawPayload` values are intentionally excluded from approval persistence
+
+Current eligibility and rejection rules:
+
+- source job is not found in the current tenant
+- source job is not in a terminal status (`SUCCEEDED` or `FAILED`)
+- source job has `failureCount = 0`
+- source job is not `USER_CSV`
+- none of the requested `errorCodes` resolve to replayable row-level failures in the source job
+- `sourceInteractionId`, when present, does not reference a same-job `FIX_RECOMMENDATION` interaction in `SUCCEEDED` status
+
+Current approval behavior:
+
+- `POST /api/v1/approval-requests/{id}/approve` re-checks the same selective replay eligibility at approve time and then executes the existing selective replay path synchronously as the reviewer/request-id actor
+- `POST /api/v1/approval-requests/{id}/reject` transitions the request to `REJECTED` and does not create a replay job
+- requester self-approval is still blocked by the shared approval guard
+- duplicate proposal creation is not suppressed in this slice; repeated proposal calls can create separate pending approval requests
 
 ## Edited Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
 
@@ -710,6 +748,20 @@ Content-Type: application/json
 }
 ```
 
+Example selective replay proposal request:
+
+```http
+POST /api/v1/import-jobs/1201/replay-failures/selective/proposals
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "errorCodes": ["UNKNOWN_ROLE"],
+  "sourceInteractionId": 9103,
+  "proposalReason": "Review role fixes before replay"
+}
+```
+
 Example edited replay request:
 
 ```http
@@ -841,14 +893,15 @@ Current semantics:
 - a stale in-progress failure currently surfaces through job summary plus audit error `PROCESSING_STALE`; it does not create a replayable row-level `itemError`.
 - replay writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `IMPORT_JOB_CREATED` on the new replay job with `sourceJobId` in the created snapshot.
 - selective replay keeps the same event types and additionally records `selectedErrorCodes` in both source and replay audit snapshots.
+- selective replay proposal adds `APPROVAL_REQUEST_CREATED`, `APPROVAL_REQUEST_APPROVED` or `APPROVAL_REQUEST_REJECTED`, and `APPROVAL_ACTION_EXECUTED` on the approval entity while an approved request still reuses the same selective replay import-job audit events described above.
 - edited replay keeps the same event types and additionally records `editedErrorIds`, `editedRowCount`, and `editedFields` in both source and replay audit snapshots without persisting replacement values.
 - each successful user creation still emits existing `USER_CREATED` audit events through `UserCommandService`.
 - created users still persist tenant/operator attribution (`tenantId`, `createdBy`, `updatedBy`) from the import request context.
 
 ## Notes
 
-- this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay, exact error-code selective replay, and edited failed-row replay are implemented.
-- the current AI guidance slices are intentionally narrower still: only read-only import interaction history, error summary, mapping suggestion, and fix recommendation are public; any write-back flow remains out of scope.
+- this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay, exact error-code selective replay, approval-backed selective replay proposal, and edited failed-row replay are implemented.
+- the current AI guidance slices are intentionally narrower still: only read-only import interaction history, error summary, mapping suggestion, and fix recommendation are public; Week 8 adds one separate human-reviewed selective replay bridge, but the AI endpoints themselves still do not write back or execute replay directly.
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.

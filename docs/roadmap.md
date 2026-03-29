@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -23,14 +23,15 @@ The current Week 8 implementation should stay narrow and human-governed:
 
 - keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the completed Week 7 import AI surface stable: `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
-- use Week 8 to add low-risk proposal, approval, and execution flows with human oversight instead of widening the existing ticket or import AI slices into direct autonomous write-back
+- the first shipped Week 8 slice is now `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, which adds a low-risk proposal, approval, and execution flow with human oversight by connecting import fix guidance to the existing selective replay path
+- continue using Week 8 to add low-risk proposal, approval, and execution flows with human oversight instead of widening the existing ticket or import AI slices into direct autonomous write-back
 - keep Week 8 focused on approval-bounded workflow execution rather than tenant billing, ledger semantics, or generic chat tooling
 
 ## Recommended Next Steps
 
-- introduce the first low-risk Week 8 agentic workflow as a proposal-plus-approval path rather than direct AI write-back
-- keep the completed Week 6 ticket AI surface and the completed Week 7 import AI read surface stable while Week 8 focuses on human-reviewed execution flows
-- defer broader write-back, billing, ledger semantics, and generic chat tooling until the Week 8 workflow shape is proven
+- treat the import selective replay proposal flow as the Week 8 baseline pattern for proposal -> approval -> execution
+- keep the completed Week 6 ticket AI surface and the completed Week 7 import AI read surface stable while the next Week 8 slice reuses the same human-reviewed execution pattern for another low-risk workflow
+- defer broader write-back, billing, ledger semantics, and generic chat tooling until the Week 8 proposal/approval/execution shape is proven across more than one action
 
 ## Near-Term Sequence
 

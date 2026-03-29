@@ -2,6 +2,7 @@ package com.renda.merchantops.domain.importjob;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ImportJobQueryUseCase {
 
@@ -12,6 +13,8 @@ public interface ImportJobQueryUseCase {
     ImportJobAiInteractionPageResult pageJobAiInteractions(Long tenantId,
                                                            Long importJobId,
                                                            ImportJobAiInteractionPageCriteria criteria);
+
+    Optional<ImportJobAiInteractionItem> findJobAiInteraction(Long tenantId, Long importJobId, Long interactionId);
 
     ImportJobErrorPageResult pageJobErrors(Long tenantId, Long importJobId, ImportJobErrorPageCriteria criteria);
 

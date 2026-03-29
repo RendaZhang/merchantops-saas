@@ -3,6 +3,8 @@ package com.renda.merchantops.api.approval;
 import com.renda.merchantops.api.audit.AuditEventService;
 import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
+import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayProposalRequest;
+import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
 import com.renda.merchantops.domain.approval.ApprovalRequestUseCase;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,37 @@ public class ApprovalRequestCommandService {
     public ApprovalRequestResponse createDisableRequest(Long tenantId, Long requestedBy, String requestId, Long userId) {
         String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         ApprovalRequestRecord saved = approvalRequestUseCase.createDisableRequest(tenantId, requestedBy, resolvedRequestId, userId);
+        auditEventService.recordEvent(
+                tenantId,
+                ENTITY_APPROVAL_REQUEST,
+                saved.id(),
+                "APPROVAL_REQUEST_CREATED",
+                requestedBy,
+                resolvedRequestId,
+                null,
+                approvalRequestResponseMapper.snapshot(saved)
+        );
+        return approvalRequestResponseMapper.toResponse(saved);
+    }
+
+    @Transactional
+    public ApprovalRequestResponse createImportSelectiveReplayRequest(Long tenantId,
+                                                                      Long requestedBy,
+                                                                      String requestId,
+                                                                      Long sourceJobId,
+                                                                      ImportJobSelectiveReplayProposalRequest request) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
+        ApprovalRequestRecord saved = approvalRequestUseCase.createImportSelectiveReplayRequest(
+                tenantId,
+                requestedBy,
+                resolvedRequestId,
+                new ImportSelectiveReplayApprovalCommand(
+                        sourceJobId,
+                        request == null ? null : request.getErrorCodes(),
+                        request == null ? null : request.getSourceInteractionId(),
+                        request == null ? null : request.getProposalReason()
+                )
+        );
         auditEventService.recordEvent(
                 tenantId,
                 ENTITY_APPROVAL_REQUEST,

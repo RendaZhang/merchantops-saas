@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -101,9 +101,13 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `GET /api/v1/approval-requests?page=0&size=10` returns a page object with tenant-scoped items only
 - [ ] `GET /api/v1/approval-requests?status=PENDING` returns only pending items
 - [ ] `GET /api/v1/approval-requests?actionType=USER_STATUS_DISABLE` filters by action type
+- [ ] `GET /api/v1/approval-requests?actionType=IMPORT_JOB_SELECTIVE_REPLAY` filters by action type
 - [ ] `GET /api/v1/approval-requests?requestedBy=<userId>` filters by requester
 - [ ] approval queue ordering is stable: `createdAt DESC, id DESC`
 - [ ] approve path writes approval audit events and executes user disable (`USER_STATUS_UPDATED`)
+- [ ] import selective replay proposal approval writes approval audit events and creates exactly one derived selective replay job
+- [ ] import selective replay proposal rejection keeps the approval row only and does not create a replay job
+- [ ] import selective replay approval payload stores only safe proposal fields and does not persist raw CSV rows, replacement values, passwords, or emails
 - [ ] a `DISABLED` user is rejected by `POST /api/v1/auth/login`
 - [ ] a token issued before a user was disabled is rejected on protected endpoints with `403` / `user is not active`
 - [ ] `PUT /api/v1/users/{id}/roles` replaces the old role set rather than appending to it
@@ -139,7 +143,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## Import Jobs
 
-- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`
+- [ ] Swagger `Import Jobs` tag shows `POST /api/v1/import-jobs`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, and `GET /api/v1/import-jobs/{id}/errors`
 - [ ] `POST /api/v1/import-jobs` accepts multipart `request` + `file` and returns an initial `QUEUED` job
 - [ ] `POST /api/v1/import-jobs` with a `viewer` token returns `403`
 - [ ] `GET /api/v1/import-jobs?page=0&size=10` returns a page object ordered by `createdAt DESC, id DESC`
@@ -155,6 +159,8 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `POST /api/v1/import-jobs/{id}/replay-file` returns a new `QUEUED` derived job whose detail keeps `sourceJobId=<source job id>` and whose stored file matches the source file bytes for full-failure jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective` rejects empty `errorCodes`, unknown selected codes, non-terminal, cross-tenant, and unsupported-import-type source jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective` returns a new `QUEUED` derived job whose execution only replays rows whose `errorCode` exactly matches the request
+- [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` rejects empty or non-replayable `errorCodes`, cross-tenant or missing source jobs, and invalid `sourceInteractionId`
+- [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` returns a `PENDING` approval request instead of creating a replay job immediately
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/edited` rejects empty `items`, duplicate `errorId`, cross-job or cross-tenant `errorId`, header/global errors, and unsupported-import-type source jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/edited` returns a new `QUEUED` derived job whose execution uses only the caller-provided full replacement rows keyed by the requested replayable `errorId`
 - [ ] `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` returns a page object ordered by null `rowNumber` first, then `rowNumber ASC, id ASC`

@@ -2,19 +2,25 @@
 
 ## Current Scope
 
-The repository includes a generic `audit_event` backbone plus a minimal approval envelope for one high-value action (`USER_STATUS_DISABLE`).
+The repository includes a generic `audit_event` backbone plus a still-narrow approval envelope for two high-value actions: `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`.
 
 Implemented now:
 
 - tenant-scoped `audit_event` write/read baseline, including `GET /api/v1/audit-events`
-- tenant-scoped `approval_request` table for `USER_STATUS_DISABLE`
+- tenant-scoped `approval_request` table for `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`
 - user disable request flow:
   - `POST /api/v1/users/{id}/disable-requests`
   - `GET /api/v1/approval-requests`
   - `GET /api/v1/approval-requests/{id}`
   - `POST /api/v1/approval-requests/{id}/approve`
   - `POST /api/v1/approval-requests/{id}/reject`
-- approve executes synchronously via existing user status write chain (`UserCommandService.updateStatus`)
+- import selective replay proposal flow:
+  - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
+  - `GET /api/v1/approval-requests`
+  - `GET /api/v1/approval-requests/{id}`
+  - `POST /api/v1/approval-requests/{id}/approve`
+  - `POST /api/v1/approval-requests/{id}/reject`
+- approve executes synchronously via the existing user status write chain (`UserCommandService.updateStatus`) for `USER_STATUS_DISABLE` and via the existing selective import replay chain for `IMPORT_JOB_SELECTIVE_REPLAY`
 
 Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceability. That model is not part of the public `GET /api/v1/audit-events` contract and does not replace `audit_event`.
 
@@ -36,6 +42,15 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - does not mutate target user status yet
 - rejects duplicate pending disable requests for the same tenant user
 
+### `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
+
+- scope: current tenant only
+- permission: `USER_WRITE`
+- creates a `PENDING` approval request for `IMPORT_JOB_SELECTIVE_REPLAY`
+- proposal payload stores only `sourceJobId`, normalized `errorCodes`, optional `sourceInteractionId`, and optional `proposalReason`
+- the endpoint does not create a replay job yet and does not persist raw CSV values or replay replacement values in `payload_json`
+- `sourceInteractionId`, when present, must reference a same-job `FIX_RECOMMENDATION` interaction in `SUCCEEDED` status
+
 ### `GET /api/v1/approval-requests`
 
 - scope: current tenant only
@@ -53,7 +68,9 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - scope: current tenant only
 - permission: `USER_WRITE`
 - transitions `PENDING -> APPROVED`
-- executes target user status update to `DISABLED` in the same transaction boundary
+- executes the underlying action in the same transaction boundary:
+  - `USER_STATUS_DISABLE`: target user status update to `DISABLED`
+  - `IMPORT_JOB_SELECTIVE_REPLAY`: existing selective replay execution, creating one new derived import job when approval succeeds
 
 ### `POST /api/v1/approval-requests/{id}/reject`
 
@@ -103,6 +120,10 @@ Shared response shape example:
 - `reviewed_at`
 - `executed_at`
 
+Current import selective replay payload note:
+
+- `payload_json` is intentionally narrow and does not store raw CSV rows, replay replacement values, passwords, emails, or other sensitive replay inputs
+
 Current constraint note:
 
 - `requested_by` and `reviewed_by` both use same-tenant foreign-key linkage through `(user_id, tenant_id)` so cross-tenant reviewer attribution is rejected at the database layer
@@ -115,6 +136,7 @@ The current approval flow writes at least:
 - `APPROVAL_REQUEST_APPROVED` or `APPROVAL_REQUEST_REJECTED`
 - `APPROVAL_ACTION_EXECUTED` (for approve path)
 - existing user-chain event `USER_STATUS_UPDATED` from the reused write service
+- existing import replay-chain events `IMPORT_JOB_REPLAY_REQUESTED` and `IMPORT_JOB_CREATED` when an `IMPORT_JOB_SELECTIVE_REPLAY` request is approved
 
 Manual verification hint:
 
@@ -132,7 +154,7 @@ This separation keeps read-only AI suggestion calls from polluting the business 
 
 ## Still Planned (Not Yet Implemented)
 
-- multi-action generic approval routing beyond `USER_STATUS_DISABLE`
+- broader multi-action approval routing beyond the current `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY` pair
 - broader cross-entity audit and approval read surfaces
 - public read surfaces for AI interaction history or usage summaries
 - async approval executors or delayed execution modes

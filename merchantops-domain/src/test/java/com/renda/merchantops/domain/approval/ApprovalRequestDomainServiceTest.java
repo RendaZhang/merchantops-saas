@@ -18,7 +18,12 @@ class ApprovalRequestDomainServiceTest {
         requestPort.existsPendingDisableRequest = false;
         requestPort.savedResponse = approvalRequest(901L, "PENDING", null, null);
         CapturingApprovalTargetUserPort userPort = new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE")));
-        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(requestPort, userPort, new NoopApprovalActionPort());
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                userPort,
+                new NoopApprovalActionPort(),
+                new NoopApprovalImportSelectiveReplayPort()
+        );
 
         ApprovalRequestRecord result = useCase.createDisableRequest(1L, 101L, "disable-req-1", 103L);
 
@@ -31,13 +36,56 @@ class ApprovalRequestDomainServiceTest {
     }
 
     @Test
+    void createImportSelectiveReplayRequestShouldPersistPreparedApprovalPayload() {
+        CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
+        requestPort.savedResponse = importApprovalRequest(902L, "PENDING", 7001L, 101L, "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}");
+        CapturingApprovalImportSelectiveReplayPort importReplayPort = new CapturingApprovalImportSelectiveReplayPort();
+        importReplayPort.prepared = new PreparedImportSelectiveReplayApproval(
+                7001L,
+                List.of("UNKNOWN_ROLE"),
+                9103L,
+                "Review role fixes before replay",
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"],\"sourceInteractionId\":9103,\"proposalReason\":\"Review role fixes before replay\"}"
+        );
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
+                new NoopApprovalActionPort(),
+                importReplayPort
+        );
+
+        ApprovalRequestRecord result = useCase.createImportSelectiveReplayRequest(
+                1L,
+                101L,
+                "proposal-req-1",
+                new ImportSelectiveReplayApprovalCommand(7001L, List.of("UNKNOWN_ROLE"), 9103L, "Review role fixes before replay")
+        );
+
+        assertThat(result.id()).isEqualTo(902L);
+        assertThat(importReplayPort.command).isEqualTo(
+                new ImportSelectiveReplayApprovalCommand(7001L, List.of("UNKNOWN_ROLE"), 9103L, "Review role fixes before replay")
+        );
+        assertThat(requestPort.savedRequest.actionType()).isEqualTo("IMPORT_JOB_SELECTIVE_REPLAY");
+        assertThat(requestPort.savedRequest.entityType()).isEqualTo("IMPORT_JOB");
+        assertThat(requestPort.savedRequest.entityId()).isEqualTo(7001L);
+        assertThat(requestPort.savedRequest.payloadJson()).isEqualTo(
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"],\"sourceInteractionId\":9103,\"proposalReason\":\"Review role fixes before replay\"}"
+        );
+    }
+
+    @Test
     void approveShouldDisableUserAndPersistApprovedStatus() {
         CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
         requestPort.lockedRequest = Optional.of(approvalRequest(901L, "PENDING", 103L, 101L));
         requestPort.savedResponse = approvalRequest(901L, "APPROVED", 103L, 101L);
         CapturingApprovalTargetUserPort userPort = new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE")));
         CapturingApprovalActionPort actionPort = new CapturingApprovalActionPort();
-        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(requestPort, userPort, actionPort);
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                userPort,
+                actionPort,
+                new NoopApprovalImportSelectiveReplayPort()
+        );
 
         ApprovalRequestRecord result = useCase.approve(1L, 105L, "approve-req-1", 901L);
 
@@ -53,13 +101,47 @@ class ApprovalRequestDomainServiceTest {
     }
 
     @Test
+    void approveImportSelectiveReplayShouldDispatchReplayActionAndPersistApprovedStatus() {
+        CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
+        requestPort.lockedRequest = Optional.of(importApprovalRequest(
+                902L,
+                "PENDING",
+                7001L,
+                101L,
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}"
+        ));
+        requestPort.savedResponse = importApprovalRequest(
+                902L,
+                "APPROVED",
+                7001L,
+                101L,
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}"
+        );
+        CapturingApprovalActionPort actionPort = new CapturingApprovalActionPort();
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
+                actionPort,
+                new NoopApprovalImportSelectiveReplayPort()
+        );
+
+        ApprovalRequestRecord result = useCase.approve(1L, 105L, "approve-import-proposal-1", 902L);
+
+        assertThat(actionPort.sourceJobId).isEqualTo(7001L);
+        assertThat(actionPort.payloadJson).isEqualTo("{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}");
+        assertThat(result.status()).isEqualTo("APPROVED");
+        assertThat(requestPort.savedRequest.executedAt()).isNotNull();
+    }
+
+    @Test
     void rejectShouldPreventSelfReview() {
         CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
         requestPort.lockedRequest = Optional.of(approvalRequest(901L, "PENDING", 103L, 101L));
         ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
                 requestPort,
                 new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
-                new NoopApprovalActionPort()
+                new NoopApprovalActionPort(),
+                new NoopApprovalImportSelectiveReplayPort()
         );
 
         assertThatThrownBy(() -> useCase.reject(1L, 101L, "reject-req-1", 901L))
@@ -74,7 +156,8 @@ class ApprovalRequestDomainServiceTest {
         ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
                 requestPort,
                 new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
-                new NoopApprovalActionPort()
+                new NoopApprovalActionPort(),
+                new NoopApprovalImportSelectiveReplayPort()
         );
 
         useCase.page(1L, new ApprovalRequestPageCriteria(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L));
@@ -99,6 +182,28 @@ class ApprovalRequestDomainServiceTest {
                 "{\"status\":\"DISABLED\"}",
                 "disable-req-1",
                 LocalDateTime.of(2026, 3, 26, 10, 0),
+                null,
+                null
+        );
+    }
+
+    private ApprovalRequestRecord importApprovalRequest(Long id,
+                                                        String status,
+                                                        Long entityId,
+                                                        Long requestedBy,
+                                                        String payloadJson) {
+        return new ApprovalRequestRecord(
+                id,
+                1L,
+                "IMPORT_JOB_SELECTIVE_REPLAY",
+                "IMPORT_JOB",
+                entityId,
+                requestedBy,
+                null,
+                status,
+                payloadJson,
+                "proposal-req-1",
+                LocalDateTime.of(2026, 3, 29, 10, 0),
                 null,
                 null
         );
@@ -155,6 +260,8 @@ class ApprovalRequestDomainServiceTest {
         private Long reviewerId;
         private String requestId;
         private Long userId;
+        private Long sourceJobId;
+        private String payloadJson;
 
         @Override
         public void disableUser(Long tenantId, Long reviewerId, String requestId, Long userId) {
@@ -163,12 +270,59 @@ class ApprovalRequestDomainServiceTest {
             this.requestId = requestId;
             this.userId = userId;
         }
+
+        @Override
+        public void replayImportJobSelective(Long tenantId,
+                                             Long reviewerId,
+                                             String requestId,
+                                             Long sourceJobId,
+                                             String payloadJson) {
+            this.tenantId = tenantId;
+            this.reviewerId = reviewerId;
+            this.requestId = requestId;
+            this.sourceJobId = sourceJobId;
+            this.payloadJson = payloadJson;
+        }
     }
 
     private static final class NoopApprovalActionPort implements ApprovalActionPort {
 
         @Override
         public void disableUser(Long tenantId, Long reviewerId, String requestId, Long userId) {
+        }
+
+        @Override
+        public void replayImportJobSelective(Long tenantId,
+                                             Long reviewerId,
+                                             String requestId,
+                                             Long sourceJobId,
+                                             String payloadJson) {
+        }
+    }
+
+    private static final class CapturingApprovalImportSelectiveReplayPort implements ApprovalImportSelectiveReplayPort {
+
+        private ImportSelectiveReplayApprovalCommand command;
+        private PreparedImportSelectiveReplayApproval prepared;
+
+        @Override
+        public PreparedImportSelectiveReplayApproval prepareProposal(Long tenantId, ImportSelectiveReplayApprovalCommand command) {
+            this.command = command;
+            return prepared;
+        }
+    }
+
+    private static final class NoopApprovalImportSelectiveReplayPort implements ApprovalImportSelectiveReplayPort {
+
+        @Override
+        public PreparedImportSelectiveReplayApproval prepareProposal(Long tenantId, ImportSelectiveReplayApprovalCommand command) {
+            return new PreparedImportSelectiveReplayApproval(
+                    command.sourceJobId(),
+                    command.errorCodes(),
+                    command.sourceInteractionId(),
+                    command.proposalReason(),
+                    "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}"
+            );
         }
     }
 }

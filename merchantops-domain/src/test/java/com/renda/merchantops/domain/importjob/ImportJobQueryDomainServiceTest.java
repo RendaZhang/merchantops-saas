@@ -73,6 +73,53 @@ class ImportJobQueryDomainServiceTest {
                 .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
     }
 
+    @Test
+    void findJobAiInteractionShouldReturnScopedInteractionWhenJobExists() {
+        RecordingQueryPort port = new RecordingQueryPort();
+        port.foundJob = new ImportJobRecord(
+                7001L,
+                1L,
+                "USER_CSV",
+                "CSV",
+                "users.csv",
+                "1/users.csv",
+                null,
+                "FAILED",
+                101L,
+                "req-7001",
+                2,
+                0,
+                2,
+                "all rows failed validation",
+                LocalDateTime.of(2026, 3, 28, 9, 0),
+                LocalDateTime.of(2026, 3, 28, 9, 0, 2),
+                LocalDateTime.of(2026, 3, 28, 9, 0, 5)
+        );
+        port.foundInteraction = Optional.of(new ImportJobAiInteractionItem(
+                9103L,
+                "FIX_RECOMMENDATION",
+                "SUCCEEDED",
+                "Use selective replay for role-related rows only.",
+                "import-fix-recommendation-v1",
+                "gpt-4.1-mini",
+                566L,
+                "import-ai-fix-recommendation-req-1",
+                140,
+                72,
+                212,
+                null,
+                LocalDateTime.of(2026, 3, 28, 10, 45)
+        ));
+        ImportJobQueryDomainService service = new ImportJobQueryDomainService(port);
+
+        Optional<ImportJobAiInteractionItem> result = service.findJobAiInteraction(1L, 7001L, 9103L);
+
+        assertThat(result).isPresent();
+        assertThat(port.findAiInteractionTenantId).isEqualTo(1L);
+        assertThat(port.findAiInteractionImportJobId).isEqualTo(7001L);
+        assertThat(port.findAiInteractionId).isEqualTo(9103L);
+    }
+
     private static final class RecordingQueryPort implements ImportJobQueryPort {
 
         private ImportJobPageCriteria pageCriteria;
@@ -80,6 +127,10 @@ class ImportJobQueryDomainServiceTest {
         private Long pageAiInteractionTenantId;
         private Long pageAiInteractionImportJobId;
         private ImportJobAiInteractionPageCriteria pageAiInteractionCriteria;
+        private Optional<ImportJobAiInteractionItem> foundInteraction = Optional.empty();
+        private Long findAiInteractionTenantId;
+        private Long findAiInteractionImportJobId;
+        private Long findAiInteractionId;
 
         @Override
         public ImportJobPageResult pageJobs(Long tenantId, ImportJobPageCriteria criteria) {
@@ -100,6 +151,14 @@ class ImportJobQueryDomainServiceTest {
             this.pageAiInteractionImportJobId = importJobId;
             this.pageAiInteractionCriteria = criteria;
             return new ImportJobAiInteractionPageResult(List.of(), criteria.page(), criteria.size(), 0, 0);
+        }
+
+        @Override
+        public Optional<ImportJobAiInteractionItem> findJobAiInteraction(Long tenantId, Long importJobId, Long interactionId) {
+            this.findAiInteractionTenantId = tenantId;
+            this.findAiInteractionImportJobId = importJobId;
+            this.findAiInteractionId = interactionId;
+            return foundInteraction;
         }
 
         @Override
