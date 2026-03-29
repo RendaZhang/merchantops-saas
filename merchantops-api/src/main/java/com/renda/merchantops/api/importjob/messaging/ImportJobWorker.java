@@ -110,7 +110,9 @@ public class ImportJobWorker {
                     rowNumber++;
                     int nextDataRowCount = flushedDataRows + chunk.size() + 1;
                     if (nextDataRowCount > importProcessingProperties.getMaxRowsPerJob()) {
-                        flushChunk(context, chunk);
+                        if (!flushChunk(context, chunk)) {
+                            return;
+                        }
                         importJobExecutionCoordinator.failJob(context, new ImportJobFailure(
                                 null,
                                 "MAX_ROWS_EXCEEDED",
@@ -130,12 +132,16 @@ public class ImportJobWorker {
                     ));
                     if (chunk.size() >= importProcessingProperties.getChunkSize()) {
                         flushedDataRows += chunk.size();
-                        flushChunk(context, chunk);
+                        if (!flushChunk(context, chunk)) {
+                            return;
+                        }
                     }
                 }
             }
 
-            flushChunk(context, chunk);
+            if (!flushChunk(context, chunk)) {
+                return;
+            }
             importJobExecutionCoordinator.completeJob(context);
         } catch (IOException | UncheckedIOException ex) {
             flushChunkQuietly(context, chunk);
@@ -164,13 +170,17 @@ public class ImportJobWorker {
         }
     }
 
-    private void flushChunk(ImportJobExecutionContext context,
-                            List<ImportJobChunkRow> chunk) {
+    private boolean flushChunk(ImportJobExecutionContext context,
+                               List<ImportJobChunkRow> chunk) {
         if (chunk.isEmpty()) {
-            return;
+            return true;
         }
-        importJobExecutionCoordinator.processChunk(context, List.copyOf(chunk));
+        boolean processed = importJobExecutionCoordinator.processChunk(context, List.copyOf(chunk));
         chunk.clear();
+        if (!processed) {
+            log.debug("stopped import job {} after chunk because execution is no longer active", context.jobId());
+        }
+        return processed;
     }
 
     private void flushChunkQuietly(ImportJobExecutionContext context,

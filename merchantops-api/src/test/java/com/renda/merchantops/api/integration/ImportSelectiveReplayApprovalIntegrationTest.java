@@ -154,6 +154,7 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                     reviewed_by BIGINT,
                     status VARCHAR(32) NOT NULL,
                     payload_json CLOB NOT NULL,
+                    pending_request_key VARCHAR(191),
                     request_id VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
                     reviewed_at TIMESTAMP,
@@ -162,6 +163,7 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                     CONSTRAINT fk_approval_request_reviewed_by_tenant FOREIGN KEY (reviewed_by, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
         jdbcTemplate.execute("""
                 CREATE TABLE import_job (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,

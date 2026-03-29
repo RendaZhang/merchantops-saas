@@ -47,6 +47,9 @@ public class ApprovalRequestEntity {
     @Column(name = "payload_json", nullable = false)
     private String payloadJson;
 
+    @Column(name = "pending_request_key", length = 191)
+    private String pendingRequestKey;
+
     @Column(name = "request_id", nullable = false, length = 128)
     private String requestId;
 

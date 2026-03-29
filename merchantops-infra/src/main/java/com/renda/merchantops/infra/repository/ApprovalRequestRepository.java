@@ -31,10 +31,4 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
                                                       @Param("actionType") String actionType,
                                                       @Param("requestedBy") Long requestedBy,
                                                       Pageable pageable);
-
-    boolean existsByTenantIdAndActionTypeAndEntityTypeAndEntityIdAndStatus(Long tenantId,
-                                                                            String actionType,
-                                                                            String entityType,
-                                                                            Long entityId,
-                                                                            String status);
 }

@@ -41,6 +41,7 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - creates a `PENDING` approval request for `USER_STATUS_DISABLE`
 - does not mutate target user status yet
 - rejects duplicate pending disable requests for the same tenant user
+- duplicate suppression is now also enforced at the database layer through a derived pending-request key, so concurrent duplicate creates still collapse into the same public `400` behavior
 
 ### `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
 
@@ -115,6 +116,7 @@ Shared response shape example:
 - `reviewed_by`
 - `status`
 - `payload_json`
+- `pending_request_key`
 - `request_id`
 - `created_at`
 - `reviewed_at`
@@ -127,6 +129,7 @@ Current import selective replay payload note:
 Current constraint note:
 
 - `requested_by` and `reviewed_by` both use same-tenant foreign-key linkage through `(user_id, tenant_id)` so cross-tenant reviewer attribution is rejected at the database layer
+- pending `USER_STATUS_DISABLE` requests now also derive a unique `pending_request_key` (`USER_STATUS_DISABLE:<tenantId>:<entityId>`) so duplicate pending disable requests are rejected even under concurrent writes; non-disable approval rows keep this field `NULL`
 
 ## Current Audit Coverage For Approval Flow
 

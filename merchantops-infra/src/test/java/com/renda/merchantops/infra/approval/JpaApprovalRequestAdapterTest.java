@@ -2,6 +2,7 @@ package com.renda.merchantops.infra.approval;
 
 import com.renda.merchantops.domain.approval.ApprovalRequestPageCriteria;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
+import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.infra.persistence.entity.ApprovalRequestEntity;
 import com.renda.merchantops.infra.repository.ApprovalRequestRepository;
 import org.junit.jupiter.api.Test;
@@ -12,11 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -52,7 +55,37 @@ class JpaApprovalRequestAdapterTest {
         ArgumentCaptor<ApprovalRequestEntity> entityCaptor = ArgumentCaptor.forClass(ApprovalRequestEntity.class);
         verify(approvalRequestRepository).save(entityCaptor.capture());
         assertThat(entityCaptor.getValue().getStatus()).isEqualTo("APPROVED");
+        assertThat(entityCaptor.getValue().getPendingRequestKey()).isNull();
         assertThat(saved.reviewedBy()).isEqualTo(105L);
+    }
+
+    @Test
+    void saveShouldDerivePendingDisableKeyAndTranslateDuplicateConstraint() {
+        JpaApprovalRequestAdapter adapter = new JpaApprovalRequestAdapter(approvalRequestRepository);
+        when(approvalRequestRepository.save(any(ApprovalRequestEntity.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> adapter.save(new ApprovalRequestRecord(
+                null,
+                1L,
+                "USER_STATUS_DISABLE",
+                "USER",
+                103L,
+                101L,
+                null,
+                "PENDING",
+                "{\"status\":\"DISABLED\"}",
+                "disable-req-1",
+                LocalDateTime.of(2026, 3, 26, 10, 0),
+                null,
+                null
+        )))
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BAD_REQUEST);
+
+        ArgumentCaptor<ApprovalRequestEntity> entityCaptor = ArgumentCaptor.forClass(ApprovalRequestEntity.class);
+        verify(approvalRequestRepository).save(entityCaptor.capture());
+        assertThat(entityCaptor.getValue().getPendingRequestKey()).isEqualTo("USER_STATUS_DISABLE:1:103");
     }
 
     @Test

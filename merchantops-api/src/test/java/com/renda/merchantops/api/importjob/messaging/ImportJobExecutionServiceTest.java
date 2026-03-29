@@ -119,6 +119,56 @@ class ImportJobExecutionServiceTest {
         assertThat(errorCaptor.getValue().errorCode()).isEqualTo("INVALID_EMAIL");
     }
 
+    @Test
+    void processChunkShouldStopBeforeDelegatingWhenJobIsNoLongerProcessing() {
+        ImportJobRecord job = importJob(7003L, "FAILED", LocalDateTime.now(), 5, 2, 1);
+        when(importJobCommandPort.findJobForUpdate(1L, 7003L)).thenReturn(Optional.of(job));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7003L, 1L, "USER_CSV", "1/key.csv", 101L, "req-1");
+
+        boolean processed = importJobExecutionCoordinator.processChunk(context, List.of(
+                new ImportJobChunkRow(2, validColumns(), "alpha,Alpha User,alpha@example.com,abc123,READ_ONLY")
+        ));
+
+        assertThat(processed).isFalse();
+        verify(importJobCommandPort, never()).saveJob(any());
+        verify(importJobCommandPort, never()).saveJobError(any());
+        verifyNoInteractions(auditEventService, userCsvImportProcessor);
+    }
+
+    @Test
+    void completeJobShouldIgnoreNonProcessingJob() {
+        ImportJobRecord job = importJob(7004L, "FAILED", LocalDateTime.now(), 5, 2, 1);
+        when(importJobCommandPort.findJobForUpdate(1L, 7004L)).thenReturn(Optional.of(job));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7004L, 1L, "USER_CSV", "1/key.csv", 101L, "req-1");
+
+        importJobExecutionCoordinator.completeJob(context);
+
+        verify(importJobCommandPort, never()).saveJob(any());
+        verify(importJobCommandPort, never()).saveJobError(any());
+        verifyNoInteractions(auditEventService, userCsvImportProcessor);
+    }
+
+    @Test
+    void failJobShouldIgnoreNonProcessingJob() {
+        ImportJobRecord job = importJob(7005L, "FAILED", LocalDateTime.now(), 5, 2, 1);
+        when(importJobCommandPort.findJobForUpdate(1L, 7005L)).thenReturn(Optional.of(job));
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7005L, 1L, "USER_CSV", "1/key.csv", 101L, "req-1");
+
+        importJobExecutionCoordinator.failJob(context, new ImportJobFailure(
+                null,
+                "PROCESSING_ERROR",
+                "import job processing failed",
+                "synthetic failure",
+                "import job processing failed",
+                0,
+                1
+        ));
+
+        verify(importJobCommandPort, never()).saveJob(any());
+        verify(importJobCommandPort, never()).saveJobError(any());
+        verifyNoInteractions(auditEventService, userCsvImportProcessor);
+    }
+
     private ImportJobRecord importJob(Long id,
                                       String status,
                                       LocalDateTime startedAt,

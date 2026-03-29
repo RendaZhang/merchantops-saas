@@ -58,8 +58,9 @@ Worker and runtime behavior (Week 5 runtime hardening):
 10. each row executes in its own transaction through the existing user-create service chain, so row-level partial success still holds across chunk boundaries
 11. row errors are recorded in `import_job_item_error` for both parse-level and business-level failures
 12. `totalCount`, `successCount`, and `failureCount` are flushed back to `import_job` after each chunk so `GET /api/v1/import-jobs/{id}` can show real progress during `PROCESSING`; handled-row progress and saved row errors are still persisted before an unexpected runtime failure writes the terminal job failure
-13. files that exceed the configured row guardrail fail with `MAX_ROWS_EXCEEDED`
-14. terminal transitions still write job-level audit events such as `IMPORT_JOB_COMPLETED` and `IMPORT_JOB_FAILED`
+13. if the job has already left `PROCESSING` before a later chunk flush or completion/failure handling runs, the worker stops quietly and does not write duplicate completion or terminal-failure side effects
+14. files that exceed the configured row guardrail fail with `MAX_ROWS_EXCEEDED`
+15. terminal transitions still write job-level audit events such as `IMPORT_JOB_COMPLETED` and `IMPORT_JOB_FAILED`
 
 Current internal processing controls:
 
@@ -891,6 +892,7 @@ Current semantics:
 - a fresh duplicate delivery for an already-active `PROCESSING` job is acknowledged and ignored; recovery republishes only after the stale threshold is crossed.
 - a stale zero-progress restart records `recoveredFromStale=true` on `IMPORT_JOB_PROCESSING_STARTED`.
 - a stale in-progress failure currently surfaces through job summary plus audit error `PROCESSING_STALE`; it does not create a replayable row-level `itemError`.
+- if a later chunk flush or completion/failure callback finds the job already outside `PROCESSING`, local execution stops without reviving the job or writing duplicate terminal audit rows.
 - replay writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job and keeps `IMPORT_JOB_CREATED` on the new replay job with `sourceJobId` in the created snapshot.
 - selective replay keeps the same event types and additionally records `selectedErrorCodes` in both source and replay audit snapshots.
 - selective replay proposal adds `APPROVAL_REQUEST_CREATED`, `APPROVAL_REQUEST_APPROVED` or `APPROVAL_REQUEST_REJECTED`, and `APPROVAL_ACTION_EXECUTED` on the approval entity while an approved request still reuses the same selective replay import-job audit events described above.

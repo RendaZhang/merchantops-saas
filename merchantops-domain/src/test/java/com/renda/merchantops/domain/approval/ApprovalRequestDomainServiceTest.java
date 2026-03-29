@@ -15,7 +15,6 @@ class ApprovalRequestDomainServiceTest {
     @Test
     void createDisableRequestShouldLockActiveUserBeforeSavingPendingRequest() {
         CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
-        requestPort.existsPendingDisableRequest = false;
         requestPort.savedResponse = approvalRequest(901L, "PENDING", null, null);
         CapturingApprovalTargetUserPort userPort = new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE")));
         ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
@@ -211,17 +210,11 @@ class ApprovalRequestDomainServiceTest {
 
     private static final class CapturingApprovalRequestPort implements ApprovalRequestPort {
 
-        private boolean existsPendingDisableRequest;
         private ApprovalRequestRecord savedRequest;
         private ApprovalRequestRecord savedResponse;
         private Optional<ApprovalRequestRecord> lockedRequest = Optional.empty();
         private ApprovalRequestPageCriteria pageCriteria;
         private ApprovalRequestPageResult pageResult;
-
-        @Override
-        public boolean existsPendingDisableRequest(Long tenantId, Long userId) {
-            return existsPendingDisableRequest;
-        }
 
         @Override
         public ApprovalRequestRecord save(ApprovalRequestRecord request) {

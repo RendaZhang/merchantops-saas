@@ -40,7 +40,6 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         requireTenantAndOperator(tenantId, requestedBy);
         String resolvedRequestId = requireRequestId(requestId);
         requireUserCanBeDisabled(tenantId, userId);
-        ensureNoPendingRequest(tenantId, userId);
 
         return approvalRequestPort.save(new ApprovalRequestRecord(
                 null,
@@ -144,12 +143,6 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
                 LocalDateTime.now(),
                 null
         ));
-    }
-
-    private void ensureNoPendingRequest(Long tenantId, Long userId) {
-        if (approvalRequestPort.existsPendingDisableRequest(tenantId, userId)) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "pending disable request already exists for user");
-        }
     }
 
     private void requireTenantAndOperator(Long tenantId, Long operatorId) {

@@ -4,33 +4,31 @@ import com.renda.merchantops.domain.approval.ApprovalRequestPageCriteria;
 import com.renda.merchantops.domain.approval.ApprovalRequestPageResult;
 import com.renda.merchantops.domain.approval.ApprovalRequestPort;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
+import com.renda.merchantops.domain.shared.error.BizException;
+import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.infra.persistence.entity.ApprovalRequestEntity;
 import com.renda.merchantops.infra.repository.ApprovalRequestRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
+import java.util.Locale;
 import java.util.Optional;
 
 @Component
 public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
 
+    private static final String ACTION_USER_STATUS_DISABLE = "USER_STATUS_DISABLE";
+    private static final String ENTITY_USER = "USER";
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String DUPLICATE_PENDING_DISABLE_MESSAGE = "pending disable request already exists for user";
+
     private final ApprovalRequestRepository approvalRequestRepository;
 
     public JpaApprovalRequestAdapter(ApprovalRequestRepository approvalRequestRepository) {
         this.approvalRequestRepository = approvalRequestRepository;
-    }
-
-    @Override
-    public boolean existsPendingDisableRequest(Long tenantId, Long userId) {
-        return approvalRequestRepository.existsByTenantIdAndActionTypeAndEntityTypeAndEntityIdAndStatus(
-                tenantId,
-                "USER_STATUS_DISABLE",
-                "USER",
-                userId,
-                "PENDING"
-        );
     }
 
     @Override
@@ -45,11 +43,19 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
         entity.setReviewedBy(request.reviewedBy());
         entity.setStatus(request.status());
         entity.setPayloadJson(request.payloadJson());
+        entity.setPendingRequestKey(toPendingRequestKey(request));
         entity.setRequestId(request.requestId());
         entity.setCreatedAt(request.createdAt());
         entity.setReviewedAt(request.reviewedAt());
         entity.setExecutedAt(request.executedAt());
-        return toRecord(approvalRequestRepository.save(entity));
+        try {
+            return toRecord(approvalRequestRepository.save(entity));
+        } catch (DataIntegrityViolationException ex) {
+            if (isPendingDisableRequest(request)) {
+                throw new BizException(ErrorCode.BAD_REQUEST, DUPLICATE_PENDING_DISABLE_MESSAGE);
+            }
+            throw ex;
+        }
     }
 
     @Override
@@ -100,5 +106,24 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
                 entity.getReviewedAt(),
                 entity.getExecutedAt()
         );
+    }
+
+    private String toPendingRequestKey(ApprovalRequestRecord request) {
+        if (!isPendingDisableRequest(request)) {
+            return null;
+        }
+        return ACTION_USER_STATUS_DISABLE + ":" + request.tenantId() + ":" + request.entityId();
+    }
+
+    private boolean isPendingDisableRequest(ApprovalRequestRecord request) {
+        return ACTION_USER_STATUS_DISABLE.equals(normalizeKey(request.actionType()))
+                && ENTITY_USER.equals(normalizeKey(request.entityType()))
+                && STATUS_PENDING.equals(normalizeKey(request.status()))
+                && request.tenantId() != null
+                && request.entityId() != null;
+    }
+
+    private String normalizeKey(String value) {
+        return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
     }
 }

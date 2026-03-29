@@ -20,6 +20,7 @@
 - `V9__add_import_job_backbone.sql`: adds tenant-scoped `import_job` and `import_job_item_error` for Week 5 async import submission, queue processing, and row-level error tracking, including DB-level same-tenant linkage from item errors back to the parent import job
 - `V10__add_import_job_replay_lineage.sql`: adds nullable `import_job.source_job_id` so replay-derived jobs can point back to the source job, including DB-level same-tenant lineage protection through `(tenant_id, source_job_id) -> import_job(tenant_id, id)`
 - `V11__add_ai_interaction_record.sql`: adds tenant-scoped `ai_interaction_record` for Week 6 AI runtime traceability, including same-tenant linkage between `tenant_id` and `user_id` plus indexed lookup by entity and request id
+- `V12__enforce_pending_disable_uniqueness.sql`: adds nullable `approval_request.pending_request_key`, converts superseded historical duplicate pending `USER_STATUS_DISABLE` rows for the same tenant user to `REJECTED`, backfills only the canonical newest pending row with the derived key, and creates a unique index so future pending disable requests stay unique per tenant user at the database layer
 
 ## Demo Accounts
 

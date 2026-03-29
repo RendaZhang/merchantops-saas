@@ -16,6 +16,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -38,6 +39,7 @@ class ImportJobWorkerTest {
         importProcessingProperties.setChunkSize(2);
         importProcessingProperties.setMaxRowsPerJob(100);
         importJobWorker = new ImportJobWorker(importFileStorageService, importJobExecutionCoordinator, importProcessingProperties);
+        lenient().when(importJobExecutionCoordinator.processChunk(any(), any())).thenReturn(true);
     }
 
     @Test
@@ -210,6 +212,35 @@ class ImportJobWorkerTest {
 
         verify(importJobExecutionCoordinator, never()).processChunk(any(), any());
         verify(importJobExecutionCoordinator, never()).completeJob(any());
+        verify(importJobExecutionCoordinator, never()).failJob(any(), any());
+    }
+
+    @Test
+    void consumeShouldStopFurtherExecutionWhenChunkProcessingIsNoLongerActive() throws Exception {
+        importProcessingProperties.setChunkSize(1);
+        ImportJobExecutionContext context = new ImportJobExecutionContext(7007L, 1L, "USER_CSV", "1/stop.csv", 101L, "req-7");
+        when(importJobExecutionCoordinator.startProcessing(7007L, 1L))
+                .thenReturn(ImportJobStartResult.started(context));
+        when(importFileStorageService.openStream("1/stop.csv")).thenReturn(new ByteArrayInputStream(
+                ("""
+                        username,displayName,email,password,roleCodes
+                        alpha,Alpha User,alpha@example.com,123456,READ_ONLY
+                        beta,Beta User,beta@example.com,123456,READ_ONLY
+                        gamma,Gamma User,gamma@example.com,123456,READ_ONLY
+                        """).getBytes(StandardCharsets.UTF_8)
+        ));
+        when(importJobExecutionCoordinator.processChunk(eq(context), any()))
+                .thenReturn(true, false);
+
+        importJobWorker.consume(new ImportJobMessage(7007L, 1L));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<ImportJobChunkRow>> chunkCaptor = ArgumentCaptor.forClass(List.class);
+        verify(importJobExecutionCoordinator, times(2)).processChunk(eq(context), chunkCaptor.capture());
+        assertThat(chunkCaptor.getAllValues()).hasSize(2);
+        assertThat(chunkCaptor.getAllValues().get(0)).singleElement().extracting(ImportJobChunkRow::rowNumber).isEqualTo(2);
+        assertThat(chunkCaptor.getAllValues().get(1)).singleElement().extracting(ImportJobChunkRow::rowNumber).isEqualTo(3);
+        verify(importJobExecutionCoordinator, never()).completeJob(context);
         verify(importJobExecutionCoordinator, never()).failJob(any(), any());
     }
 }

@@ -5,6 +5,7 @@ import com.renda.merchantops.api.config.ImportProcessingProperties;
 import com.renda.merchantops.domain.importjob.ImportJobCommandPort;
 import com.renda.merchantops.domain.importjob.ImportJobRecord;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,9 +13,11 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ImportJobExecutionCoordinator {
 
     private static final String STATUS_QUEUED = "QUEUED";
@@ -49,20 +52,25 @@ public class ImportJobExecutionCoordinator {
     }
 
     @Transactional(noRollbackFor = RuntimeException.class)
-    public void processChunk(ImportJobExecutionContext context, List<ImportJobChunkRow> rows) {
+    public boolean processChunk(ImportJobExecutionContext context, List<ImportJobChunkRow> rows) {
         if (rows == null || rows.isEmpty()) {
-            return;
+            return true;
         }
-        ImportJobRecord job = requireJobForUpdate(context);
-        ImportJobRecord updated = importJobChunkProcessor.processChunk(job, context, rows);
-        if (!STATUS_PROCESSING.equals(updated.status())) {
-            throw new IllegalStateException("import job must stay in PROCESSING during chunk execution");
+        Optional<ImportJobRecord> job = findProcessingJobForUpdate(context, "chunk execution");
+        if (job.isEmpty()) {
+            return false;
         }
+        importJobChunkProcessor.processChunk(job.get(), context, rows);
+        return true;
     }
 
     @Transactional
     public void completeJob(ImportJobExecutionContext context) {
-        ImportJobRecord job = requireJobForUpdate(context);
+        Optional<ImportJobRecord> maybeJob = findProcessingJobForUpdate(context, "completion");
+        if (maybeJob.isEmpty()) {
+            return;
+        }
+        ImportJobRecord job = maybeJob.get();
         int success = safeInt(job.successCount());
         int failure = safeInt(job.failureCount());
         LocalDateTime finishedAt = LocalDateTime.now();
@@ -129,7 +137,11 @@ public class ImportJobExecutionCoordinator {
 
     @Transactional
     public void failJob(ImportJobExecutionContext context, ImportJobFailure failure) {
-        ImportJobRecord job = requireJobForUpdate(context);
+        Optional<ImportJobRecord> maybeJob = findProcessingJobForUpdate(context, "failure handling");
+        if (maybeJob.isEmpty()) {
+            return;
+        }
+        ImportJobRecord job = maybeJob.get();
         if (failure.rowNumber() != null || failure.errorCode() != null || failure.errorMessage() != null
                 || failure.rawPayload() != null) {
             importJobFailureRecorder.saveRowError(
@@ -262,9 +274,18 @@ public class ImportJobExecutionCoordinator {
                 || safeInt(job.failureCount()) > 0;
     }
 
-    private ImportJobRecord requireJobForUpdate(ImportJobExecutionContext context) {
-        return importJobCommandPort.findJobForUpdate(context.tenantId(), context.jobId())
-                .orElseThrow(() -> new IllegalStateException("import job not found for execution"));
+    private Optional<ImportJobRecord> findProcessingJobForUpdate(ImportJobExecutionContext context, String operation) {
+        Optional<ImportJobRecord> maybeJob = importJobCommandPort.findJobForUpdate(context.tenantId(), context.jobId());
+        if (maybeJob.isEmpty()) {
+            log.debug("skipping import job {} {} because job no longer exists", context.jobId(), operation);
+            return Optional.empty();
+        }
+        ImportJobRecord job = maybeJob.get();
+        if (!STATUS_PROCESSING.equals(job.status())) {
+            log.debug("skipping import job {} {} because status is {}", context.jobId(), operation, job.status());
+            return Optional.empty();
+        }
+        return Optional.of(job);
     }
 
     private int safeInt(Integer value) {

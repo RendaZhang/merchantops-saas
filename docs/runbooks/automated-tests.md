@@ -9,7 +9,7 @@ Use this runbook when you want a fast regression signal before doing manual API 
 Latest local default regression result on 2026-03-29:
 
 - `BUILD SUCCESS`
-- `Tests run: 335, Failures: 0, Errors: 0, Skipped: 0`
+- `Tests run: 342, Failures: 0, Errors: 0, Skipped: 0`
 
 ## Recommended Commands
 
@@ -39,7 +39,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, and import-specific migration protection
+- import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-disable uniqueness
 - Week 8 Slice A proposal-plus-approval coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, self-approval guard, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
 - AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
 - provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
@@ -72,7 +72,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - successful create-user flow with BCrypt password persistence, immediate login, and `created_by` / `updated_by` attribution
   - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence and refreshed `updated_by`
   - successful disable-user flow for `PATCH /api/v1/users/{id}/status` with refreshed `updated_by`, followed by login rejection for `DISABLED`
-  - minimal approval flow coverage for disable requests, including duplicate-pending-request rejection
+  - minimal approval flow coverage for disable requests, including duplicate-pending-request rejection and the database-level pending-disable uniqueness key
   - approval queue coverage for tenant isolation, `status` filter, `actionType` filter, `requestedBy` filter, and stable ordering by `createdAt DESC, id DESC`
   - rejection of a pre-disable token on protected endpoints after the tenant becomes inactive
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
@@ -257,7 +257,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - `ImportJobAiFixRecommendationServiceTest`
   - import prompt-version fallback, grounded row-level error-group prompt assembly, `400` rejection for no-failure, unsupported-import-type, and no-row-signal jobs, local affected-row estimate fill, and `INVALID_RESPONSE` persistence semantics for unknown error codes and sensitive-output policy failures
 - `ImportJobIntegrationTest`
-  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, fresh `PROCESSING` duplicate-delivery acknowledgement, stale `PROCESSING` redelivery handling, unexpected row-crash handling that preserves handled progress plus `PROCESSING_ERROR`, failed-row replay as a derived job, whole-file replay for full-failure jobs, rejection when a source job already has successful rows, selective replay by exact `errorCode`, edited replay by exact `errorId`, replay rejection cases, summary semantics, and import audit events including replay-scope metadata
+  - create/list/detail/error-page worker flow with tenant isolation, queue filters, stable ordering, exact `errorCode` filtering, `requestedBy` / `hasFailures` / `errorCodeCounts` reporting, business-row user creation, quoted CSV field persistence, row-level failure isolation, per-chunk counter visibility during `PROCESSING`, `MAX_ROWS_EXCEEDED` guardrails, fresh `PROCESSING` duplicate-delivery acknowledgement, stale `PROCESSING` redelivery handling, late-chunk stop when a job is externally marked terminal between chunk flushes, unexpected row-crash handling that preserves handled progress plus `PROCESSING_ERROR`, failed-row replay as a derived job, whole-file replay for full-failure jobs, rejection when a source job already has successful rows, selective replay by exact `errorCode`, edited replay by exact `errorId`, replay rejection cases, summary semantics, and import audit events including replay-scope metadata
   - RabbitMQ publish happens only after transaction commit and is suppressed on rollback
   - scheduled recovery can republish aged `QUEUED` jobs when the original after-commit publish failed and can republish stale `PROCESSING` jobs without writing a duplicate processing-started audit during republish
 - `ImportJobAiErrorSummaryIntegrationTest`
@@ -291,9 +291,11 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - `ImportJobExecutionServiceTest`
   - fresh `PROCESSING` redelivery returns `REQUEUE` without duplicate processing-started side effects
   - `processChunk` persists handled success/failure counters plus saved row errors before rethrowing an unexpected runtime failure
+  - `processChunk`, `completeJob`, and `failJob` become no-ops when the job is no longer `PROCESSING`
 - `ImportJobWorkerTest`
   - worker reads source files through `ImportFileStorageService` instead of binding directly to the local storage implementation
   - fresh `PROCESSING` duplicate delivery is acknowledged without duplicating local execution
+  - worker stops further chunk flushes when chunk processing reports that execution is no longer active
   - internal sequential chunk boundaries follow the configured chunk size without changing public contract shape
   - quoted commas, escaped quotes, embedded newlines, and UTF-8 BOM headers still normalize into correct row payloads before chunk execution
   - the worker flushes pending rows before failing `MAX_ROWS_EXCEEDED`
@@ -304,6 +306,8 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - `ImportJobMigrationTest`
   - `V9__add_import_job_backbone.sql` rejects `import_job_item_error` rows whose `tenant_id` does not match the parent import job
   - `V10__add_import_job_replay_lineage.sql` rejects cross-tenant `source_job_id` lineage on replay-derived jobs
+- `ApprovalRequestMigrationTest`
+  - `V12__enforce_pending_disable_uniqueness.sql` converts superseded historical duplicate pending disable rows to `REJECTED`, keeps only the canonical newest pending row keyed per tenant user, preserves same-timestamp tie-breaking by highest `id`, and keeps the unique index usable for a later fresh pending disable request after the canonical row is resolved
 - `RoleControllerTest`
   - `GET /api/v1/roles` unauthorized / forbidden / success paths
   - tenant resolution through request-scoped context and forwarding to `RoleQueryService`
@@ -315,6 +319,10 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `username`, `status`, and `roleCode` filtering
   - `DISTINCT` deduplication across joined role rows
   - pagination ordering and count stability
+- `JpaApprovalRequestAdapterTest`
+  - derives the pending-disable uniqueness key for `USER_STATUS_DISABLE`
+  - keeps non-disable approval rows free of that key
+  - translates duplicate-key violations back into the existing `BAD_REQUEST` duplicate-disable behavior
 - `JpaImportJobAdapterTest`
   - import AI interaction-history repository delegation with exact tenant/entity filters
   - stable `createdAt DESC, id DESC` sort wiring

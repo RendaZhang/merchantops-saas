@@ -17,12 +17,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -172,6 +174,7 @@ class AuthSecurityIntegrationTest {
                     reviewed_by BIGINT,
                     status VARCHAR(32) NOT NULL,
                     payload_json CLOB NOT NULL,
+                    pending_request_key VARCHAR(191),
                     request_id VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
                     reviewed_at TIMESTAMP,
@@ -181,6 +184,7 @@ class AuthSecurityIntegrationTest {
                     CONSTRAINT fk_approval_request_reviewed_by_tenant FOREIGN KEY (reviewed_by, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
 
 
         seedTenants();
@@ -315,6 +319,28 @@ class AuthSecurityIntegrationTest {
                         .header("X-Request-Id", "disable-req-create-dup-2"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("pending disable request already exists for user"));
+    }
+
+    @Test
+    void approvalRequestTableShouldEnforcePendingDisableUniquenessAtDatabaseLevel() {
+        jdbcTemplate.update("""
+                INSERT INTO approval_request (
+                    id, tenant_id, action_type, entity_type, entity_id, requested_by, status, payload_json,
+                    pending_request_key, request_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                9001L, 1L, "USER_STATUS_DISABLE", "USER", 103L, 101L, "PENDING", "{\"status\":\"DISABLED\"}",
+                "USER_STATUS_DISABLE:1:103", "disable-req-db-1");
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                INSERT INTO approval_request (
+                    id, tenant_id, action_type, entity_type, entity_id, requested_by, status, payload_json,
+                    pending_request_key, request_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                9002L, 1L, "USER_STATUS_DISABLE", "USER", 103L, 101L, "PENDING", "{\"status\":\"DISABLED\"}",
+                "USER_STATUS_DISABLE:1:103", "disable-req-db-2"))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

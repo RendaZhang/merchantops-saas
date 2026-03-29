@@ -13,7 +13,9 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 ### Changed
 
 - Approval routing now supports both `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`, with approve-time dispatch reusing the existing selective replay execution path while keeping approval payloads narrow and free of raw CSV rows or replacement values.
-- Import docs, approval docs, API examples, phase status/roadmap/plan pages, and automated verification notes now reflect the Week 8 import selective replay proposal-plus-approval baseline and the latest fresh regression result.
+- Pending `USER_STATUS_DISABLE` requests now enforce per-tenant-user uniqueness at the database layer through a derived pending-request key, preserving the same public duplicate-request `400` behavior while removing the earlier race window from pre-check-only enforcement.
+- Import execution now stops late chunk, completion, or failure work when the job has already left `PROCESSING`, avoiding duplicate terminal side effects after external failure or recovery handling.
+- Import docs, approval docs, migration notes, API examples, phase status/roadmap/plan pages, and automated verification notes now reflect the Week 8 import selective replay proposal-plus-approval baseline plus the latest approval/import hardening.
 
 ## [v0.4.0-beta] - 2026-03-28
 

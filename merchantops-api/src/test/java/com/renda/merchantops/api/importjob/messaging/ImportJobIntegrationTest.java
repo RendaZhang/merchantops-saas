@@ -423,6 +423,63 @@ class ImportJobIntegrationTest {
     }
 
     @Test
+    void workerShouldStopLateChunksAfterJobIsMarkedFailedBetweenChunkFlushes() {
+        importProcessingProperties.setChunkSize(1);
+        ImportJobCreateRequest request = new ImportJobCreateRequest();
+        request.setImportType("USER_CSV");
+        MockMultipartFile file = new MockMultipartFile("file", "users-stop-late-chunk.csv", "text/csv", ("""
+                username,displayName,email,password,roleCodes
+                alpha,Alpha User,alpha@example.com,abc123,READ_ONLY
+                beta,Beta User,beta@example.com,abc123,READ_ONLY
+                """).getBytes(StandardCharsets.UTF_8));
+
+        ImportJobDetailResponse created = importJobSubmissionService.createJob(1L, 101L, "req-import-stop-late-chunk", request, file);
+        AtomicInteger chunkCalls = new AtomicInteger();
+        Mockito.doAnswer(invocation -> {
+            if (chunkCalls.incrementAndGet() == 2) {
+                jdbcTemplate.update(
+                        "UPDATE import_job SET status = 'FAILED', error_summary = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
+                        "import job processing expired after partial progress",
+                        created.id()
+                );
+            }
+            return invocation.callRealMethod();
+        }).when(importJobExecutionCoordinator).processChunk(Mockito.any(), Mockito.anyList());
+
+        importJobWorker.consume(new ImportJobMessage(created.id(), 1L));
+
+        ImportJobDetailResponse processed = importJobQueryService.getJobDetail(1L, created.id());
+        assertThat(processed.status()).isEqualTo("FAILED");
+        assertThat(processed.totalCount()).isEqualTo(1);
+        assertThat(processed.successCount()).isEqualTo(1);
+        assertThat(processed.failureCount()).isZero();
+        assertThat(processed.errorSummary()).isEqualTo("import job processing expired after partial progress");
+
+        Integer alphaCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username = 'alpha'",
+                Integer.class
+        );
+        Integer betaCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE tenant_id = 1 AND username = 'beta'",
+                Integer.class
+        );
+        Integer processingErrorCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM import_job_item_error WHERE tenant_id = 1 AND import_job_id = ? AND error_code = 'PROCESSING_ERROR'",
+                Integer.class,
+                created.id()
+        );
+        Integer completedAuditCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'IMPORT_JOB' AND entity_id = ? AND action_type = 'IMPORT_JOB_COMPLETED'",
+                Integer.class,
+                created.id()
+        );
+        assertThat(alphaCount).isEqualTo(1);
+        assertThat(betaCount).isZero();
+        assertThat(processingErrorCount).isZero();
+        assertThat(completedAuditCount).isZero();
+    }
+
+    @Test
     void workerShouldIgnoreDuplicateImportMessagesAfterFirstSuccessfulRun() {
         ImportJobCreateRequest request = new ImportJobCreateRequest();
         request.setImportType("USER_CSV");
