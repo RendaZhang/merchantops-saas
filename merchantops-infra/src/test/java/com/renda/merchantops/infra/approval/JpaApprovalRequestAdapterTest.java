@@ -17,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -103,16 +104,26 @@ class JpaApprovalRequestAdapterTest {
         entity.setRequestId("disable-req-1");
         entity.setCreatedAt(LocalDateTime.of(2026, 3, 26, 10, 0));
         when(approvalRequestRepository.searchPageByTenantId(
-                eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), any(Pageable.class)
+                eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), eq(Set.of("USER_STATUS_DISABLE", "TICKET_COMMENT_CREATE")), any(Pageable.class)
         )).thenReturn(new PageImpl<>(List.of(entity), PageRequest.of(0, 10), 1));
 
-        var result = adapter.page(1L, new ApprovalRequestPageCriteria(0, 10, "PENDING", "USER_STATUS_DISABLE", 101L));
+        var result = adapter.page(1L, new ApprovalRequestPageCriteria(0, 10, "PENDING", "USER_STATUS_DISABLE", 101L, Set.of("USER_STATUS_DISABLE", "TICKET_COMMENT_CREATE")));
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(approvalRequestRepository).searchPageByTenantId(eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), pageableCaptor.capture());
+        verify(approvalRequestRepository).searchPageByTenantId(eq(1L), eq("PENDING"), eq("USER_STATUS_DISABLE"), eq(101L), eq(Set.of("USER_STATUS_DISABLE", "TICKET_COMMENT_CREATE")), pageableCaptor.capture());
         assertThat(pageableCaptor.getValue().getSort().getOrderFor("createdAt")).isNotNull();
         assertThat(pageableCaptor.getValue().getSort().getOrderFor("id")).isNotNull();
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().getFirst().entityId()).isEqualTo(103L);
+    }
+
+    @Test
+    void pageShouldReturnEmptyResultWhenNoActionTypesAreAllowed() {
+        JpaApprovalRequestAdapter adapter = new JpaApprovalRequestAdapter(approvalRequestRepository);
+
+        var result = adapter.page(1L, new ApprovalRequestPageCriteria(0, 10, "PENDING", null, null, Set.of()));
+
+        assertThat(result.items()).isEmpty();
+        assertThat(result.total()).isZero();
     }
 }

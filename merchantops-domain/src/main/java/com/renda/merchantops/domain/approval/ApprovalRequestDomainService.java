@@ -4,14 +4,17 @@ import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 
 import java.time.LocalDateTime;
-import java.util.Locale;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
 
-    private static final String ACTION_USER_STATUS_DISABLE = "USER_STATUS_DISABLE";
-    private static final String ACTION_IMPORT_JOB_SELECTIVE_REPLAY = "IMPORT_JOB_SELECTIVE_REPLAY";
+    private static final String ACTION_USER_STATUS_DISABLE = ApprovalActionTypes.USER_STATUS_DISABLE;
+    private static final String ACTION_IMPORT_JOB_SELECTIVE_REPLAY = ApprovalActionTypes.IMPORT_JOB_SELECTIVE_REPLAY;
+    private static final String ACTION_TICKET_COMMENT_CREATE = ApprovalActionTypes.TICKET_COMMENT_CREATE;
     private static final String ENTITY_USER = "USER";
     private static final String ENTITY_IMPORT_JOB = "IMPORT_JOB";
+    private static final String ENTITY_TICKET = "TICKET";
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_REJECTED = "REJECTED";
@@ -24,15 +27,18 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
     private final ApprovalTargetUserPort approvalTargetUserPort;
     private final ApprovalActionPort approvalActionPort;
     private final ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort;
+    private final ApprovalTicketCommentProposalPort approvalTicketCommentProposalPort;
 
     public ApprovalRequestDomainService(ApprovalRequestPort approvalRequestPort,
                                         ApprovalTargetUserPort approvalTargetUserPort,
                                         ApprovalActionPort approvalActionPort,
-                                        ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort) {
+                                        ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort,
+                                        ApprovalTicketCommentProposalPort approvalTicketCommentProposalPort) {
         this.approvalRequestPort = approvalRequestPort;
         this.approvalTargetUserPort = approvalTargetUserPort;
         this.approvalActionPort = approvalActionPort;
         this.approvalImportSelectiveReplayPort = approvalImportSelectiveReplayPort;
+        this.approvalTicketCommentProposalPort = approvalTicketCommentProposalPort;
     }
 
     @Override
@@ -75,6 +81,34 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
                 ACTION_IMPORT_JOB_SELECTIVE_REPLAY,
                 ENTITY_IMPORT_JOB,
                 prepared.sourceJobId(),
+                requestedBy,
+                null,
+                STATUS_PENDING,
+                prepared.payloadJson(),
+                resolvedRequestId,
+                LocalDateTime.now(),
+                null,
+                null
+        ));
+    }
+
+    @Override
+    public ApprovalRequestRecord createTicketCommentRequest(Long tenantId,
+                                                            Long requestedBy,
+                                                            String requestId,
+                                                            TicketCommentApprovalCommand command) {
+        requireTenantAndOperator(tenantId, requestedBy);
+        String resolvedRequestId = requireRequestId(requestId);
+        PreparedTicketCommentApproval prepared = approvalTicketCommentProposalPort.prepareProposal(
+                tenantId,
+                requireTicketCommentCommand(command)
+        );
+        return approvalRequestPort.save(new ApprovalRequestRecord(
+                null,
+                tenantId,
+                ACTION_TICKET_COMMENT_CREATE,
+                ENTITY_TICKET,
+                prepared.ticketId(),
                 requestedBy,
                 null,
                 STATUS_PENDING,
@@ -202,6 +236,16 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
             );
             return;
         }
+        if (ACTION_TICKET_COMMENT_CREATE.equals(actionType)) {
+            approvalActionPort.createTicketComment(
+                    tenantId,
+                    reviewerId,
+                    requestId,
+                    approvalRequest.entityId(),
+                    approvalRequest.payloadJson()
+            );
+            return;
+        }
         throw new BizException(ErrorCode.BAD_REQUEST, "unsupported approval action");
     }
 
@@ -215,14 +259,15 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
 
     private ApprovalRequestPageCriteria normalize(ApprovalRequestPageCriteria criteria) {
         if (criteria == null) {
-            return new ApprovalRequestPageCriteria(DEFAULT_PAGE, DEFAULT_SIZE, null, null, null);
+            return new ApprovalRequestPageCriteria(DEFAULT_PAGE, DEFAULT_SIZE, null, null, null, Set.of());
         }
         return new ApprovalRequestPageCriteria(
                 normalizePage(criteria.page()),
                 normalizeSize(criteria.size()),
                 normalizeFilter(criteria.status()),
                 normalizeFilter(criteria.actionType()),
-                criteria.requestedBy()
+                criteria.requestedBy(),
+                normalizeAllowedActionTypes(criteria.allowedActionTypes())
         );
     }
 
@@ -244,13 +289,34 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         return value.trim();
     }
 
+    private Set<String> normalizeAllowedActionTypes(Set<String> allowedActionTypes) {
+        if (allowedActionTypes == null || allowedActionTypes.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String actionType : allowedActionTypes) {
+            String resolved = normalizeKey(actionType);
+            if (!resolved.isBlank()) {
+                normalized.add(resolved);
+            }
+        }
+        return Set.copyOf(normalized);
+    }
+
     private String normalizeKey(String value) {
-        return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+        return ApprovalActionTypes.normalize(value);
     }
 
     private ImportSelectiveReplayApprovalCommand requireImportSelectiveReplayCommand(ImportSelectiveReplayApprovalCommand command) {
         if (command == null || command.sourceJobId() == null) {
             throw new BizException(ErrorCode.BAD_REQUEST, "sourceJobId missing");
+        }
+        return command;
+    }
+
+    private TicketCommentApprovalCommand requireTicketCommentCommand(TicketCommentApprovalCommand command) {
+        if (command == null || command.ticketId() == null) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "ticketId missing");
         }
         return command;
     }

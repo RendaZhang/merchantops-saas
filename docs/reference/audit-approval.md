@@ -1,13 +1,15 @@
 # Audit And Approval Patterns
 
+Last updated: 2026-03-30
+
 ## Current Scope
 
-The repository includes a generic `audit_event` backbone plus a still-narrow approval envelope for two high-value actions: `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`.
+The repository includes a generic `audit_event` backbone plus a still-narrow approval envelope for three high-value actions: `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`.
 
 Implemented now:
 
 - tenant-scoped `audit_event` write/read baseline, including `GET /api/v1/audit-events`
-- tenant-scoped `approval_request` table for `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`
+- tenant-scoped `approval_request` table for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`
 - user disable request flow:
   - `POST /api/v1/users/{id}/disable-requests`
   - `GET /api/v1/approval-requests`
@@ -20,7 +22,14 @@ Implemented now:
   - `GET /api/v1/approval-requests/{id}`
   - `POST /api/v1/approval-requests/{id}/approve`
   - `POST /api/v1/approval-requests/{id}/reject`
-- approve executes synchronously via the existing user status write chain (`UserCommandService.updateStatus`) for `USER_STATUS_DISABLE` and via the existing selective import replay chain for `IMPORT_JOB_SELECTIVE_REPLAY`
+- ticket reply-draft comment proposal flow:
+  - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
+  - `GET /api/v1/approval-requests`
+  - `GET /api/v1/approval-requests/{id}`
+  - `POST /api/v1/approval-requests/{id}/approve`
+  - `POST /api/v1/approval-requests/{id}/reject`
+- approve executes synchronously via the existing user status write chain (`UserCommandService.updateStatus`) for `USER_STATUS_DISABLE`, the existing selective import replay chain for `IMPORT_JOB_SELECTIVE_REPLAY`, and the existing ticket comment write chain for `TICKET_COMMENT_CREATE`
+- the shared approval queue is now action-aware: read visibility and review permission are derived from the approval action rather than a controller-wide `USER_*` gate
 
 Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceability. That model is not part of the public `GET /api/v1/audit-events` contract and does not replace `audit_event`.
 
@@ -52,33 +61,55 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - the endpoint does not create a replay job yet and does not persist raw CSV values or replay replacement values in `payload_json`
 - `sourceInteractionId`, when present, must reference a same-job `FIX_RECOMMENDATION` interaction in `SUCCEEDED` status
 
+### `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
+
+- scope: current tenant only
+- permission: `TICKET_WRITE`
+- creates a `PENDING` approval request for `TICKET_COMMENT_CREATE`
+- proposal payload stores only trimmed `commentContent` and optional `sourceInteractionId`
+- `sourceInteractionId`, when present, must reference a same-ticket `REPLY_DRAFT` interaction in `SUCCEEDED` status
+- the endpoint does not create a comment yet and does not persist raw prompt text, raw provider payload, or model metadata in `payload_json`
+
 ### `GET /api/v1/approval-requests`
 
 - scope: current tenant only
-- permission: `USER_READ`
+- permission: action-aware approval read
+- action mapping:
+  - `USER_STATUS_DISABLE` -> `USER_READ`
+  - `IMPORT_JOB_SELECTIVE_REPLAY` -> `USER_READ`
+  - `TICKET_COMMENT_CREATE` -> `TICKET_READ`
 - supports `page`, `size`, `status`, `actionType`, and `requestedBy` filters
+- requires at least one readable action capability
+- returns only the action types visible to the current caller
+- explicit `actionType` filters outside the caller's visible action set return an empty page
 - default sort: `createdAt DESC, id DESC` for stable queue ordering
 
 ### `GET /api/v1/approval-requests/{id}`
 
 - scope: current tenant only
-- permission: `USER_READ`
+- permission: action-aware approval read
+- hidden action types return `404` after same-tenant lookup so mixed queues do not leak other action families
 
 ### `POST /api/v1/approval-requests/{id}/approve`
 
 - scope: current tenant only
-- permission: `USER_WRITE`
+- permission: action-aware approval review
+- action mapping:
+  - `USER_STATUS_DISABLE` -> `USER_WRITE`
+  - `IMPORT_JOB_SELECTIVE_REPLAY` -> `USER_WRITE`
+  - `TICKET_COMMENT_CREATE` -> `TICKET_WRITE`
 - transitions `PENDING -> APPROVED`
 - executes the underlying action in the same transaction boundary:
   - `USER_STATUS_DISABLE`: target user status update to `DISABLED`
   - `IMPORT_JOB_SELECTIVE_REPLAY`: existing selective replay execution, creating one new derived import job when approval succeeds
+  - `TICKET_COMMENT_CREATE`: existing ticket comment execution, creating exactly one new comment plus the normal ticket workflow log and audit side effects
 
 ### `POST /api/v1/approval-requests/{id}/reject`
 
 - scope: current tenant only
-- permission: `USER_WRITE`
+- permission: action-aware approval review
 - transitions `PENDING -> REJECTED`
-- does not mutate target user status
+- does not mutate target user status, create a replay job, or create a comment
 
 Shared response shape example:
 
@@ -126,6 +157,10 @@ Current import selective replay payload note:
 
 - `payload_json` is intentionally narrow and does not store raw CSV rows, replay replacement values, passwords, emails, or other sensitive replay inputs
 
+Current ticket comment payload note:
+
+- `payload_json` is intentionally narrow and does not store raw prompt text, raw provider payload, model metadata, or any AI runtime fields beyond optional `sourceInteractionId`
+
 Current constraint note:
 
 - `requested_by` and `reviewed_by` both use same-tenant foreign-key linkage through `(user_id, tenant_id)` so cross-tenant reviewer attribution is rejected at the database layer
@@ -140,6 +175,7 @@ The current approval flow writes at least:
 - `APPROVAL_ACTION_EXECUTED` (for approve path)
 - existing user-chain event `USER_STATUS_UPDATED` from the reused write service
 - existing import replay-chain events `IMPORT_JOB_REPLAY_REQUESTED` and `IMPORT_JOB_CREATED` when an `IMPORT_JOB_SELECTIVE_REPLAY` request is approved
+- existing ticket comment-chain workflow-log and audit side effects when a `TICKET_COMMENT_CREATE` request is approved
 
 Manual verification hint:
 
@@ -147,7 +183,7 @@ Manual verification hint:
 
 ## AI Traceability Note
 
-Week 6 summary calls are intentionally recorded outside `audit_event`:
+Week 6-8 AI suggestion calls are intentionally recorded outside `audit_event`:
 
 - `audit_event` remains for business-governance snapshots around write actions
 - `ticket_operation_log` remains the domain-readable ticket timeline
@@ -157,7 +193,7 @@ This separation keeps read-only AI suggestion calls from polluting the business 
 
 ## Still Planned (Not Yet Implemented)
 
-- broader multi-action approval routing beyond the current `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY` pair
+- broader multi-action approval routing beyond the current `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE` trio
 - broader cross-entity audit and approval read surfaces
-- public read surfaces for AI interaction history or usage summaries
+- public aggregate AI usage summary surfaces
 - async approval executors or delayed execution modes

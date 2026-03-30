@@ -10,12 +10,14 @@
 @createUserEmail = cashier-demo@demo-shop.local
 @targetUserId = replace-with-created-user-id
 @approvalRequestId = replace-with-created-approval-request-id
+@ticketCommentProposalApprovalRequestId = replace-with-created-ticket-comment-proposal-approval-request-id
 @proposalApprovalRequestId = replace-with-created-import-proposal-approval-request-id
 @approvalRequestedBy = replace-with-requester-user-id
 @targetUserToken = replace-with-pre-change-user-access-token
 @refreshedTargetUserToken = replace-with-post-role-change-user-access-token
 @opsUserId = 2
 @ticketId = replace-with-created-ticket-id
+@ticketAiInteractionId = replace-with-succeeded-ticket-reply-draft-interaction-id
 @importJobId = replace-with-created-import-job-id
 @importErrorId = replace-with-row-error-id
 @importAiInteractionId = replace-with-succeeded-fix-recommendation-interaction-id
@@ -243,6 +245,19 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-reply-draft
 Authorization: Bearer {{token}}
 
+### Create ticket AI reply-draft comment proposal
+# Optional sourceInteractionId should come from a SUCCEEDED REPLY_DRAFT row in
+# GET /api/v1/tickets/{id}/ai-interactions. This creates a pending approval
+# request only; no comment is written until a different reviewer approves it.
+POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/comments/proposals/ai-reply-draft
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "commentContent": "Quick update from ops. The ticket is still in progress, and the next step is to confirm whether the replacement restored printer health before moving toward closure.",
+  "sourceInteractionId": {{ticketAiInteractionId}}
+}
+
 ### Assign tenant ticket
 # Use opsUserId=2 for the seeded ops handler in a fresh local database.
 PATCH {{baseUrl}}/api/v1/tickets/{{ticketId}}/assignee
@@ -294,6 +309,8 @@ POST {{baseUrl}}/api/v1/users/{{targetUserId}}/disable-requests
 Authorization: Bearer {{token}}
 
 ### List approval requests (queue)
+# Visibility is action-aware: USER_STATUS_DISABLE and IMPORT_JOB_SELECTIVE_REPLAY use USER_READ,
+# while TICKET_COMMENT_CREATE uses TICKET_READ.
 GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10
 Authorization: Bearer {{token}}
 
@@ -307,7 +324,12 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=IMPORT_JOB_SELECTIVE_REPLAY&requestedBy={{approvalRequestedBy}}
 Authorization: Bearer {{token}}
 
+### List pending ticket comment proposals by requester
+GET {{baseUrl}}/api/v1/approval-requests?page=0&size=10&status=PENDING&actionType=TICKET_COMMENT_CREATE&requestedBy={{approvalRequestedBy}}
+Authorization: Bearer {{token}}
+
 ### Get approval request detail
+# Use a token whose read permission matches the target action type.
 GET {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}
 Authorization: Bearer {{token}}
 
@@ -316,13 +338,23 @@ GET {{baseUrl}}/api/v1/audit-events?entityType=APPROVAL_REQUEST&entityId={{appro
 Authorization: Bearer {{token}}
 
 ### Approve approval request
-# Use a token from a different tenant-local reviewer than the requester.
+# Use a token from a different tenant-local reviewer than the requester, and make sure
+# the reviewer has the review permission for the target action type.
 POST {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}/approve
 Authorization: Bearer {{token}}
 
 ### Reject approval request
-# Use a token from a different tenant-local reviewer than the requester.
+# Use a token from a different tenant-local reviewer than the requester, and make sure
+# the reviewer has the review permission for the target action type.
 POST {{baseUrl}}/api/v1/approval-requests/{{approvalRequestId}}/reject
+Authorization: Bearer {{token}}
+
+### Approve ticket comment proposal
+POST {{baseUrl}}/api/v1/approval-requests/{{ticketCommentProposalApprovalRequestId}}/approve
+Authorization: Bearer {{token}}
+
+### Reject ticket comment proposal
+POST {{baseUrl}}/api/v1/approval-requests/{{ticketCommentProposalApprovalRequestId}}/reject
 Authorization: Bearer {{token}}
 
 ### Query tenant audit events by entity

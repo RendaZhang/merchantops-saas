@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,7 +22,8 @@ class ApprovalRequestDomainServiceTest {
                 requestPort,
                 userPort,
                 new NoopApprovalActionPort(),
-                new NoopApprovalImportSelectiveReplayPort()
+                new NoopApprovalImportSelectiveReplayPort(),
+                new NoopApprovalTicketCommentProposalPort()
         );
 
         ApprovalRequestRecord result = useCase.createDisableRequest(1L, 101L, "disable-req-1", 103L);
@@ -50,7 +52,8 @@ class ApprovalRequestDomainServiceTest {
                 requestPort,
                 new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
                 new NoopApprovalActionPort(),
-                importReplayPort
+                importReplayPort,
+                new NoopApprovalTicketCommentProposalPort()
         );
 
         ApprovalRequestRecord result = useCase.createImportSelectiveReplayRequest(
@@ -83,7 +86,8 @@ class ApprovalRequestDomainServiceTest {
                 requestPort,
                 userPort,
                 actionPort,
-                new NoopApprovalImportSelectiveReplayPort()
+                new NoopApprovalImportSelectiveReplayPort(),
+                new NoopApprovalTicketCommentProposalPort()
         );
 
         ApprovalRequestRecord result = useCase.approve(1L, 105L, "approve-req-1", 901L);
@@ -121,7 +125,8 @@ class ApprovalRequestDomainServiceTest {
                 requestPort,
                 new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
                 actionPort,
-                new NoopApprovalImportSelectiveReplayPort()
+                new NoopApprovalImportSelectiveReplayPort(),
+                new NoopApprovalTicketCommentProposalPort()
         );
 
         ApprovalRequestRecord result = useCase.approve(1L, 105L, "approve-import-proposal-1", 902L);
@@ -140,7 +145,8 @@ class ApprovalRequestDomainServiceTest {
                 requestPort,
                 new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
                 new NoopApprovalActionPort(),
-                new NoopApprovalImportSelectiveReplayPort()
+                new NoopApprovalImportSelectiveReplayPort(),
+                new NoopApprovalTicketCommentProposalPort()
         );
 
         assertThatThrownBy(() -> useCase.reject(1L, 101L, "reject-req-1", 901L))
@@ -156,16 +162,86 @@ class ApprovalRequestDomainServiceTest {
                 requestPort,
                 new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
                 new NoopApprovalActionPort(),
-                new NoopApprovalImportSelectiveReplayPort()
+                new NoopApprovalImportSelectiveReplayPort(),
+                new NoopApprovalTicketCommentProposalPort()
         );
 
-        useCase.page(1L, new ApprovalRequestPageCriteria(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L));
+        useCase.page(1L, new ApprovalRequestPageCriteria(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L, Set.of(" ticket_comment_create ", "USER_STATUS_DISABLE")));
 
         assertThat(requestPort.pageCriteria.page()).isEqualTo(0);
         assertThat(requestPort.pageCriteria.size()).isEqualTo(10);
         assertThat(requestPort.pageCriteria.status()).isEqualTo("PENDING");
         assertThat(requestPort.pageCriteria.actionType()).isEqualTo("USER_STATUS_DISABLE");
         assertThat(requestPort.pageCriteria.requestedBy()).isEqualTo(101L);
+        assertThat(requestPort.pageCriteria.allowedActionTypes()).containsExactlyInAnyOrder("TICKET_COMMENT_CREATE", "USER_STATUS_DISABLE");
+    }
+
+    @Test
+    void createTicketCommentRequestShouldPersistPreparedApprovalPayload() {
+        CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
+        requestPort.savedResponse = ticketCommentApprovalRequest(903L, "PENDING", 301L, 101L, "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}");
+        CapturingApprovalTicketCommentProposalPort ticketCommentPort = new CapturingApprovalTicketCommentProposalPort();
+        ticketCommentPort.prepared = new PreparedTicketCommentApproval(
+                301L,
+                "Reply draft content",
+                9002L,
+                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}"
+        );
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
+                new NoopApprovalActionPort(),
+                new NoopApprovalImportSelectiveReplayPort(),
+                ticketCommentPort
+        );
+
+        ApprovalRequestRecord result = useCase.createTicketCommentRequest(
+                1L,
+                101L,
+                "ticket-comment-proposal-1",
+                new TicketCommentApprovalCommand(301L, "Reply draft content", 9002L)
+        );
+
+        assertThat(result.id()).isEqualTo(903L);
+        assertThat(ticketCommentPort.command).isEqualTo(new TicketCommentApprovalCommand(301L, "Reply draft content", 9002L));
+        assertThat(requestPort.savedRequest.actionType()).isEqualTo("TICKET_COMMENT_CREATE");
+        assertThat(requestPort.savedRequest.entityType()).isEqualTo("TICKET");
+        assertThat(requestPort.savedRequest.entityId()).isEqualTo(301L);
+        assertThat(requestPort.savedRequest.payloadJson()).isEqualTo("{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}");
+    }
+
+    @Test
+    void approveTicketCommentShouldDispatchCommentCreationAndPersistApprovedStatus() {
+        CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
+        requestPort.lockedRequest = Optional.of(ticketCommentApprovalRequest(
+                903L,
+                "PENDING",
+                301L,
+                101L,
+                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}"
+        ));
+        requestPort.savedResponse = ticketCommentApprovalRequest(
+                903L,
+                "APPROVED",
+                301L,
+                101L,
+                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}"
+        );
+        CapturingApprovalActionPort actionPort = new CapturingApprovalActionPort();
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
+                actionPort,
+                new NoopApprovalImportSelectiveReplayPort(),
+                new NoopApprovalTicketCommentProposalPort()
+        );
+
+        ApprovalRequestRecord result = useCase.approve(1L, 105L, "approve-ticket-comment-proposal-1", 903L);
+
+        assertThat(actionPort.ticketId).isEqualTo(301L);
+        assertThat(actionPort.payloadJson).isEqualTo("{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}");
+        assertThat(result.status()).isEqualTo("APPROVED");
+        assertThat(requestPort.savedRequest.executedAt()).isNotNull();
     }
 
     private ApprovalRequestRecord approvalRequest(Long id, String status, Long entityId, Long requestedBy) {
@@ -203,6 +279,28 @@ class ApprovalRequestDomainServiceTest {
                 payloadJson,
                 "proposal-req-1",
                 LocalDateTime.of(2026, 3, 29, 10, 0),
+                null,
+                null
+        );
+    }
+
+    private ApprovalRequestRecord ticketCommentApprovalRequest(Long id,
+                                                               String status,
+                                                               Long entityId,
+                                                               Long requestedBy,
+                                                               String payloadJson) {
+        return new ApprovalRequestRecord(
+                id,
+                1L,
+                "TICKET_COMMENT_CREATE",
+                "TICKET",
+                entityId,
+                requestedBy,
+                null,
+                status,
+                payloadJson,
+                "ticket-comment-proposal-1",
+                LocalDateTime.of(2026, 3, 30, 10, 0),
                 null,
                 null
         );
@@ -254,6 +352,7 @@ class ApprovalRequestDomainServiceTest {
         private String requestId;
         private Long userId;
         private Long sourceJobId;
+        private Long ticketId;
         private String payloadJson;
 
         @Override
@@ -276,6 +375,19 @@ class ApprovalRequestDomainServiceTest {
             this.sourceJobId = sourceJobId;
             this.payloadJson = payloadJson;
         }
+
+        @Override
+        public void createTicketComment(Long tenantId,
+                                        Long reviewerId,
+                                        String requestId,
+                                        Long ticketId,
+                                        String payloadJson) {
+            this.tenantId = tenantId;
+            this.reviewerId = reviewerId;
+            this.requestId = requestId;
+            this.ticketId = ticketId;
+            this.payloadJson = payloadJson;
+        }
     }
 
     private static final class NoopApprovalActionPort implements ApprovalActionPort {
@@ -291,6 +403,14 @@ class ApprovalRequestDomainServiceTest {
                                              Long sourceJobId,
                                              String payloadJson) {
         }
+
+        @Override
+        public void createTicketComment(Long tenantId,
+                                        Long reviewerId,
+                                        String requestId,
+                                        Long ticketId,
+                                        String payloadJson) {
+        }
     }
 
     private static final class CapturingApprovalImportSelectiveReplayPort implements ApprovalImportSelectiveReplayPort {
@@ -300,6 +420,18 @@ class ApprovalRequestDomainServiceTest {
 
         @Override
         public PreparedImportSelectiveReplayApproval prepareProposal(Long tenantId, ImportSelectiveReplayApprovalCommand command) {
+            this.command = command;
+            return prepared;
+        }
+    }
+
+    private static final class CapturingApprovalTicketCommentProposalPort implements ApprovalTicketCommentProposalPort {
+
+        private TicketCommentApprovalCommand command;
+        private PreparedTicketCommentApproval prepared;
+
+        @Override
+        public PreparedTicketCommentApproval prepareProposal(Long tenantId, TicketCommentApprovalCommand command) {
             this.command = command;
             return prepared;
         }
@@ -315,6 +447,19 @@ class ApprovalRequestDomainServiceTest {
                     command.sourceInteractionId(),
                     command.proposalReason(),
                     "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}"
+            );
+        }
+    }
+
+    private static final class NoopApprovalTicketCommentProposalPort implements ApprovalTicketCommentProposalPort {
+
+        @Override
+        public PreparedTicketCommentApproval prepareProposal(Long tenantId, TicketCommentApprovalCommand command) {
+            return new PreparedTicketCommentApproval(
+                    command.ticketId(),
+                    command.commentContent(),
+                    command.sourceInteractionId(),
+                    "{\"commentContent\":\"Reply draft content\"}"
             );
         }
     }

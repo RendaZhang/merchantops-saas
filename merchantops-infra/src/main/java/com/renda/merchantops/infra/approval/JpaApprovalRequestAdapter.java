@@ -4,6 +4,7 @@ import com.renda.merchantops.domain.approval.ApprovalRequestPageCriteria;
 import com.renda.merchantops.domain.approval.ApprovalRequestPageResult;
 import com.renda.merchantops.domain.approval.ApprovalRequestPort;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
+import com.renda.merchantops.domain.approval.ApprovalActionTypes;
 import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.infra.persistence.entity.ApprovalRequestEntity;
@@ -14,7 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
-import java.util.Locale;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -70,11 +71,15 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
 
     @Override
     public ApprovalRequestPageResult page(Long tenantId, ApprovalRequestPageCriteria criteria) {
+        if (criteria.allowedActionTypes() == null || criteria.allowedActionTypes().isEmpty()) {
+            return new ApprovalRequestPageResult(List.of(), criteria.page(), criteria.size(), 0, 0);
+        }
         Page<ApprovalRequestEntity> resultPage = approvalRequestRepository.searchPageByTenantId(
                 tenantId,
                 criteria.status(),
                 criteria.actionType(),
                 criteria.requestedBy(),
+                criteria.allowedActionTypes(),
                 PageRequest.of(
                         criteria.page(),
                         criteria.size(),
@@ -124,6 +129,6 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
     }
 
     private String normalizeKey(String value) {
-        return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+        return ApprovalActionTypes.normalize(value);
     }
 }

@@ -1,6 +1,6 @@
 # AI Regression Checklist
 
-Last updated: 2026-03-28
+Last updated: 2026-03-30
 
 > Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
@@ -28,7 +28,11 @@ The AI checklist is now active because public AI endpoints exist:
 - suggestion-only ticket summary, triage, internal reply-draft, and import error-summary plus mapping-suggestion plus fix-recommendation results plus narrowed interaction-history visibility for one current-tenant ticket or import job
 - read permission inherited from `TICKET_READ`
 - import error summary, mapping suggestion, and fix recommendation inherit import read permission from `USER_READ`
-- no write-back, no comment creation, and no approval execution in the current slice
+- no write-back, no comment creation, and no approval execution from the eight public AI endpoints themselves
+- adjacent Week 8 workflow endpoints now exist outside the AI endpoint set:
+  - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
+  - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
+- those workflow endpoints may reference successful AI interactions as provenance, but the public AI endpoints themselves remain suggestion-only
 - interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`, but do not expose raw prompt or raw provider payload and do not establish billing semantics
 
 ## Environment And Control
@@ -140,9 +144,11 @@ The AI checklist is now active because public AI endpoints exist:
 ## Workflow Safety
 
 - [ ] AI summary, triage, and reply-draft calls do not mutate ticket status, assignee, comments, workflow logs, or approvals
+- [ ] `POST /api/v1/tickets/{id}/ai-reply-draft` does not create a ticket comment or approval request directly even though a separate ticket comment proposal endpoint now exists outside the AI endpoint set
 - [ ] import AI error-summary calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - [ ] import AI mapping-suggestion calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - [ ] import AI fix-recommendation calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
+- [ ] import AI fix-recommendation does not create a selective replay proposal directly even though a separate proposal endpoint now exists outside the AI endpoint set
 - [ ] AI summary, triage, and reply-draft calls do not create business `audit_event` rows
 - [ ] AI interaction-history reads do not mutate ticket status, assignee, comments, workflow logs, approvals, or business `audit_event` rows
 - [ ] import AI interaction-history reads do not mutate import job state, import error rows, replay lineage, approvals, or business `audit_event` rows
@@ -157,6 +163,7 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] AI reference docs are updated in [../reference/ai-integration.md](../reference/ai-integration.md)
 - [ ] import AI reference docs are updated in [../reference/import-jobs.md](../reference/import-jobs.md)
 - [ ] ticket workflow docs are updated in [../reference/ticket-workflow.md](../reference/ticket-workflow.md)
+- [ ] approval and governance docs are updated in [../reference/audit-approval.md](../reference/audit-approval.md) when a workflow-adjacent AI proposal bridge changes
 - [ ] request examples are updated in `api-demo.http`
 - [ ] provider configuration docs stay aligned with active runtime keys
 - [ ] architecture notes stay aligned with the governing ADRs

@@ -1,7 +1,9 @@
 package com.renda.merchantops.api.ticket;
 
+import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.dto.ticket.command.TicketAssigneeUpdateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketCommentCreateRequest;
+import com.renda.merchantops.api.dto.ticket.command.TicketCommentProposalRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketCreateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketStatusUpdateRequest;
 import com.renda.merchantops.api.dto.ticket.command.TicketWriteResponse;
@@ -44,4 +46,10 @@ public interface TicketWorkflowApi {
     @PostMapping("/{id}/comments")
     ApiResponse<TicketCommentResponse> addComment(@PathVariable("id") Long id,
                                                   @Valid @org.springframework.web.bind.annotation.RequestBody TicketCommentCreateRequest request);
+
+    @Operation(summary = "Create approval-backed ticket comment proposal from AI reply draft workflow")
+    @RequestBody(required = true)
+    @PostMapping("/{id}/comments/proposals/ai-reply-draft")
+    ApiResponse<ApprovalRequestResponse> createCommentProposal(@PathVariable("id") Long id,
+                                                               @Valid @org.springframework.web.bind.annotation.RequestBody TicketCommentProposalRequest request);
 }

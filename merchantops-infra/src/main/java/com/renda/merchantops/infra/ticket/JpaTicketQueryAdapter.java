@@ -126,6 +126,17 @@ public class JpaTicketQueryAdapter implements TicketQueryPort {
     }
 
     @Override
+    public Optional<TicketAiInteractionItem> findTicketAiInteraction(Long tenantId, Long ticketId, Long interactionId) {
+        return aiInteractionRecordRepository.findByIdAndTenantIdAndEntityTypeAndEntityId(
+                        interactionId,
+                        tenantId,
+                        ENTITY_TYPE_TICKET,
+                        ticketId
+                )
+                .map(this::toAiInteractionItem);
+    }
+
+    @Override
     public Optional<TicketDetail> findTicketDetail(Long tenantId, Long ticketId) {
         return ticketRepository.findByIdAndTenantId(ticketId, tenantId)
                 .map(ticket -> {

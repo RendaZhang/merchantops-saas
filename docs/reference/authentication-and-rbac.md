@@ -12,6 +12,7 @@
 - `PUT /api/v1/users/{id}` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PATCH /api/v1/users/{id}/status` (requires `USER_WRITE`; see [user-management.md](user-management.md))
 - `PUT /api/v1/users/{id}/roles` (requires `USER_WRITE`; see [user-management.md](user-management.md))
+- `POST /api/v1/users/{id}/disable-requests` (requires `USER_WRITE`; see [audit-approval.md](audit-approval.md))
 - `GET /api/v1/tickets` (requires `TICKET_READ`; see [ticket-workflow.md](ticket-workflow.md))
 - `GET /api/v1/tickets/{id}` (requires `TICKET_READ`; see [ticket-workflow.md](ticket-workflow.md))
 - `GET /api/v1/tickets/{id}/ai-interactions` (requires `TICKET_READ`; see [ticket-workflow.md](ticket-workflow.md))
@@ -21,7 +22,13 @@
 - `POST /api/v1/tickets` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
 - `PATCH /api/v1/tickets/{id}/assignee` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
 - `PATCH /api/v1/tickets/{id}/status` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
+- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
 - `POST /api/v1/tickets/{id}/comments` (requires `TICKET_WRITE`; see [ticket-workflow.md](ticket-workflow.md))
+- `GET /api/v1/audit-events` (requires `USER_READ`; see [audit-approval.md](audit-approval.md))
+- `GET /api/v1/approval-requests` (requires action-specific approval read; see [audit-approval.md](audit-approval.md))
+- `GET /api/v1/approval-requests/{id}` (requires action-specific approval read; see [audit-approval.md](audit-approval.md))
+- `POST /api/v1/approval-requests/{id}/approve` (requires action-specific approval review; see [audit-approval.md](audit-approval.md))
+- `POST /api/v1/approval-requests/{id}/reject` (requires action-specific approval review; see [audit-approval.md](audit-approval.md))
 - `GET /api/v1/import-jobs` (requires `USER_READ`; see [import-jobs.md](import-jobs.md))
 - `GET /api/v1/import-jobs/{id}` (requires `USER_READ`; see [import-jobs.md](import-jobs.md))
 - `GET /api/v1/import-jobs/{id}/errors` (requires `USER_READ`; see [import-jobs.md](import-jobs.md))
@@ -124,6 +131,7 @@ Password handling note:
 - protected requests re-check the current user row, so a token issued before a user was disabled is rejected with `403 user is not active`
 - protected requests also re-check current roles and permissions, so a token issued before role or permission changes is rejected with `403 token claims are stale, please login again`
 - the same stale-claim rule applies to current public import read and suggestion-only AI endpoints because they also authorize from current `USER_READ`
+- the shared approval surface is action-aware: `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY` use `USER_READ` / `USER_WRITE`, while `TICKET_COMMENT_CREATE` uses `TICKET_READ` / `TICKET_WRITE`
 - run [../runbooks/automated-tests.md](../runbooks/automated-tests.md) before manual RBAC smoke checks when code changed
 
 Quick check:
@@ -482,13 +490,22 @@ Current notes:
 - `ops` and `viewer` are denied on endpoints requiring permissions they do not have
 - after `viewer` is promoted and logs in again, the refreshed token can access `/api/v1/rbac/users/manage`, `/api/v1/rbac/feature-flags`, and ticket write endpoints
 
-The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`), `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, and `POST /comments`), the current import read / AI read surface (`GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`), plus the Week 8 import proposal/approval path (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` and the shared approval review endpoints) permission paths end to end, including inactive-tenant rejection, disabled-user rejection, stale-claim rejection, ticket status-transition rejection, import-job tenant isolation, approval self-review rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
+Approval routing notes:
+
+- `GET /api/v1/approval-requests` and `GET /api/v1/approval-requests/{id}` are filtered by action-specific read capability rather than a controller-wide `USER_READ` gate
+- `POST /api/v1/approval-requests/{id}/approve` and `POST /api/v1/approval-requests/{id}/reject` are filtered by action-specific review capability rather than a controller-wide `USER_WRITE` gate
+- `admin` can read and review all three current approval action types because the role carries both `USER_*` and `TICKET_*`
+- `ops` can create ticket comment proposals and can review `TICKET_COMMENT_CREATE` requests because the role carries `TICKET_WRITE`, but still cannot review `USER_STATUS_DISABLE` or `IMPORT_JOB_SELECTIVE_REPLAY` without `USER_WRITE`
+- `viewer` can read only the approval action types exposed by its read permissions and cannot approve or reject any approval request
+
+The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`), `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, `POST /comments`, and `POST /comments/proposals/ai-reply-draft`), the current import read / AI read surface (`GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`), plus the Week 8 import and ticket proposal/approval paths (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and the shared approval review endpoints) permission paths end to end, including inactive-tenant rejection, disabled-user rejection, stale-claim rejection, mixed-action approval visibility, ticket status-transition rejection, import-job tenant isolation, approval self-review rejection, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, `/api/v1/context`, Swagger authorization behavior, and the RBAC demo endpoints.
 
 ## Current Public RBAC Boundary
 
 - Swagger currently exposes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` under the `User Management` tag
 - Swagger exposes `GET /api/v1/roles` under the `Role Management` tag
-- Swagger exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` under the `Ticket Workflow` tag
+- Swagger exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and `POST /api/v1/tickets/{id}/comments` under the `Ticket Workflow` tag
+- Swagger exposes `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject` under the `Approval Requests` tag with action-aware permission routing
 - Swagger exposes `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` under the `Import Jobs` tag
 - `GET /api/v1/users` is the formal paged tenant query endpoint
 - `GET /api/v1/users/{id}` is the formal tenant-scoped detail endpoint
@@ -497,9 +514,11 @@ The automated suite now covers the login -> JWT -> `/api/v1/users` (`GET`, `GET 
 - `PATCH /api/v1/users/{id}/status` is the current public status-management endpoint
 - `PUT /api/v1/users/{id}/roles` is the current public role-assignment endpoint
 - `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, and `GET /api/v1/tickets/{id}/ai-interactions` are the current ticket read endpoints
+- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` is the current ticket proposal-write endpoint for human-reviewed reply-draft execution
 - `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` are the current import read endpoints
 - `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, and `POST /api/v1/import-jobs/{id}/replay-failures/edited` are the current import write endpoints
 - `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments` are the current ticket write endpoints
+- the approval queue/detail/approve/reject endpoints are mixed-action public endpoints whose visibility depends on the current action type rather than a single fixed permission
 - Treat the Swagger-visible endpoints in this document as the only public API surface
 
 ## Tenant Isolation Note

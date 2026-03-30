@@ -1,15 +1,15 @@
 # Automated Tests
 
-Last updated: 2026-03-29
+Last updated: 2026-03-30
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-03-29:
+Latest local default regression result on 2026-03-30:
 
 - `BUILD SUCCESS`
-- `Tests run: 342, Failures: 0, Errors: 0, Skipped: 0`
+- `Tests run: 350, Failures: 0, Errors: 0, Skipped: 0`
 
 ## Recommended Commands
 
@@ -33,7 +33,7 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, and the first Week 8 human-reviewed import execution bridge. Today that means:
+Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, and the current two Week 8 human-reviewed execution bridges. Today that means:
 
 - auth and permission checks for the current public user-management, ticket, AI interaction-history, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
@@ -41,6 +41,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-disable uniqueness
 - Week 8 Slice A proposal-plus-approval coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, self-approval guard, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
+- Week 8 Slice B proposal-plus-approval coverage for `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, including `TICKET_WRITE` enforcement, cross-tenant/missing ticket handling, blank and overlong comment rejection, invalid same-ticket `sourceInteractionId` rejection, safe approval payload persistence, self-approval guard, synchronous approve-time single-comment execution, reject-without-execution behavior, and no-regression on the mixed-action approval queue
 - AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
 - provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
@@ -73,7 +74,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - successful profile-update flow for `PUT /api/v1/users/{id}` with tenant-scoped persistence and refreshed `updated_by`
   - successful disable-user flow for `PATCH /api/v1/users/{id}/status` with refreshed `updated_by`, followed by login rejection for `DISABLED`
   - minimal approval flow coverage for disable requests, including duplicate-pending-request rejection and the database-level pending-disable uniqueness key
-  - approval queue coverage for tenant isolation, `status` filter, `actionType` filter, `requestedBy` filter, and stable ordering by `createdAt DESC, id DESC`
+  - action-aware approval queue coverage for tenant isolation, `status` filter, `actionType` filter, `requestedBy` filter, stable ordering by `createdAt DESC, id DESC`, and permission-based visibility over mixed action types
   - rejection of a pre-disable token on protected endpoints after the tenant becomes inactive
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
   - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
@@ -101,6 +102,10 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `400` when ticket status transition rules are violated (including no-op transitions)
   - `200` for `CLOSED -> OPEN` reopen with status/detail verification, `updated_at` refresh, and appended `STATUS_CHANGED` log
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
+  - real `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` happy path with safe payload and approval-audit assertions
+  - `403` for missing `TICKET_WRITE`, `404` for missing or cross-tenant tickets, and `400` for blank, overlong, or invalid-provenance proposal input
+  - approve path for `TICKET_COMMENT_CREATE` creates exactly one comment and reject path creates none
+  - mixed-action approval queue visibility and review behavior for ticket comment proposals under action-specific read/review permissions
   - ticket writes emit `audit_event` rows while preserving workflow-level `ticket_operation_log`
   - `GET /api/v1/audit-events` returns only current-tenant rows and accepts case-insensitive `entityType`
   - ticket write access changing only after role reassignment plus re-login
@@ -232,10 +237,12 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
   - import selective replay proposal creation delegates the normalized approval command and records approval audit
+  - ticket comment proposal creation delegates the normalized approval command and records approval audit
   - duplicate pending disable requests are rejected
   - approve/reject paths lock the pending request before updating review state
-  - approval queue query normalization with stable `createdAt DESC, id DESC` ordering
-  - approval execution delegates to the existing tenant-scoped user status update flow for `USER_STATUS_DISABLE` and to the existing selective replay flow for `IMPORT_JOB_SELECTIVE_REPLAY`
+  - approval queue query normalization with stable `createdAt DESC, id DESC` ordering plus visible-action filtering
+  - approval detail hides same-tenant rows whose action type is outside the caller's readable action set
+  - approval execution delegates to the existing tenant-scoped user status update flow for `USER_STATUS_DISABLE`, to the existing selective replay flow for `IMPORT_JOB_SELECTIVE_REPLAY`, and to the existing ticket comment write flow for `TICKET_COMMENT_CREATE`
 - `ImportJobCommandServiceTest`
   - queued import-job persistence, failed-row replay as a new derived job, whole-file replay from `FAILED` zero-success sources, selective replay request normalization, edited replay request normalization, replay lineage/audit emission including `replayMode=WHOLE_FILE`, `selectedErrorCodes`, plus `editedErrorIds` / `editedRowCount` / `editedFields`, and after-commit import event publication
   - invalid `importType` rejection
@@ -323,6 +330,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - derives the pending-disable uniqueness key for `USER_STATUS_DISABLE`
   - keeps non-disable approval rows free of that key
   - translates duplicate-key violations back into the existing `BAD_REQUEST` duplicate-disable behavior
+  - applies visible-action filtering to approval-page queries and short-circuits empty visible-action sets
 - `JpaImportJobAdapterTest`
   - import AI interaction-history repository delegation with exact tenant/entity filters
   - stable `createdAt DESC, id DESC` sort wiring
@@ -332,7 +340,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.ticket;
 
+import com.renda.merchantops.api.approval.ApprovalRequestCommandService;
 import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.api.dto.ticket.command.TicketAssigneeUpdateCommand;
@@ -83,13 +84,16 @@ class TicketManagementControllerTest {
     @Mock
     private TicketAiReplyDraftService ticketAiReplyDraftService;
 
+    @Mock
+    private ApprovalRequestCommandService approvalRequestCommandService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new TicketQueryController(ticketQueryService),
-                        new TicketWorkflowController(ticketCommandService),
+                        new TicketWorkflowController(ticketCommandService, approvalRequestCommandService),
                         new TicketAiController(ticketQueryService, ticketAiSummaryService, ticketAiTriageService, ticketAiReplyDraftService)
                 )
                 .setControllerAdvice(new GlobalExceptionHandler())

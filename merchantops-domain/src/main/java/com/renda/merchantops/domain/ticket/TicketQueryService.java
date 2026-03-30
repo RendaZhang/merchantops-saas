@@ -3,6 +3,8 @@ package com.renda.merchantops.domain.ticket;
 import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 
+import java.util.Optional;
+
 public class TicketQueryService implements TicketQueryUseCase {
 
     private static final int DEFAULT_PAGE = 0;
@@ -30,6 +32,12 @@ public class TicketQueryService implements TicketQueryUseCase {
                                                                   TicketAiInteractionPageCriteria criteria) {
         requireTicketExists(tenantId, ticketId);
         return ticketQueryPort.pageTicketAiInteractions(tenantId, ticketId, normalize(criteria));
+    }
+
+    @Override
+    public Optional<TicketAiInteractionItem> findTicketAiInteraction(Long tenantId, Long ticketId, Long interactionId) {
+        requireTicketExists(tenantId, ticketId);
+        return ticketQueryPort.findTicketAiInteraction(tenantId, ticketId, interactionId);
     }
 
     @Override

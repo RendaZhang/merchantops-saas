@@ -6,6 +6,7 @@ import com.renda.merchantops.domain.approval.ApprovalActionPort;
 import com.renda.merchantops.domain.approval.ApprovalImportSelectiveReplayPort;
 import com.renda.merchantops.domain.approval.ApprovalRequestPort;
 import com.renda.merchantops.domain.approval.ApprovalRequestUseCase;
+import com.renda.merchantops.domain.approval.ApprovalTicketCommentProposalPort;
 import com.renda.merchantops.domain.approval.ApprovalTargetUserPort;
 import com.renda.merchantops.domain.audit.AuditEventPort;
 import com.renda.merchantops.domain.audit.AuditEventUseCase;
@@ -49,12 +50,14 @@ public class DomainUseCaseConfig {
     public ApprovalRequestUseCase approvalRequestUseCase(ApprovalRequestPort approvalRequestPort,
                                                          ApprovalTargetUserPort approvalTargetUserPort,
                                                          ApprovalActionPort approvalActionPort,
-                                                         ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort) {
+                                                         ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort,
+                                                         ApprovalTicketCommentProposalPort approvalTicketCommentProposalPort) {
         return new com.renda.merchantops.domain.approval.ApprovalRequestDomainService(
                 approvalRequestPort,
                 approvalTargetUserPort,
                 approvalActionPort,
-                approvalImportSelectiveReplayPort
+                approvalImportSelectiveReplayPort,
+                approvalTicketCommentProposalPort
         );
     }
 

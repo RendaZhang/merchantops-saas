@@ -9,6 +9,11 @@ public interface ApprovalRequestUseCase {
                                                              String requestId,
                                                              ImportSelectiveReplayApprovalCommand command);
 
+    ApprovalRequestRecord createTicketCommentRequest(Long tenantId,
+                                                     Long requestedBy,
+                                                     String requestId,
+                                                     TicketCommentApprovalCommand command);
+
     ApprovalRequestRecord getById(Long tenantId, Long approvalRequestId);
 
     ApprovalRequestPageResult page(Long tenantId, ApprovalRequestPageCriteria criteria);

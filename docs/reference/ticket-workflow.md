@@ -1,10 +1,10 @@
 # Ticket Workflow
 
-Last updated: 2026-03-28
+Last updated: 2026-03-30
 
 ## Public API Surface
 
-Swagger currently exposes ten ticket-workflow endpoints:
+Swagger currently exposes eleven ticket-workflow endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -17,6 +17,7 @@ Swagger currently exposes ten ticket-workflow endpoints:
 | `POST` | `/api/v1/tickets` | Bearer JWT | `TICKET_WRITE` | Creates a new `OPEN` ticket |
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Bearer JWT | `TICKET_WRITE` | Replaces the current assignee with an active tenant user |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Bearer JWT | `TICKET_WRITE` | Transitions the ticket state |
+| `POST` | `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` | Bearer JWT | `TICKET_WRITE` | Creates a pending `TICKET_COMMENT_CREATE` approval request for later comment execution |
 | `POST` | `/api/v1/tickets/{id}/comments` | Bearer JWT | `TICKET_WRITE` | Adds a comment and writes a workflow log entry |
 
 Use Swagger UI or [../../api-demo.http](../../api-demo.http) for the current request flow.
@@ -30,6 +31,7 @@ Current public ticket workflow keeps the business state model narrow:
 - read permission: `TICKET_READ`
 - workflow log event types: `CREATED`, `ASSIGNED`, `STATUS_CHANGED`, `COMMENTED`
 - AI summary, triage, and reply-draft behavior: suggestion-only, read-only, and non-mutating
+- AI reply-draft comment proposal behavior: a separate `TICKET_WRITE` workflow endpoint creates a pending approval request only; approve-time execution later reuses the existing comment write chain
 - AI interaction history behavior: read-only operator visibility over stored `ai_interaction_record` rows only
 
 Current transition rules:
@@ -288,6 +290,61 @@ Failure examples:
 - AI disabled: `503`, message `ticket ai reply draft is disabled`
 - provider unavailable: `503`, message `ticket ai reply draft is unavailable`
 
+## `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
+
+Current behavior:
+
+- requires `TICKET_WRITE`
+- loads the target ticket through the existing tenant-scoped ticket read boundary before creating the approval request
+- request body accepts required `commentContent` plus optional `sourceInteractionId`
+- `commentContent` is trimmed, must be non-blank, and must stay within the current ticket comment limit of `2000`
+- `sourceInteractionId`, when present, must reference a same-ticket `REPLY_DRAFT` interaction in `SUCCEEDED` status
+- creates a `PENDING` approval request with `actionType=TICKET_COMMENT_CREATE`, `entityType=TICKET`, and `entityId=<ticketId>`
+- stores only a narrow approval payload: `commentContent` and optional `sourceInteractionId`
+- does not store raw prompt text, raw provider payload, model metadata, or other AI runtime fields in `payloadJson`
+- does not create a comment yet; approve-time execution later reuses `POST /api/v1/tickets/{id}/comments` behavior through the existing ticket comment write chain
+
+Request example:
+
+```json
+{
+  "commentContent": "Quick update from ops.\n\nThe ticket is still in progress and the latest ticket activity confirms the cable swap has started for the store printer issue.\n\nNext step: Confirm whether the replacement restored printer health and note any blocker before moving toward closure.\n\nI will add another internal update once the verification result is confirmed.",
+  "sourceInteractionId": 9002
+}
+```
+
+Response example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "id": 981,
+    "tenantId": 1,
+    "actionType": "TICKET_COMMENT_CREATE",
+    "entityType": "TICKET",
+    "entityId": 302,
+    "requestedBy": 2,
+    "reviewedBy": null,
+    "status": "PENDING",
+    "payloadJson": "{\"commentContent\":\"Quick update from ops.\\n\\nThe ticket is still in progress and the latest ticket activity confirms the cable swap has started for the store printer issue.\\n\\nNext step: Confirm whether the replacement restored printer health and note any blocker before moving toward closure.\\n\\nI will add another internal update once the verification result is confirmed.\",\"sourceInteractionId\":9002}",
+    "requestId": "ticket-comment-proposal-req-1",
+    "createdAt": "2026-03-30T10:20:00",
+    "reviewedAt": null,
+    "executedAt": null
+  }
+}
+```
+
+Failure examples:
+
+- missing `TICKET_WRITE`: `403`, message `permission denied`
+- ticket outside the current tenant: `404`, message `ticket not found`
+- blank comment: `400`, message `commentContent must not be blank`
+- overlong comment: `400`, message `commentContent length must be less than or equal to 2000`
+- invalid provenance: `400`, message `sourceInteractionId must reference a succeeded REPLY_DRAFT interaction for the source ticket`
+
 ## `POST /api/v1/tickets`
 
 Current behavior:
@@ -336,6 +393,7 @@ Current behavior:
 - request body accepts `content`
 - comment author is always the current operator from authenticated context
 - writes both one `ticket_comment` row and one `COMMENTED` workflow log entry
+- the same write chain is also reused at approve time for `TICKET_COMMENT_CREATE` approval requests, so approved proposal comments are authored by the reviewer who executes the approval
 
 ## Internal Tracking Notes
 
@@ -344,6 +402,7 @@ Current ticket-related tracking is intentionally split by concern:
 - controllers resolve `tenantId`, `operatorId`, and `requestId`
 - ticket writes persist workflow history into `ticket_operation_log`
 - ticket writes also emit governance-oriented `audit_event` rows where applicable
+- ticket comment proposals persist `approval_request` rows with `actionType=TICKET_COMMENT_CREATE` for later human review
 - AI summary, triage, and reply-draft calls persist runtime traceability into `ai_interaction_record`
 - AI history reads expose a narrowed page over `ai_interaction_record`, including ticket-scoped runtime usage/cost metadata, while still not exposing raw prompt or provider payload columns
 - the public ticket and AI response shapes do not expose raw provider payloads or internal audit tables directly
@@ -359,8 +418,12 @@ Current seeded ticket permissions:
 That means:
 
 - `admin` can create, assign, update status, comment, and access AI summaries, triage suggestions, reply drafts, and ticket AI interaction history
-- `ops` can create, assign, update status, comment, and access AI summaries, triage suggestions, reply drafts, and ticket AI interaction history
+- `ops` can create, assign, update status, comment, create ticket comment proposals, and access AI summaries, triage suggestions, reply drafts, and ticket AI interaction history
 - `viewer` can list, view details, and access AI summaries, triage suggestions, reply drafts, and ticket AI interaction history, but cannot write
+
+Approval note:
+
+- ticket comment proposals are reviewed through the shared `/api/v1/approval-requests` surface, but queue/detail/approve/reject visibility is action-aware rather than globally `USER_*`; see [audit-approval.md](audit-approval.md) for the mixed-action approval routing model
 
 If `viewer` is promoted through `PUT /api/v1/users/{id}/roles`, old JWT claims become stale immediately. The user must log in again before the new ticket permissions apply.
 

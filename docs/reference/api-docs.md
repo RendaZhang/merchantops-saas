@@ -61,12 +61,13 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/tickets` | Yes + `TICKET_WRITE` | Create a new `OPEN` ticket |
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Yes + `TICKET_WRITE` | Assign the ticket to an active user in current tenant |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Yes + `TICKET_WRITE` | Transition the ticket status |
+| `POST` | `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` | Yes + `TICKET_WRITE` | Create a pending approval request for later ticket comment execution |
 | `POST` | `/api/v1/tickets/{id}/comments` | Yes + `TICKET_WRITE` | Add a comment and workflow log entry |
 | `GET` | `/api/v1/audit-events` | Yes + `USER_READ` | List current-tenant audit rows for one entity |
-| `GET` | `/api/v1/approval-requests` | Yes + `USER_READ` | Page approval requests in current tenant |
-| `GET` | `/api/v1/approval-requests/{id}` | Yes + `USER_READ` | Get one tenant-scoped approval request |
-| `POST` | `/api/v1/approval-requests/{id}/approve` | Yes + `USER_WRITE` | Approve a pending request and execute the action |
-| `POST` | `/api/v1/approval-requests/{id}/reject` | Yes + `USER_WRITE` | Reject a pending request |
+| `GET` | `/api/v1/approval-requests` | Yes + action-specific approval read | Page approval requests visible in the current tenant for the caller's readable action types |
+| `GET` | `/api/v1/approval-requests/{id}` | Yes + action-specific approval read | Get one tenant-scoped approval request when the caller can read that action type |
+| `POST` | `/api/v1/approval-requests/{id}/approve` | Yes + action-specific approval review | Approve a pending request and execute the action when the caller can review that action type |
+| `POST` | `/api/v1/approval-requests/{id}/reject` | Yes + action-specific approval review | Reject a pending request when the caller can review that action type |
 | `POST` | `/api/v1/import-jobs` | Yes + `USER_WRITE` | Create an async import job from multipart request + CSV file |
 | `GET` | `/api/v1/import-jobs` | Yes + `USER_READ` | Page import jobs in current tenant with optional queue filters |
 | `GET` | `/api/v1/import-jobs/{id}` | Yes + `USER_READ` | Get one tenant-scoped import job overview with `errorCodeCounts` plus `itemErrors` |
@@ -104,12 +105,13 @@ User Management tag note:
 
 Ticket Workflow tag note:
 
-- Swagger currently exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`.
+- Swagger currently exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and `POST /api/v1/tickets/{id}/comments`.
 - `GET /api/v1/tickets` supports `page`, `size`, `status`, `assigneeId`, `keyword` (title/description), and `unassignedOnly`.
 - `GET /api/v1/tickets/{id}` includes current comments and workflow-level operation logs.
 - `GET /api/v1/tickets/{id}/ai-interactions` supports `page`, `size`, `interactionType`, and `status`, with stable ordering `createdAt DESC, id DESC`.
 - `GET /api/v1/tickets/{id}/ai-interactions` exposes narrowed runtime metadata including `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, and `usageCostMicros`, while still not exposing raw prompt text or raw provider payload and while remaining outside billing or ledger semantics.
 - `POST /api/v1/tickets/{id}/ai-reply-draft` exposes no request body and returns a structured internal comment draft plus assembled `draftText`.
+- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` accepts required `commentContent` plus optional `sourceInteractionId`, creates a pending `TICKET_COMMENT_CREATE` approval request only, and stores a narrow payload without raw prompt or provider fields.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.
 - `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`, including reopen (`CLOSED -> OPEN`).
@@ -129,12 +131,19 @@ Audit Events tag note:
 Approval Requests tag note:
 
 - Swagger currently exposes `GET /api/v1/approval-requests`, `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject`.
-- `GET /api/v1/approval-requests` requires `USER_READ` and supports `page`, `size`, `status`, `actionType`, and `requestedBy`.
-- `GET /api/v1/approval-requests/{id}` requires `USER_READ`.
-- approve/reject endpoints require `USER_WRITE`.
-- the current public approval surface supports two action types: `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`.
+- `GET /api/v1/approval-requests` supports `page`, `size`, `status`, `actionType`, and `requestedBy`.
+- queue/detail visibility is action-aware:
+  - `USER_STATUS_DISABLE` -> `USER_READ`
+  - `IMPORT_JOB_SELECTIVE_REPLAY` -> `USER_READ`
+  - `TICKET_COMMENT_CREATE` -> `TICKET_READ`
+- approve/reject review permission is also action-aware:
+  - `USER_STATUS_DISABLE` -> `USER_WRITE`
+  - `IMPORT_JOB_SELECTIVE_REPLAY` -> `USER_WRITE`
+  - `TICKET_COMMENT_CREATE` -> `TICKET_WRITE`
+- the current public approval surface supports three action types: `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`.
+- queue requests filtered to an unreadable explicit `actionType` return an empty page, and detail/review requests for unreadable same-tenant action types return `404`.
 - requester cannot approve or reject the same request they created.
-- approval is synchronous in the current implementation and reuses the existing user status write flow for `USER_STATUS_DISABLE` plus the existing import selective replay flow for `IMPORT_JOB_SELECTIVE_REPLAY`.
+- approval is synchronous in the current implementation and reuses the existing user status write flow for `USER_STATUS_DISABLE`, the existing import selective replay flow for `IMPORT_JOB_SELECTIVE_REPLAY`, and the existing ticket comment write flow for `TICKET_COMMENT_CREATE`.
 
 Import Jobs tag note:
 

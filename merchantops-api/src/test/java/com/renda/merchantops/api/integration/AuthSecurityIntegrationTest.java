@@ -386,7 +386,7 @@ class AuthSecurityIntegrationTest {
 
 
     @Test
-    void listApprovalRequestsShouldReturnTenantScopedItemsAndApplyFiltersWithStableSort() throws Exception {
+    void listApprovalRequestsShouldReturnTenantScopedMappedItemsAndApplyFiltersWithStableSort() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
 
         insertApprovalRequest(9101L, 1L, "USER_STATUS_DISABLE", 103L, 101L, "PENDING", "2026-03-12 10:00:00");
@@ -399,16 +399,16 @@ class AuthSecurityIntegrationTest {
                         .queryParam("page", "0")
                         .queryParam("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.total").value(3))
-                .andExpect(jsonPath("$.data.items[*].id", contains(9102, 9101, 9103)))
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items[*].id", contains(9102, 9101)))
                 .andExpect(jsonPath("$.data.items[*].id", not(hasItem(9201))));
 
         mockMvc.perform(get("/api/v1/approval-requests")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
                         .queryParam("status", "PENDING"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.total").value(2))
-                .andExpect(jsonPath("$.data.items[*].status", contains("PENDING", "PENDING")));
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].status", contains("PENDING")));
 
         mockMvc.perform(get("/api/v1/approval-requests")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
@@ -421,8 +421,8 @@ class AuthSecurityIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
                         .queryParam("requestedBy", "101"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.total").value(2))
-                .andExpect(jsonPath("$.data.items[*].requestedBy", contains(101, 101)));
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].requestedBy", contains(101)));
     }
 
     @Test

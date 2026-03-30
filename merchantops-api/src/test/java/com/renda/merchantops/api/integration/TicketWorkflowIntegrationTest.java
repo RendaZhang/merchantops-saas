@@ -21,6 +21,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -159,6 +162,29 @@ class TicketWorkflowIntegrationTest {
                 )
                 """);
 
+        jdbcTemplate.execute("""
+                CREATE TABLE approval_request (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    action_type VARCHAR(64) NOT NULL,
+                    entity_type VARCHAR(64) NOT NULL,
+                    entity_id BIGINT NOT NULL,
+                    requested_by BIGINT NOT NULL,
+                    reviewed_by BIGINT,
+                    status VARCHAR(32) NOT NULL,
+                    payload_json CLOB NOT NULL,
+                    pending_request_key VARCHAR(191),
+                    request_id VARCHAR(128) NOT NULL,
+                    created_at TIMESTAMP NOT NULL,
+                    reviewed_at TIMESTAMP,
+                    executed_at TIMESTAMP,
+                    CONSTRAINT fk_approval_request_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id),
+                    CONSTRAINT fk_approval_request_requested_by_tenant FOREIGN KEY (requested_by, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_approval_request_reviewed_by_tenant FOREIGN KEY (reviewed_by, tenant_id) REFERENCES users(id, tenant_id)
+                )
+                """);
+        jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
+
 
         jdbcTemplate.execute("""
                 CREATE TABLE ticket (
@@ -172,6 +198,30 @@ class TicketWorkflowIntegrationTest {
                     request_id VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
                     updated_at TIMESTAMP NOT NULL
+                )
+                """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE ai_interaction_record (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    user_id BIGINT NOT NULL,
+                    request_id VARCHAR(128) NOT NULL,
+                    entity_type VARCHAR(64) NOT NULL,
+                    entity_id BIGINT NOT NULL,
+                    interaction_type VARCHAR(64) NOT NULL,
+                    prompt_version VARCHAR(128) NOT NULL,
+                    model_id VARCHAR(128),
+                    status VARCHAR(32) NOT NULL,
+                    latency_ms BIGINT NOT NULL,
+                    output_summary CLOB,
+                    usage_prompt_tokens INT,
+                    usage_completion_tokens INT,
+                    usage_total_tokens INT,
+                    usage_cost_micros BIGINT,
+                    created_at TIMESTAMP NOT NULL,
+                    CONSTRAINT fk_ai_interaction_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id),
+                    CONSTRAINT fk_ai_interaction_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
 
@@ -207,6 +257,7 @@ class TicketWorkflowIntegrationTest {
         seedUserRoles();
         seedRolePermissions();
         seedTickets();
+        seedAiInteractions();
     }
 
     @Test
@@ -473,6 +524,373 @@ class TicketWorkflowIntegrationTest {
     }
 
     @Test
+    void createCommentProposalShouldPersistSafePayloadAndApprovalAuditSnapshot() throws Exception {
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        MvcResult result = mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-create-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("  Draft reply for the store. Cable swap verified.  ", 9002L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.actionType").value("TICKET_COMMENT_CREATE"))
+                .andExpect(jsonPath("$.data.entityType").value("TICKET"))
+                .andExpect(jsonPath("$.data.entityId").value(301))
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.requestedBy").value(102))
+                .andReturn();
+
+        Long approvalRequestId = objectMapper.readTree(result.getResponse().getContentAsByteArray())
+                .path("data").path("id").asLong();
+
+        String payloadJson = jdbcTemplate.queryForObject(
+                "SELECT payload_json FROM approval_request WHERE id = ?",
+                String.class,
+                approvalRequestId
+        );
+        assertThat(payloadJson).isEqualTo(
+                "{\"commentContent\":\"Draft reply for the store. Cable swap verified.\",\"sourceInteractionId\":9002}"
+        );
+        assertThat(payloadJson)
+                .doesNotContain("ticket-ai-reply-draft-req-1")
+                .doesNotContain("gpt-4.1-mini")
+                .doesNotContain("nextStep=");
+
+        String approvalAuditSnapshot = jdbcTemplate.queryForObject(
+                "SELECT after_value FROM audit_event WHERE entity_type = 'APPROVAL_REQUEST' AND entity_id = ? AND action_type = 'APPROVAL_REQUEST_CREATED'",
+                String.class,
+                approvalRequestId
+        );
+        assertThat(approvalAuditSnapshot)
+                .contains("TICKET_COMMENT_CREATE")
+                .contains("\\\"commentContent\\\":\\\"Draft reply for the store. Cable swap verified.\\\"")
+                .contains("\\\"sourceInteractionId\\\":9002")
+                .doesNotContain("ticket-ai-reply-draft-req-1")
+                .doesNotContain("gpt-4.1-mini")
+                .doesNotContain("nextStep=");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE ticket_id = ?",
+                Integer.class,
+                301L
+        )).isZero();
+    }
+
+    @Test
+    void createCommentProposalShouldRequireTicketWriteAndHideMissingOrCrossTenantTickets() throws Exception {
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+        String outsiderToken = loginAndGetToken("other-shop", "outsider", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-read-denied")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Reply draft from viewer", 9002L)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("permission denied"));
+
+        mockMvc.perform(post("/api/v1/tickets/999/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-missing-ticket")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Reply draft for missing ticket", 9002L)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("ticket not found"));
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(outsiderToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-cross-tenant")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Cross-tenant reply draft", null)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("ticket not found"));
+    }
+
+    @Test
+    void createCommentProposalShouldRejectBlankOverlongAndInvalidSourceInteraction() throws Exception {
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-blank")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("   ", null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("commentContent: commentContent must not be blank"));
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-too-long")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("a".repeat(2001), null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("commentContent: commentContent length must be less than or equal to 2000"));
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-invalid-source-type")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Reply draft content", 9003L)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("sourceInteractionId must reference a succeeded REPLY_DRAFT interaction for the source ticket"));
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-invalid-source-ticket")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Reply draft content", 9004L)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("sourceInteractionId must reference a succeeded REPLY_DRAFT interaction for the source ticket"));
+    }
+
+    @Test
+    void approveCommentProposalShouldKeepSelfApprovalGuardAndCreateExactlyOneComment() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long approvalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-approve-create",
+                "Reply drafted from the AI suggestion",
+                9002L
+        );
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-self-approve"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("requester cannot approve or reject own request"));
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-approve-final"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                approvalRequestId
+        )).isEqualTo("APPROVED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT reviewed_by FROM approval_request WHERE id = ?",
+                Long.class,
+                approvalRequestId
+        )).isEqualTo(101L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE ticket_id = ?",
+                Integer.class,
+                301L
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE ticket_id = ? AND request_id = ?",
+                Integer.class,
+                301L,
+                "ticket-comment-proposal-approve-final"
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT content FROM ticket_comment WHERE ticket_id = ? AND request_id = ?",
+                String.class,
+                301L,
+                "ticket-comment-proposal-approve-final"
+        )).isEqualTo("Reply drafted from the AI suggestion");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT created_by FROM ticket_comment WHERE ticket_id = ? AND request_id = ?",
+                Long.class,
+                301L,
+                "ticket-comment-proposal-approve-final"
+        )).isEqualTo(101L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_operation_log WHERE ticket_id = ? AND request_id = ? AND operation_type = ? AND detail = ?",
+                Integer.class,
+                301L,
+                "ticket-comment-proposal-approve-final",
+                "COMMENTED",
+                "comment added"
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'APPROVAL_REQUEST' AND entity_id = ? AND action_type = 'APPROVAL_ACTION_EXECUTED'",
+                Integer.class,
+                approvalRequestId
+        )).isEqualTo(1);
+    }
+
+    @Test
+    void rejectCommentProposalShouldNotCreateComment() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long approvalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-reject-create",
+                "Rejectable reply draft content",
+                null
+        );
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-reject-final"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                approvalRequestId
+        )).isEqualTo("REJECTED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE request_id = ?",
+                Integer.class,
+                "ticket-comment-proposal-reject-final"
+        )).isZero();
+    }
+
+    @Test
+    void approvalQueueShouldFilterTicketCommentActionsByPermissionSet() throws Exception {
+        insertApprovalRequest(
+                9101L,
+                1L,
+                "TICKET_COMMENT_CREATE",
+                "TICKET",
+                301L,
+                101L,
+                "PENDING",
+                "{\"commentContent\":\"Seeded queue reply\",\"sourceInteractionId\":9002}",
+                "seed-ticket-comment-approval-9101",
+                "2026-03-30 10:00:00"
+        );
+        insertApprovalRequest(
+                9102L,
+                1L,
+                "USER_STATUS_DISABLE",
+                "USER",
+                103L,
+                101L,
+                "PENDING",
+                "{\"status\":\"DISABLED\"}",
+                "seed-user-approval-9102",
+                "2026-03-30 09:00:00"
+        );
+        insertApprovalRequest(
+                9103L,
+                1L,
+                "IMPORT_JOB_SELECTIVE_REPLAY",
+                "IMPORT_JOB",
+                7001L,
+                101L,
+                "PENDING",
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}",
+                "seed-import-approval-9103",
+                "2026-03-30 08:00:00"
+        );
+        insertApprovalRequest(
+                9201L,
+                2L,
+                "TICKET_COMMENT_CREATE",
+                "TICKET",
+                401L,
+                201L,
+                "PENDING",
+                "{\"commentContent\":\"Other tenant reply\"}",
+                "seed-other-tenant-ticket-approval-9201",
+                "2026-03-30 11:00:00"
+        );
+
+        jdbcTemplate.update("DELETE FROM role_permission WHERE role_id = ? AND permission_id = ?", 13L, 1L);
+        insertRole(14L, 1L, "TICKET_REVIEWER", "Ticket Reviewer");
+        insertUser(104L, 1L, "ticketreviewer", passwordEncoder.encode("123456"), "Ticket Reviewer", "ticketreviewer@demo-shop.local", "ACTIVE");
+        insertUserRole(1005L, 104L, 14L);
+        insertRolePermission(2018L, 14L, 6L);
+        insertRolePermission(2019L, 14L, 7L);
+
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+        String ticketReviewerToken = loginAndGetToken("demo-shop", "ticketreviewer", "123456");
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .queryParam("page", "0")
+                        .queryParam("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].id", contains(9101)))
+                .andExpect(jsonPath("$.data.items[*].id", not(hasItem(9201))));
+
+        mockMvc.perform(get("/api/v1/approval-requests/9101")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.actionType").value("TICKET_COMMENT_CREATE"));
+
+        mockMvc.perform(post("/api/v1/approval-requests/9101/approve")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "viewer-approve-ticket-comment"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("permission denied"));
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(ticketReviewerToken))
+                        .queryParam("page", "0")
+                        .queryParam("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].id", contains(9101)));
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(ticketReviewerToken))
+                        .queryParam("actionType", "USER_STATUS_DISABLE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(get("/api/v1/approval-requests/9102")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(ticketReviewerToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("approval request not found"));
+
+        mockMvc.perform(post("/api/v1/approval-requests/9102/approve")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(ticketReviewerToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-only-approve-user-request"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("approval request not found"));
+
+        mockMvc.perform(post("/api/v1/approval-requests/9101/approve")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(ticketReviewerToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-only-approve-ticket-request"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE ticket_id = ? AND request_id = ?",
+                Integer.class,
+                301L,
+                "ticket-only-approve-ticket-request"
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT created_by FROM ticket_comment WHERE ticket_id = ? AND request_id = ?",
+                Long.class,
+                301L,
+                "ticket-only-approve-ticket-request"
+        )).isEqualTo(104L);
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("page", "0")
+                        .queryParam("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.items[*].id", contains(9101, 9102, 9103)));
+
+        mockMvc.perform(get("/api/v1/approval-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .queryParam("actionType", "TICKET_COMMENT_CREATE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[*].id", contains(9101)));
+    }
+
+    @Test
     void viewerRoleUpgradeShouldChangeTicketWriteAccessAfterRelogin() throws Exception {
         String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
@@ -657,6 +1075,66 @@ class TicketWorkflowIntegrationTest {
         insertTicket(401L, 2L, "Other tenant ticket", "Other tenant issue", "OPEN", null, 201L, "seed-ticket-401");
     }
 
+    private void seedAiInteractions() {
+        insertAiInteractionRecord(
+                9002L,
+                1L,
+                102L,
+                "ticket-ai-reply-draft-req-1",
+                "TICKET",
+                301L,
+                "REPLY_DRAFT",
+                "ticket-reply-draft-v1",
+                "gpt-4.1-mini",
+                "SUCCEEDED",
+                436L,
+                "nextStep=Confirm whether the replacement restored printer health and note any blocker before moving toward closure.",
+                140,
+                88,
+                228,
+                2100L,
+                Timestamp.valueOf("2026-03-22 09:00:00")
+        );
+        insertAiInteractionRecord(
+                9003L,
+                1L,
+                102L,
+                "ticket-ai-triage-req-1",
+                "TICKET",
+                301L,
+                "TRIAGE",
+                "ticket-triage-v1",
+                "gpt-4.1-mini",
+                "SUCCEEDED",
+                251L,
+                "triage severity=medium",
+                120,
+                44,
+                164,
+                1500L,
+                Timestamp.valueOf("2026-03-22 09:05:00")
+        );
+        insertAiInteractionRecord(
+                9004L,
+                1L,
+                102L,
+                "ticket-ai-reply-draft-other-ticket-1",
+                "TICKET",
+                302L,
+                "REPLY_DRAFT",
+                "ticket-reply-draft-v1",
+                "gpt-4.1-mini",
+                "SUCCEEDED",
+                401L,
+                "other ticket reply draft",
+                118,
+                62,
+                180,
+                1700L,
+                Timestamp.valueOf("2026-03-22 09:10:00")
+        );
+    }
+
     private void insertPermission(Long id, String permissionCode, String permissionName) {
         jdbcTemplate.update("""
                 INSERT INTO permission (id, permission_code, permission_name, created_at, updated_at)
@@ -712,6 +1190,56 @@ class TicketWorkflowIntegrationTest {
                 """, id, tenantId, title, description, status, assigneeId, createdBy, requestId);
     }
 
+    private void insertAiInteractionRecord(Long id,
+                                           Long tenantId,
+                                           Long userId,
+                                           String requestId,
+                                           String entityType,
+                                           Long entityId,
+                                           String interactionType,
+                                           String promptVersion,
+                                           String modelId,
+                                           String status,
+                                           Long latencyMs,
+                                           String outputSummary,
+                                           Integer usagePromptTokens,
+                                           Integer usageCompletionTokens,
+                                           Integer usageTotalTokens,
+                                           Long usageCostMicros,
+                                           Timestamp createdAt) {
+        jdbcTemplate.update("""
+                INSERT INTO ai_interaction_record (
+                    id, tenant_id, user_id, request_id, entity_type, entity_id, interaction_type, prompt_version,
+                    model_id, status, latency_ms, output_summary, usage_prompt_tokens, usage_completion_tokens,
+                    usage_total_tokens, usage_cost_micros, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                id, tenantId, userId, requestId, entityType, entityId, interactionType, promptVersion,
+                modelId, status, latencyMs, outputSummary, usagePromptTokens, usageCompletionTokens,
+                usageTotalTokens, usageCostMicros, createdAt
+        );
+    }
+
+    private void insertApprovalRequest(Long id,
+                                       Long tenantId,
+                                       String actionType,
+                                       String entityType,
+                                       Long entityId,
+                                       Long requestedBy,
+                                       String status,
+                                       String payloadJson,
+                                       String requestId,
+                                       String createdAt) {
+        jdbcTemplate.update("""
+                INSERT INTO approval_request (
+                    id, tenant_id, action_type, entity_type, entity_id, requested_by, reviewed_by, status,
+                    payload_json, pending_request_key, request_id, created_at, reviewed_at, executed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?, PARSEDATETIME(?, 'yyyy-MM-dd HH:mm:ss'), NULL, NULL)
+                """,
+                id, tenantId, actionType, entityType, entityId, requestedBy, status, payloadJson, requestId, createdAt
+        );
+    }
+
     private Long createTicketAndGetId(String token, String requestId, String title, String description) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/tickets")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
@@ -722,6 +1250,20 @@ class TicketWorkflowIntegrationTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andReturn();
 
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsByteArray());
+        return root.path("data").path("id").asLong();
+    }
+
+    private Long createCommentProposalAndGetId(String token, String requestId, String commentContent, Long sourceInteractionId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, requestId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest(commentContent, sourceInteractionId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andReturn();
         JsonNode root = objectMapper.readTree(result.getResponse().getContentAsByteArray());
         return root.path("data").path("id").asLong();
     }
@@ -781,6 +1323,15 @@ class TicketWorkflowIntegrationTest {
                   "content": "%s"
                 }
                 """.formatted(content);
+    }
+
+    private String commentProposalRequest(String commentContent, Long sourceInteractionId) throws Exception {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("commentContent", commentContent);
+        if (sourceInteractionId != null) {
+            payload.put("sourceInteractionId", sourceInteractionId);
+        }
+        return objectMapper.writeValueAsString(payload);
     }
 
     private String assignRolesRequest(String roleCodesJson) {

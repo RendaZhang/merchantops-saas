@@ -4,9 +4,11 @@ import com.renda.merchantops.api.audit.AuditEventService;
 import com.renda.merchantops.api.context.RequestIdPolicy;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestResponse;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayProposalRequest;
+import com.renda.merchantops.api.dto.ticket.command.TicketCommentProposalRequest;
 import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
 import com.renda.merchantops.domain.approval.ApprovalRequestUseCase;
+import com.renda.merchantops.domain.approval.TicketCommentApprovalCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +58,36 @@ public class ApprovalRequestCommandService {
                         request == null ? null : request.getErrorCodes(),
                         request == null ? null : request.getSourceInteractionId(),
                         request == null ? null : request.getProposalReason()
+                )
+        );
+        auditEventService.recordEvent(
+                tenantId,
+                ENTITY_APPROVAL_REQUEST,
+                saved.id(),
+                "APPROVAL_REQUEST_CREATED",
+                requestedBy,
+                resolvedRequestId,
+                null,
+                approvalRequestResponseMapper.snapshot(saved)
+        );
+        return approvalRequestResponseMapper.toResponse(saved);
+    }
+
+    @Transactional
+    public ApprovalRequestResponse createTicketCommentRequest(Long tenantId,
+                                                              Long requestedBy,
+                                                              String requestId,
+                                                              Long ticketId,
+                                                              TicketCommentProposalRequest request) {
+        String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
+        ApprovalRequestRecord saved = approvalRequestUseCase.createTicketCommentRequest(
+                tenantId,
+                requestedBy,
+                resolvedRequestId,
+                new TicketCommentApprovalCommand(
+                        ticketId,
+                        request == null ? null : request.getCommentContent(),
+                        request == null ? null : request.getSourceInteractionId()
                 )
         );
         auditEventService.recordEvent(

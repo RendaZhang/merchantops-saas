@@ -3,11 +3,13 @@ package com.renda.merchantops.api.approval;
 import com.renda.merchantops.api.audit.AuditEventService;
 import com.renda.merchantops.api.dto.approval.query.ApprovalRequestPageQuery;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayProposalRequest;
+import com.renda.merchantops.api.dto.ticket.command.TicketCommentProposalRequest;
 import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
 import com.renda.merchantops.domain.approval.ApprovalRequestPageCriteria;
 import com.renda.merchantops.domain.approval.ApprovalRequestPageResult;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
 import com.renda.merchantops.domain.approval.ApprovalRequestUseCase;
+import com.renda.merchantops.domain.approval.TicketCommentApprovalCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -88,7 +91,7 @@ class ApprovalRequestServiceTest {
     void getByIdShouldMapDomainRecordToResponse() {
         when(approvalRequestUseCase.getById(1L, 901L)).thenReturn(record(901L, "PENDING", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}"));
 
-        var response = approvalRequestQueryService.getById(1L, 901L);
+        var response = approvalRequestQueryService.getById(1L, 901L, Set.of("USER_STATUS_DISABLE"));
 
         assertThat(response.id()).isEqualTo(901L);
         assertThat(response.entityId()).isEqualTo(103L);
@@ -100,7 +103,7 @@ class ApprovalRequestServiceTest {
         when(approvalRequestUseCase.page(eq(1L), any()))
                 .thenReturn(new ApprovalRequestPageResult(List.of(record(901L, "PENDING", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}")), 0, 10, 1, 1));
 
-        var response = approvalRequestQueryService.page(1L, new ApprovalRequestPageQuery(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L));
+        var response = approvalRequestQueryService.page(1L, new ApprovalRequestPageQuery(-1, 0, "  PENDING  ", " USER_STATUS_DISABLE ", 101L), Set.of("USER_STATUS_DISABLE", "TICKET_COMMENT_CREATE"));
 
         ArgumentCaptor<ApprovalRequestPageCriteria> criteriaCaptor = ArgumentCaptor.forClass(ApprovalRequestPageCriteria.class);
         verify(approvalRequestUseCase).page(eq(1L), criteriaCaptor.capture());
@@ -109,8 +112,32 @@ class ApprovalRequestServiceTest {
         assertThat(criteriaCaptor.getValue().status()).isEqualTo("  PENDING  ");
         assertThat(criteriaCaptor.getValue().actionType()).isEqualTo(" USER_STATUS_DISABLE ");
         assertThat(criteriaCaptor.getValue().requestedBy()).isEqualTo(101L);
+        assertThat(criteriaCaptor.getValue().allowedActionTypes()).containsExactlyInAnyOrder("USER_STATUS_DISABLE", "TICKET_COMMENT_CREATE");
         assertThat(response.getTotal()).isEqualTo(1);
         assertThat(response.getItems()).hasSize(1);
+    }
+
+    @Test
+    void createTicketCommentRequestShouldDelegateToUseCaseAndRecordAudit() {
+        TicketCommentProposalRequest request = new TicketCommentProposalRequest("Reply draft content", 9002L);
+        when(approvalRequestUseCase.createTicketCommentRequest(
+                1L,
+                101L,
+                "ticket-comment-proposal-1",
+                new TicketCommentApprovalCommand(301L, "Reply draft content", 9002L)
+        )).thenReturn(record(903L, "PENDING", 301L, 101L, "TICKET_COMMENT_CREATE", "TICKET", "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}"));
+
+        var response = approvalRequestCommandService.createTicketCommentRequest(1L, 101L, "ticket-comment-proposal-1", 301L, request);
+
+        assertThat(response.id()).isEqualTo(903L);
+        assertThat(response.actionType()).isEqualTo("TICKET_COMMENT_CREATE");
+        verify(approvalRequestUseCase).createTicketCommentRequest(
+                1L,
+                101L,
+                "ticket-comment-proposal-1",
+                new TicketCommentApprovalCommand(301L, "Reply draft content", 9002L)
+        );
+        verify(auditEventService).recordEvent(eq(1L), eq("APPROVAL_REQUEST"), eq(903L), eq("APPROVAL_REQUEST_CREATED"), eq(101L), eq("ticket-comment-proposal-1"), eq(null), any());
     }
 
     @Test
@@ -135,6 +162,15 @@ class ApprovalRequestServiceTest {
         assertThat(response.status()).isEqualTo("REJECTED");
         verify(approvalRequestUseCase).reject(1L, 105L, "reject-req-1", 901L);
         verify(auditEventService).recordEvent(eq(1L), eq("APPROVAL_REQUEST"), eq(901L), eq("APPROVAL_REQUEST_REJECTED"), eq(105L), eq("reject-req-1"), eq(null), any());
+    }
+
+    @Test
+    void getByIdShouldHideActionOutsideAllowedSet() {
+        when(approvalRequestUseCase.getById(1L, 901L))
+                .thenReturn(record(901L, "PENDING", 103L, 101L, "USER_STATUS_DISABLE", "USER", "{\"status\":\"DISABLED\"}"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> approvalRequestQueryService.getById(1L, 901L, Set.of("TICKET_COMMENT_CREATE")))
+                .hasMessage("approval request not found");
     }
 
     private ApprovalRequestRecord record(Long id,

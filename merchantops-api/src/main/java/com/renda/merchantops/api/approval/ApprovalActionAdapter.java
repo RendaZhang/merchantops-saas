@@ -2,8 +2,10 @@ package com.renda.merchantops.api.approval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.renda.merchantops.api.dto.ticket.command.TicketCommentCreateCommand;
 import com.renda.merchantops.api.dto.importjob.command.ImportJobSelectiveReplayRequest;
 import com.renda.merchantops.api.importjob.ImportJobReplayService;
+import com.renda.merchantops.api.ticket.TicketCommandService;
 import com.renda.merchantops.domain.approval.ApprovalActionPort;
 import com.renda.merchantops.domain.approval.ApprovalImportSelectiveReplayPort;
 import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
@@ -22,15 +24,18 @@ public class ApprovalActionAdapter implements ApprovalActionPort {
 
     private final UserCommandUseCase userCommandUseCase;
     private final ImportJobReplayService importJobReplayService;
+    private final TicketCommandService ticketCommandService;
     private final ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort;
     private final ObjectMapper objectMapper;
 
     public ApprovalActionAdapter(UserCommandUseCase userCommandUseCase,
                                  ImportJobReplayService importJobReplayService,
+                                 TicketCommandService ticketCommandService,
                                  ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort,
                                  ObjectMapper objectMapper) {
         this.userCommandUseCase = userCommandUseCase;
         this.importJobReplayService = importJobReplayService;
+        this.ticketCommandService = ticketCommandService;
         this.approvalImportSelectiveReplayPort = approvalImportSelectiveReplayPort;
         this.objectMapper = objectMapper;
     }
@@ -70,12 +75,31 @@ public class ApprovalActionAdapter implements ApprovalActionPort {
         );
     }
 
+    @Override
+    public void createTicketComment(Long tenantId, Long reviewerId, String requestId, Long ticketId, String payloadJson) {
+        TicketCommentApprovalPayload payload = parsePayload(payloadJson, TicketCommentApprovalPayload.class);
+        if (!StringUtils.hasText(payload.commentContent())) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "approval payload is invalid");
+        }
+        ticketCommandService.addComment(
+                tenantId,
+                reviewerId,
+                requestId,
+                ticketId,
+                new TicketCommentCreateCommand(payload.commentContent().trim())
+        );
+    }
+
     private ImportSelectiveReplayApprovalPayload parsePayload(String payloadJson) {
+        return parsePayload(payloadJson, ImportSelectiveReplayApprovalPayload.class);
+    }
+
+    private <T> T parsePayload(String payloadJson, Class<T> payloadType) {
         if (!StringUtils.hasText(payloadJson)) {
             throw new BizException(ErrorCode.BAD_REQUEST, "approval payload missing");
         }
         try {
-            return objectMapper.readValue(payloadJson, ImportSelectiveReplayApprovalPayload.class);
+            return objectMapper.readValue(payloadJson, payloadType);
         } catch (JsonProcessingException ex) {
             throw new BizException(ErrorCode.BAD_REQUEST, "approval payload is invalid");
         }

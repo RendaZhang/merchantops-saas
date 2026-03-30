@@ -109,6 +109,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Read [docs/architecture/java-architecture-map.md](docs/architecture/java-architecture-map.md) before moving Java types across modules or capability packages.
 - This is a multi-module Maven repository. When `merchantops-api` depends on sibling-module changes, prefer reactor commands with `-am`; before standalone `spring-boot:run` or API-only verification after repository/entity/signature changes, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first so local SNAPSHOT dependencies are current.
 - Keep tenant scoping explicit and keep query/write models separated.
+- On mixed-action approval surfaces, route queue/detail/approve/reject authorization by approval action capability instead of hard-coding a controller-wide `USER_*` gate.
 - Use the linked development guidance for detailed rules on `operatorId` / `requestId` propagation, internal attribution fields, and request-time access revalidation.
 - For large repetitive or cross-file edits, prefer scoped Python or Node transforms over a single giant `apply_patch`; keep the detailed execution guidance in the linked development guidance page.
 - Do not present internal groundwork as public API.

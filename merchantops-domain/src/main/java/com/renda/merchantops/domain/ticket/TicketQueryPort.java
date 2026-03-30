@@ -12,6 +12,8 @@ public interface TicketQueryPort {
                                                            Long ticketId,
                                                            TicketAiInteractionPageCriteria criteria);
 
+    Optional<TicketAiInteractionItem> findTicketAiInteraction(Long tenantId, Long ticketId, Long interactionId);
+
     Optional<TicketDetail> findTicketDetail(Long tenantId, Long ticketId);
 
     Optional<TicketPromptContext> findTicketPromptContext(Long tenantId, Long ticketId);

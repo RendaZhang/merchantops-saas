@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.Set;
 
 public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequestEntity, Long> {
 
@@ -25,10 +26,12 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
               and (:status is null or a.status = :status)
               and (:actionType is null or a.actionType = :actionType)
               and (:requestedBy is null or a.requestedBy = :requestedBy)
+              and a.actionType in :allowedActionTypes
             """)
     Page<ApprovalRequestEntity> searchPageByTenantId(@Param("tenantId") Long tenantId,
                                                       @Param("status") String status,
                                                       @Param("actionType") String actionType,
                                                       @Param("requestedBy") Long requestedBy,
+                                                      @Param("allowedActionTypes") Set<String> allowedActionTypes,
                                                       Pageable pageable);
 }
