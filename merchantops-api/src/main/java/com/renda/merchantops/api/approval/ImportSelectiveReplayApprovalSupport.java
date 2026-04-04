@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.importjob.ImportSelectiveReplayNormalizer;
 import com.renda.merchantops.api.importjob.replay.ImportReplaySourceLoader;
 import com.renda.merchantops.domain.approval.ApprovalImportSelectiveReplayPort;
+import com.renda.merchantops.domain.approval.ApprovalPendingRequestKeyPolicy;
 import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
 import com.renda.merchantops.domain.approval.PreparedImportSelectiveReplayApproval;
 import com.renda.merchantops.domain.importjob.ImportJobAiInteractionItem;
@@ -44,7 +45,7 @@ public class ImportSelectiveReplayApprovalSupport implements ApprovalImportSelec
         if (command == null || command.sourceJobId() == null) {
             throw new BizException(ErrorCode.BAD_REQUEST, "sourceJobId missing");
         }
-        List<String> errorCodes = importSelectiveReplayNormalizer.normalizeSelectedErrorCodes(command.errorCodes());
+        List<String> errorCodes = canonicalizeErrorCodes(command.errorCodes());
         importReplaySourceLoader.loadSelectiveFailedRowReplay(tenantId, command.sourceJobId(), errorCodes);
         Long sourceInteractionId = command.sourceInteractionId();
         if (sourceInteractionId != null) {
@@ -65,8 +66,15 @@ public class ImportSelectiveReplayApprovalSupport implements ApprovalImportSelec
                 errorCodes,
                 sourceInteractionId,
                 proposalReason,
-                serializePayload(command.sourceJobId(), errorCodes, sourceInteractionId, proposalReason)
+                serializePayload(command.sourceJobId(), errorCodes, sourceInteractionId, proposalReason),
+                ApprovalPendingRequestKeyPolicy.importJobSelectiveReplayKey(tenantId, command.sourceJobId(), errorCodes)
         );
+    }
+
+    private List<String> canonicalizeErrorCodes(List<String> errorCodes) {
+        return importSelectiveReplayNormalizer.normalizeSelectedErrorCodes(errorCodes).stream()
+                .sorted()
+                .toList();
     }
 
     private String serializePayload(Long sourceJobId,

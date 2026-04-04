@@ -7,7 +7,8 @@ public record PreparedImportSelectiveReplayApproval(
         List<String> errorCodes,
         Long sourceInteractionId,
         String proposalReason,
-        String payloadJson
+        String payloadJson,
+        String pendingRequestKey
 ) {
     public PreparedImportSelectiveReplayApproval {
         errorCodes = List.copyOf(errorCodes);

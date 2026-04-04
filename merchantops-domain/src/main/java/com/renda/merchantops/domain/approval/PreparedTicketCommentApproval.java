@@ -4,6 +4,7 @@ public record PreparedTicketCommentApproval(
         Long ticketId,
         String commentContent,
         Long sourceInteractionId,
-        String payloadJson
+        String payloadJson,
+        String pendingRequestKey
 ) {
 }

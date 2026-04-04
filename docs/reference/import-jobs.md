@@ -1,6 +1,6 @@
 # Import Jobs
 
-Last updated: 2026-03-29
+Last updated: 2026-04-04
 
 ## Public API Surface
 
@@ -431,8 +431,16 @@ Current proposal payload rules are explicit:
 - `actionType=IMPORT_JOB_SELECTIVE_REPLAY`
 - `entityType=IMPORT_JOB`
 - `entityId=<source job id>`
-- `payloadJson` stores only canonical `sourceJobId`, normalized `errorCodes`, optional `sourceInteractionId`, and optional `proposalReason`
+- `payloadJson` stores only canonical `sourceJobId`, canonical sorted `errorCodes`, optional `sourceInteractionId`, and optional `proposalReason`
 - raw CSV rows, replay replacement values, passwords, emails, and full `rawPayload` values are intentionally excluded from approval persistence
+
+Current proposal normalization rules are explicit:
+
+- incoming `errorCodes` are trimmed
+- blank values are rejected
+- duplicates are removed
+- the stored executable set is sorted deterministically before it is persisted or used for pending-proposal uniqueness
+- `sourceInteractionId` and `proposalReason` are provenance only and do not affect duplicate suppression
 
 Current eligibility and rejection rules:
 
@@ -442,13 +450,15 @@ Current eligibility and rejection rules:
 - source job is not `USER_CSV`
 - none of the requested `errorCodes` resolve to replayable row-level failures in the source job
 - `sourceInteractionId`, when present, does not reference a same-job `FIX_RECOMMENDATION` interaction in `SUCCEEDED` status
+- a same-tenant pending proposal already exists for the same source job plus canonical `errorCodes`, returning `400`, message `pending selective replay proposal already exists for source job and selected errorCodes`
 
 Current approval behavior:
 
 - `POST /api/v1/approval-requests/{id}/approve` re-checks the same selective replay eligibility at approve time and then executes the existing selective replay path synchronously as the reviewer/request-id actor
 - `POST /api/v1/approval-requests/{id}/reject` transitions the request to `REJECTED` and does not create a replay job
 - requester self-approval is still blocked by the shared approval guard
-- duplicate proposal creation is not suppressed in this slice; repeated proposal calls can create separate pending approval requests
+- duplicate pending proposal creation is suppressed on executable payload semantics, not provenance fields
+- once a proposal leaves `PENDING`, its pending key is cleared, so the same canonical payload can be proposed again later if replay eligibility still passes
 
 ## Edited Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
 

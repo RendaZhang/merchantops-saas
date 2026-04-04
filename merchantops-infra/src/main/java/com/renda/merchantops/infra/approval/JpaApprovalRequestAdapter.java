@@ -22,9 +22,14 @@ import java.util.Optional;
 public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
 
     private static final String ACTION_USER_STATUS_DISABLE = "USER_STATUS_DISABLE";
-    private static final String ENTITY_USER = "USER";
+    private static final String ACTION_IMPORT_JOB_SELECTIVE_REPLAY = "IMPORT_JOB_SELECTIVE_REPLAY";
+    private static final String ACTION_TICKET_COMMENT_CREATE = "TICKET_COMMENT_CREATE";
     private static final String STATUS_PENDING = "PENDING";
     private static final String DUPLICATE_PENDING_DISABLE_MESSAGE = "pending disable request already exists for user";
+    private static final String DUPLICATE_PENDING_IMPORT_SELECTIVE_REPLAY_MESSAGE =
+            "pending selective replay proposal already exists for source job and selected errorCodes";
+    private static final String DUPLICATE_PENDING_TICKET_COMMENT_MESSAGE =
+            "pending ticket comment proposal already exists for ticket and comment content";
 
     private final ApprovalRequestRepository approvalRequestRepository;
 
@@ -44,7 +49,7 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
         entity.setReviewedBy(request.reviewedBy());
         entity.setStatus(request.status());
         entity.setPayloadJson(request.payloadJson());
-        entity.setPendingRequestKey(toPendingRequestKey(request));
+        entity.setPendingRequestKey(request.pendingRequestKey());
         entity.setRequestId(request.requestId());
         entity.setCreatedAt(request.createdAt());
         entity.setReviewedAt(request.reviewedAt());
@@ -52,8 +57,9 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
         try {
             return toRecord(approvalRequestRepository.save(entity));
         } catch (DataIntegrityViolationException ex) {
-            if (isPendingDisableRequest(request)) {
-                throw new BizException(ErrorCode.BAD_REQUEST, DUPLICATE_PENDING_DISABLE_MESSAGE);
+            String duplicateMessage = duplicatePendingRequestMessage(request);
+            if (duplicateMessage != null) {
+                throw new BizException(ErrorCode.BAD_REQUEST, duplicateMessage);
             }
             throw ex;
         }
@@ -106,6 +112,7 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
                 entity.getReviewedBy(),
                 entity.getStatus(),
                 entity.getPayloadJson(),
+                entity.getPendingRequestKey(),
                 entity.getRequestId(),
                 entity.getCreatedAt(),
                 entity.getReviewedAt(),
@@ -113,19 +120,27 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
         );
     }
 
-    private String toPendingRequestKey(ApprovalRequestRecord request) {
-        if (!isPendingDisableRequest(request)) {
+    private String duplicatePendingRequestMessage(ApprovalRequestRecord request) {
+        if (!isPendingRequest(request)) {
             return null;
         }
-        return ACTION_USER_STATUS_DISABLE + ":" + request.tenantId() + ":" + request.entityId();
+        String actionType = normalizeKey(request.actionType());
+        if (ACTION_USER_STATUS_DISABLE.equals(actionType)) {
+            return DUPLICATE_PENDING_DISABLE_MESSAGE;
+        }
+        if (ACTION_IMPORT_JOB_SELECTIVE_REPLAY.equals(actionType)) {
+            return DUPLICATE_PENDING_IMPORT_SELECTIVE_REPLAY_MESSAGE;
+        }
+        if (ACTION_TICKET_COMMENT_CREATE.equals(actionType)) {
+            return DUPLICATE_PENDING_TICKET_COMMENT_MESSAGE;
+        }
+        return null;
     }
 
-    private boolean isPendingDisableRequest(ApprovalRequestRecord request) {
-        return ACTION_USER_STATUS_DISABLE.equals(normalizeKey(request.actionType()))
-                && ENTITY_USER.equals(normalizeKey(request.entityType()))
+    private boolean isPendingRequest(ApprovalRequestRecord request) {
+        return request.pendingRequestKey() != null
                 && STATUS_PENDING.equals(normalizeKey(request.status()))
-                && request.tenantId() != null
-                && request.entityId() != null;
+                && !request.pendingRequestKey().isBlank();
     }
 
     private String normalizeKey(String value) {

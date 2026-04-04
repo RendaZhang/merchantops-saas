@@ -249,6 +249,8 @@ Authorization: Bearer {{token}}
 # Optional sourceInteractionId should come from a SUCCEEDED REPLY_DRAFT row in
 # GET /api/v1/tickets/{id}/ai-interactions. This creates a pending approval
 # request only; no comment is written until a different reviewer approves it.
+# Duplicate pending creates for the same trimmed comment content now return 400
+# until the current pending request is approved or rejected.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/comments/proposals/ai-reply-draft
 Authorization: Bearer {{token}}
 Content-Type: {{contentType}}
@@ -454,6 +456,8 @@ Authorization: Bearer {{token}}
 # Optional sourceInteractionId should come from a SUCCEEDED FIX_RECOMMENDATION row in
 # GET /api/v1/import-jobs/{id}/ai-interactions. The proposal creates a pending approval
 # request only; it does not create a replay job until a different reviewer approves it.
+# Duplicate pending creates for the same source job plus canonical error-code set
+# now return 400 until the current pending request is approved or rejected.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/selective/proposals
 Authorization: Bearer {{token}}
 Content-Type: {{contentType}}

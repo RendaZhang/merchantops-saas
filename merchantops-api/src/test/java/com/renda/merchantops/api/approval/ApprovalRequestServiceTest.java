@@ -190,6 +190,7 @@ class ApprovalRequestServiceTest {
                 "APPROVED".equals(status) ? 105L : null,
                 status,
                 payloadJson,
+                "PENDING".equals(status) ? "pending-key" : null,
                 "disable-req-1",
                 LocalDateTime.of(2026, 3, 26, 10, 0),
                 "PENDING".equals(status) ? null : LocalDateTime.of(2026, 3, 26, 10, 5),

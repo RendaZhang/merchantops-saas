@@ -1,6 +1,6 @@
 # Ticket Workflow
 
-Last updated: 2026-03-30
+Last updated: 2026-04-04
 
 ## Public API Surface
 
@@ -303,6 +303,9 @@ Current behavior:
 - stores only a narrow approval payload: `commentContent` and optional `sourceInteractionId`
 - does not store raw prompt text, raw provider payload, model metadata, or other AI runtime fields in `payloadJson`
 - does not create a comment yet; approve-time execution later reuses `POST /api/v1/tickets/{id}/comments` behavior through the existing ticket comment write chain
+- pending-proposal uniqueness is based on trimmed `commentContent` only; `sourceInteractionId` is provenance only and does not affect duplicate suppression
+- duplicate pending proposals for the same ticket and trimmed `commentContent` return `400`, message `pending ticket comment proposal already exists for ticket and comment content`
+- once a proposal leaves `PENDING`, its pending key is cleared, so the same trimmed comment can be proposed again later
 
 Request example:
 
@@ -344,6 +347,7 @@ Failure examples:
 - blank comment: `400`, message `commentContent must not be blank`
 - overlong comment: `400`, message `commentContent length must be less than or equal to 2000`
 - invalid provenance: `400`, message `sourceInteractionId must reference a succeeded REPLY_DRAFT interaction for the source ticket`
+- duplicate pending proposal: `400`, message `pending ticket comment proposal already exists for ticket and comment content`
 
 ## `POST /api/v1/tickets`
 

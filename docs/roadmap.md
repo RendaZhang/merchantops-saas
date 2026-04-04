@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-30
+Last updated: 2026-04-04
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -25,14 +25,16 @@ The current Week 8 implementation should stay narrow and human-governed:
 - keep the completed Week 7 import AI surface stable: `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
 - the shipped Week 8 slices are now `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` and `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, which add low-risk proposal, approval, and execution flows with human oversight by connecting import fix guidance to the existing selective replay path and connecting ticket reply-draft output to the existing comment write path
 - keep the shared approval queue action-aware: mixed approval surfaces now route read/review permissions by approval action capability instead of a controller-wide `USER_*` gate
+- keep the Week 8 governance baseline hardened: pending proposals are now deduplicated on executable payload semantics, concurrent duplicate creates collapse to one pending row, and resolved requests release their pending key for future proposals
 - continue using Week 8 to add low-risk proposal, approval, and execution flows with human oversight instead of widening the existing ticket or import AI slices into direct autonomous write-back
 - keep Week 8 focused on approval-bounded workflow execution rather than tenant billing, ledger semantics, or generic chat tooling
 
 ## Recommended Next Steps
 
-- treat the import selective replay proposal flow plus the ticket reply-draft comment proposal flow as the Week 8 baseline patterns for proposal -> approval -> execution
+- treat the import selective replay proposal flow plus the ticket reply-draft comment proposal flow, together with the shared pending-proposal uniqueness hardening, as the Week 8 baseline pattern for proposal -> approval -> execution
 - keep the completed Week 6 ticket AI surface and the completed Week 7 import AI read surface stable while any further Week 8 slice reuses the same human-reviewed execution pattern through separate workflow endpoints rather than widening the AI endpoints themselves
-- prefer the next Week 8 action to keep approval payloads narrow and non-sensitive; avoid broader write-back, billing, ledger semantics, and generic chat tooling until the proposal/approval/execution shape has been proven across these first two actions
+- the next Week 8 decision is now close-out versus one bonus third narrow workflow, not another round of approval-engine hardening
+- if a bonus third workflow is added later, keep approval payloads narrow and non-sensitive; avoid broader write-back, billing, ledger semantics, and generic chat tooling until the proposal/approval/execution shape has been proven across these first two actions plus the hardening baseline
 
 ## Near-Term Sequence
 

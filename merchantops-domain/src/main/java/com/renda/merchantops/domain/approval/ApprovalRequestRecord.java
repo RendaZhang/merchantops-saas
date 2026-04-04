@@ -12,6 +12,7 @@ public record ApprovalRequestRecord(
         Long reviewedBy,
         String status,
         String payloadJson,
+        String pendingRequestKey,
         String requestId,
         LocalDateTime createdAt,
         LocalDateTime reviewedAt,

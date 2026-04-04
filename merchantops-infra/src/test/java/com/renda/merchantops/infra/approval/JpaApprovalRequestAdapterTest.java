@@ -2,6 +2,8 @@ package com.renda.merchantops.infra.approval;
 
 import com.renda.merchantops.domain.approval.ApprovalRequestPageCriteria;
 import com.renda.merchantops.domain.approval.ApprovalRequestRecord;
+import com.renda.merchantops.domain.approval.ApprovalPendingRequestKeyPolicy;
+import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.infra.persistence.entity.ApprovalRequestEntity;
 import com.renda.merchantops.infra.repository.ApprovalRequestRepository;
@@ -47,6 +49,7 @@ class JpaApprovalRequestAdapterTest {
                 105L,
                 "APPROVED",
                 "{\"status\":\"DISABLED\"}",
+                null,
                 "approve-req-1",
                 LocalDateTime.of(2026, 3, 26, 10, 0),
                 LocalDateTime.of(2026, 3, 26, 10, 5),
@@ -61,7 +64,7 @@ class JpaApprovalRequestAdapterTest {
     }
 
     @Test
-    void saveShouldDerivePendingDisableKeyAndTranslateDuplicateConstraint() {
+    void saveShouldPersistPendingDisableKeyAndTranslateDuplicateConstraint() {
         JpaApprovalRequestAdapter adapter = new JpaApprovalRequestAdapter(approvalRequestRepository);
         when(approvalRequestRepository.save(any(ApprovalRequestEntity.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate"));
@@ -76,17 +79,72 @@ class JpaApprovalRequestAdapterTest {
                 null,
                 "PENDING",
                 "{\"status\":\"DISABLED\"}",
+                ApprovalPendingRequestKeyPolicy.userStatusDisableKey(1L, 103L),
                 "disable-req-1",
                 LocalDateTime.of(2026, 3, 26, 10, 0),
                 null,
                 null
         )))
+                .isInstanceOf(BizException.class)
+                .hasMessage("pending disable request already exists for user")
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.BAD_REQUEST);
 
         ArgumentCaptor<ApprovalRequestEntity> entityCaptor = ArgumentCaptor.forClass(ApprovalRequestEntity.class);
         verify(approvalRequestRepository).save(entityCaptor.capture());
         assertThat(entityCaptor.getValue().getPendingRequestKey()).isEqualTo("USER_STATUS_DISABLE:1:103");
+    }
+
+    @Test
+    void saveShouldTranslateDuplicateConstraintForImportReplayProposal() {
+        JpaApprovalRequestAdapter adapter = new JpaApprovalRequestAdapter(approvalRequestRepository);
+        when(approvalRequestRepository.save(any(ApprovalRequestEntity.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> adapter.save(new ApprovalRequestRecord(
+                null,
+                1L,
+                "IMPORT_JOB_SELECTIVE_REPLAY",
+                "IMPORT_JOB",
+                7001L,
+                101L,
+                null,
+                "PENDING",
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}",
+                ApprovalPendingRequestKeyPolicy.importJobSelectiveReplayKey(1L, 7001L, List.of("UNKNOWN_ROLE")),
+                "proposal-req-1",
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                null,
+                null
+        )))
+                .isInstanceOf(BizException.class)
+                .hasMessage("pending selective replay proposal already exists for source job and selected errorCodes");
+    }
+
+    @Test
+    void saveShouldTranslateDuplicateConstraintForTicketCommentProposal() {
+        JpaApprovalRequestAdapter adapter = new JpaApprovalRequestAdapter(approvalRequestRepository);
+        when(approvalRequestRepository.save(any(ApprovalRequestEntity.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> adapter.save(new ApprovalRequestRecord(
+                null,
+                1L,
+                "TICKET_COMMENT_CREATE",
+                "TICKET",
+                301L,
+                101L,
+                null,
+                "PENDING",
+                "{\"commentContent\":\"Reply draft content\"}",
+                ApprovalPendingRequestKeyPolicy.ticketCommentCreateKey(1L, 301L, "Reply draft content"),
+                "ticket-comment-proposal-1",
+                LocalDateTime.of(2026, 3, 30, 10, 0),
+                null,
+                null
+        )))
+                .isInstanceOf(BizException.class)
+                .hasMessage("pending ticket comment proposal already exists for ticket and comment content");
     }
 
     @Test

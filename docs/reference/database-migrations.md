@@ -3,8 +3,11 @@
 ## Flyway Setup
 
 - Flyway dependencies are managed in `merchantops-infra`
-- Migration location: `merchantops-api/src/main/resources/db/migration`
-- Naming pattern: `V{version}__{description}.sql`
+- SQL migration location: `merchantops-api/src/main/resources/db/migration`
+- Java migration location: `merchantops-api/src/main/java/db/migration`
+- Naming pattern:
+  - SQL: `V{version}__{description}.sql`
+  - Java: `V{version}__{description}.java`
 - In the `dev` profile, Flyway runs automatically on startup
 
 ## Current Migrations
@@ -21,6 +24,7 @@
 - `V10__add_import_job_replay_lineage.sql`: adds nullable `import_job.source_job_id` so replay-derived jobs can point back to the source job, including DB-level same-tenant lineage protection through `(tenant_id, source_job_id) -> import_job(tenant_id, id)`
 - `V11__add_ai_interaction_record.sql`: adds tenant-scoped `ai_interaction_record` for Week 6 AI runtime traceability, including same-tenant linkage between `tenant_id` and `user_id` plus indexed lookup by entity and request id
 - `V12__enforce_pending_disable_uniqueness.sql`: adds nullable `approval_request.pending_request_key`, converts superseded historical duplicate pending `USER_STATUS_DISABLE` rows for the same tenant user to `REJECTED`, backfills only the canonical newest pending row with the derived key, and creates a unique index so future pending disable requests stay unique per tenant user at the database layer
+- `V13__harden_pending_proposal_uniqueness.java`: extends pending-request-key governance across `IMPORT_JOB_SELECTIVE_REPLAY` and `TICKET_COMMENT_CREATE`, backfills canonical pending keys for those actions, clears stale keys from resolved rows, and converts superseded duplicate pending proposal rows to `REJECTED` before the shared unique index continues enforcing one pending executable intent per key
 
 ## Demo Accounts
 
@@ -125,7 +129,8 @@ SELECT
 ## Related Notes
 
 - Password hashes for seed users can be generated with `merchantops-api/src/main/java/com/renda/merchantops/api/tools/PasswordHashGenerator.java`
-- Do not edit an already-applied migration. Create a new version for follow-up changes instead.
+- Do not edit an already-applied migration once it is part of a tagged or otherwise shared baseline. The current `V12__enforce_pending_disable_uniqueness.sql` rewrite is a narrow pre-tag exception because a fresh MySQL install failed before later migrations could run.
+- If a local development database already applied the pre-fix `V12`, prefer dropping and recreating that schema so Flyway can replay the corrected migration chain cleanly. If the schema must be kept, confirm the rewritten `V12` is semantically equivalent first, then repair the `flyway_schema_history` checksum with an external Flyway client before the next startup.
 - `created_by` and `updated_by` are intentionally nullable so historical seed rows do not pretend to have a synthetic operator.
 - `ai_interaction_record` is intentionally separate from `audit_event`; see [../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md](../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md).
 - Known schema gap: [../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity](../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity)

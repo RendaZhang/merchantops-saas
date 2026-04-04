@@ -21,6 +21,13 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -332,6 +339,48 @@ class ImportSelectiveReplayApprovalIntegrationTest {
     }
 
     @Test
+    void proposalCreateShouldRejectDuplicatePendingProposalForSameCanonicalErrorCodes() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        Long approvalRequestId = createProposal(adminToken, "req-proposal-duplicate-first", """
+                {
+                  "errorCodes": ["UNKNOWN_ROLE", "INVALID_EMAIL"],
+                  "sourceInteractionId": 9103,
+                  "proposalReason": "first"
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/import-jobs/7001/replay-failures/selective/proposals")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "req-proposal-duplicate-second")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "errorCodes": [" INVALID_EMAIL ", "UNKNOWN_ROLE", "UNKNOWN_ROLE"],
+                                  "proposalReason": "second"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("pending selective replay proposal already exists for source job and selected errorCodes"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT payload_json FROM approval_request WHERE id = ?",
+                String.class,
+                approvalRequestId
+        )).isEqualTo(
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"INVALID_EMAIL\",\"UNKNOWN_ROLE\"],\"sourceInteractionId\":9103,\"proposalReason\":\"first\"}"
+        );
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'IMPORT_JOB_SELECTIVE_REPLAY'",
+                Integer.class
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'IMPORT_JOB_SELECTIVE_REPLAY' AND status = 'PENDING'",
+                Integer.class
+        )).isEqualTo(1);
+    }
+
+    @Test
     void proposalCreateShouldRejectNonReplayableErrorCodesAndInvalidSourceInteraction() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
 
@@ -357,6 +406,88 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("sourceInteractionId must reference a succeeded FIX_RECOMMENDATION interaction for the source import job"));
+    }
+
+    @Test
+    void proposalCreateShouldAllowSamePayloadAgainAfterRejectingResolvedProposal() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String reviewerToken = loginAndGetToken("demo-shop", "approver", "123456");
+
+        Long firstApprovalRequestId = createProposal(adminToken, "req-proposal-retry-after-reject-first", """
+                {
+                  "errorCodes": ["UNKNOWN_ROLE"],
+                  "sourceInteractionId": 9103
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", firstApprovalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "req-proposal-retry-after-reject-review"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"));
+
+        Long secondApprovalRequestId = createProposal(adminToken, "req-proposal-retry-after-reject-second", """
+                {
+                  "errorCodes": [" UNKNOWN_ROLE "]
+                }
+                """);
+
+        assertThat(secondApprovalRequestId).isNotEqualTo(firstApprovalRequestId);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT pending_request_key FROM approval_request WHERE id = ?",
+                String.class,
+                firstApprovalRequestId
+        )).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                secondApprovalRequestId
+        )).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'IMPORT_JOB_SELECTIVE_REPLAY'",
+                Integer.class
+        )).isEqualTo(2);
+    }
+
+    @Test
+    void proposalCreateShouldAllowSamePayloadAgainAfterApprovingResolvedProposal() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String reviewerToken = loginAndGetToken("demo-shop", "approver", "123456");
+
+        Long firstApprovalRequestId = createProposal(adminToken, "req-proposal-retry-after-approve-first", """
+                {
+                  "errorCodes": ["UNKNOWN_ROLE"]
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", firstApprovalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "req-proposal-retry-after-approve-review"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        Long secondApprovalRequestId = createProposal(adminToken, "req-proposal-retry-after-approve-second", """
+                {
+                  "errorCodes": ["UNKNOWN_ROLE"],
+                  "proposalReason": "new review cycle"
+                }
+                """);
+
+        assertThat(secondApprovalRequestId).isNotEqualTo(firstApprovalRequestId);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT pending_request_key FROM approval_request WHERE id = ?",
+                String.class,
+                firstApprovalRequestId
+        )).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                secondApprovalRequestId
+        )).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM import_job WHERE tenant_id = 1 AND source_job_id = 7001 AND request_id = 'req-proposal-retry-after-approve-review'",
+                Integer.class
+        )).isEqualTo(1);
     }
 
     @Test
@@ -423,6 +554,44 @@ class ImportSelectiveReplayApprovalIntegrationTest {
     }
 
     @Test
+    void reviewEndpointsShouldRejectAlreadyResolvedSelectiveReplayProposal() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String reviewerToken = loginAndGetToken("demo-shop", "approver", "123456");
+
+        Long approvedRequestId = createProposal(adminToken, "req-proposal-repeat-review-approved-create", """
+                {
+                  "errorCodes": ["UNKNOWN_ROLE"]
+                }
+                """);
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "req-proposal-repeat-review-approved-final"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "req-proposal-repeat-review-approved-repeat"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("approval request is not pending"));
+
+        Long rejectedRequestId = createProposal(adminToken, "req-proposal-repeat-review-rejected-create", """
+                {
+                  "errorCodes": ["INVALID_EMAIL"]
+                }
+                """);
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", rejectedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "req-proposal-repeat-review-rejected-final"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"));
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", rejectedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(reviewerToken))
+                        .header("X-Request-Id", "req-proposal-repeat-review-rejected-repeat"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("approval request is not pending"));
+    }
+
+    @Test
     void rejectShouldNotCreateReplayJob() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
         String reviewerToken = loginAndGetToken("demo-shop", "approver", "123456");
@@ -448,6 +617,51 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                 "SELECT COUNT(*) FROM import_job WHERE tenant_id = 1 AND source_job_id = 7001 AND request_id = 'req-proposal-review-reject'",
                 Integer.class
         )).isZero();
+    }
+
+    @Test
+    void proposalCreateShouldKeepOnlyOnePendingRowUnderConcurrentDuplicateRequests() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String requestBody = """
+                {
+                  "errorCodes": ["UNKNOWN_ROLE"],
+                  "sourceInteractionId": 9103
+                }
+                """;
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try {
+            List<Future<MvcResult>> futures = List.of(
+                    executor.submit(() -> submitConcurrentProposal(adminToken, "req-proposal-concurrent-1", requestBody, ready, start)),
+                    executor.submit(() -> submitConcurrentProposal(adminToken, "req-proposal-concurrent-2", requestBody, ready, start))
+            );
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<MvcResult> results = new ArrayList<>();
+            for (Future<MvcResult> future : futures) {
+                results.add(future.get(10, TimeUnit.SECONDS));
+            }
+
+            assertThat(results.stream().map(result -> result.getResponse().getStatus()).toList())
+                    .containsExactlyInAnyOrder(200, 400);
+            assertThat(results.stream()
+                    .filter(result -> result.getResponse().getStatus() == 400)
+                    .map(this::responseMessage)
+                    .toList()).containsExactly("pending selective replay proposal already exists for source job and selected errorCodes");
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM approval_request WHERE action_type = 'IMPORT_JOB_SELECTIVE_REPLAY'",
+                    Integer.class
+            )).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM approval_request WHERE action_type = 'IMPORT_JOB_SELECTIVE_REPLAY' AND status = 'PENDING'",
+                    Integer.class
+            )).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     private void seedCoreData() {
@@ -584,9 +798,33 @@ class ImportSelectiveReplayApprovalIntegrationTest {
         return responseId(result);
     }
 
+    private MvcResult submitConcurrentProposal(String token,
+                                               String requestId,
+                                               String requestBody,
+                                               CountDownLatch ready,
+                                               CountDownLatch start) throws Exception {
+        ready.countDown();
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        return mockMvc.perform(post("/api/v1/import-jobs/7001/replay-failures/selective/proposals")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .header("X-Request-Id", requestId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andReturn();
+    }
+
     private Long responseId(MvcResult result) throws Exception {
         JsonNode root = objectMapper.readTree(result.getResponse().getContentAsByteArray());
         return root.path("data").path("id").asLong();
+    }
+
+    private String responseMessage(MvcResult result) {
+        try {
+            JsonNode root = objectMapper.readTree(result.getResponse().getContentAsByteArray());
+            return root.path("message").asText();
+        } catch (Exception ex) {
+            throw new IllegalStateException("failed to parse response message", ex);
+        }
     }
 
     private String loginAndGetToken(String tenantCode, String username, String password) throws Exception {

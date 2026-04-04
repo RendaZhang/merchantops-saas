@@ -111,7 +111,7 @@ Ticket Workflow tag note:
 - `GET /api/v1/tickets/{id}/ai-interactions` supports `page`, `size`, `interactionType`, and `status`, with stable ordering `createdAt DESC, id DESC`.
 - `GET /api/v1/tickets/{id}/ai-interactions` exposes narrowed runtime metadata including `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, and `usageCostMicros`, while still not exposing raw prompt text or raw provider payload and while remaining outside billing or ledger semantics.
 - `POST /api/v1/tickets/{id}/ai-reply-draft` exposes no request body and returns a structured internal comment draft plus assembled `draftText`.
-- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` accepts required `commentContent` plus optional `sourceInteractionId`, creates a pending `TICKET_COMMENT_CREATE` approval request only, and stores a narrow payload without raw prompt or provider fields.
+- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` accepts required `commentContent` plus optional `sourceInteractionId`, creates a pending `TICKET_COMMENT_CREATE` approval request only, stores a narrow payload without raw prompt or provider fields, and suppresses duplicate pending proposals on trimmed `commentContent` only.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.
 - `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`, including reopen (`CLOSED -> OPEN`).
@@ -144,6 +144,7 @@ Approval Requests tag note:
 - queue requests filtered to an unreadable explicit `actionType` return an empty page, and detail/review requests for unreadable same-tenant action types return `404`.
 - requester cannot approve or reject the same request they created.
 - approval is synchronous in the current implementation and reuses the existing user status write flow for `USER_STATUS_DISABLE`, the existing import selective replay flow for `IMPORT_JOB_SELECTIVE_REPLAY`, and the existing ticket comment write flow for `TICKET_COMMENT_CREATE`.
+- repeated approve or reject attempts after the request has already left `PENDING` return `400`, message `approval request is not pending`.
 
 Import Jobs tag note:
 
@@ -163,7 +164,8 @@ Import Jobs tag note:
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `POST /api/v1/import-jobs/{id}/replay-file` copies the stored source file into a new derived `QUEUED` job for current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
-- `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` returns the shared approval-request response shape and stores only safe proposal payload fields (`sourceJobId`, normalized `errorCodes`, optional `sourceInteractionId`, optional `proposalReason`) for later human review.
+- `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` returns the shared approval-request response shape and stores only safe proposal payload fields (`sourceJobId`, canonical sorted `errorCodes`, optional `sourceInteractionId`, optional `proposalReason`) for later human review.
+- `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` suppresses duplicate pending proposals on source job plus canonical `errorCodes`; `sourceInteractionId` and `proposalReason` do not affect uniqueness.
 - `POST /api/v1/import-jobs/{id}/replay-failures/edited` creates a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.

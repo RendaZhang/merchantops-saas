@@ -2,6 +2,7 @@ package com.renda.merchantops.api.approval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.renda.merchantops.domain.approval.ApprovalPendingRequestKeyPolicy;
 import com.renda.merchantops.domain.approval.ApprovalTicketCommentProposalPort;
 import com.renda.merchantops.domain.approval.PreparedTicketCommentApproval;
 import com.renda.merchantops.domain.approval.TicketCommentApprovalCommand;
@@ -54,7 +55,8 @@ public class TicketCommentApprovalSupport implements ApprovalTicketCommentPropos
                 command.ticketId(),
                 commentContent,
                 sourceInteractionId,
-                serializePayload(commentContent, sourceInteractionId)
+                serializePayload(commentContent, sourceInteractionId),
+                ApprovalPendingRequestKeyPolicy.ticketCommentCreateKey(tenantId, command.ticketId(), commentContent)
         );
     }
 

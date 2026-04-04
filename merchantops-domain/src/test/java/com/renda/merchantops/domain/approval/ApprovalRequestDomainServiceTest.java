@@ -34,6 +34,7 @@ class ApprovalRequestDomainServiceTest {
         assertThat(requestPort.savedRequest.entityId()).isEqualTo(103L);
         assertThat(requestPort.savedRequest.status()).isEqualTo("PENDING");
         assertThat(requestPort.savedRequest.payloadJson()).isEqualTo("{\"status\":\"DISABLED\"}");
+        assertThat(requestPort.savedRequest.pendingRequestKey()).isEqualTo("USER_STATUS_DISABLE:1:103");
     }
 
     @Test
@@ -46,7 +47,8 @@ class ApprovalRequestDomainServiceTest {
                 List.of("UNKNOWN_ROLE"),
                 9103L,
                 "Review role fixes before replay",
-                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"],\"sourceInteractionId\":9103,\"proposalReason\":\"Review role fixes before replay\"}"
+                "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"],\"sourceInteractionId\":9103,\"proposalReason\":\"Review role fixes before replay\"}",
+                ApprovalPendingRequestKeyPolicy.importJobSelectiveReplayKey(1L, 7001L, List.of("UNKNOWN_ROLE"))
         );
         ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
                 requestPort,
@@ -72,6 +74,9 @@ class ApprovalRequestDomainServiceTest {
         assertThat(requestPort.savedRequest.entityId()).isEqualTo(7001L);
         assertThat(requestPort.savedRequest.payloadJson()).isEqualTo(
                 "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"],\"sourceInteractionId\":9103,\"proposalReason\":\"Review role fixes before replay\"}"
+        );
+        assertThat(requestPort.savedRequest.pendingRequestKey()).isEqualTo(
+                ApprovalPendingRequestKeyPolicy.importJobSelectiveReplayKey(1L, 7001L, List.of("UNKNOWN_ROLE"))
         );
     }
 
@@ -100,6 +105,7 @@ class ApprovalRequestDomainServiceTest {
         assertThat(requestPort.savedRequest.reviewedBy()).isEqualTo(105L);
         assertThat(requestPort.savedRequest.reviewedAt()).isNotNull();
         assertThat(requestPort.savedRequest.executedAt()).isNotNull();
+        assertThat(requestPort.savedRequest.pendingRequestKey()).isNull();
         assertThat(result.status()).isEqualTo("APPROVED");
     }
 
@@ -135,6 +141,7 @@ class ApprovalRequestDomainServiceTest {
         assertThat(actionPort.payloadJson).isEqualTo("{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}");
         assertThat(result.status()).isEqualTo("APPROVED");
         assertThat(requestPort.savedRequest.executedAt()).isNotNull();
+        assertThat(requestPort.savedRequest.pendingRequestKey()).isNull();
     }
 
     @Test
@@ -185,7 +192,8 @@ class ApprovalRequestDomainServiceTest {
                 301L,
                 "Reply draft content",
                 9002L,
-                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}"
+                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}",
+                ApprovalPendingRequestKeyPolicy.ticketCommentCreateKey(1L, 301L, "Reply draft content")
         );
         ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
                 requestPort,
@@ -208,6 +216,9 @@ class ApprovalRequestDomainServiceTest {
         assertThat(requestPort.savedRequest.entityType()).isEqualTo("TICKET");
         assertThat(requestPort.savedRequest.entityId()).isEqualTo(301L);
         assertThat(requestPort.savedRequest.payloadJson()).isEqualTo("{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}");
+        assertThat(requestPort.savedRequest.pendingRequestKey()).isEqualTo(
+                ApprovalPendingRequestKeyPolicy.ticketCommentCreateKey(1L, 301L, "Reply draft content")
+        );
     }
 
     @Test
@@ -242,6 +253,42 @@ class ApprovalRequestDomainServiceTest {
         assertThat(actionPort.payloadJson).isEqualTo("{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}");
         assertThat(result.status()).isEqualTo("APPROVED");
         assertThat(requestPort.savedRequest.executedAt()).isNotNull();
+        assertThat(requestPort.savedRequest.pendingRequestKey()).isNull();
+    }
+
+    @Test
+    void rejectShouldPersistRejectedStatusAndClearPendingRequestKey() {
+        CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
+        requestPort.lockedRequest = Optional.of(ticketCommentApprovalRequest(
+                903L,
+                "PENDING",
+                301L,
+                101L,
+                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}"
+        ));
+        requestPort.savedResponse = ticketCommentApprovalRequest(
+                903L,
+                "REJECTED",
+                301L,
+                101L,
+                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}"
+        );
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
+                new NoopApprovalActionPort(),
+                new NoopApprovalImportSelectiveReplayPort(),
+                new NoopApprovalTicketCommentProposalPort()
+        );
+
+        ApprovalRequestRecord result = useCase.reject(1L, 105L, "reject-ticket-comment-proposal-1", 903L);
+
+        assertThat(result.status()).isEqualTo("REJECTED");
+        assertThat(requestPort.savedRequest.status()).isEqualTo("REJECTED");
+        assertThat(requestPort.savedRequest.reviewedBy()).isEqualTo(105L);
+        assertThat(requestPort.savedRequest.reviewedAt()).isNotNull();
+        assertThat(requestPort.savedRequest.executedAt()).isNull();
+        assertThat(requestPort.savedRequest.pendingRequestKey()).isNull();
     }
 
     private ApprovalRequestRecord approvalRequest(Long id, String status, Long entityId, Long requestedBy) {
@@ -255,6 +302,9 @@ class ApprovalRequestDomainServiceTest {
                 null,
                 status,
                 "{\"status\":\"DISABLED\"}",
+                "PENDING".equals(status) && entityId != null
+                        ? ApprovalPendingRequestKeyPolicy.userStatusDisableKey(1L, entityId)
+                        : null,
                 "disable-req-1",
                 LocalDateTime.of(2026, 3, 26, 10, 0),
                 null,
@@ -277,6 +327,9 @@ class ApprovalRequestDomainServiceTest {
                 null,
                 status,
                 payloadJson,
+                "PENDING".equals(status)
+                        ? ApprovalPendingRequestKeyPolicy.importJobSelectiveReplayKey(1L, entityId, List.of("UNKNOWN_ROLE"))
+                        : null,
                 "proposal-req-1",
                 LocalDateTime.of(2026, 3, 29, 10, 0),
                 null,
@@ -299,6 +352,9 @@ class ApprovalRequestDomainServiceTest {
                 null,
                 status,
                 payloadJson,
+                "PENDING".equals(status)
+                        ? ApprovalPendingRequestKeyPolicy.ticketCommentCreateKey(1L, entityId, "Reply draft content")
+                        : null,
                 "ticket-comment-proposal-1",
                 LocalDateTime.of(2026, 3, 30, 10, 0),
                 null,
@@ -446,7 +502,8 @@ class ApprovalRequestDomainServiceTest {
                     command.errorCodes(),
                     command.sourceInteractionId(),
                     command.proposalReason(),
-                    "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}"
+                    "{\"sourceJobId\":7001,\"errorCodes\":[\"UNKNOWN_ROLE\"]}",
+                    ApprovalPendingRequestKeyPolicy.importJobSelectiveReplayKey(tenantId, command.sourceJobId(), command.errorCodes())
             );
         }
     }
@@ -459,7 +516,8 @@ class ApprovalRequestDomainServiceTest {
                     command.ticketId(),
                     command.commentContent(),
                     command.sourceInteractionId(),
-                    "{\"commentContent\":\"Reply draft content\"}"
+                    "{\"commentContent\":\"Reply draft content\"}",
+                    ApprovalPendingRequestKeyPolicy.ticketCommentCreateKey(tenantId, command.ticketId(), command.commentContent())
             );
         }
     }

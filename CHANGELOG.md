@@ -16,8 +16,9 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Approval routing now supports both `USER_STATUS_DISABLE` and `IMPORT_JOB_SELECTIVE_REPLAY`, with approve-time dispatch reusing the existing selective replay execution path while keeping approval payloads narrow and free of raw CSV rows or replacement values.
 - Approval routing is now action-aware for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`, so queue/detail/approve/reject permissions follow the approval action capability instead of a controller-wide `USER_*` gate.
 - Pending `USER_STATUS_DISABLE` requests now enforce per-tenant-user uniqueness at the database layer through a derived pending-request key, preserving the same public duplicate-request `400` behavior while removing the earlier race window from pre-check-only enforcement.
+- Shared pending-request-key hardening now extends to `IMPORT_JOB_SELECTIVE_REPLAY` and `TICKET_COMMENT_CREATE`, so duplicate pending proposals are rejected on executable payload semantics, resolved requests release their key for later reproposal, and `V13__harden_pending_proposal_uniqueness.java` backfills canonical pending rows while collapsing superseded historical duplicates to `REJECTED`.
 - Import execution now stops late chunk, completion, or failure work when the job has already left `PROCESSING`, avoiding duplicate terminal side effects after external failure or recovery handling.
-- Ticket workflow docs, approval docs, AI regression notes, API examples, phase status/roadmap/plan pages, and automated verification notes now reflect the Week 8 ticket comment proposal-plus-approval baseline alongside the existing import proposal flow and the latest approval/import hardening.
+- Ticket workflow docs, approval docs, import docs, migration notes, AI regression notes, API examples, phase status/roadmap pages, and automated verification notes now reflect the Week 8 ticket comment proposal-plus-approval baseline alongside the existing import proposal flow and the latest approval/import hardening.
 
 ## [v0.4.0-beta] - 2026-03-28
 

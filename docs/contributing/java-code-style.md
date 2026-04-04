@@ -36,6 +36,7 @@ Use it when placing new Java types, restructuring packages, extracting shared su
 - Domain use cases, ports, records, and shared business errors stay in `merchantops-domain`.
 - JPA adapters, entities, and Spring Data repositories stay in `merchantops-infra`.
 - Provider adapters should validate provider payload shape and translate provider-specific wire concerns, but should not take over service orchestration or business-side recording.
+- Flyway Java migrations stay under `merchantops-api/src/main/java/db/migration` and keep Flyway-style `V{version}__...` type names that match the migration file name; the Checkstyle `TypeName` relaxation is intentionally limited to that directory and is not a general naming exception for normal Java code.
 
 ## Shared Support Extraction
 

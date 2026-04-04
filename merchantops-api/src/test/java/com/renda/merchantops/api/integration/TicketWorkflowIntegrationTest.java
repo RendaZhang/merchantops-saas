@@ -22,8 +22,15 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -577,6 +584,40 @@ class TicketWorkflowIntegrationTest {
     }
 
     @Test
+    void createCommentProposalShouldRejectDuplicatePendingProposalForSameTrimmedComment() throws Exception {
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long approvalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-duplicate-first",
+                "  Draft reply for the store. Cable swap verified.  ",
+                9002L
+        );
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-duplicate-second")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Draft reply for the store. Cable swap verified.", null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("pending ticket comment proposal already exists for ticket and comment content"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT payload_json FROM approval_request WHERE id = ?",
+                String.class,
+                approvalRequestId
+        )).isEqualTo("{\"commentContent\":\"Draft reply for the store. Cable swap verified.\",\"sourceInteractionId\":9002}");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'TICKET_COMMENT_CREATE'",
+                Integer.class
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'TICKET_COMMENT_CREATE' AND status = 'PENDING'",
+                Integer.class
+        )).isEqualTo(1);
+    }
+
+    @Test
     void createCommentProposalShouldRequireTicketWriteAndHideMissingOrCrossTenantTickets() throws Exception {
         String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
         String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
@@ -644,6 +685,91 @@ class TicketWorkflowIntegrationTest {
                         .content(commentProposalRequest("Reply draft content", 9004L)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("sourceInteractionId must reference a succeeded REPLY_DRAFT interaction for the source ticket"));
+    }
+
+    @Test
+    void createCommentProposalShouldAllowSamePayloadAgainAfterRejectingResolvedProposal() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long firstApprovalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-retry-after-reject-first",
+                "Rejectable repeat draft",
+                9002L
+        );
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", firstApprovalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-retry-after-reject-review"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"));
+
+        Long secondApprovalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-retry-after-reject-second",
+                "  Rejectable repeat draft  ",
+                null
+        );
+
+        assertThat(secondApprovalRequestId).isNotEqualTo(firstApprovalRequestId);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT pending_request_key FROM approval_request WHERE id = ?",
+                String.class,
+                firstApprovalRequestId
+        )).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                secondApprovalRequestId
+        )).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'TICKET_COMMENT_CREATE'",
+                Integer.class
+        )).isEqualTo(2);
+    }
+
+    @Test
+    void createCommentProposalShouldAllowSamePayloadAgainAfterApprovingResolvedProposal() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long firstApprovalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-retry-after-approve-first",
+                "Approved repeat draft",
+                null
+        );
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", firstApprovalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-retry-after-approve-review"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        Long secondApprovalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-retry-after-approve-second",
+                "  Approved repeat draft  ",
+                9002L
+        );
+
+        assertThat(secondApprovalRequestId).isNotEqualTo(firstApprovalRequestId);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT pending_request_key FROM approval_request WHERE id = ?",
+                String.class,
+                firstApprovalRequestId
+        )).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                secondApprovalRequestId
+        )).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE request_id = ?",
+                Integer.class,
+                "ticket-comment-proposal-retry-after-approve-review"
+        )).isEqualTo(1);
     }
 
     @Test
@@ -719,6 +845,46 @@ class TicketWorkflowIntegrationTest {
     }
 
     @Test
+    void reviewEndpointsShouldRejectAlreadyResolvedTicketCommentProposal() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long approvedRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-repeat-review-approved-create",
+                "Already approved draft",
+                null
+        );
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-repeat-review-approved-final"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-repeat-review-approved-repeat"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("approval request is not pending"));
+
+        Long rejectedRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-repeat-review-rejected-create",
+                "Already rejected draft",
+                9002L
+        );
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", rejectedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-repeat-review-rejected-final"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REJECTED"));
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/reject", rejectedRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-repeat-review-rejected-repeat"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("approval request is not pending"));
+    }
+
+    @Test
     void rejectCommentProposalShouldNotCreateComment() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
         String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
@@ -746,6 +912,59 @@ class TicketWorkflowIntegrationTest {
                 Integer.class,
                 "ticket-comment-proposal-reject-final"
         )).isZero();
+    }
+
+    @Test
+    void createCommentProposalShouldKeepOnlyOnePendingRowUnderConcurrentDuplicateRequests() throws Exception {
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try {
+            List<Future<MvcResult>> futures = List.of(
+                    executor.submit(() -> submitConcurrentCommentProposal(
+                            opsToken,
+                            "ticket-comment-proposal-concurrent-1",
+                            "Concurrent ticket reply draft",
+                            9002L,
+                            ready,
+                            start
+                    )),
+                    executor.submit(() -> submitConcurrentCommentProposal(
+                            opsToken,
+                            "ticket-comment-proposal-concurrent-2",
+                            "  Concurrent ticket reply draft  ",
+                            null,
+                            ready,
+                            start
+                    ))
+            );
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<MvcResult> results = new ArrayList<>();
+            for (Future<MvcResult> future : futures) {
+                results.add(future.get(10, TimeUnit.SECONDS));
+            }
+
+            assertThat(results.stream().map(result -> result.getResponse().getStatus()).toList())
+                    .containsExactlyInAnyOrder(200, 400);
+            assertThat(results.stream()
+                    .filter(result -> result.getResponse().getStatus() == 400)
+                    .map(this::responseMessage)
+                    .toList()).containsExactly("pending ticket comment proposal already exists for ticket and comment content");
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM approval_request WHERE action_type = 'TICKET_COMMENT_CREATE'",
+                    Integer.class
+            )).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM approval_request WHERE action_type = 'TICKET_COMMENT_CREATE' AND status = 'PENDING'",
+                    Integer.class
+            )).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
@@ -1268,6 +1487,22 @@ class TicketWorkflowIntegrationTest {
         return root.path("data").path("id").asLong();
     }
 
+    private MvcResult submitConcurrentCommentProposal(String token,
+                                                      String requestId,
+                                                      String commentContent,
+                                                      Long sourceInteractionId,
+                                                      CountDownLatch ready,
+                                                      CountDownLatch start) throws Exception {
+        ready.countDown();
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        return mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, requestId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest(commentContent, sourceInteractionId)))
+                .andReturn();
+    }
+
     private String loginAndGetToken(String tenantCode, String username, String password) throws Exception {
         MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1344,6 +1579,15 @@ class TicketWorkflowIntegrationTest {
 
     private String bearerToken(String token) {
         return "Bearer " + token;
+    }
+
+    private String responseMessage(MvcResult result) {
+        try {
+            JsonNode root = objectMapper.readTree(result.getResponse().getContentAsByteArray());
+            return root.path("message").asText();
+        } catch (Exception ex) {
+            throw new IllegalStateException("failed to parse response message", ex);
+        }
     }
 
     private String currentJdbcUrl() {

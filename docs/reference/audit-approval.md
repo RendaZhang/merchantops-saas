@@ -1,6 +1,6 @@
 # Audit And Approval Patterns
 
-Last updated: 2026-03-30
+Last updated: 2026-04-04
 
 ## Current Scope
 
@@ -57,9 +57,11 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - scope: current tenant only
 - permission: `USER_WRITE`
 - creates a `PENDING` approval request for `IMPORT_JOB_SELECTIVE_REPLAY`
-- proposal payload stores only `sourceJobId`, normalized `errorCodes`, optional `sourceInteractionId`, and optional `proposalReason`
+- proposal payload stores only `sourceJobId`, canonical sorted `errorCodes`, optional `sourceInteractionId`, and optional `proposalReason`
 - the endpoint does not create a replay job yet and does not persist raw CSV values or replay replacement values in `payload_json`
 - `sourceInteractionId`, when present, must reference a same-job `FIX_RECOMMENDATION` interaction in `SUCCEEDED` status
+- duplicate pending proposals for the same tenant, source job, and canonical `errorCodes` return `400`, message `pending selective replay proposal already exists for source job and selected errorCodes`
+- `sourceInteractionId` and `proposalReason` are provenance only and do not affect pending-proposal uniqueness
 
 ### `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
 
@@ -69,6 +71,8 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - proposal payload stores only trimmed `commentContent` and optional `sourceInteractionId`
 - `sourceInteractionId`, when present, must reference a same-ticket `REPLY_DRAFT` interaction in `SUCCEEDED` status
 - the endpoint does not create a comment yet and does not persist raw prompt text, raw provider payload, or model metadata in `payload_json`
+- duplicate pending proposals for the same tenant, ticket, and trimmed `commentContent` return `400`, message `pending ticket comment proposal already exists for ticket and comment content`
+- `sourceInteractionId` is provenance only and does not affect pending-proposal uniqueness
 
 ### `GET /api/v1/approval-requests`
 
@@ -103,6 +107,7 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
   - `USER_STATUS_DISABLE`: target user status update to `DISABLED`
   - `IMPORT_JOB_SELECTIVE_REPLAY`: existing selective replay execution, creating one new derived import job when approval succeeds
   - `TICKET_COMMENT_CREATE`: existing ticket comment execution, creating exactly one new comment plus the normal ticket workflow log and audit side effects
+- requests that are already `APPROVED` or `REJECTED` return `400`, message `approval request is not pending`
 
 ### `POST /api/v1/approval-requests/{id}/reject`
 
@@ -110,6 +115,7 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - permission: action-aware approval review
 - transitions `PENDING -> REJECTED`
 - does not mutate target user status, create a replay job, or create a comment
+- requests that are already `APPROVED` or `REJECTED` return `400`, message `approval request is not pending`
 
 Shared response shape example:
 
@@ -164,7 +170,13 @@ Current ticket comment payload note:
 Current constraint note:
 
 - `requested_by` and `reviewed_by` both use same-tenant foreign-key linkage through `(user_id, tenant_id)` so cross-tenant reviewer attribution is rejected at the database layer
-- pending `USER_STATUS_DISABLE` requests now also derive a unique `pending_request_key` (`USER_STATUS_DISABLE:<tenantId>:<entityId>`) so duplicate pending disable requests are rejected even under concurrent writes; non-disable approval rows keep this field `NULL`
+- pending approval requests now share one action-aware uniqueness key across all three shipped actions:
+  - `USER_STATUS_DISABLE:<tenantId>:<userId>`
+  - `IMPORT_JOB_SELECTIVE_REPLAY:<tenantId>:<sourceJobId>:<md5(canonicalErrorCodes)>`
+  - `TICKET_COMMENT_CREATE:<tenantId>:<ticketId>:<md5(trimmedCommentContent)>`
+- import proposal uniqueness is based on executable payload only, so `sourceInteractionId` and `proposalReason` do not affect the pending key
+- ticket comment proposal uniqueness is based on executable payload only, so `sourceInteractionId` does not affect the pending key
+- review resolution clears `pending_request_key`, so the same executable payload can be proposed again after `APPROVED` or `REJECTED`
 
 ## Current Audit Coverage For Approval Flow
 

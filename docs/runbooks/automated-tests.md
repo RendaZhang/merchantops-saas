@@ -1,15 +1,15 @@
 # Automated Tests
 
-Last updated: 2026-03-30
+Last updated: 2026-04-04
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-03-30:
+Latest local default regression result on 2026-04-04:
 
 - `BUILD SUCCESS`
-- `Tests run: 350, Failures: 0, Errors: 0, Skipped: 0`
+- `Tests run: 362, Failures: 0, Errors: 0, Skipped: 1`
 
 ## Recommended Commands
 
@@ -39,9 +39,9 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
-- import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-disable uniqueness
-- Week 8 Slice A proposal-plus-approval coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, self-approval guard, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
-- Week 8 Slice B proposal-plus-approval coverage for `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, including `TICKET_WRITE` enforcement, cross-tenant/missing ticket handling, blank and overlong comment rejection, invalid same-ticket `sourceInteractionId` rejection, safe approval payload persistence, self-approval guard, synchronous approve-time single-comment execution, reject-without-execution behavior, and no-regression on the mixed-action approval queue
+- import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-request-key hardening across disable, import replay proposal, and ticket comment proposal flows
+- Week 8 import selective replay proposal coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, duplicate suppression on canonical `errorCodes`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
+- Week 8 ticket comment proposal coverage for `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, including `TICKET_WRITE` enforcement, cross-tenant/missing ticket handling, blank and overlong comment rejection, invalid same-ticket `sourceInteractionId` rejection, safe approval payload persistence, duplicate suppression on trimmed `commentContent`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time single-comment execution, reject-without-execution behavior, and no-regression on the mixed-action approval queue
 - AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
 - provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
@@ -88,10 +88,14 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `404` for cross-tenant or missing import jobs
   - `400` for non-replayable `errorCodes`
   - `400` for invalid `sourceInteractionId`
+  - `400` for duplicate pending proposals with the same canonical `errorCodes` even when caller order differs
   - safe approval payload and approval-audit snapshot assertions that exclude raw CSV rows, emails, passwords, and replacement values
   - self-approval rejection on the new import replay approval path
+  - reproposal allowed after `REJECTED` and after `APPROVED` when normal selective replay eligibility still passes
+  - near-concurrent duplicate create leaves exactly one `PENDING` row
   - approve path creates exactly one derived selective replay job and reuses the existing selective replay execution chain
   - reject path leaves the source job untouched and creates no replay job
+  - repeated approve or reject after resolution returns `400`
 - `TicketWorkflowIntegrationTest`
   - real `GET /api/v1/tickets` and `GET /api/v1/tickets/{id}` auth + tenant-isolation behavior
   - `GET /api/v1/tickets` queue filters for `status + assigneeId`, `unassignedOnly`, and `keyword` (including title-only hit, description-only hit, and tenant isolation)
@@ -104,7 +108,11 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
   - real `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` happy path with safe payload and approval-audit assertions
   - `403` for missing `TICKET_WRITE`, `404` for missing or cross-tenant tickets, and `400` for blank, overlong, or invalid-provenance proposal input
+  - `400` for duplicate pending proposals with the same trimmed `commentContent`
   - approve path for `TICKET_COMMENT_CREATE` creates exactly one comment and reject path creates none
+  - reproposal allowed after `REJECTED` and after `APPROVED`
+  - near-concurrent duplicate create leaves exactly one `PENDING` row
+  - repeated approve or reject after resolution returns `400`
   - mixed-action approval queue visibility and review behavior for ticket comment proposals under action-specific read/review permissions
   - ticket writes emit `audit_event` rows while preserving workflow-level `ticket_operation_log`
   - `GET /api/v1/audit-events` returns only current-tenant rows and accepts case-insensitive `entityType`
@@ -314,7 +322,10 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `V9__add_import_job_backbone.sql` rejects `import_job_item_error` rows whose `tenant_id` does not match the parent import job
   - `V10__add_import_job_replay_lineage.sql` rejects cross-tenant `source_job_id` lineage on replay-derived jobs
 - `ApprovalRequestMigrationTest`
-  - `V12__enforce_pending_disable_uniqueness.sql` converts superseded historical duplicate pending disable rows to `REJECTED`, keeps only the canonical newest pending row keyed per tenant user, preserves same-timestamp tie-breaking by highest `id`, and keeps the unique index usable for a later fresh pending disable request after the canonical row is resolved
+  - `V12__enforce_pending_disable_uniqueness.sql` converts superseded historical duplicate pending disable rows to `REJECTED`, stamps `reviewed_at` from legacy row time when backfilling that resolution, keeps only the canonical newest pending row keyed per tenant user, preserves same-timestamp tie-breaking by highest `id`, and keeps the unique index usable for a later fresh pending disable request after the canonical row is resolved
+  - `V13__harden_pending_proposal_uniqueness.java` backfills canonical pending keys for import replay proposals and ticket comment proposals, clears stale keys from resolved rows, preserves pending-disable uniqueness, stamps migrated duplicate proposal rejections with a deterministic `reviewed_at`, and collapses superseded historical duplicate pending proposal rows to one surviving `PENDING` row per executable key
+- `ApprovalRequestRealMysqlMigrationTest`
+  - opt-in real MySQL Flyway verification, gated by `MERCHANTOPS_RUN_REAL_MYSQL_MIGRATION_TESTS=true`, migrates a fresh schema through `V12` and `V13`, seeds legacy duplicate approval rows, and proves the fresh-install path plus pending-request-key hardening against the real engine instead of only H2 `MODE=MySQL`
 - `RoleControllerTest`
   - `GET /api/v1/roles` unauthorized / forbidden / success paths
   - tenant resolution through request-scoped context and forwarding to `RoleQueryService`
@@ -327,9 +338,8 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `DISTINCT` deduplication across joined role rows
   - pagination ordering and count stability
 - `JpaApprovalRequestAdapterTest`
-  - derives the pending-disable uniqueness key for `USER_STATUS_DISABLE`
-  - keeps non-disable approval rows free of that key
-  - translates duplicate-key violations back into the existing `BAD_REQUEST` duplicate-disable behavior
+  - persists action-aware pending-request keys for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`
+  - translates duplicate-key violations back into the existing `BAD_REQUEST` duplicate-disable behavior plus the new duplicate proposal `400` responses for import and ticket
   - applies visible-action filtering to approval-page queries and short-circuits empty visible-action sets
 - `JpaImportJobAdapterTest`
   - import AI interaction-history repository delegation with exact tenant/entity filters
@@ -360,7 +370,8 @@ Use [local-smoke-test.md](local-smoke-test.md), [ai-live-smoke-test.md](ai-live-
 - Do not treat `merchantops-api/target/merchantops-api-0.0.1-SNAPSHOT.jar` as the default local smoke-test entry point. The current packaging does not produce a fat jar that is ready for `java -jar`.
 - For H2-based native SQL tests that rely on `MODE=MySQL`, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify the mode through `INFORMATION_SCHEMA.SETTINGS`. `DatabaseMetaData#getURL()` does not reliably echo the `MODE=...` parameter.
 - If a change adds or edits a Flyway migration, do at least one real MySQL verification pass after `spring-boot:run`. The current H2 and manually-created integration-test schemas do not prove that Flyway applied the new migration exactly as intended.
-- If Flyway reports a checksum mismatch in a real local run, do not edit an already-applied migration to make the error disappear. Create a new `Vx__...sql` migration instead.
+- If Flyway reports a checksum mismatch in a real local run, do not rewrite a tagged or shared migration just to make the error disappear. The current in-place `V12` repair is a narrow untagged pre-release exception; for already-shared baselines, create a new `Vx__...sql` migration instead.
+- If a local development schema already applied the pre-fix `V12`, prefer recreating that schema before the next verification pass. If preserving the schema is unavoidable, repair the stored Flyway checksum only after confirming the rewritten `V12` keeps the same business effect.
 - Treat password edge cases as an explicit regression item. If create-user or login password handling changes, verify that leading and trailing whitespace behavior is consistent across both flows before documenting a final business rule.
 
 ## Troubleshooting
