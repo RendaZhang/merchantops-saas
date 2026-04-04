@@ -6,12 +6,12 @@ Last updated: 2026-04-04
 
 ## Overview
 
-MerchantOps SaaS now sits on a completed Week 1-7 baseline with Week 8 Agentic Workflows with Human Oversight active. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, read-only ticket AI summary, triage, internal reply-draft, interaction-history endpoints, four read-only import AI endpoints, and two Week 8 human-reviewed execution bridges: approval-bounded import selective replay and approval-bounded ticket comment creation from AI reply-draft output. Week 8 governance hardening now also ships as the shared approval baseline: pending proposals are deduplicated on executable payload semantics, concurrent duplicate creates collapse to one pending row, and resolved requests release their pending key for future proposals.
+MerchantOps SaaS now sits on a completed Week 1-8 working-tree baseline with Week 9 AI Governance, Eval, Cost, and Usage active. The public surface covers tenant-scoped user management, ticket workflow, audit/approval, import jobs, read-only ticket AI summary, triage, internal reply-draft, interaction-history endpoints, four read-only import AI endpoints, and two completed Week 8 human-reviewed execution bridges: approval-bounded import selective replay and approval-bounded ticket comment creation from AI reply-draft output. Week 8 governance hardening now also ships as the shared approval baseline: pending proposals are deduplicated on executable payload semantics, concurrent duplicate creates collapse to one pending row, and resolved requests release their pending key for future proposals.
 
 ## Current Phase Summary
 
-- Current phase: Week 8 Agentic Workflows With Human Oversight.
-- Stable completed tagged baselines: Week 2 tenant user management, Week 3 ticket workflow, Week 4 audit/approval, Week 5 async import and data operations, Week 6 AI Copilot for Ticket Operations, and Week 7 AI Copilot for Import and Data Quality.
+- Current phase: Week 9 AI Governance, Eval, Cost, and Usage.
+- Stable completed tagged baselines: Week 2 tenant user management, Week 3 ticket workflow, Week 4 audit/approval, Week 5 async import and data operations, Week 6 AI Copilot for Ticket Operations, Week 7 AI Copilot for Import and Data Quality, and Week 8 Agentic Workflows with Human Oversight.
 - Week 5 remains complete with import submission/list/detail/error reporting, narrowed `USER_CSV` business-row execution, filtered queue reads, failed-row replay variants, whole-file replay for full-failure sources, and derived-job lineage.
 - Week 6 is now complete with four public suggestion-only or read-only ticket AI slices exposed as `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` under tenant scope, `TICKET_READ`, explicit prompt versioning, controlled provider degradation, dedicated AI interaction persistence, and operator-visible runtime usage/cost metadata on interaction history.
 - Week 7 Slice A is now live as `POST /api/v1/import-jobs/{id}/ai-error-summary` under tenant scope and `USER_READ`, with read-only suggestion-only behavior, prompt-time row sanitization, controlled provider degradation, and dedicated `ai_interaction_record` persistence as `entityType=IMPORT_JOB` plus `interactionType=ERROR_SUMMARY`.
@@ -21,15 +21,15 @@ MerchantOps SaaS now sits on a completed Week 1-7 baseline with Week 8 Agentic W
 - Week 8 Slice A is now live as `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, creating `IMPORT_JOB_SELECTIVE_REPLAY` approval requests with a narrow safe payload and approve-time dispatch into the existing selective replay execution path.
 - Week 8 Slice B is now live as `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, creating `TICKET_COMMENT_CREATE` approval requests with a narrow safe payload and approve-time dispatch into the existing ticket comment write chain.
 - Week 8 Slice C is now live as shared approval hardening: `pending_request_key` is action-aware across disable, import replay proposal, and ticket comment proposal flows; duplicate pending proposals now return controlled `400` responses; and resolved requests clear the key so the same executable payload can be proposed again later.
-- Week 7 is now complete as a full import AI read baseline, and Week 8 is now active through two shipped proposal-plus-approval-plus-execution workflows plus the governance hardening needed to treat them as a reusable baseline across import and ticket operations.
+- Week 8 is now complete as the first human-reviewed execution baseline across import and ticket workflows, and Week 9 is now active to harden eval, governance, cost, and usage visibility on top of that baseline.
 - Exact endpoint contracts live in [reference/README.md](reference/README.md); this page keeps the phase-level truth and current limits.
 
 ## Release Baseline
 
-- Current tagged milestone: `v0.4.0-beta` on 2026-03-28, recorded as `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`.
-- Previous tagged milestone: `v0.3.0-beta` on 2026-03-22, recorded as `Week 6 complete: AI Copilot for Ticket Operations beta baseline`.
+- Current tagged milestone: `v0.5.0-beta` on 2026-04-04, recorded as `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`.
+- Previous tagged milestone: `v0.4.0-beta` on 2026-03-28, recorded as `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`.
 - Earlier milestones: `v0.2.0-alpha` on 2026-03-19 (`Week 5 complete: async import and data operations preview`), `v0.1.3` on 2026-03-12 (`Week 4 complete: audit and approval baseline`), `v0.1.2` on 2026-03-11 (`Week 3 complete: ticket workflow baseline`), `v0.1.1` on 2026-03-11 (`Week 2 complete: tenant user management loop`), and `v0.1.0` on 2026-03-09 (`Week 1 complete: foundation phase`).
-- The current tagged baseline still records Week 7 completion only. It includes the full Week 6 ticket AI surface, the full Week 7 import AI read surface, and their latest runtime/documentation hardening, but it does not yet record the untagged Week 8 workflow slices.
+- The current tagged baseline now records the completed Week 8 workflow and approval-hardening line on top of the earlier Week 6 ticket AI and Week 7 import AI public baselines, while Week 9 governance, eval, cost, and usage work stays the active next phase above that tag.
 
 ## Current Repository Baseline
 
@@ -41,7 +41,7 @@ MerchantOps SaaS now sits on a completed Week 1-7 baseline with Week 8 Agentic W
 - AI-assisted ticket read path: `GET /api/v1/tickets/{id}/ai-interactions` for narrowed interaction-history visibility plus operator-visible runtime usage/cost metadata, `POST /api/v1/tickets/{id}/ai-summary` for suggestion-only summaries, `POST /api/v1/tickets/{id}/ai-triage` for suggestion-only classification and priority guidance, and `POST /api/v1/tickets/{id}/ai-reply-draft` for internal comment-style reply drafts from ticket detail context.
 - AI-assisted import read path: `GET /api/v1/import-jobs/{id}/ai-interactions` for narrowed stored import AI interaction history with operator-visible runtime usage/cost metadata when present; `POST /api/v1/import-jobs/{id}/ai-error-summary` for a suggestion-only summary built from current-tenant import detail, `errorCodeCounts`, and the first sanitized failed-row window without forwarding raw CSV payload values to the provider; `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` for a suggestion-only canonical-field mapping proposal built from sanitized header/global parse signal plus the same bounded row-summary context; and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` for a suggestion-only fix recommendation built from grounded row-level `errorCode` groups without returning replacement values.
 - Governance: entity-scoped `GET /api/v1/audit-events` plus an action-aware approval request queue/detail/approve/reject flow for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`, with shared pending-request-key deduplication on executable payload semantics and key release after approval resolution.
-- Import jobs: tenant-scoped create/list/detail/ai-interactions/ai-error-summary/ai-mapping-suggestion/ai-fix-recommendation/replay/replay-file/selective-replay/selective-replay-proposal/edited-replay/error-page flow with `USER_CSV` processing, filtered queue reads, quoted CSV record parsing, `errorCodeCounts`, row-level item errors, replay-derived job lineage, scope-only replay audit metadata, and the current Week 5 plus Week 7 plus Week 8 Slice A reporting/guidance surface.
+- Import jobs: tenant-scoped create/list/detail/ai-interactions/ai-error-summary/ai-mapping-suggestion/ai-fix-recommendation/replay/replay-file/selective-replay/selective-replay-proposal/edited-replay/error-page flow with `USER_CSV` processing, filtered queue reads, quoted CSV record parsing, `errorCodeCounts`, row-level item errors, replay-derived job lineage, scope-only replay audit metadata, and the current Week 5 plus Week 7 plus Week 8 reporting/guidance surface.
 
 ### Shared runtime and internal baseline
 
@@ -63,7 +63,7 @@ MerchantOps SaaS now sits on a completed Week 1-7 baseline with Week 8 Agentic W
 - The interaction-history surfaces return both successful and controlled-failure records with exact-match `interactionType` and `status` filters plus stable `createdAt DESC, id DESC` ordering.
 - The interaction-history surfaces now expose ticket-scoped and import-scoped runtime usage/cost metadata when present, return those fields as `null` when unavailable, and still do not expose raw prompt text or raw provider payload.
 - The current provider ownership model is instance-level configuration rather than tenant BYOK.
-- The completed Week 6 ticket AI baseline and the completed Week 7 import AI read baseline stay stable while Week 8 now adds two separate approval-backed execution bridges: import selective replay proposals and ticket comment proposals. The eight public AI endpoints themselves still do not write back or self-execute.
+- The completed Week 6 ticket AI baseline and the completed Week 7 import AI read baseline stay stable while the completed Week 8 workflow now adds two separate approval-backed execution bridges: import selective replay proposals and ticket comment proposals. The eight public AI endpoints themselves still do not write back or self-execute.
 
 ## Current Limitations
 

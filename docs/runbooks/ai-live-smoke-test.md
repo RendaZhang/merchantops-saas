@@ -1,6 +1,6 @@
 # AI Live Smoke Test
 
-Last updated: 2026-03-28
+Last updated: 2026-04-04
 
 > Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
 
@@ -18,6 +18,7 @@ This runbook is intentionally narrow:
 - call `POST /api/v1/tickets/{id}/ai-summary` exactly once
 - if that succeeds, immediately call `GET /api/v1/tickets/{id}/ai-interactions`
 - only after summary succeeds, optionally expand the same session to `ai-triage`, `GET /ai-interactions?interactionType=TRIAGE`, `ai-reply-draft`, `GET /ai-interactions?interactionType=REPLY_DRAFT`, one import `ai-error-summary` call plus `GET /api/v1/import-jobs/{id}/ai-interactions?interactionType=ERROR_SUMMARY`, and when eligible one import `ai-mapping-suggestion` call plus one import `ai-fix-recommendation` call, each followed by the matching import history read, against known failed import jobs
+- if Week 8 workflow bridge wiring changed, reuse the successful `REPLY_DRAFT` and `FIX_RECOMMENDATION` interaction ids from that same live session for proposal create / duplicate / reject / approve / reproposal checks instead of spending on extra generation calls
 - if any live endpoint fails, stop immediately and do not continue to the next endpoint
 
 Budget guard for the first live pass:
@@ -25,6 +26,7 @@ Budget guard for the first live pass:
 - keep spend at or below `1 RMB`
 - use one summary call only
 - expand to `ai-triage`, `ai-reply-draft`, import `ai-error-summary`, import `ai-mapping-suggestion`, or import `ai-fix-recommendation` only after the summary path is proven locally
+- for the Week 8 bridge path, keep the expansion to one successful `ai-reply-draft` call and one successful `ai-fix-recommendation` call, then reuse those interaction ids for the approval workflow checks
 
 ## 1. Run Automated Tests First
 
@@ -389,7 +391,44 @@ Expected result:
 - `requestId` equals `$importFixRequestId`
 - `modelId` matches the resolved provider model
 
-## 12. What Counts As A Stop Condition
+## 12. Optional Week 8 Workflow Bridge
+
+Use this stage only after the matching interaction-history read succeeds:
+
+- for ticket proposals, after a `REPLY_DRAFT/SUCCEEDED` row is visible
+- for import proposals, after a `FIX_RECOMMENDATION/SUCCEEDED` row is visible
+
+Use separate requester and reviewer identities so the bridge also covers the mixed-action approval routing and self-approval guard:
+
+- ticket comment proposal: requester `ops`, reviewer `admin`
+- import selective replay proposal: create one temporary current-tenant smoke user with `TENANT_ADMIN` so the requester still has `USER_WRITE`, then use `admin` as reviewer
+
+Capture the successful interaction ids before the proposal calls:
+
+```powershell
+$replyDraftInteractionId = ($replyDraftHistory.data.items | Where-Object { $_.requestId -eq $replyDraftRequestId } | Select-Object -First 1).id
+$importFixInteractionId = ($importFixHistory.data.items | Where-Object { $_.requestId -eq $importFixRequestId } | Select-Object -First 1).id
+```
+
+Ticket comment proposal bridge:
+
+- `POST /api/v1/tickets/$ticketId/comments/proposals/ai-reply-draft` with `commentContent=$replyDraftResponse.data.draftText` plus `sourceInteractionId=$replyDraftInteractionId` returns a shared approval response with `status=PENDING`
+- repeating the same request with the same trimmed `commentContent` returns `400` duplicate pending even when `sourceInteractionId` is omitted or changed
+- `POST /api/v1/approval-requests/{id}/reject` leaves ticket detail unchanged: no new comment and no new ticket `COMMENTED` workflow log
+- after `REJECTED`, the same trimmed `commentContent` can be proposed again and returns a new `PENDING` approval request
+- `POST /api/v1/approval-requests/{id}/approve` creates exactly one new ticket comment plus exactly one new `COMMENTED` workflow log
+- after `APPROVED`, the same trimmed `commentContent` can be proposed again and returns a new `PENDING` approval request
+
+Import selective replay proposal bridge:
+
+- `POST /api/v1/import-jobs/$importJobId/replay-failures/selective/proposals` with grounded `errorCodes` plus `sourceInteractionId=$importFixInteractionId` returns a shared approval response with `status=PENDING`
+- repeating the same canonical `errorCodes` returns `400` duplicate pending even when request order, `sourceInteractionId`, or `proposalReason` changes
+- `POST /api/v1/approval-requests/{id}/reject` leaves the source job without replay side effects
+- after `REJECTED`, the same canonical `errorCodes` can be proposed again and returns a new `PENDING` approval request
+- `POST /api/v1/approval-requests/{id}/approve` writes `IMPORT_JOB_REPLAY_REQUESTED` on the source job; use `replayJobId` from that audit row, then `GET /api/v1/import-jobs/{replayJobId}` to verify `sourceJobId=$importJobId`
+- after `APPROVED`, the same canonical `errorCodes` can be proposed again and returns a new `PENDING` approval request while source-job eligibility still holds
+
+## 13. What Counts As A Stop Condition
 
 Stop the live pass immediately if any of these happen:
 
@@ -403,6 +442,9 @@ Stop the live pass immediately if any of these happen:
 - the interaction-history read does not show the matching `REPLY_DRAFT/SUCCEEDED` row after a successful reply-draft call
 - import error summary returns a non-`200` response or is missing `summary`, `topErrorPatterns`, or `recommendedNextSteps`
 - the import interaction-history read does not show the matching `ERROR_SUMMARY`, `MAPPING_SUGGESTION`, or `FIX_RECOMMENDATION` `SUCCEEDED` row after a successful import AI generation call
+- the Week 8 ticket proposal bridge creates a ticket comment before approval, fails to suppress a duplicate pending trimmed `commentContent`, adds side effects on reject, or fails to allow reproposal after `REJECTED` or `APPROVED`
+- the Week 8 import proposal bridge creates a replay job before approval, fails to suppress a duplicate pending canonical `errorCodes` set, adds replay side effects on reject, or fails to allow reproposal after `REJECTED` or `APPROVED`
+- the Week 8 import approve path cannot be tied to a replay job through `IMPORT_JOB_REPLAY_REQUESTED.afterValue.replayJobId` plus `GET /api/v1/import-jobs/{replayJobId}`
 
 When that happens, capture the response or log evidence, update the relevant AI docs if the behavior changed, and do not spend more tokens by continuing to the next live endpoint.
 

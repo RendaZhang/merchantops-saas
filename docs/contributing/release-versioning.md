@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-03-28
+Last updated: 2026-04-04
 
 ## Purpose
 
@@ -8,19 +8,19 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 
 ## Current Tagged Milestone
 
-- current tag: `v0.4.0-beta`
+- current tag: `v0.5.0-beta`
+- tag date: 2026-04-04
+- tag message: `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
+
+This tag records the completed Week 8 baseline: approval-backed import selective replay proposals, approval-backed ticket comment proposals from AI reply-draft output, shared approval hardening that deduplicates pending proposals on executable payload semantics across all three shipped approval action types, and the latest AI provider runtime hardening that now ships with the same cut.
+
+## Previous Tagged Milestone
+
+- previous tag: `v0.4.0-beta`
 - tag date: 2026-03-28
 - tag message: `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`
 
 This tag records the completed Week 7 import AI read baseline and marks the first dual-workflow AI beta line beyond the earlier ticket-only beta baseline.
-
-## Previous Tagged Milestone
-
-- previous tag: `v0.3.0-beta`
-- tag date: 2026-03-22
-- tag message: `Week 6 complete: AI Copilot for Ticket Operations beta baseline`
-
-This tag records the completed Week 6 AI Copilot for Ticket Operations baseline before Week 7 broadened the public story into a dual-workflow AI read line.
 
 ## Earlier Tagged Milestones
 
@@ -95,6 +95,7 @@ Recommended direction:
 - `v0.2.0-alpha`: Week 5 async import and data operations preview line
 - `v0.3.0-beta`: Week 6 AI Copilot for Ticket Operations beta baseline
 - `v0.4.0-beta`: Week 7 AI Copilot for Import and Data Quality beta baseline
+- `v0.5.0-beta`: Week 8 Agentic Workflows with Human Oversight beta baseline
 - later `v0.x` releases: governance, usage tracking, hardening, and packaging milestones
 
 ## Practical Rules

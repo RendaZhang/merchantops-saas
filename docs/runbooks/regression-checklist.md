@@ -101,6 +101,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `GET /api/v1/approval-requests?page=0&size=10` returns a page object with tenant-scoped items only
 - [ ] `GET /api/v1/approval-requests?status=PENDING` returns only pending items
 - [ ] `GET /api/v1/approval-requests?actionType=USER_STATUS_DISABLE` filters by action type
+- [ ] `GET /api/v1/approval-requests?actionType=TICKET_COMMENT_CREATE` filters by action type
 - [ ] `GET /api/v1/approval-requests?actionType=IMPORT_JOB_SELECTIVE_REPLAY` filters by action type
 - [ ] `GET /api/v1/approval-requests?requestedBy=<userId>` filters by requester
 - [ ] approval queue ordering is stable: `createdAt DESC, id DESC`
@@ -119,7 +120,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 ## Ticket Workflow
 
-- [ ] Swagger `Ticket Workflow` tag shows `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, and `POST /api/v1/tickets/{id}/comments`
+- [ ] Swagger `Ticket Workflow` tag shows `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, and `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
 - [ ] `GET /api/v1/tickets?page=0&size=10` returns a page object rather than a bare array
 - [ ] `GET /api/v1/tickets?status=OPEN` filters by ticket status
 - [ ] `GET /api/v1/tickets/{id}` returns comments and workflow-level `operationLogs`
@@ -130,6 +131,12 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `PATCH /api/v1/tickets/{id}/status` accepts `OPEN`, `IN_PROGRESS`, and `CLOSED`
 - [ ] `PATCH /api/v1/tickets/{id}/status` allows reopen (`CLOSED -> OPEN`) and still rejects illegal transitions such as `IN_PROGRESS -> OPEN` or no-op `CLOSED -> CLOSED`
 - [ ] `POST /api/v1/tickets/{id}/comments` appends a comment that appears in ticket detail
+- [ ] `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` rejects blank `commentContent`, missing or cross-tenant tickets, and invalid `sourceInteractionId`
+- [ ] `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` returns a `PENDING` approval request instead of creating a comment immediately
+- [ ] `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` suppresses duplicate pending proposals on the same trimmed `commentContent` even when `sourceInteractionId` differs or is omitted
+- [ ] rejecting a ticket comment proposal does not add a new ticket comment and does not add a new ticket `COMMENTED` workflow log
+- [ ] approving a ticket comment proposal adds exactly one new ticket comment and exactly one new ticket `COMMENTED` workflow log
+- [ ] the same trimmed `commentContent` can be proposed again after either `REJECTED` or `APPROVED`
 - [ ] create, assign, status, comment, and close flows write `ticket_operation_log` rows
 - [ ] after promoting `viewer` to a role with `TICKET_WRITE`, the old token is rejected as stale and the refreshed token can write tickets
 
@@ -161,6 +168,10 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective` returns a new `QUEUED` derived job whose execution only replays rows whose `errorCode` exactly matches the request
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` rejects empty or non-replayable `errorCodes`, cross-tenant or missing source jobs, and invalid `sourceInteractionId`
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` returns a `PENDING` approval request instead of creating a replay job immediately
+- [ ] `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` suppresses duplicate pending proposals on the same canonical `errorCodes` set even when request order, `sourceInteractionId`, or `proposalReason` differs
+- [ ] rejecting an import selective replay proposal does not create a replay job
+- [ ] approving an import selective replay proposal creates exactly one replay job; verify `replayJobId` from the source-job `IMPORT_JOB_REPLAY_REQUESTED` audit row, then `GET /api/v1/import-jobs/{replayJobId}` shows `sourceJobId=<source job id>`
+- [ ] the same canonical `errorCodes` set can be proposed again after either `REJECTED` or `APPROVED` while the source job is still replay-eligible
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/edited` rejects empty `items`, duplicate `errorId`, cross-job or cross-tenant `errorId`, header/global errors, and unsupported-import-type source jobs
 - [ ] `POST /api/v1/import-jobs/{id}/replay-failures/edited` returns a new `QUEUED` derived job whose execution uses only the caller-provided full replacement rows keyed by the requested replayable `errorId`
 - [ ] `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` returns a page object ordered by null `rowNumber` first, then `rowNumber ASC, id ASC`

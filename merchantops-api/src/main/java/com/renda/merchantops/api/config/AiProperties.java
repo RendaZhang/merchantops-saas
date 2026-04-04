@@ -39,7 +39,7 @@ public class AiProperties {
     private String modelId;
 
     @Min(100)
-    private int timeoutMs = 5000;
+    private int timeoutMs = 15000;
 
     @Valid
     private OpenAiProperties openai = new OpenAiProperties();

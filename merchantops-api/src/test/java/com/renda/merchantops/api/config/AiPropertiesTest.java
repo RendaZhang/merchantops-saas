@@ -83,4 +83,11 @@ class AiPropertiesTest {
         assertThat(properties.resolveApiKey()).isNull();
         assertThat(properties.hasProviderConfiguration()).isFalse();
     }
+
+    @Test
+    void shouldDefaultTimeoutToFifteenSeconds() {
+        AiProperties properties = new AiProperties();
+
+        assertThat(properties.getTimeoutMs()).isEqualTo(15000);
+    }
 }

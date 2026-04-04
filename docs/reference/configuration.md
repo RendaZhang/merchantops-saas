@@ -45,7 +45,7 @@ Shared application configuration currently includes:
   - `merchantops.ai.base-url=`
   - `merchantops.ai.api-key=`
   - `merchantops.ai.model-id=`
-  - `merchantops.ai.timeout-ms=5000`
+  - `merchantops.ai.timeout-ms=15000`
   - `merchantops.ai.openai.base-url=`
   - `merchantops.ai.openai.api-key=`
 - import processing defaults:

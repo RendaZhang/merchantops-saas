@@ -30,6 +30,7 @@ Implemented now:
   - `POST /api/v1/approval-requests/{id}/reject`
 - approve executes synchronously via the existing user status write chain (`UserCommandService.updateStatus`) for `USER_STATUS_DISABLE`, the existing selective import replay chain for `IMPORT_JOB_SELECTIVE_REPLAY`, and the existing ticket comment write chain for `TICKET_COMMENT_CREATE`
 - the shared approval queue is now action-aware: read visibility and review permission are derived from the approval action rather than a controller-wide `USER_*` gate
+- the completed Week 8 baseline now includes two separate proposal -> approval -> execution bridges plus shared pending-request-key hardening across all three shipped approval action types
 
 Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceability. That model is not part of the public `GET /api/v1/audit-events` contract and does not replace `audit_event`.
 

@@ -4,7 +4,7 @@ Last updated: 2026-04-04
 
 ## Public API Surface
 
-Week 8 now exposes thirteen import endpoints:
+The current public import surface exposes thirteen endpoints:
 
 | Method | Path | Auth | Permission | Notes |
 | --- | --- | --- | --- | --- |
@@ -296,7 +296,7 @@ Current prompt-safety and output-safety rules are hard-coded:
 - the model must return recommendations keyed by grounded local `errorCode` values only; ungrounded or duplicate codes are rejected as `INVALID_RESPONSE`
 - the model does not return direct replacement values; any value edit still belongs to manual replay prep outside the AI response
 - provider output is rejected if it echoes raw CSV-like strings or sensitive local row values such as username, display name, email, password, or role-code text
-- the endpoint itself stays read-only and suggestion-only even though Week 8 now adds a separate approval-backed selective replay proposal path that can optionally reference a successful `FIX_RECOMMENDATION` interaction as provenance
+- the endpoint itself stays read-only and suggestion-only even though the current workflow now includes a separate approval-backed selective replay proposal path that can optionally reference a successful `FIX_RECOMMENDATION` interaction as provenance
 
 Current response shape is:
 
@@ -416,7 +416,7 @@ Current audit behavior:
 
 ## Selective Replay Proposal (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`)
 
-The first Week 8 human-reviewed execution bridge stays intentionally narrow:
+The approval-backed selective replay proposal bridge stays intentionally narrow:
 
 - request body shape is `{ "errorCodes": ["UNKNOWN_ROLE"], "sourceInteractionId": 9103, "proposalReason": "Review role fixes before replay" }`
 - `errorCodes` is required and is normalized exactly like direct selective replay: trim values, reject blanks, remove duplicates while preserving caller order, and require at least one value
@@ -913,7 +913,7 @@ Current semantics:
 ## Notes
 
 - this slice is intentionally narrow: only `USER_CSV` business-row execution plus failed-row replay, exact error-code selective replay, approval-backed selective replay proposal, and edited failed-row replay are implemented.
-- the current AI guidance slices are intentionally narrower still: only read-only import interaction history, error summary, mapping suggestion, and fix recommendation are public; Week 8 adds one separate human-reviewed selective replay bridge, but the AI endpoints themselves still do not write back or execute replay directly.
+- the current AI guidance slices are intentionally narrower still: only read-only import interaction history, error summary, mapping suggestion, and fix recommendation are public; the current workflow also includes one separate human-reviewed selective replay bridge, but the AI endpoints themselves still do not write back or execute replay directly.
 - quoted CSV fields are supported by the current parser, so commas inside quoted values do not force an `INVALID_ROW_SHAPE` by themselves.
 - unsupported import types currently fail before row processing begins and are recorded as terminal job failures.
 - local file storage is intentionally replaceable for later object-storage rollout.

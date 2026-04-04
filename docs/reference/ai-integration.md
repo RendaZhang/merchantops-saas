@@ -33,7 +33,7 @@ Current public AI scope is intentionally narrow:
 - eight public AI endpoints only: two history read endpoints plus six suggestion-generating endpoints
 - the generation endpoints use no request body; the server derives the prompt from current tenant-scoped ticket or import-job context
 - the history endpoints support `page`, `size`, `interactionType`, and `status` query params over stored `ai_interaction_record` rows
-- no new AI generation endpoint in Week 8; instead, Week 8 adds two normal workflow endpoints outside the AI endpoint set:
+- no new public AI generation endpoint was added in Week 8; instead, the current workflow now includes two normal workflow endpoints outside the AI endpoint set:
   - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, which can optionally reference a successful import `FIX_RECOMMENDATION` interaction as provenance
   - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, which accepts final `commentContent` plus optional same-ticket `REPLY_DRAFT` provenance
 - no ticket status change, comment write, approval trigger, replay trigger, or other workflow mutation from the eight public AI endpoints themselves
@@ -617,8 +617,8 @@ Current non-happy-path behavior:
 - cross-tenant or missing import jobs remain `404`
 - `GET /api/v1/tickets/{id}/ai-interactions` is read-only and does not create new interaction rows or mutate ticket workflow state
 - `GET /api/v1/import-jobs/{id}/ai-interactions` is read-only and does not create new interaction rows or mutate import job state, import error rows, replay lineage, approvals, or business audit state
-- `POST /api/v1/tickets/{id}/ai-reply-draft` remains read-only even though Week 8 now adds a separate approval-backed ticket comment proposal endpoint outside the AI endpoint set
-- `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` remain read-only even though Week 8 now adds a separate approval-backed selective replay proposal path outside the AI endpoint set
+- `POST /api/v1/tickets/{id}/ai-reply-draft` remains read-only even though the current workflow now includes a separate approval-backed ticket comment proposal endpoint outside the AI endpoint set
+- `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` remain read-only even though the current workflow now includes a separate approval-backed selective replay proposal path outside the AI endpoint set
 - disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled`
 - disabled import AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `import ai error summary is disabled`, `import ai mapping suggestion is disabled`, or `import ai fix recommendation is disabled`
 - missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
@@ -644,16 +644,16 @@ Not implemented yet:
 
 ## Planned Next Workflow Areas
 
-The current public AI baseline should stay stable while the next workflow expansion moves forward:
+The current public AI baseline should stay stable while the Week 9 governance and evaluation layer moves forward:
 
 - keep the completed Week 6 ticket AI read surface and completed Week 7 import AI read surface stable instead of widening them with another read-only slice first
-- treat the shipped Week 8 import selective replay proposal flow and the shipped Week 8 ticket comment proposal flow as the first two human-reviewed execution bridges from suggestion-only AI guidance into approval-bounded workflow execution
-- future approval-aware write-back should build on those separate Week 8 proposal/approval/execution patterns instead of bypassing them or widening the eight public AI endpoints directly
+- treat the completed Week 8 import selective replay proposal flow and the completed Week 8 ticket comment proposal flow as the first two human-reviewed execution bridges from suggestion-only AI guidance into approval-bounded workflow execution
+- future approval-aware write-back should build on those separate proposal/approval/execution patterns instead of bypassing them or widening the eight public AI endpoints directly
 
 Later roadmap areas remain:
 
-- Week 8 agentic workflows with human oversight
-- Week 9 broader AI governance, cost, and usage reporting
+- Week 9 broader AI governance, eval, cost, and usage reporting
+- later human-reviewed workflow expansion only after the current Week 8 execution bridges and approval hardening baseline are proven stable
 
 ## Related Documents
 

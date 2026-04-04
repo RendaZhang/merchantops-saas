@@ -1,22 +1,22 @@
 # MerchantOps SaaS
 
-`v0.4.0-beta` | workflow-first, AI-enhanced vertical SaaS backend
+`v0.5.0-beta` | workflow-first, AI-enhanced vertical SaaS backend
 
 MerchantOps SaaS is an open-source, multi-tenant backend reference implementation for merchant operations workflows. It combines tenant isolation, JWT and RBAC security, ticket workflow execution, audit and approval patterns, and async import/data-operations flows in a modular Spring Boot codebase.
 
 ## Status
 
-- Current tagged milestone: `v0.4.0-beta`
-- Milestone meaning: `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`
-- Current active phase: Week 8 Agentic Workflows with Human Oversight
+- Current tagged milestone: `v0.5.0-beta`
+- Milestone meaning: `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
+- Current active phase: Week 9 AI Governance, Eval, Cost, and Usage
 - Release maturity: beta preview, not production-ready
-- Prior baseline: `v0.3.0-beta` for the completed Week 6 AI Copilot for Ticket Operations beta baseline
+- Prior baseline: `v0.4.0-beta` for the completed Week 7 AI Copilot for Import and Data Quality beta baseline
 
 ## Current Capabilities
 
 - Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
 - Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, narrowed AI interaction-history reads with runtime usage/cost metadata, suggestion-only AI summary/triage/internal reply-draft generation, and approval-backed ticket comment proposals from AI reply-draft output
-- Audit-event query backbone plus approval-backed governance flow for `USER_STATUS_DISABLE`, import selective replay proposals, and ticket comment proposals
+- Audit-event query backbone plus approval-backed governance flow for `USER_STATUS_DISABLE`, import selective replay proposals, and ticket comment proposals, with action-aware queue visibility and duplicate-pending suppression on executable payload semantics
 - Async import jobs with create, list, detail, paged error reporting, narrowed AI interaction-history reads with runtime usage/cost metadata when present, suggestion-only AI error summary, mapping suggestion, and fix recommendation from sanitized failed-row context, failed-row replay, whole-file replay, selective replay, approval-backed selective replay proposals, edited replay, queued-job recovery, and stale-processing safeguards
 - JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
 
@@ -24,7 +24,7 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 - The public import surface currently supports one business import type only: `USER_CSV`
 - There is no frontend or tenant admin UI in this repository
-- The current public AI surface is still read-only or suggestion-only: one narrowed ticket AI interaction-history endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, one narrowed import AI interaction-history endpoint, and three suggestion-only import AI endpoints for error summary, mapping suggestion, and fix recommendation. Week 8 also adds two separate human-reviewed workflow bridges through approval requests: import selective replay proposals and ticket comment proposals from AI reply-draft output. Broader direct AI write-back remains pending
+- The current public AI surface is still read-only or suggestion-only: one narrowed ticket AI interaction-history endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, one narrowed import AI interaction-history endpoint, and three suggestion-only import AI endpoints for error summary, mapping suggestion, and fix recommendation. The current workflow also includes two separate human-reviewed workflow bridges through approval requests: import selective replay proposals and ticket comment proposals from AI reply-draft output. Broader direct AI write-back remains pending
 - This release line is intended for evaluation and contribution, not production deployment
 
 ## Quick Start

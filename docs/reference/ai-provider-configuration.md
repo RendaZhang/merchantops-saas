@@ -1,6 +1,6 @@
 # AI Provider Configuration
 
-Last updated: 2026-03-28
+Last updated: 2026-04-04
 
 ## Purpose
 
@@ -75,7 +75,7 @@ Current defaults in `application.yml` keep AI optional:
 - `import-mapping-suggestion-prompt-version=import-mapping-suggestion-v1`
 - `import-fix-recommendation-prompt-version=import-fix-recommendation-v1`
 - `provider=OPENAI`
-- `timeout-ms=5000`
+- `timeout-ms=15000`
 - provider-neutral `base-url`, `api-key`, and `model-id` blank until the deployment operator supplies them
 - the legacy OpenAI compatibility keys remain blank until needed
 

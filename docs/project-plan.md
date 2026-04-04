@@ -142,10 +142,10 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 当前计划锚点
 
-- 当前执行已经完成 Week 7 AI Copilot for Import and Data Quality。
-- Week 1-7 当前已形成稳定 workflow + dual-workflow AI read baseline，其中 Week 7 已完成 import interaction history、error summary、mapping suggestion 和 fix recommendation 四条公开 AI slice。
-- 当前 tagged baseline 已是 `v0.4.0-beta`，对应 `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`。
-- 当前近期待办已经切到 Week 8 agentic workflows with human oversight，且当前已落地两条 Week 8 slice：import selective replay proposal -> approval -> execution，以及 ticket reply-draft comment proposal -> approval -> execution。
+- 当前执行已经完成 Week 8 Agentic Workflows with Human Oversight。
+- Week 1-8 当前已形成稳定 workflow + dual-workflow AI read baseline + human-reviewed execution bridge baseline，其中 Week 8 已完成 import selective replay proposal -> approval -> execution、ticket reply-draft comment proposal -> approval -> execution，以及共享 approval hardening。
+- 当前 tagged baseline 已切到 `v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`。
+- 当前近期待办已经切到 Week 9 AI governance, eval, cost, and usage。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -553,6 +553,7 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 ### Week 8 结束时
 
 - 你有两个真实工作流里的 AI Copilot，以及至少两个低风险、human-reviewed 的 agent approval flows
+- 当前这一步还包含共享 approval hardening：pending proposal dedupe、resolved-request reproposal、以及 action-aware approval baseline 的收口
 
 ### Week 10 结束时
 
@@ -573,9 +574,9 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 推荐发布时间点
 
-- 当前 tagged baseline：`v0.4.0-beta`，对应 `Week 7 complete: AI Copilot for Import and Data Quality beta baseline`
+- 当前 tagged baseline：`v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
 - 详细版本历史以 `CHANGELOG.md` 和 `docs/contributing/release-versioning.md` 为准
-- Week 8 后：继续把公开叙事从双工作流 AI read baseline 推进到带 human oversight 的 agentic workflow baseline，并再判断下一条 `v0.x` 版本线
+- Week 9 后：继续把公开叙事从当前 human-reviewed workflow baseline 推进到更可信的 governance / eval / cost / usage baseline，并再判断下一条 `v0.x` 版本线
 - Week 10 后：更稳定的开源参考实现，可作为商业探索起点
 
 ### 开源前最低准备项

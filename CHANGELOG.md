@@ -6,6 +6,10 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+## [v0.5.0-beta] - 2026-04-04
+
+Tagged as `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`.
+
 ### Added
 
 - Added the first Week 8 human-reviewed execution workflow through `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, creating `IMPORT_JOB_SELECTIVE_REPLAY` approval requests that can optionally reference a successful import `FIX_RECOMMENDATION` interaction before a reviewer approves execution.
@@ -17,8 +21,11 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Approval routing is now action-aware for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`, so queue/detail/approve/reject permissions follow the approval action capability instead of a controller-wide `USER_*` gate.
 - Pending `USER_STATUS_DISABLE` requests now enforce per-tenant-user uniqueness at the database layer through a derived pending-request key, preserving the same public duplicate-request `400` behavior while removing the earlier race window from pre-check-only enforcement.
 - Shared pending-request-key hardening now extends to `IMPORT_JOB_SELECTIVE_REPLAY` and `TICKET_COMMENT_CREATE`, so duplicate pending proposals are rejected on executable payload semantics, resolved requests release their key for later reproposal, and `V13__harden_pending_proposal_uniqueness.java` backfills canonical pending rows while collapsing superseded historical duplicates to `REJECTED`.
+- The fresh-install approval migration path now keeps `V12__enforce_pending_disable_uniqueness.sql` on MySQL-compatible canonical-row backfill semantics and adds an opt-in real MySQL Flyway verification path for the `V12 -> V13` chain.
 - Import execution now stops late chunk, completion, or failure work when the job has already left `PROCESSING`, avoiding duplicate terminal side effects after external failure or recovery handling.
+- AI provider runtime now uses a `15000 ms` default timeout with broader timeout classification across nested HTTP timeout failures, reducing false generic-provider failures in the shared ticket and import AI path.
 - Ticket workflow docs, approval docs, import docs, migration notes, AI regression notes, API examples, phase status/roadmap pages, and automated verification notes now reflect the Week 8 ticket comment proposal-plus-approval baseline alongside the existing import proposal flow and the latest approval/import hardening.
+- AI provider configuration docs, shared configuration docs, and the live AI smoke runbook now reflect the `15000 ms` timeout baseline plus the Week 8 bridge verification flow that reuses successful `REPLY_DRAFT` and `FIX_RECOMMENDATION` interaction ids.
 
 ## [v0.4.0-beta] - 2026-03-28
 

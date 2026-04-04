@@ -9,7 +9,11 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
+import java.util.Locale;
+import java.util.concurrent.TimeoutException;
 
 final class AiProviderHttpSupport {
 
@@ -37,7 +41,14 @@ final class AiProviderHttpSupport {
     static boolean isTimeout(Throwable throwable) {
         Throwable current = throwable;
         while (current != null) {
-            if (current instanceof SocketTimeoutException) {
+            if (current instanceof SocketTimeoutException
+                    || current instanceof InterruptedIOException
+                    || current instanceof HttpTimeoutException
+                    || current instanceof TimeoutException) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains("timed out")) {
                 return true;
             }
             current = current.getCause();
