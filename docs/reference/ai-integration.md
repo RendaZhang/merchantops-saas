@@ -721,7 +721,7 @@ This record is still the governance-facing source of truth. The public ticket an
 The current public AI slices establish a minimal eval and visibility path:
 
 - explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, `import-mapping-suggestion-v1`, and `import-fix-recommendation-v1`
-- a shared executable workflow catalog in `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java` plus a mirrored test inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`
+- a shared executable workflow catalog in `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java` plus an intentionally paired but independently maintained eval inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`, so unreviewed prompt-version bumps fail the governance baseline until both sides are updated on purpose
 - checked-in golden, failure, and policy datasets under `merchantops-api/src/test/resources/ai/<workflow>/`
 - checked-in provider-response fixtures per workflow that drive the real provider parser and service path in automated golden tests
 - a shared comparator pass in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java` that reports checked workflows, prompt versions, sample counts, and failing assertions

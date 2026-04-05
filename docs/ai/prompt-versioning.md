@@ -17,7 +17,7 @@ As of today:
 - public generation responses return `promptVersion`, and the history endpoints reuse the stored prompt version from previous AI invocations
 - `ai_interaction_record` persists the prompt version for each AI invocation
 - the active six-workflow prompt inventory is now executable in main code through `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java`
-- the test-side governance baseline mirrors that inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`
+- the test-side governance baseline lives alongside that runtime inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`, but it is maintained independently so prompt-version bumps fail the eval baseline until the governance inventory is intentionally updated
 - prompt text still lives in code-side prompt builders rather than a separate prompt registry
 
 ## Active Workflow Inventory
@@ -34,6 +34,8 @@ The current live prompt inventory is explicit and executable rather than only de
 | `import-job-fix-recommendation` | `FIX_RECOMMENDATION` | `import-fix-recommendation-v1` | `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/golden-samples.json` | `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/failure-samples.json` | `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/policy-samples.json` |
 
 The default regression now checks that inventory through `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java`.
+
+When a workflow prompt version advances, update both `AiGenerationWorkflow` and `AiWorkflowEvalInventory` intentionally in the same change. The runtime catalog defines what the application serves; the eval inventory defines the reviewed governance baseline that must still pass.
 
 ## What Counts As A Versioned AI Artifact
 
