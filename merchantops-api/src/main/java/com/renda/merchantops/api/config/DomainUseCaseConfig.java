@@ -2,6 +2,8 @@ package com.renda.merchantops.api.config;
 
 import com.renda.merchantops.domain.ai.AiInteractionRecordPort;
 import com.renda.merchantops.domain.ai.AiInteractionRecordUseCase;
+import com.renda.merchantops.domain.ai.AiInteractionUsageSummaryQueryPort;
+import com.renda.merchantops.domain.ai.AiInteractionUsageSummaryUseCase;
 import com.renda.merchantops.domain.approval.ApprovalActionPort;
 import com.renda.merchantops.domain.approval.ApprovalImportSelectiveReplayPort;
 import com.renda.merchantops.domain.approval.ApprovalRequestPort;
@@ -44,6 +46,14 @@ public class DomainUseCaseConfig {
     @Bean
     public AiInteractionRecordUseCase aiInteractionRecordUseCase(AiInteractionRecordPort aiInteractionRecordPort) {
         return new com.renda.merchantops.domain.ai.AiInteractionRecordDomainService(aiInteractionRecordPort);
+    }
+
+    @Bean
+    public AiInteractionUsageSummaryUseCase aiInteractionUsageSummaryUseCase(
+            AiInteractionUsageSummaryQueryPort aiInteractionUsageSummaryQueryPort) {
+        return new com.renda.merchantops.domain.ai.AiInteractionUsageSummaryDomainService(
+                aiInteractionUsageSummaryQueryPort
+        );
     }
 
     @Bean

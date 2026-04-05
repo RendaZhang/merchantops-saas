@@ -11,7 +11,7 @@ Use this checklist when any of the following change:
 - provider adapter logic
 - AI feature gating or timeout behavior
 - AI-related logging, usage, or error handling
-- the public AI interaction-history, ticket summary, ticket triage, ticket reply-draft, or import AI error-summary / mapping-suggestion / fix-recommendation response shape or Swagger examples
+- the public AI interaction-history, tenant AI usage-summary, ticket summary, ticket triage, ticket reply-draft, or import AI error-summary / mapping-suggestion / fix-recommendation response shape or Swagger examples
 
 ## Current Public Boundary
 
@@ -24,16 +24,18 @@ The AI checklist is now active because public AI endpoints exist:
 - `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`
 - `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
 - `GET /api/v1/tickets/{id}/ai-interactions`
+- `GET /api/v1/ai-interactions/usage-summary`
 - `GET /api/v1/import-jobs/{id}/ai-interactions`
-- suggestion-only ticket summary, triage, internal reply-draft, and import error-summary plus mapping-suggestion plus fix-recommendation results plus narrowed interaction-history visibility for one current-tenant ticket or import job
+- suggestion-only ticket summary, triage, internal reply-draft, and import error-summary plus mapping-suggestion plus fix-recommendation results plus narrowed interaction-history visibility for one current-tenant ticket or import job and one tenant-scoped aggregate usage-summary view over current runtime metadata
 - read permission inherited from `TICKET_READ`
-- import error summary, mapping suggestion, and fix recommendation inherit import read permission from `USER_READ`
-- no write-back, no comment creation, and no approval execution from the eight public AI endpoints themselves
+- import error summary, mapping suggestion, fix recommendation, import interaction history, and tenant usage summary inherit read permission from `USER_READ`
+- no write-back, no comment creation, and no approval execution from the nine public AI endpoints themselves
 - adjacent Week 8 workflow endpoints now exist outside the AI endpoint set:
   - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
   - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
 - those workflow endpoints may reference successful AI interactions as provenance, but the public AI endpoints themselves remain suggestion-only
 - interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`, but do not expose raw prompt or raw provider payload and do not establish billing semantics
+- tenant usage-summary reads expose aggregate counts, token totals, cost totals, and `byInteractionType` / `byStatus` breakdowns only; they do not expose raw prompt text, raw provider payload, or request-level cross-entity detail fields such as `requestId`, `outputSummary`, `promptVersion`, or `modelId`
 
 ## Environment And Control
 
@@ -77,11 +79,12 @@ The AI checklist is now active because public AI endpoints exist:
 
 - [ ] AI input data is limited to the current tenant
 - [ ] AI requests do not combine records across tenants
+- [ ] the tenant usage-summary endpoint does not aggregate `ai_interaction_record` rows across tenants
 - [ ] permission failures still return normal application errors such as `403`
 - [ ] cross-tenant or missing tickets still return normal business `404`
 - [ ] cross-tenant or missing import jobs still return normal business `404`
 - [ ] the interaction-history, summary, triage, and reply-draft endpoints do not bypass the existing ticket read boundary
-- [ ] the import error-summary, mapping-suggestion, and fix-recommendation endpoints do not bypass the existing import read boundary
+- [ ] the import error-summary, mapping-suggestion, fix-recommendation, import-history, and tenant usage-summary endpoints do not bypass the existing `USER_READ` boundary
 
 ## Audit And Traceability
 
@@ -111,6 +114,22 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] history responses expose usage/cost values only as runtime metadata, return `null` when unavailable, and do not leak raw prompt text or raw provider payload
 - [ ] history reads do not create new `ai_interaction_record` rows or mutate ticket workflow state, approvals, or business `audit_event`
 - [ ] import history reads do not create new `ai_interaction_record` rows or mutate import job state, import error rows, replay lineage, approvals, or business `audit_event`
+
+## Tenant Usage Summary Read Surface
+
+- [ ] `GET /api/v1/ai-interactions/usage-summary` returns `403` when `USER_READ` is missing
+- [ ] `GET /api/v1/ai-interactions/usage-summary` returns `400` when `from > to`
+- [ ] `GET /api/v1/ai-interactions/usage-summary` returns `400` when `entityType` is outside `TICKET` and `IMPORT_JOB`
+- [ ] `from` and `to` filtering is inclusive on stored `createdAt`
+- [ ] `entityType` filtering accepts trim-only exact-match `TICKET` and `IMPORT_JOB`
+- [ ] `interactionType` and `status` filtering is trim-only exact-match on stored canonical values
+- [ ] the response returns `from`, `to`, `totalInteractions`, `succeededCount`, `failedCount`, `totalPromptTokens`, `totalCompletionTokens`, `totalTokens`, `totalCostMicros`, `byInteractionType`, and `byStatus`
+- [ ] `failedCount` equals every non-`SUCCEEDED` row and `succeededCount` equals `status=SUCCEEDED`
+- [ ] `byInteractionType` ordering is `count DESC, interactionType ASC`
+- [ ] `byStatus` ordering is `count DESC, status ASC`
+- [ ] null token or cost rows still count toward interaction totals while contributing zero to aggregate sums
+- [ ] usage-summary responses do not leak raw prompt text, raw provider payload, `requestId`, `outputSummary`, `promptVersion`, or `modelId`
+- [ ] usage-summary reads do not create new `ai_interaction_record` rows or mutate ticket state, import state, approvals, or business `audit_event`
 
 ## Output Quality
 

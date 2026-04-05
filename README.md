@@ -16,6 +16,7 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 - Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
 - Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, narrowed AI interaction-history reads with runtime usage/cost metadata, suggestion-only AI summary/triage/internal reply-draft generation, and approval-backed ticket comment proposals from AI reply-draft output
+- Tenant-scoped AI governance read surface with aggregate usage/cost summary across stored ticket and import AI interactions
 - Audit-event query backbone plus approval-backed governance flow for `USER_STATUS_DISABLE`, import selective replay proposals, and ticket comment proposals, with action-aware queue visibility and duplicate-pending suppression on executable payload semantics
 - Async import jobs with create, list, detail, paged error reporting, narrowed AI interaction-history reads with runtime usage/cost metadata when present, suggestion-only AI error summary, mapping suggestion, and fix recommendation from sanitized failed-row context, failed-row replay, whole-file replay, selective replay, approval-backed selective replay proposals, edited replay, queued-job recovery, and stale-processing safeguards
 - JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
@@ -24,7 +25,7 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 - The public import surface currently supports one business import type only: `USER_CSV`
 - There is no frontend or tenant admin UI in this repository
-- The current public AI surface is still read-only or suggestion-only: one narrowed ticket AI interaction-history endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, one narrowed import AI interaction-history endpoint, and three suggestion-only import AI endpoints for error summary, mapping suggestion, and fix recommendation. The current workflow also includes two separate human-reviewed workflow bridges through approval requests: import selective replay proposals and ticket comment proposals from AI reply-draft output. Broader direct AI write-back remains pending
+- The current public AI surface is still read-only or suggestion-only: one narrowed ticket AI interaction-history endpoint, one tenant AI usage-summary endpoint over stored runtime metadata, three suggestion-only ticket generation endpoints, one narrowed import AI interaction-history endpoint, and three suggestion-only import AI endpoints for error summary, mapping suggestion, and fix recommendation. The current workflow also includes two separate human-reviewed workflow bridges through approval requests: import selective replay proposals and ticket comment proposals from AI reply-draft output. Broader direct AI write-back, billing, and ledger semantics remain pending
 - This release line is intended for evaluation and contribution, not production deployment
 
 ## Quick Start

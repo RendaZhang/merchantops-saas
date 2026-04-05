@@ -438,6 +438,18 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-interactions?page=0&size=10&interactionType=ERROR_SUMMARY&status=SUCCEEDED
 Authorization: Bearer {{token}}
 
+### Get tenant AI usage summary
+# Aggregates current-tenant ai_interaction_record rows across current ticket and import AI interactions.
+# Read-only governance surface only: no raw prompt text, no raw provider payload, no per-request cross-entity detail, and no billing/ledger semantics.
+GET {{baseUrl}}/api/v1/ai-interactions/usage-summary
+Authorization: Bearer {{token}}
+
+### Get tenant AI usage summary - filtered
+# Filters are trim-only exact matches. entityType supports TICKET or IMPORT_JOB only.
+# from/to are inclusive ISO LocalDateTime values and from must be before or equal to to.
+GET {{baseUrl}}/api/v1/ai-interactions/usage-summary?from=2026-04-01T00:00:00&to=2026-04-05T23:59:59&entityType=IMPORT_JOB&interactionType=ERROR_SUMMARY&status=SUCCEEDED
+Authorization: Bearer {{token}}
+
 ### Generate import AI mapping suggestion
 # Read-only and suggestion-only. The server uses import detail, errorCodeCounts, sanitized
 # header/global parse signal, and bounded structural failure context; it does not rescan the

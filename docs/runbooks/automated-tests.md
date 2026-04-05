@@ -9,7 +9,7 @@ Use this runbook when you want a fast regression signal before doing manual API 
 Latest local default regression result on 2026-04-05:
 
 - `BUILD SUCCESS`
-- `Tests run: 367, Failures: 0, Errors: 0, Skipped: 1`
+- `Tests run: 376, Failures: 0, Errors: 0, Skipped: 1`
 
 ## Recommended Commands
 
@@ -33,11 +33,11 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, and the current two Week 8 human-reviewed execution bridges. Today that means:
+Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, and the current Week 9 tenant-scoped AI governance read baseline. Today that means:
 
-- auth and permission checks for the current public user-management, ticket, AI interaction-history, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
-- controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
-- tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, approvals, and import jobs
+- auth and permission checks for the current public user-management, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
+- tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-request-key hardening across disable, import replay proposal, and ticket comment proposal flows
 - Week 8 import selective replay proposal coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, duplicate suppression on canonical `errorCodes`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
@@ -47,11 +47,13 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
 - shared AI interaction execution support coverage for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import entity types
+- domain and adapter coverage for tenant AI usage-summary normalization, exact-match trimmed filter semantics, `from <= to` validation, aggregate query delegation, and nullable metering aggregation with zero-filled totals
 - symmetrical degraded-mode persistence coverage for AI summary, AI triage, AI reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
 - explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
 - explicit no-business-side-effect assertions for import AI interaction history, error summary, mapping suggestion, and fix recommendation against `import_job`, `import_job_item_error`, replay lineage, approvals, and business audit rows plus prompt non-leakage assertions against raw `USER_CSV` values and sensitive-output rejection for fix recommendation
 - ticket AI interaction-history coverage for tenant-scoped ticket existence, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, and non-leakage of raw prompt and raw provider payload fields
 - explicit read-only assertions for `GET /api/v1/tickets/{id}/ai-interactions` against ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
+- tenant AI usage-summary coverage for `USER_READ` enforcement, tenant isolation, inclusive `from/to` filtering, exact-match trimmed `entityType` / `interactionType` / `status` filters, totals math, stable breakdown ordering, null metering rows, non-leakage of request-level fields and raw provider data, and read-only assertions
 - import AI interaction-history coverage for import-scoped existence checks through the existing read path, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, non-leakage of raw prompt and raw provider payload fields, and read-after-write visibility after real import AI generation calls
 - explicit read-only assertions for `GET /api/v1/import-jobs/{id}/ai-interactions` against import job fields, import error rows, replay lineage, approvals, business audit rows, and `ai_interaction_record` row counts
 - stale-token rejection after tenant status, user status, role, or permission changes
@@ -145,6 +147,14 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - stable `createdAt DESC, id DESC` ordering, including same-timestamp tie breaks
   - widened response shape with correct usage/cost visibility, nullability for failed rows, and no leakage of raw prompt or raw provider payload
   - read-only assertions for ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
+- `AiInteractionUsageSummaryIntegrationTest`
+  - real `GET /api/v1/ai-interactions/usage-summary` happy path for a `USER_READ` user with seeded cross-entity `ai_interaction_record` rows
+  - `403` when `USER_READ` is missing
+  - tenant isolation over aggregate totals and breakdowns
+  - inclusive `from` and `to` filtering plus exact-match trimmed `entityType`, `interactionType`, and `status` filters
+  - aggregate totals math, stable `byInteractionType` and `byStatus` ordering, and zero-filled sums for null token or cost rows
+  - non-leakage of raw prompt or raw provider payload plus request-level fields such as `requestId`, `outputSummary`, `promptVersion`, and `modelId`
+  - read-only assertions for `ai_interaction_record` row counts, business audit rows, ticket state, import state, and approval state
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -184,6 +194,13 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - HTTP request binding for `POST /api/v1/tickets/{id}/comments`
   - AI interaction-history query binding for `page`, `size`, `interactionType`, and `status`
   - request-scoped forwarding of `tenantId`, `operatorId`, and `requestId`
+- `AiInteractionUsageSummaryControllerTest`
+  - HTTP request binding for `GET /api/v1/ai-interactions/usage-summary`
+  - `401` when authentication is missing and `403` when `USER_READ` is missing
+  - request-scoped tenant resolution plus forwarding of `from`, `to`, `entityType`, `interactionType`, and `status`
+- `AiInteractionUsageSummaryQueryServiceTest`
+  - mapping from HTTP query DTO to domain usage-summary criteria with exact-value forwarding
+  - response mapping for totals plus `byInteractionType` and `byStatus`
 - `TicketAiSummaryControllerTest`
   - HTTP request binding for `POST /api/v1/tickets/{id}/ai-summary`
   - `401` when authentication is missing and `403` when `TICKET_READ` is missing
@@ -340,6 +357,9 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `username`, `status`, and `roleCode` filtering
   - `DISTINCT` deduplication across joined role rows
   - pagination ordering and count stability
+- `JpaAiInteractionUsageSummaryAdapterTest`
+  - aggregate repository delegation for tenant-scoped totals plus `byInteractionType` and `byStatus`
+  - zero-filled mapping for nullable token or cost sums
 - `JpaApprovalRequestAdapterTest`
   - persists action-aware pending-request keys for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`
   - translates duplicate-key violations back into the existing `BAD_REQUEST` duplicate-disable behavior plus the new duplicate proposal `400` responses for import and ticket
@@ -353,7 +373,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

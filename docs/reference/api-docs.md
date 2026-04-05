@@ -58,6 +58,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | Yes + `TICKET_READ` | Generate a suggestion-only AI summary for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | Yes + `TICKET_READ` | Generate a suggestion-only AI triage result for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Yes + `TICKET_READ` | Generate a suggestion-only AI internal reply draft for one current-tenant ticket |
+| `GET` | `/api/v1/ai-interactions/usage-summary` | Yes + `USER_READ` | Return tenant-scoped aggregate AI usage and cost summary from stored interaction metadata |
 | `POST` | `/api/v1/tickets` | Yes + `TICKET_WRITE` | Create a new `OPEN` ticket |
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Yes + `TICKET_WRITE` | Assign the ticket to an active user in current tenant |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Yes + `TICKET_WRITE` | Transition the ticket status |
