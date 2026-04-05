@@ -6,6 +6,15 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+### Added
+
+- Added the first Week 9 governance slice as an executable six-workflow AI prompt inventory plus shared eval-comparator baseline, centered on `AiGenerationWorkflow`, `AiWorkflowEvalInventory`, and a default-suite comparator pass that checks golden, failure, and policy datasets across the current ticket and import generation workflows.
+
+### Changed
+
+- Golden-sample AI regression coverage now reuses shared evaluator infrastructure instead of six separate assertion paths, and the checked-in AI datasets now include explicit failure and policy baselines alongside the existing golden samples.
+- AI governance docs, AI regression guidance, automated test notes, and phase status/roadmap pages now reflect the Week 9 Slice A prompt-inventory plus comparator baseline without presenting it as a public API expansion.
+
 ## [v0.5.0-beta] - 2026-04-04
 
 Tagged as `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`.

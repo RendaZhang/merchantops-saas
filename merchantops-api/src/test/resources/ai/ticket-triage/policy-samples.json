@@ -1,0 +1,47 @@
+[
+  {
+    "id": "ambiguous-noisy-triage",
+    "promptContext": {
+      "id": 9302,
+      "tenantId": 1,
+      "title": "Printer issue after router maintenance",
+      "description": "The printer disconnects intermittently after weekend network maintenance and the cause is still ambiguous.",
+      "status": "OPEN",
+      "assigneeUsername": "ops",
+      "createdByUsername": "admin",
+      "createdAt": "2026-04-02T10:00:00",
+      "updatedAt": "2026-04-02T10:15:00",
+      "comments": [
+        {
+          "id": 5302,
+          "content": "No one can tell yet whether the fault is the printer or the network segment.",
+          "createdByUsername": "ops",
+          "createdAt": "2026-04-02T10:07:00"
+        }
+      ],
+      "olderCommentsOmitted": false,
+      "operationLogs": [
+        {
+          "id": 6302,
+          "operationType": "COMMENTED",
+          "detail": "latest note recorded",
+          "operatorUsername": "ops",
+          "createdAt": "2026-04-02T10:07:00"
+        }
+      ],
+      "olderOperationLogsOmitted": false
+    },
+    "classification": "DEVICE_ISSUE",
+    "priority": "MEDIUM",
+    "reasoning": "The incident is ambiguous after the router change and still needs operator review before any targeted action is chosen.",
+    "mustContain": [
+      "ambiguous",
+      "operator review"
+    ],
+    "mustNotContain": [
+      "automatically",
+      "cross-tenant",
+      "write back"
+    ]
+  }
+]

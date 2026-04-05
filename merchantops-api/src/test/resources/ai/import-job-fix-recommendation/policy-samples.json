@@ -1,0 +1,129 @@
+[
+  {
+    "id": "sanitized-fix-baseline",
+    "detail": {
+      "job": {
+        "id": 9703,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-fix-policy.csv",
+        "storageKey": "1/week9-fix-policy.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-policy-9703",
+        "totalCount": 9,
+        "successCount": 0,
+        "failureCount": 9,
+        "errorSummary": "role validation and duplicate usernames blocked the import",
+        "createdAt": "2026-04-04T11:10:00",
+        "startedAt": "2026-04-04T11:10:02",
+        "finishedAt": "2026-04-04T11:10:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "count": 7
+        },
+        {
+          "errorCode": "DUPLICATE_USERNAME",
+          "count": 2
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 97031,
+          "tenantId": 1,
+          "importJobId": 9703,
+          "rowNumber": 2,
+          "errorCode": "UNKNOWN_ROLE",
+          "errorMessage": "roleCodes must exist in current tenant",
+          "rawPayload": "policy-fix,Policy Fix,policy-fix@example.com,secret-pass-3,READ_ONLY",
+          "createdAt": "2026-04-04T11:10:03"
+        },
+        {
+          "id": 97032,
+          "tenantId": 1,
+          "importJobId": 9703,
+          "rowNumber": 3,
+          "errorCode": "DUPLICATE_USERNAME",
+          "errorMessage": "username already exists in current tenant",
+          "rawPayload": "existing-user,Existing User,existing@example.com,password-2,READ_ONLY",
+          "createdAt": "2026-04-04T11:10:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [
+      {
+        "id": 97031,
+        "tenantId": 1,
+        "importJobId": 9703,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "policy-fix,Policy Fix,policy-fix@example.com,secret-pass-3,READ_ONLY",
+        "createdAt": "2026-04-04T11:10:03"
+      },
+      {
+        "id": 97032,
+        "tenantId": 1,
+        "importJobId": 9703,
+        "rowNumber": 3,
+        "errorCode": "DUPLICATE_USERNAME",
+        "errorMessage": "username already exists in current tenant",
+        "rawPayload": "existing-user,Existing User,existing@example.com,password-2,READ_ONLY",
+        "createdAt": "2026-04-04T11:10:04"
+      }
+    ],
+    "providerResult": {
+      "summary": "The job is mostly blocked by tenant role validation, with a smaller duplicate-username tail that should still be handled as a separate operator-reviewed cleanup step.",
+      "recommendedFixes": [
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "recommendedAction": "Verify that the referenced role codes exist in the current tenant and normalize the source role-code format before replay preparation.",
+          "reasoning": "The grouped failures point to tenant role validation rather than CSV shape corruption.",
+          "reviewRequired": true
+        },
+        {
+          "errorCode": "DUPLICATE_USERNAME",
+          "recommendedAction": "Review the source usernames against current-tenant users and prepare unique replacements outside the AI response before replay.",
+          "reasoning": "The grouped failures indicate a uniqueness conflict that still needs operator-reviewed edits.",
+          "reviewRequired": true
+        }
+      ],
+      "confidenceNotes": [
+        "The recommendations are grounded in row-level error groups, so operators should confirm tenant-specific rules before reuse."
+      ],
+      "recommendedOperatorChecks": [
+        "Confirm which error-code group is the highest-volume cleanup target before editing replay input.",
+        "Review the affected rows in /errors so value changes can be prepared outside the AI response."
+      ],
+      "modelId": "gpt-4.1-mini",
+      "inputTokens": 150,
+      "outputTokens": 76,
+      "totalTokens": 226,
+      "costMicros": null
+    },
+    "promptMustContain": [
+      "Grounded row-level failure groups",
+      "affectedRowsEstimate: 7",
+      "passwordPresent=true"
+    ],
+    "promptMustNotContain": [
+      "policy-fix@example.com",
+      "secret-pass-3",
+      "READ_ONLY"
+    ],
+    "outputMustNotContain": [
+      "policy-fix@example.com",
+      "secret-pass-3",
+      "READ_ONLY",
+      "automatically replayed"
+    ],
+    "expectedErrorCodes": [
+      "UNKNOWN_ROLE",
+      "DUPLICATE_USERNAME"
+    ]
+  }
+]

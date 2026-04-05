@@ -2,6 +2,7 @@ package com.renda.merchantops.api.ticket.ai;
 
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
+import com.renda.merchantops.api.ai.core.AiGenerationWorkflow;
 import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.ticket.triage.TicketTriageAiProvider;
 import com.renda.merchantops.api.ai.ticket.triage.TicketTriagePrompt;
@@ -23,8 +24,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TicketAiTriageService {
 
-    private static final String ENTITY_TYPE_TICKET = "TICKET";
-    private static final String INTERACTION_TYPE_TRIAGE = "TRIAGE";
+    private static final AiGenerationWorkflow WORKFLOW = AiGenerationWorkflow.TICKET_TRIAGE;
 
     private final TicketQueryUseCase ticketQueryUseCase;
     private final TicketTriagePromptBuilder ticketTriagePromptBuilder;
@@ -35,7 +35,7 @@ public class TicketAiTriageService {
     public TicketAiTriageResponse generateTriage(Long tenantId, Long userId, String requestId, Long ticketId) {
         String normalizedRequestId = aiInteractionExecutionSupport.normalizeRequestId(requestId);
         TicketPromptContext ticket = ticketQueryUseCase.getTicketPromptContext(tenantId, ticketId);
-        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(aiProperties.getTriagePromptVersion(), "ticket-triage-v1");
+        String promptVersion = WORKFLOW.resolvePromptVersion(aiProperties, aiInteractionExecutionSupport);
         String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         TicketTriagePrompt prompt = ticketTriagePromptBuilder.build(promptVersion, ticket);
 
@@ -43,9 +43,9 @@ public class TicketAiTriageService {
                 tenantId,
                 userId,
                 normalizedRequestId,
-                ENTITY_TYPE_TICKET,
+                WORKFLOW.entityType(),
                 ticketId,
-                INTERACTION_TYPE_TRIAGE,
+                WORKFLOW.interactionType(),
                 promptVersion,
                 configuredModelId,
                 aiProperties,
@@ -74,9 +74,9 @@ public class TicketAiTriageService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_TICKET,
+                    WORKFLOW.entityType(),
                     ticketId,
-                    INTERACTION_TYPE_TRIAGE,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     resolvedModelId,
                     latencyMs,
@@ -101,9 +101,9 @@ public class TicketAiTriageService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_TICKET,
+                    WORKFLOW.entityType(),
                     ticketId,
-                    INTERACTION_TYPE_TRIAGE,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     configuredModelId,
                     ex.getFailureType(),

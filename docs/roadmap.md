@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-04
+Last updated: 2026-04-05
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -25,13 +25,15 @@ The current Week 9 implementation should build governance and observability on t
 - keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the completed Week 7 import AI surface stable: `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
 - treat the completed Week 8 workflow baseline as fixed input: `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, action-aware approval routing, and shared pending-request-key hardening now form the human-reviewed execution bridge pattern
-- add governance and visibility around that baseline: prompt-version discipline, eval datasets, regression comparators, usage and cost visibility, and rollout-safe verification rather than another immediate workflow mutation slice
+- Week 9 Slice A is now complete on that baseline: executable prompt-version inventory, per-workflow golden plus failure plus policy datasets, and one shared comparator pass now run in the default Maven suite without widening the public AI surface
+- continue governance and visibility on top of that baseline: usage and cost visibility, rollout-safe verification, and broader governance reporting rather than another immediate workflow mutation slice
 - keep approval payloads narrow and non-sensitive while governance work lands; avoid broader write-back, billing, ledger semantics, and generic chat tooling in the public workflow surface itself
 
 ## Recommended Next Steps
 
 - treat the completed Week 8 import selective replay proposal flow plus the completed Week 8 ticket reply-draft comment proposal flow, together with the shared pending-proposal uniqueness hardening, as the fixed proposal -> approval -> execution baseline for later work
-- start Week 9 by tightening the AI governance loop: prompt-version inventory, eval dataset coverage, regression comparators, and cost/usage visibility over the existing public AI slices
+- treat the completed Week 9 Slice A prompt-inventory plus comparator baseline as the fixed governance input for the rest of Week 9
+- next, widen governance and visibility around current runtime metadata before adding any broader billing or ledger semantics
 - keep the completed Week 6 ticket AI surface and the completed Week 7 import AI read surface stable while Week 9 adds governance and observability instead of widening the AI endpoints themselves
 - only consider another bonus workflow slice after the Week 9 governance/eval/cost baseline is credible enough to support a broader beta story
 

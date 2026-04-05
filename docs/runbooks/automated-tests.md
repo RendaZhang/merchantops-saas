@@ -1,15 +1,15 @@
 # Automated Tests
 
-Last updated: 2026-04-04
+Last updated: 2026-04-05
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-04:
+Latest local default regression result on 2026-04-05:
 
 - `BUILD SUCCESS`
-- `Tests run: 362, Failures: 0, Errors: 0, Skipped: 1`
+- `Tests run: 367, Failures: 0, Errors: 0, Skipped: 1`
 
 ## Recommended Commands
 
@@ -43,6 +43,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - Week 8 import selective replay proposal coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, duplicate suppression on canonical `errorCodes`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
 - Week 8 ticket comment proposal coverage for `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, including `TICKET_WRITE` enforcement, cross-tenant/missing ticket handling, blank and overlong comment rejection, invalid same-ticket `sourceInteractionId` rejection, safe approval payload persistence, duplicate suppression on trimmed `commentContent`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time single-comment execution, reject-without-execution behavior, and no-regression on the mixed-action approval queue
 - AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
+- a shared Week 9 governance comparator pass across all six generation workflows, with executable inventory plus golden, failure, and policy datasets in the default regression suite
 - provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
 - shared AI interaction execution support coverage for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import entity types
@@ -196,13 +197,15 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `401` when authentication is missing and `403` when `TICKET_READ` is missing
   - request-scoped forwarding of `tenantId`, `userId`, and `requestId` to `TicketAiReplyDraftService`
 - `TicketSummaryGoldenSampleTest`
-  - checked-in ticket-summary samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiSummaryService`
+  - thin wrapper over the shared eval runner for the checked-in ticket-summary golden dataset and real provider/service parsing path
 - `TicketTriageGoldenSampleTest`
-  - checked-in ticket-triage samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiTriageService`
+  - thin wrapper over the shared eval runner for the checked-in ticket-triage golden dataset and real provider/service parsing path
 - `TicketReplyDraftGoldenSampleTest`
-  - checked-in ticket reply-draft samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiReplyDraftService`, including assembled `draftText`
+  - thin wrapper over the shared eval runner for the checked-in ticket reply-draft golden dataset and real provider/service parsing path, including assembled `draftText`
 - `AiInteractionExecutionSupportTest`
   - shared AI interaction execution support behavior for feature-disabled, provider-not-configured, failure mapping, and persisted ticket/import entity metadata
+- `AiWorkflowEvalComparatorTest`
+  - shared Week 9 governance pass across the six generation workflows with executable inventory, prompt-version assertions, golden datasets, failure datasets, policy datasets, and comparator summary reporting
 - `AiPropertiesTest`
   - provider-neutral AI config resolution, legacy OpenAI fallback, DeepSeek alias fallback, defaults, and not-configured detection
 - `DotenvBootstrapTest`
@@ -282,7 +285,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
   - prompt-context non-leakage assertions for `rawPayload`, username, email, and password plus no-side-effect assertions for import job state, error rows, replay lineage, approvals, and business audit rows
 - `ImportJobErrorSummaryGoldenSampleTest`
-  - checked-in import error-summary samples plus checked-in provider-response fixtures through the real provider parser and `ImportJobAiErrorSummaryService`
+  - thin wrapper over the shared eval runner for the checked-in import error-summary golden dataset and real provider/service parsing path
 - `ImportJobAiMappingSuggestionIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` happy path for a `USER_READ` user with database assertions on `ai_interaction_record`
   - `403` when `USER_READ` is missing
@@ -291,7 +294,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
   - prompt-context non-leakage assertions for raw header lines, raw row values, username, email, and password plus no-side-effect assertions for import job state, error rows, replay lineage, approvals, and business audit rows
 - `ImportJobMappingSuggestionGoldenSampleTest`
-  - checked-in import mapping-suggestion samples plus checked-in provider-response fixtures through the real provider parser and `ImportJobAiMappingSuggestionService`
+  - thin wrapper over the shared eval runner for the checked-in import mapping-suggestion golden dataset and real provider/service parsing path
 - `ImportJobAiFixRecommendationIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` happy path for a `USER_READ` user with database assertions on `ai_interaction_record`
   - `403` when `USER_READ` is missing
@@ -300,7 +303,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
   - prompt-context non-leakage assertions for raw row values, username, email, password, and role codes plus no-side-effect assertions for import job state, error rows, replay lineage, approvals, and business audit rows
 - `ImportJobFixRecommendationGoldenSampleTest`
-  - checked-in import fix-recommendation samples plus checked-in provider-response fixtures through the real provider parser and `ImportJobAiFixRecommendationService`
+  - thin wrapper over the shared eval runner for the checked-in import fix-recommendation golden dataset and real provider/service parsing path
 - `OpenAiImportJobFixRecommendationProviderTest`
   - import fix-recommendation schema, example JSON, provider-response parsing, empty-array handling, blank-field rejection, and invalid `reviewRequired` handling for the import adapter
 - `ImportJobExecutionServiceTest`

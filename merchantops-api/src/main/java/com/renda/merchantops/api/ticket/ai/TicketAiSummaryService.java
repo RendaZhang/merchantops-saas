@@ -2,6 +2,7 @@ package com.renda.merchantops.api.ticket.ai;
 
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
+import com.renda.merchantops.api.ai.core.AiGenerationWorkflow;
 import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryAiProvider;
 import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryPrompt;
@@ -22,8 +23,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TicketAiSummaryService {
 
-    private static final String ENTITY_TYPE_TICKET = "TICKET";
-    private static final String INTERACTION_TYPE_SUMMARY = "SUMMARY";
+    private static final AiGenerationWorkflow WORKFLOW = AiGenerationWorkflow.TICKET_SUMMARY;
 
     private final TicketQueryUseCase ticketQueryUseCase;
     private final TicketSummaryPromptBuilder ticketSummaryPromptBuilder;
@@ -34,7 +34,7 @@ public class TicketAiSummaryService {
     public TicketAiSummaryResponse generateSummary(Long tenantId, Long userId, String requestId, Long ticketId) {
         String normalizedRequestId = aiInteractionExecutionSupport.normalizeRequestId(requestId);
         TicketPromptContext ticket = ticketQueryUseCase.getTicketPromptContext(tenantId, ticketId);
-        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(aiProperties.getPromptVersion(), "ticket-summary-v1");
+        String promptVersion = WORKFLOW.resolvePromptVersion(aiProperties, aiInteractionExecutionSupport);
         String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         TicketSummaryPrompt prompt = ticketSummaryPromptBuilder.build(promptVersion, ticket);
 
@@ -42,9 +42,9 @@ public class TicketAiSummaryService {
                 tenantId,
                 userId,
                 normalizedRequestId,
-                ENTITY_TYPE_TICKET,
+                WORKFLOW.entityType(),
                 ticketId,
-                INTERACTION_TYPE_SUMMARY,
+                WORKFLOW.interactionType(),
                 promptVersion,
                 configuredModelId,
                 aiProperties,
@@ -71,9 +71,9 @@ public class TicketAiSummaryService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_TICKET,
+                    WORKFLOW.entityType(),
                     ticketId,
-                    INTERACTION_TYPE_SUMMARY,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     resolvedModelId,
                     latencyMs,
@@ -96,9 +96,9 @@ public class TicketAiSummaryService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_TICKET,
+                    WORKFLOW.entityType(),
                     ticketId,
-                    INTERACTION_TYPE_SUMMARY,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     configuredModelId,
                     ex.getFailureType(),

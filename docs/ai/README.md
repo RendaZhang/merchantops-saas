@@ -19,6 +19,8 @@ Current reality:
 - the current public AI workflows are still read-only or suggestion-only; no public AI endpoint mutates ticket or import business state directly
 - the current workflow also includes two separate human-reviewed execution bridges outside the AI endpoint set: `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` and `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`; both are documented with the import or ticket workflow docs rather than as AI endpoints because they create approval requests instead of generating AI output
 - prompt versioning and eval guidance already apply to the live ticket and import AI paths, not just future design work
+- Week 9 Slice A now adds an executable six-workflow prompt inventory in `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java`
+- Week 9 Slice A also adds a unified comparator pass in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java`, backed by per-workflow golden, failure, and policy sample files under `merchantops-api/src/test/resources/ai/`
 
 ## Related Documents
 

@@ -1,6 +1,6 @@
 # AI Regression Checklist
 
-Last updated: 2026-03-30
+Last updated: 2026-04-05
 
 > Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
@@ -120,6 +120,9 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] golden import error-summary samples still produce the expected stable shape
 - [ ] golden import mapping-suggestion samples still produce the expected stable shape
 - [ ] golden import fix-recommendation samples still produce the expected stable shape
+- [ ] the shared comparator pass in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java` stays green in the default Maven suite
+- [ ] the comparator inventory stays aligned with the six active generation workflows and their prompt versions
+- [ ] the failure and policy sample baselines still cover invalid-response cases, ambiguous or noisy ticket cases, import no-failure or no-header or no-row eligibility failures where relevant, and grounded or sensitive-output import guardrails
 - [ ] golden tests use checked-in provider-response fixtures and the real provider/service parsing path rather than echoing expected output fields back from the sample file
 - [ ] summary output still includes issue, current state, latest meaningful signal, and next human follow-up
 - [ ] summary output remains non-blank and does not expose raw prompt text or raw provider payload
@@ -181,7 +184,7 @@ For the current public AI slices, at minimum run:
 7. one invalid-response simulation
 8. one prompt-context non-leakage or sensitive-output-rejection check when the affected workflow includes import AI error summary, mapping suggestion, or fix recommendation
 9. one interaction-history filter, ordering, and non-leakage check when the history surface is affected
-10. one golden-sample regression check for each affected AI generation workflow
+10. one shared comparator regression pass plus one golden-sample regression check for each affected AI generation workflow when the comparator itself is not the only changed surface
 11. when live provider wiring changed, one local summary-first provider smoke plus the matching interaction-history read through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 12. after summary succeeds and the change still needs real-vendor verification, one second-stage live triage pass plus one second-stage live reply-draft pass, each followed by the matching interaction-history read, plus one import error-summary live pass and, when eligible, one import mapping-suggestion live pass plus one import fix-recommendation live pass, each followed by the matching import interaction-history read, when the change touches import AI or shared AI runtime behavior
 

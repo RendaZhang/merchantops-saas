@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.importjob.ai;
 
+import com.renda.merchantops.api.ai.core.AiGenerationWorkflow;
 import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
@@ -26,8 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ImportJobAiErrorSummaryService {
 
-    private static final String ENTITY_TYPE_IMPORT_JOB = "IMPORT_JOB";
-    private static final String INTERACTION_TYPE_ERROR_SUMMARY = "ERROR_SUMMARY";
+    private static final AiGenerationWorkflow WORKFLOW = AiGenerationWorkflow.IMPORT_ERROR_SUMMARY;
     private static final int PROMPT_WINDOW_PAGE = 0;
     private static final int PROMPT_WINDOW_SIZE = 20;
 
@@ -45,10 +45,7 @@ public class ImportJobAiErrorSummaryService {
                 importJobId,
                 new ImportJobErrorPageCriteria(PROMPT_WINDOW_PAGE, PROMPT_WINDOW_SIZE, null)
         ).items();
-        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(
-                aiProperties.getImportErrorSummaryPromptVersion(),
-                "import-error-summary-v1"
-        );
+        String promptVersion = WORKFLOW.resolvePromptVersion(aiProperties, aiInteractionExecutionSupport);
         String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         ImportJobErrorSummaryPromptContext promptContext = toPromptContext(detail, promptWindowErrors);
         ImportJobErrorSummaryPrompt prompt = importJobErrorSummaryPromptBuilder.build(promptVersion, promptContext);
@@ -57,9 +54,9 @@ public class ImportJobAiErrorSummaryService {
                 tenantId,
                 userId,
                 normalizedRequestId,
-                ENTITY_TYPE_IMPORT_JOB,
+                WORKFLOW.entityType(),
                 importJobId,
-                INTERACTION_TYPE_ERROR_SUMMARY,
+                WORKFLOW.interactionType(),
                 promptVersion,
                 configuredModelId,
                 aiProperties,
@@ -88,9 +85,9 @@ public class ImportJobAiErrorSummaryService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_ERROR_SUMMARY,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     resolvedModelId,
                     latencyMs,
@@ -115,9 +112,9 @@ public class ImportJobAiErrorSummaryService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_ERROR_SUMMARY,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     configuredModelId,
                     ex.getFailureType(),

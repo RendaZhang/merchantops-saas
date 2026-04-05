@@ -1,6 +1,6 @@
 # AI Integration
 
-Last updated: 2026-03-30
+Last updated: 2026-04-05
 
 ## Purpose
 
@@ -601,8 +601,11 @@ This record is still the governance-facing source of truth. The public ticket an
 The current public AI slices establish a minimal eval and visibility path:
 
 - explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, `import-mapping-suggestion-v1`, and `import-fix-recommendation-v1`
-- golden-sample ticket and import inputs at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`, `merchantops-api/src/test/resources/ai/import-job-error-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/golden-samples.json`, and `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/golden-samples.json`
+- a shared executable workflow catalog in `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java` plus a mirrored test inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`
+- checked-in golden, failure, and policy datasets under `merchantops-api/src/test/resources/ai/<workflow>/`
 - checked-in provider-response fixtures per workflow that drive the real provider parser and service path in automated golden tests
+- a shared comparator pass in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java` that reports checked workflows, prompt versions, sample counts, and failing assertions
+- thin per-workflow golden tests that now reuse the shared evaluator logic instead of maintaining independent assertion paths
 - focused automated tests for generation-endpoint happy path, permission failure, tenant isolation, symmetric degraded-mode coverage, provider-normalized request-contract assertions, endpoint-specific required-field validation, import prompt sanitization, import no-side-effect assertions, import `400` eligibility checks for no-failure, unsupported-import-type, no-header-signal, and no-row-signal jobs, sensitive-output rejection for fix recommendation, and ticket plus import history-endpoint filter/sort/non-leakage coverage including import read-after-write visibility after real generation calls
 - the local provider live smoke path in [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md)
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
