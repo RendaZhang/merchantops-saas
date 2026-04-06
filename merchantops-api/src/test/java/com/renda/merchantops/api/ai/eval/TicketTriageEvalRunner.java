@@ -89,6 +89,7 @@ final class TicketTriageEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketTriagePromptBuilder(),
                 new OpenAiTicketTriageProvider(objectMapper, structuredOutputAiClient),
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -147,6 +148,7 @@ final class TicketTriageEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketTriagePromptBuilder(),
                 ticketTriageAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -188,6 +190,7 @@ final class TicketTriageEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketTriagePromptBuilder(),
                 ticketTriageAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 

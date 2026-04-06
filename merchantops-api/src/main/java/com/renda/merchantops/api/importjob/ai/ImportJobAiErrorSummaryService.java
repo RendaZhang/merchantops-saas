@@ -12,6 +12,8 @@ import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummary
 import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummaryProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
 import com.renda.merchantops.domain.importjob.ImportJobErrorRecord;
@@ -35,6 +37,7 @@ public class ImportJobAiErrorSummaryService {
     private final ImportJobErrorSummaryPromptBuilder importJobErrorSummaryPromptBuilder;
     private final ImportJobErrorSummaryAiProvider importJobErrorSummaryAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public ImportJobAiErrorSummaryResponse generateErrorSummary(Long tenantId, Long userId, String requestId, Long importJobId) {
@@ -60,6 +63,7 @@ public class ImportJobAiErrorSummaryService {
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_IMPORT_ERROR_SUMMARY),
                 "import ai error summary is disabled",
                 "import ai error summary is unavailable"
         );

@@ -15,6 +15,10 @@ import com.renda.merchantops.domain.audit.AuditEventUseCase;
 import com.renda.merchantops.domain.auth.AccessValidationUseCase;
 import com.renda.merchantops.domain.auth.AuthAccessPort;
 import com.renda.merchantops.domain.auth.AuthenticationUseCase;
+import com.renda.merchantops.domain.featureflag.FeatureFlagCommandPort;
+import com.renda.merchantops.domain.featureflag.FeatureFlagCommandUseCase;
+import com.renda.merchantops.domain.featureflag.FeatureFlagQueryPort;
+import com.renda.merchantops.domain.featureflag.FeatureFlagQueryUseCase;
 import com.renda.merchantops.domain.importjob.ImportJobCommandPort;
 import com.renda.merchantops.domain.importjob.ImportJobCommandUseCase;
 import com.renda.merchantops.domain.importjob.ImportJobQueryPort;
@@ -79,6 +83,16 @@ public class DomainUseCaseConfig {
     @Bean
     public AccessValidationUseCase accessValidationUseCase(AuthAccessPort authAccessPort) {
         return new com.renda.merchantops.domain.auth.AccessValidationService(authAccessPort);
+    }
+
+    @Bean
+    public FeatureFlagQueryUseCase featureFlagQueryUseCase(FeatureFlagQueryPort featureFlagQueryPort) {
+        return new com.renda.merchantops.domain.featureflag.FeatureFlagQueryService(featureFlagQueryPort);
+    }
+
+    @Bean
+    public FeatureFlagCommandUseCase featureFlagCommandUseCase(FeatureFlagCommandPort featureFlagCommandPort) {
+        return new com.renda.merchantops.domain.featureflag.FeatureFlagCommandDomainService(featureFlagCommandPort);
     }
 
     @Bean

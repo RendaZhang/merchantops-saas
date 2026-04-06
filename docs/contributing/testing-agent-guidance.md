@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-04-05
+Last updated: 2026-04-06
 
 ## Purpose
 
@@ -48,12 +48,13 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-8 public workflow surface plus the current Week 9 AI governance, eval, cost, and usage baseline.
+The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, and the completed Week 10 Slice A persisted feature-flag hardening baseline.
 
 Today it covers:
 
 - login success and wrong-password failure
 - real JWT parsing and permission claims
+- current public feature-flag management behavior for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`
 - current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, ticket AI interaction-history plus summary/triage/reply-draft, tenant AI usage-summary, import AI interaction-history plus error summary/mapping suggestion/fix recommendation, and `GET /api/v1/roles`
 - controller request binding and tenant-context forwarding for the current public workflow surface
 - user, ticket, approval, and import query/command service behavior
@@ -62,11 +63,12 @@ Today it covers:
 - workflow-log persistence on `ticket_operation_log` and generic `audit_event` emission on covered write flows
 - import queue publication, worker execution, row-level failure isolation, and import migration protection
 - Week 8 approval-backed import selective replay proposals plus ticket comment proposals, including shared pending-request-key uniqueness hardening, duplicate suppression, reproposal-after-resolution, and mixed-action approval review behavior
+- Week 10 persisted feature-flag hardening across the six AI generation endpoints plus both Week 8 workflow proposal bridges, including list/update API happy path, `FEATURE_FLAG_MANAGE` denial, stale-claim re-login, unknown-key `404`, idempotent no-op updates, audit snapshots, controlled `503` disable behavior, and no cross-flag leakage
 - provider-adapter failure handling for the current public ticket AI summary, triage, and reply-draft paths plus the current public import AI error-summary, mapping-suggestion, and fix-recommendation paths
 - symmetric degraded-mode persistence and no-side-effect assertions across the current public ticket and import AI endpoints
 - symmetric AI hardening parity across the current public ticket and import AI endpoints, including provider-not-configured, provider-unavailable, timeout, invalid-response or output-policy-validation failure paths, `ai_interaction_record.status` assertions, response-shape / golden-sample expectations, import prompt sanitization, and fix-recommendation sensitive-output rejection
 - Week 9 shared AI governance baseline through the executable six-workflow prompt inventory, shared comparator pass, golden plus failure plus policy datasets, and tenant-scoped AI usage-summary aggregate coverage
-- stale-token rejection after user status, role, or permission changes
+- stale-token rejection after user status, role, or permission changes, plus refreshed-login success when newly granted access now includes `FEATURE_FLAG_MANAGE`
 
 It does not replace manual checks for:
 

@@ -97,6 +97,7 @@ final class ImportJobErrorSummaryEvalRunner extends AbstractAiWorkflowEvalRunner
                 new ImportJobErrorSummaryPromptBuilder(),
                 new OpenAiImportJobErrorSummaryProvider(objectMapper, structuredOutputAiClient),
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -152,6 +153,7 @@ final class ImportJobErrorSummaryEvalRunner extends AbstractAiWorkflowEvalRunner
                 new ImportJobErrorSummaryPromptBuilder(),
                 importJobErrorSummaryAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -187,6 +189,7 @@ final class ImportJobErrorSummaryEvalRunner extends AbstractAiWorkflowEvalRunner
                 new ImportJobErrorSummaryPromptBuilder(),
                 importJobErrorSummaryAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 

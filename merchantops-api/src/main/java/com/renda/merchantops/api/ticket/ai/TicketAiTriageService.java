@@ -12,6 +12,8 @@ import com.renda.merchantops.api.ai.ticket.triage.TicketTriageProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiTriagePriority;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiTriageResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.ticket.TicketPromptContext;
 import com.renda.merchantops.domain.ticket.TicketQueryUseCase;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class TicketAiTriageService {
     private final TicketTriagePromptBuilder ticketTriagePromptBuilder;
     private final TicketTriageAiProvider ticketTriageAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public TicketAiTriageResponse generateTriage(Long tenantId, Long userId, String requestId, Long ticketId) {
@@ -49,6 +52,7 @@ public class TicketAiTriageService {
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_TICKET_TRIAGE),
                 "ticket ai triage is disabled",
                 "ticket ai triage is unavailable"
         );

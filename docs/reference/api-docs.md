@@ -52,6 +52,8 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `PATCH` | `/api/v1/users/{id}/status` | Yes + `USER_WRITE` | Enable or disable a user |
 | `PUT` | `/api/v1/users/{id}/roles` | Yes + `USER_WRITE` | Replace all tenant-local roles for a user |
 | `POST` | `/api/v1/users/{id}/disable-requests` | Yes + `USER_WRITE` | Create a pending approval request for disabling a user |
+| `GET` | `/api/v1/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | List current-tenant feature flags in stable key order |
+| `PUT` | `/api/v1/feature-flags/{key}` | Yes + `FEATURE_FLAG_MANAGE` | Update one current-tenant feature flag by fixed key |
 | `GET` | `/api/v1/tickets` | Yes + `TICKET_READ` | Page tickets in current tenant |
 | `GET` | `/api/v1/tickets/{id}` | Yes + `TICKET_READ` | Get one tenant-scoped ticket detail with comments and workflow logs |
 | `GET` | `/api/v1/tickets/{id}/ai-interactions` | Yes + `TICKET_READ` | Page narrowed stored AI interaction history for one current-tenant ticket |
@@ -84,7 +86,6 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/import-jobs/{id}/ai-fix-recommendation` | Yes + `USER_READ` | Generate a suggestion-only AI fix recommendation for one current-tenant import job |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
-| `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
 
 Notes about security whitelist routes:
 
@@ -112,7 +113,9 @@ Ticket Workflow tag note:
 - `GET /api/v1/tickets/{id}/ai-interactions` supports `page`, `size`, `interactionType`, and `status`, with stable ordering `createdAt DESC, id DESC`.
 - `GET /api/v1/tickets/{id}/ai-interactions` exposes narrowed runtime metadata including `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, and `usageCostMicros`, while still not exposing raw prompt text or raw provider payload and while remaining outside billing or ledger semantics.
 - `POST /api/v1/tickets/{id}/ai-reply-draft` exposes no request body and returns a structured internal comment draft plus assembled `draftText`.
+- `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` each require both `merchantops.ai.enabled=true` and their matching persisted feature flag.
 - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` accepts required `commentContent` plus optional `sourceInteractionId`, creates a pending `TICKET_COMMENT_CREATE` approval request only, stores a narrow payload without raw prompt or provider fields, and suppresses duplicate pending proposals on trimmed `commentContent` only.
+- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` also requires persisted feature flag `workflow.ticket.comment-proposal.enabled=true`; when disabled, the endpoint returns controlled `503` and creates no approval or audit row.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.
 - `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`, including reopen (`CLOSED -> OPEN`).
@@ -130,6 +133,17 @@ AI Governance tag note:
 - the endpoint remains outside billing or ledger semantics.
 - See [ai-integration.md](ai-integration.md) for the current AI governance contract.
 
+Feature Flags tag note:
+
+- Swagger currently exposes `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`.
+- both endpoints require `FEATURE_FLAG_MANAGE`.
+- the list response returns the current tenant's fixed flag rows in stable `key ASC` order.
+- each item exposes `id`, `key`, `enabled`, and `updatedAt`.
+- the current fixed flag set covers six AI generation endpoints plus the two Week 8 workflow proposal bridges.
+- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, returns `404` for an unknown key, and is idempotent when the requested state is unchanged.
+- the feature-flag API does not manage config-level `merchantops.ai.enabled`; that remains a separate deployment setting.
+- See [feature-flags.md](feature-flags.md) for the current fixed-key inventory and rollout-control boundary.
+
 Audit Events tag note:
 
 - Swagger currently exposes `GET /api/v1/audit-events`.
@@ -137,7 +151,7 @@ Audit Events tag note:
 - query params are `entityType` and `entityId`.
 - `entityType` is case-insensitive in the current implementation and is normalized internally before lookup.
 - the current read shape is minimal: entity-scoped lookup only, ordered by insert id ascending, with no pagination or approval queue semantics yet.
-- current public write flows emit audit rows for `USER`, `TICKET`, and `APPROVAL_REQUEST` entities.
+- current public write flows emit audit rows for `USER`, `TICKET`, `APPROVAL_REQUEST`, `IMPORT_JOB`, and `FEATURE_FLAG` entities.
 - See [audit-approval.md](audit-approval.md) for the current governance baseline and non-goals.
 
 Approval Requests tag note:
@@ -173,11 +187,13 @@ Import Jobs tag note:
 - `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` is currently limited to `USER_CSV` jobs that already have failure signal plus parseable sanitized header/global signal; it does not rescan the source file or forward raw row values.
 - `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` exposes no request body and returns suggestion-only fields `importJobId`, `summary`, `recommendedFixes`, `confidenceNotes`, `recommendedOperatorChecks`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`.
 - `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` is currently limited to `USER_CSV` jobs that already have failure signal plus grounded sanitized row-level error groups; it does not rescan the source file, return direct replacement values, or forward raw row values.
+- the three import AI generation endpoints each require both `merchantops.ai.enabled=true` and their matching persisted feature flag.
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `POST /api/v1/import-jobs/{id}/replay-file` copies the stored source file into a new derived `QUEUED` job for current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` returns the shared approval-request response shape and stores only safe proposal payload fields (`sourceJobId`, canonical sorted `errorCodes`, optional `sourceInteractionId`, optional `proposalReason`) for later human review.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` suppresses duplicate pending proposals on source job plus canonical `errorCodes`; `sourceInteractionId` and `proposalReason` do not affect uniqueness.
+- `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` also requires persisted feature flag `workflow.import.selective-replay-proposal.enabled=true`; when disabled, the endpoint returns controlled `503` and creates no approval or audit row.
 - `POST /api/v1/import-jobs/{id}/replay-failures/edited` creates a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.

@@ -6,10 +6,10 @@ Last updated: 2026-04-06
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-06:
+Latest local default regression result on 2026-04-06 15:29:29 +08:00:
 
 - `BUILD SUCCESS`
-- `Tests run: 376, Failures: 0, Errors: 0, Skipped: 1`
+- `Tests run: 392, Failures: 0, Errors: 0, Skipped: 1`
 
 ## Recommended Commands
 
@@ -33,10 +33,11 @@ Use the full reactor only when you want the broader baseline:
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, and the current Week 9 tenant-scoped AI governance read baseline. Today that means:
+Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, and the completed Week 10 Slice A persisted feature-flag hardening baseline. Today that means:
 
-- auth and permission checks for the current public user-management, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- auth and permission checks for the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
+- real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, audit snapshots, and idempotent no-op updates
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-request-key hardening across disable, import replay proposal, and ticket comment proposal flows
@@ -47,6 +48,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
 - shared AI interaction execution support coverage for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import entity types
+- persisted feature-flag gate coverage across all six AI generation endpoints plus both Week 8 workflow proposal bridges, including no cross-flag leakage between unrelated endpoints
 - domain and adapter coverage for tenant AI usage-summary normalization, exact-match trimmed filter semantics, `from <= to` validation, aggregate query delegation, and nullable metering aggregation with zero-filled totals
 - symmetrical degraded-mode persistence coverage for AI summary, AI triage, AI reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
 - explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
@@ -65,7 +67,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
   - JWT claim generation and parsing for tenant, role, and permission data
-  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
+  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `GET /api/v1/feature-flags`
   - `401` when Bearer token is missing or invalid
   - `403` when login succeeds but `USER_READ` is absent
   - `403` when login succeeds but `USER_WRITE` is absent
@@ -82,13 +84,20 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
   - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
   - rejection of a pre-change token after role or permission claims become stale
-  - successful re-login after role reassignment with new RBAC access
+  - successful re-login after role reassignment with new RBAC access including `FEATURE_FLAG_MANAGE`
   - user writes emit `audit_event` rows when `X-Request-Id` is present
   - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
+- `FeatureFlagIntegrationTest`
+- real `GET /api/v1/feature-flags` happy path with stable `key ASC` ordering and the current tenant's fixed eight-row contract
+- real `PUT /api/v1/feature-flags/{key}` happy path with persisted state change plus `FEATURE_FLAG_UPDATED` audit snapshot
+- `403` when `FEATURE_FLAG_MANAGE` is missing and `404` for an unknown key
+- tenant-scoped feature-flag isolation so one tenant's update does not alter another tenant's stored flag rows or runtime AI gate behavior
+  - idempotent no-op update behavior with unchanged `updatedAt` and no extra audit row
 - `ImportSelectiveReplayApprovalIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` happy path for a `USER_WRITE` user with approval-row and audit-row assertions
   - `403` when `USER_WRITE` is missing
   - `404` for cross-tenant or missing import jobs
+  - `503` when persisted feature flag `workflow.import.selective-replay-proposal.enabled` is disabled, with no approval-row or audit-row side effects
   - `400` for non-replayable `errorCodes`
   - `400` for invalid `sourceInteractionId`
   - `400` for duplicate pending proposals with the same canonical `errorCodes` even when caller order differs
@@ -110,7 +119,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `200` for `CLOSED -> OPEN` reopen with status/detail verification, `updated_at` refresh, and appended `STATUS_CHANGED` log
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
   - real `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` happy path with safe payload and approval-audit assertions
-  - `403` for missing `TICKET_WRITE`, `404` for missing or cross-tenant tickets, and `400` for blank, overlong, or invalid-provenance proposal input
+  - `403` for missing `TICKET_WRITE`, `404` for missing or cross-tenant tickets, `503` for disabled persisted workflow flag, and `400` for blank, overlong, or invalid-provenance proposal input
   - `400` for duplicate pending proposals with the same trimmed `commentContent`
   - approve path for `TICKET_COMMENT_CREATE` creates exactly one comment and reject path creates none
   - reproposal allowed after `REJECTED` and after `APPROVED`
@@ -373,7 +382,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

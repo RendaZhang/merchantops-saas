@@ -191,6 +191,18 @@ class TicketWorkflowIntegrationTest {
                 )
                 """);
         jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
+        jdbcTemplate.execute("""
+                CREATE TABLE feature_flag (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    flag_key VARCHAR(128) NOT NULL,
+                    enabled BOOLEAN NOT NULL,
+                    updated_by BIGINT,
+                    created_at TIMESTAMP NOT NULL,
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_feature_flag_tenant_key UNIQUE (tenant_id, flag_key)
+                )
+                """);
 
 
         jdbcTemplate.execute("""
@@ -263,6 +275,7 @@ class TicketWorkflowIntegrationTest {
         seedUsers();
         seedUserRoles();
         seedRolePermissions();
+        seedFeatureFlags();
         seedTickets();
         seedAiInteractions();
     }
@@ -646,6 +659,27 @@ class TicketWorkflowIntegrationTest {
                         .content(commentProposalRequest("Cross-tenant reply draft", null)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("ticket not found"));
+    }
+
+    @Test
+    void createCommentProposalShouldReturnServiceUnavailableWhenBridgeFlagDisabled() throws Exception {
+        setFeatureFlag("workflow.ticket.comment-proposal.enabled", false);
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-flag-disabled")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Reply draft content", 9002L)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("ticket comment proposal is disabled"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'TICKET_COMMENT_CREATE'",
+                Integer.class
+        )).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isZero();
     }
 
     @Test
@@ -1234,6 +1268,17 @@ class TicketWorkflowIntegrationTest {
                 """, 2L, "other-shop", "Other Shop", "ACTIVE");
     }
 
+    private void seedFeatureFlags() {
+        insertFeatureFlag(1L, "ai.ticket.summary.enabled", true);
+        insertFeatureFlag(2L, "ai.ticket.triage.enabled", true);
+        insertFeatureFlag(3L, "ai.ticket.reply-draft.enabled", true);
+        insertFeatureFlag(4L, "ai.import.error-summary.enabled", true);
+        insertFeatureFlag(5L, "ai.import.mapping-suggestion.enabled", true);
+        insertFeatureFlag(6L, "ai.import.fix-recommendation.enabled", true);
+        insertFeatureFlag(7L, "workflow.import.selective-replay-proposal.enabled", true);
+        insertFeatureFlag(8L, "workflow.ticket.comment-proposal.enabled", true);
+    }
+
     private void seedPermissions() {
         insertPermission(1L, "USER_READ", "Read user");
         insertPermission(2L, "USER_WRITE", "Write user");
@@ -1359,6 +1404,33 @@ class TicketWorkflowIntegrationTest {
                 INSERT INTO permission (id, permission_code, permission_name, created_at, updated_at)
                 VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """, id, permissionCode, permissionName);
+    }
+
+    private void insertFeatureFlag(Long id, String key, boolean enabled) {
+        insertFeatureFlag(1L, id, key, enabled);
+    }
+
+    private void insertFeatureFlag(Long tenantId, Long id, String key, boolean enabled) {
+        jdbcTemplate.update(
+                "INSERT INTO feature_flag (id, tenant_id, flag_key, enabled, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id,
+                tenantId,
+                key,
+                enabled,
+                tenantId == 1L ? 101L : 201L
+        );
+    }
+
+    private void setFeatureFlag(String key, boolean enabled) {
+        setFeatureFlag(1L, key, enabled);
+    }
+
+    private void setFeatureFlag(Long tenantId, String key, boolean enabled) {
+        jdbcTemplate.update("""
+                UPDATE feature_flag
+                SET enabled = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE tenant_id = ? AND flag_key = ?
+                """, enabled, tenantId == 1L ? 101L : 201L, tenantId, key);
     }
 
     private void insertRole(Long id, Long tenantId, String roleCode, String roleName) {

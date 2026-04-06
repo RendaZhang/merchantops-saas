@@ -1,6 +1,6 @@
 # Ticket Workflow
 
-Last updated: 2026-04-04
+Last updated: 2026-04-06
 
 ## Public API Surface
 
@@ -11,9 +11,9 @@ Swagger currently exposes eleven ticket-workflow endpoints:
 | `GET` | `/api/v1/tickets` | Bearer JWT | `TICKET_READ` | Pages tickets in the current tenant |
 | `GET` | `/api/v1/tickets/{id}` | Bearer JWT | `TICKET_READ` | Returns one current-tenant ticket with comments and workflow logs |
 | `GET` | `/api/v1/tickets/{id}/ai-interactions` | Bearer JWT | `TICKET_READ` | Returns a narrowed page of stored AI interaction history for one current-tenant ticket |
-| `POST` | `/api/v1/tickets/{id}/ai-summary` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only AI summary from the current ticket detail context |
-| `POST` | `/api/v1/tickets/{id}/ai-triage` | Bearer JWT | `TICKET_READ` | Generates suggestion-only AI classification and priority guidance from the current ticket detail context |
-| `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only internal ticket comment draft from the current ticket detail context |
+| `POST` | `/api/v1/tickets/{id}/ai-summary` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only AI summary from the current ticket detail context; also requires config-level AI enable plus persisted flag `ai.ticket.summary.enabled` |
+| `POST` | `/api/v1/tickets/{id}/ai-triage` | Bearer JWT | `TICKET_READ` | Generates suggestion-only AI classification and priority guidance from the current ticket detail context; also requires config-level AI enable plus persisted flag `ai.ticket.triage.enabled` |
+| `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Bearer JWT | `TICKET_READ` | Generates a suggestion-only internal ticket comment draft from the current ticket detail context; also requires config-level AI enable plus persisted flag `ai.ticket.reply-draft.enabled` |
 | `POST` | `/api/v1/tickets` | Bearer JWT | `TICKET_WRITE` | Creates a new `OPEN` ticket |
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Bearer JWT | `TICKET_WRITE` | Replaces the current assignee with an active tenant user |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Bearer JWT | `TICKET_WRITE` | Transitions the ticket state |
@@ -21,6 +21,21 @@ Swagger currently exposes eleven ticket-workflow endpoints:
 | `POST` | `/api/v1/tickets/{id}/comments` | Bearer JWT | `TICKET_WRITE` | Adds a comment and writes a workflow log entry |
 
 Use Swagger UI or [../../api-demo.http](../../api-demo.http) for the current request flow.
+
+## Current Feature-Flag Controls
+
+Current persisted tenant-scoped controls for the public ticket surface are:
+
+- `ai.ticket.summary.enabled`
+- `ai.ticket.triage.enabled`
+- `ai.ticket.reply-draft.enabled`
+- `workflow.ticket.comment-proposal.enabled`
+
+Current control behavior:
+
+- the three ticket AI generation endpoints require both `merchantops.ai.enabled=true` and their matching persisted feature flag
+- `GET /api/v1/tickets/{id}/ai-interactions` is read-only and is not gated by the persisted flag set
+- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` uses only `workflow.ticket.comment-proposal.enabled`; it does not read `merchantops.ai.enabled`
 
 ## Minimal Workflow Model
 
@@ -121,6 +136,7 @@ Current behavior:
 - exposes `id`, `interactionType`, `status`, `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`
 - does not expose raw prompt text or raw provider payloads, and the runtime usage/cost fields are not a billing or ledger contract
 - does not create new AI records, mutate ticket state, write comments, or trigger approvals
+- the endpoint is not gated by the persisted AI feature flags, so history remains visible when generation is disabled
 
 Response example:
 
@@ -182,7 +198,8 @@ Current behavior:
 - loads the target ticket through the existing tenant-scoped detail query path
 - builds the prompt from ticket core fields, comments, and workflow logs only
 - returns a suggestion-only summary and does not mutate ticket state, write comments, or trigger approvals
-- returns controlled `503 SERVICE_UNAVAILABLE` responses when AI is disabled, not configured, or unavailable
+- requires both `merchantops.ai.enabled=true` and persisted flag `ai.ticket.summary.enabled=true`
+- returns controlled `503 SERVICE_UNAVAILABLE` responses when AI is disabled by config, disabled by the matching persisted flag, not configured, or unavailable
 - writes an internal `ai_interaction_record` row for success and controlled failure states
 
 Response example:
@@ -219,7 +236,8 @@ Current behavior:
 - builds the prompt from ticket core fields, comments, and workflow logs only
 - returns a suggestion-only classification, priority, and reasoning result
 - does not mutate ticket state, write comments, trigger approvals, or suggest assignees
-- returns controlled `503 SERVICE_UNAVAILABLE` responses when AI is disabled, not configured, or unavailable
+- requires both `merchantops.ai.enabled=true` and persisted flag `ai.ticket.triage.enabled=true`
+- returns controlled `503 SERVICE_UNAVAILABLE` responses when AI is disabled by config, disabled by the matching persisted flag, not configured, or unavailable
 - writes an internal `ai_interaction_record` row for success and controlled failure states
 
 Response example:
@@ -258,7 +276,8 @@ Current behavior:
 - builds the prompt from ticket core fields, comments, and workflow logs only
 - returns a structured internal comment draft plus assembled `draftText`
 - does not create a comment, send an external message, mutate ticket state, or trigger approvals
-- returns controlled `503 SERVICE_UNAVAILABLE` responses when AI is disabled, not configured, or unavailable
+- requires both `merchantops.ai.enabled=true` and persisted flag `ai.ticket.reply-draft.enabled=true`
+- returns controlled `503 SERVICE_UNAVAILABLE` responses when AI is disabled by config, disabled by the matching persisted flag, not configured, or unavailable
 - writes an internal `ai_interaction_record` row for success and controlled failure states
 
 Response example:
@@ -295,7 +314,7 @@ Failure examples:
 Current behavior:
 
 - requires `TICKET_WRITE`
-- loads the target ticket through the existing tenant-scoped ticket read boundary before creating the approval request
+- loads the target ticket through the existing tenant-scoped ticket read boundary before applying persisted feature flag `workflow.ticket.comment-proposal.enabled`
 - request body accepts required `commentContent` plus optional `sourceInteractionId`
 - `commentContent` is trimmed, must be non-blank, and must stay within the current ticket comment limit of `2000`
 - `sourceInteractionId`, when present, must reference a same-ticket `REPLY_DRAFT` interaction in `SUCCEEDED` status
@@ -344,10 +363,12 @@ Failure examples:
 
 - missing `TICKET_WRITE`: `403`, message `permission denied`
 - ticket outside the current tenant: `404`, message `ticket not found`
+- workflow flag disabled: `503`, message `ticket comment proposal is disabled`
 - blank comment: `400`, message `commentContent must not be blank`
 - overlong comment: `400`, message `commentContent length must be less than or equal to 2000`
 - invalid provenance: `400`, message `sourceInteractionId must reference a succeeded REPLY_DRAFT interaction for the source ticket`
 - duplicate pending proposal: `400`, message `pending ticket comment proposal already exists for ticket and comment content`
+- when the workflow flag is disabled, the endpoint creates no `approval_request` row and no business `audit_event` row
 
 ## `POST /api/v1/tickets`
 

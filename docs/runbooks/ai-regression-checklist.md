@@ -34,13 +34,18 @@ The AI checklist is now active because public AI endpoints exist:
   - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
   - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
 - those workflow endpoints may reference successful AI interactions as provenance, but the public AI endpoints themselves remain suggestion-only
+- the six generation endpoints are gated by both config-level `merchantops.ai.enabled` and one persisted tenant-scoped feature flag per endpoint
+- the three read endpoints are not gated by the persisted AI feature flags
+- the two adjacent workflow bridges are gated separately by persisted workflow flags `workflow.import.selective-replay-proposal.enabled` and `workflow.ticket.comment-proposal.enabled`
 - interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`, but do not expose raw prompt or raw provider payload and do not establish billing semantics
 - tenant usage-summary reads expose aggregate counts, token totals, cost totals, and `byInteractionType` / `byStatus` / `byPromptVersion` breakdowns only; they do not expose raw prompt text, raw provider payload, or request-level cross-entity detail fields such as `requestId`, `outputSummary`, or `modelId`
 
 ## Environment And Control
 
 - [ ] provider credentials and model configuration are loaded from the expected `merchantops.ai.*` keys or the documented local `.env` aliases
-- [ ] AI features can be disabled cleanly via `merchantops.ai.enabled`
+- [ ] AI generation features can be disabled cleanly via `merchantops.ai.enabled`
+- [ ] each generation endpoint can also be disabled cleanly via its matching persisted feature flag without leaking into unrelated AI endpoints
+- [ ] adjacent workflow bridges can be disabled cleanly via `workflow.import.selective-replay-proposal.enabled` and `workflow.ticket.comment-proposal.enabled`
 - [ ] degraded mode behavior is verified when the provider is unavailable or not configured
 - [ ] request timeout behavior is explicit and covered by a simulated timeout path
 
@@ -172,6 +177,8 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] import AI mapping-suggestion calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - [ ] import AI fix-recommendation calls do not mutate `import_job`, `import_job_item_error`, replay lineage, approvals, or business `audit_event`
 - [ ] import AI fix-recommendation does not create a selective replay proposal directly even though a separate proposal endpoint now exists outside the AI endpoint set
+- [ ] disabled `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` creates no `approval_request` row and no business `audit_event` row
+- [ ] disabled `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` creates no `approval_request` row and no business `audit_event` row
 - [ ] AI summary, triage, and reply-draft calls do not create business `audit_event` rows
 - [ ] AI interaction-history reads do not mutate ticket status, assignee, comments, workflow logs, approvals, or business `audit_event` rows
 - [ ] import AI interaction-history reads do not mutate import job state, import error rows, replay lineage, approvals, or business `audit_event` rows

@@ -108,6 +108,7 @@ class TicketAiSummaryIntegrationTest {
         seedUsers();
         seedUserRoles();
         seedRolePermissions();
+        seedFeatureFlags();
         seedTickets();
         seedComments();
         seedOperationLogs();
@@ -265,6 +266,76 @@ class TicketAiSummaryIntegrationTest {
     }
 
     @Test
+    void aiSummaryShouldReturnServiceUnavailableWhenPersistedSummaryFlagDisabled() throws Exception {
+        setFeatureFlag("ai.ticket.summary.enabled", false);
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/302/ai-summary")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-ai-summary-flag-disabled-1"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("ticket ai summary is disabled"));
+
+        verifyNoInteractions(ticketSummaryAiProvider);
+        assertNoTicketWorkflowMutation();
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L))
+                .isEqualTo("FEATURE_DISABLED");
+    }
+
+    @Test
+    void aiSummaryShouldRemainAvailableWhenDifferentAiFlagIsDisabled() throws Exception {
+        setFeatureFlag("ai.ticket.triage.enabled", false);
+        when(ticketSummaryAiProvider.generateSummary(any())).thenReturn(new TicketSummaryProviderResult(
+                "Issue: Printer cable replacement is in progress under ops. Current: the ticket is assigned and the latest signal says cable swap started. Next: confirm the replacement outcome and close the ticket if the printer is healthy.",
+                "gpt-4.1-mini",
+                120,
+                52,
+                172,
+                null
+        ));
+        String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/302/ai-summary")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(viewerToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-ai-summary-cross-flag-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.ticketId").value(302));
+
+        verify(ticketSummaryAiProvider).generateSummary(any());
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 302L))
+                .isEqualTo("SUCCEEDED");
+    }
+
+    @Test
+    void aiSummaryShouldRemainAvailableForOtherTenantWhenDifferentTenantFlagIsDisabled() throws Exception {
+        setFeatureFlag(1L, "ai.ticket.summary.enabled", false);
+        when(ticketSummaryAiProvider.generateSummary(any())).thenReturn(new TicketSummaryProviderResult(
+                "Issue: Other tenant checkout printer is waiting on review. Current: the issue is still open with no assignee. Next: confirm the failing printer symptoms and schedule onsite troubleshooting.",
+                "gpt-4.1-mini",
+                120,
+                52,
+                172,
+                null
+        ));
+        String outsiderToken = loginAndGetToken("other-shop", "outsider", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/401/ai-summary")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(outsiderToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-ai-summary-cross-tenant-flag-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.ticketId").value(401));
+
+        verify(ticketSummaryAiProvider).generateSummary(any());
+        assertThat(jdbcTemplate.queryForObject("SELECT tenant_id FROM ai_interaction_record WHERE entity_id = ?", Long.class, 401L))
+                .isEqualTo(2L);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM ai_interaction_record WHERE entity_id = ?", String.class, 401L))
+                .isEqualTo("SUCCEEDED");
+    }
+
+    @Test
     void aiSummaryShouldReturnServiceUnavailableWhenFeatureDisabled() throws Exception {
         aiProperties.setEnabled(false);
         String viewerToken = loginAndGetToken("demo-shop", "viewer", "123456");
@@ -304,7 +375,56 @@ class TicketAiSummaryIntegrationTest {
         jdbcTemplate.execute("CREATE TABLE audit_event (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, entity_type VARCHAR(64) NOT NULL, entity_id BIGINT NOT NULL, action_type VARCHAR(64) NOT NULL, operator_id BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, before_value CLOB, after_value CLOB, approval_status VARCHAR(32) NOT NULL, created_at TIMESTAMP NOT NULL)");
         jdbcTemplate.execute("CREATE TABLE approval_request (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, action_type VARCHAR(64) NOT NULL, entity_type VARCHAR(64) NOT NULL, entity_id BIGINT NOT NULL, requested_by BIGINT NOT NULL, reviewed_by BIGINT, status VARCHAR(32) NOT NULL, payload_json CLOB NOT NULL, pending_request_key VARCHAR(191), request_id VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL, reviewed_at TIMESTAMP, executed_at TIMESTAMP, CONSTRAINT fk_approval_request_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id), CONSTRAINT fk_approval_request_requested_by_tenant FOREIGN KEY (requested_by, tenant_id) REFERENCES users(id, tenant_id), CONSTRAINT fk_approval_request_reviewed_by_tenant FOREIGN KEY (reviewed_by, tenant_id) REFERENCES users(id, tenant_id))");
         jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
+        jdbcTemplate.execute("CREATE TABLE feature_flag (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, flag_key VARCHAR(128) NOT NULL, enabled BOOLEAN NOT NULL, updated_by BIGINT, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL, CONSTRAINT uk_feature_flag_tenant_key UNIQUE (tenant_id, flag_key))");
         jdbcTemplate.execute("CREATE TABLE ai_interaction_record (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, user_id BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, entity_type VARCHAR(64) NOT NULL, entity_id BIGINT NOT NULL, interaction_type VARCHAR(64) NOT NULL, prompt_version VARCHAR(128) NOT NULL, model_id VARCHAR(128), status VARCHAR(32) NOT NULL, latency_ms BIGINT NOT NULL, output_summary CLOB, usage_prompt_tokens INT, usage_completion_tokens INT, usage_total_tokens INT, usage_cost_micros BIGINT, created_at TIMESTAMP NOT NULL, CONSTRAINT fk_ai_interaction_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id), CONSTRAINT fk_ai_interaction_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id))");
+    }
+
+    private void seedFeatureFlags() {
+        insertFeatureFlag(1L, "ai.ticket.summary.enabled", true);
+        insertFeatureFlag(2L, "ai.ticket.triage.enabled", true);
+        insertFeatureFlag(3L, "ai.ticket.reply-draft.enabled", true);
+        insertFeatureFlag(4L, "ai.import.error-summary.enabled", true);
+        insertFeatureFlag(5L, "ai.import.mapping-suggestion.enabled", true);
+        insertFeatureFlag(6L, "ai.import.fix-recommendation.enabled", true);
+        insertFeatureFlag(7L, "workflow.import.selective-replay-proposal.enabled", true);
+        insertFeatureFlag(8L, "workflow.ticket.comment-proposal.enabled", true);
+        insertFeatureFlag(2L, 101L, "ai.ticket.summary.enabled", true);
+        insertFeatureFlag(2L, 102L, "ai.ticket.triage.enabled", true);
+        insertFeatureFlag(2L, 103L, "ai.ticket.reply-draft.enabled", true);
+        insertFeatureFlag(2L, 104L, "ai.import.error-summary.enabled", true);
+        insertFeatureFlag(2L, 105L, "ai.import.mapping-suggestion.enabled", true);
+        insertFeatureFlag(2L, 106L, "ai.import.fix-recommendation.enabled", true);
+        insertFeatureFlag(2L, 107L, "workflow.import.selective-replay-proposal.enabled", true);
+        insertFeatureFlag(2L, 108L, "workflow.ticket.comment-proposal.enabled", true);
+    }
+
+    private void insertFeatureFlag(Long id, String key, boolean enabled) {
+        insertFeatureFlag(1L, id, key, enabled);
+    }
+
+    private void insertFeatureFlag(Long tenantId, Long id, String key, boolean enabled) {
+        jdbcTemplate.update(
+                "INSERT INTO feature_flag (id, tenant_id, flag_key, enabled, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id,
+                tenantId,
+                key,
+                enabled,
+                tenantId == 1L ? 101L : 201L
+        );
+    }
+
+    private void setFeatureFlag(String key, boolean enabled) {
+        setFeatureFlag(1L, key, enabled);
+    }
+
+    private void setFeatureFlag(Long tenantId, String key, boolean enabled) {
+        jdbcTemplate.update(
+                "UPDATE feature_flag SET enabled = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND flag_key = ?",
+                enabled,
+                tenantId == 1L ? 101L : 201L,
+                tenantId,
+                key
+        );
     }
 
     private void seedTenants() {

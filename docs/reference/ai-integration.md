@@ -38,6 +38,15 @@ Current public AI scope is intentionally narrow:
 - no new public AI generation endpoint was added in Week 8; instead, the current workflow now includes two normal workflow endpoints outside the AI endpoint set:
   - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, which can optionally reference a successful import `FIX_RECOMMENDATION` interaction as provenance
   - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, which accepts final `commentContent` plus optional same-ticket `REPLY_DRAFT` provenance
+- the six generation endpoints now require both config-level `merchantops.ai.enabled=true` and their matching persisted feature flag:
+  - `ai.ticket.summary.enabled`
+  - `ai.ticket.triage.enabled`
+  - `ai.ticket.reply-draft.enabled`
+  - `ai.import.error-summary.enabled`
+  - `ai.import.mapping-suggestion.enabled`
+  - `ai.import.fix-recommendation.enabled`
+- the three read endpoints are not part of that persisted flag set, so stored history and aggregate usage-summary visibility remain available when generation is gated off
+- the two adjacent workflow endpoints above are gated separately by persisted workflow flags `workflow.import.selective-replay-proposal.enabled` and `workflow.ticket.comment-proposal.enabled`
 - the usage-summary endpoint returns aggregate counts plus usage/cost totals and `byInteractionType`, `byStatus`, and `byPromptVersion` breakdowns only; it does not return a cross-entity per-request detail list
 - no ticket status change, comment write, approval trigger, replay trigger, or other workflow mutation from the nine public AI endpoints themselves
 - no public raw prompt or raw provider response in the response body, and no billing or ledger semantics on the history or tenant-summary responses
@@ -715,7 +724,8 @@ The current runtime keeps AI plumbing narrow rather than introducing a general c
 - a shared AI interaction execution support layer for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import workflows
 - a shared provider-normalized structured-output client
 - instance-level provider configuration under `merchantops.ai.*`
-- an enable/disable flag plus provider-configuration guard
+- a config-level `merchantops.ai.enabled` master switch plus one persisted tenant-scoped feature flag per generation endpoint
+- provider-configuration guard
 - timeout-based controlled degradation
 
 The current provider-normalized client supports two protocol paths:
@@ -806,8 +816,8 @@ Current non-happy-path behavior:
 - `GET /api/v1/ai-interactions/usage-summary` returns `400 BAD_REQUEST` when `from > to` or when `entityType` is outside `TICKET` and `IMPORT_JOB`
 - `POST /api/v1/tickets/{id}/ai-reply-draft` remains read-only even though the current workflow now includes a separate approval-backed ticket comment proposal endpoint outside the AI endpoint set
 - `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` remain read-only even though the current workflow now includes a separate approval-backed selective replay proposal path outside the AI endpoint set
-- disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled`
-- disabled import AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `import ai error summary is disabled`, `import ai mapping suggestion is disabled`, or `import ai fix recommendation is disabled`
+- disabled AI generation returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled` whether the gate is closed by `merchantops.ai.enabled=false` or by the matching persisted feature flag
+- disabled import AI generation returns controlled `503 SERVICE_UNAVAILABLE` messages such as `import ai error summary is disabled`, `import ai mapping suggestion is disabled`, or `import ai fix recommendation is disabled` whether the gate is closed by `merchantops.ai.enabled=false` or by the matching persisted feature flag
 - missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
 - mapping suggestion returns controlled `400 BAD_REQUEST` when the job has no failure signal or no sanitized header signal
 - fix recommendation returns controlled `400 BAD_REQUEST` when the job has no failure signal, is not `USER_CSV`, or has no sanitized row-level signal
@@ -816,6 +826,7 @@ Current non-happy-path behavior:
 - raw provider exceptions are not exposed to API consumers
 - the rest of the ticket workflow remains usable even when AI is unavailable
 - the rest of the import workflow remains usable even when AI is unavailable
+- the separate workflow proposal bridges remain independently controllable through `workflow.import.selective-replay-proposal.enabled` and `workflow.ticket.comment-proposal.enabled` without widening the nine public AI endpoints
 
 ## Current Limitations
 
@@ -832,11 +843,12 @@ Not implemented yet:
 
 ## Planned Next Workflow Areas
 
-The current public AI baseline should stay stable while the Week 9 governance and evaluation layer moves forward:
+The current public AI baseline should stay stable while Week 10 delivery hardening lands on top of the completed Week 9 governance and evaluation layer:
 
 - keep the completed Week 6 ticket AI read surface, the completed Week 7 import AI read surface, and the completed Week 9 tenant usage-summary read surface stable instead of widening them into broader reporting too quickly
 - treat the completed Week 8 import selective replay proposal flow and the completed Week 8 ticket comment proposal flow as the first two human-reviewed execution bridges from suggestion-only AI guidance into approval-bounded workflow execution
-- treat the completed Week 9 Slice A executable eval baseline plus the completed Week 9 Slice B tenant-scoped usage-summary read as the current governance visibility baseline on top of stored `ai_interaction_record` rows
+- treat the completed Week 9 Slice A executable eval baseline plus the completed Week 9 Slice B plus Slice C tenant-scoped usage-summary read as the current governance visibility baseline on top of stored `ai_interaction_record` rows
+- treat the completed Week 10 Slice A persisted feature-flag baseline as the current rollout-safety control for the six generation endpoints and the two workflow bridges
 - future approval-aware write-back should build on those separate proposal/approval/execution patterns instead of bypassing them or widening the nine public AI endpoints directly
 
 Later roadmap areas remain:

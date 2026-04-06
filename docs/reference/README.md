@@ -10,6 +10,7 @@ Contributor and agent workflow guidance now lives under [../contributing/README.
 - [database-migrations.md](database-migrations.md): Flyway setup, migration history, and seed data notes
 - [api-conventions.md](api-conventions.md): response wrapper and error handling rules
 - [authentication-and-rbac.md](authentication-and-rbac.md): login flow, JWT usage, context propagation, RBAC expectations, the current AI interaction-history/usage-summary/summary/triage/reply-draft permission boundary, and action-aware approval visibility
+- [feature-flags.md](feature-flags.md): current tenant-scoped persisted feature-flag inventory, public list/update contract, rollout-control semantics, and audit boundary
 - [user-management.md](user-management.md): current `/api/v1/users` behavior, Swagger verification, and the current Week 2 delivery boundary
 - [ticket-workflow.md](ticket-workflow.md): current `/api/v1/tickets` workflow loop, workflow-log behavior, the public AI interaction-history/summary/triage/reply-draft read slices, and approval-backed ticket comment proposals
 - [import-jobs.md](import-jobs.md): current `/api/v1/import-jobs` async contract, replay variants plus approval-backed selective replay proposals, `USER_CSV` row-execution behavior, import AI interaction history plus error summary/mapping suggestion/fix recommendation, and status/error model

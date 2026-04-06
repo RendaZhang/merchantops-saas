@@ -2,10 +2,12 @@ package com.renda.merchantops.api.approval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
 import com.renda.merchantops.domain.approval.ApprovalPendingRequestKeyPolicy;
 import com.renda.merchantops.domain.approval.ApprovalTicketCommentProposalPort;
 import com.renda.merchantops.domain.approval.PreparedTicketCommentApproval;
 import com.renda.merchantops.domain.approval.TicketCommentApprovalCommand;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.domain.ticket.TicketAiInteractionItem;
@@ -24,10 +26,14 @@ public class TicketCommentApprovalSupport implements ApprovalTicketCommentPropos
     private static final int MAX_COMMENT_LENGTH = 2000;
 
     private final TicketQueryUseCase ticketQueryUseCase;
+    private final FeatureFlagGateService featureFlagGateService;
     private final ObjectMapper objectMapper;
 
-    public TicketCommentApprovalSupport(TicketQueryUseCase ticketQueryUseCase, ObjectMapper objectMapper) {
+    public TicketCommentApprovalSupport(TicketQueryUseCase ticketQueryUseCase,
+                                        FeatureFlagGateService featureFlagGateService,
+                                        ObjectMapper objectMapper) {
         this.ticketQueryUseCase = ticketQueryUseCase;
+        this.featureFlagGateService = featureFlagGateService;
         this.objectMapper = objectMapper;
     }
 
@@ -37,6 +43,11 @@ public class TicketCommentApprovalSupport implements ApprovalTicketCommentPropos
             throw new BizException(ErrorCode.BAD_REQUEST, "ticketId missing");
         }
         ticketQueryUseCase.getTicketDetail(tenantId, command.ticketId());
+        featureFlagGateService.requireEnabled(
+                tenantId,
+                FeatureFlagKey.WORKFLOW_TICKET_COMMENT_PROPOSAL,
+                "ticket comment proposal is disabled"
+        );
         String commentContent = normalizeCommentContent(command.commentContent());
         Long sourceInteractionId = command.sourceInteractionId();
         if (sourceInteractionId != null) {

@@ -12,7 +12,9 @@ import com.renda.merchantops.api.ai.importjob.fixrecommendation.ImportJobFixReco
 import com.renda.merchantops.api.ai.importjob.fixrecommendation.ImportJobFixRecommendationProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiFixRecommendationResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
 import com.renda.merchantops.api.importjob.ImportCsvSupport;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorCount;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
@@ -57,6 +59,7 @@ public class ImportJobAiFixRecommendationService {
     private final ImportJobFixRecommendationPromptBuilder importJobFixRecommendationPromptBuilder;
     private final ImportJobFixRecommendationAiProvider importJobFixRecommendationAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public ImportJobAiFixRecommendationResponse generateFixRecommendation(Long tenantId,
@@ -92,6 +95,7 @@ public class ImportJobAiFixRecommendationService {
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_IMPORT_FIX_RECOMMENDATION),
                 "import ai fix recommendation is disabled",
                 "import ai fix recommendation is unavailable"
         );

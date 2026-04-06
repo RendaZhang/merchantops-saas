@@ -11,6 +11,8 @@ import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftProviderRe
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.ticket.TicketPromptContext;
 import com.renda.merchantops.domain.ticket.TicketQueryUseCase;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class TicketAiReplyDraftService {
     private final TicketReplyDraftPromptBuilder ticketReplyDraftPromptBuilder;
     private final TicketReplyDraftAiProvider ticketReplyDraftAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public TicketAiReplyDraftResponse generateReplyDraft(Long tenantId, Long userId, String requestId, Long ticketId) {
@@ -50,6 +53,7 @@ public class TicketAiReplyDraftService {
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_TICKET_REPLY_DRAFT),
                 "ticket ai reply draft is disabled",
                 "ticket ai reply draft is unavailable"
         );

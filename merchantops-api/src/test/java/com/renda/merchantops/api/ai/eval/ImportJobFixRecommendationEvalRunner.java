@@ -100,6 +100,7 @@ final class ImportJobFixRecommendationEvalRunner extends AbstractAiWorkflowEvalR
                 new ImportJobFixRecommendationPromptBuilder(),
                 new OpenAiImportJobFixRecommendationProvider(objectMapper, structuredOutputAiClient),
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -161,6 +162,7 @@ final class ImportJobFixRecommendationEvalRunner extends AbstractAiWorkflowEvalR
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -202,6 +204,7 @@ final class ImportJobFixRecommendationEvalRunner extends AbstractAiWorkflowEvalR
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 

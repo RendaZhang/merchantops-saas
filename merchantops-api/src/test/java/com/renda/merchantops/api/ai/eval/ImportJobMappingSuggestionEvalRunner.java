@@ -100,6 +100,7 @@ final class ImportJobMappingSuggestionEvalRunner extends AbstractAiWorkflowEvalR
                 new ImportJobMappingSuggestionPromptBuilder(),
                 new OpenAiImportJobMappingSuggestionProvider(objectMapper, structuredOutputAiClient),
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -160,6 +161,7 @@ final class ImportJobMappingSuggestionEvalRunner extends AbstractAiWorkflowEvalR
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -201,6 +203,7 @@ final class ImportJobMappingSuggestionEvalRunner extends AbstractAiWorkflowEvalR
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 

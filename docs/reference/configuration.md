@@ -106,7 +106,7 @@ Shared application configuration currently includes:
 
 ## AI Provider Controls
 
-- `merchantops.ai.enabled` gates the current public AI generation surface: ticket `ai-summary`, `ai-triage`, `ai-reply-draft`, plus import `ai-error-summary`, `ai-mapping-suggestion`, and `ai-fix-recommendation`. When `false`, those endpoints return controlled `503 SERVICE_UNAVAILABLE` responses such as `ticket ai summary is disabled` or `import ai error summary is disabled`.
+- `merchantops.ai.enabled` is the config-level master switch for the six public AI generation endpoints: ticket `ai-summary`, `ai-triage`, `ai-reply-draft`, plus import `ai-error-summary`, `ai-mapping-suggestion`, and `ai-fix-recommendation`. When `false`, those endpoints return controlled `503 SERVICE_UNAVAILABLE` responses such as `ticket ai summary is disabled` or `import ai error summary is disabled`.
 - `merchantops.ai.prompt-version`, `merchantops.ai.triage-prompt-version`, `merchantops.ai.reply-draft-prompt-version`, `merchantops.ai.import-error-summary-prompt-version`, `merchantops.ai.import-mapping-suggestion-prompt-version`, and `merchantops.ai.import-fix-recommendation-prompt-version` are the explicit prompt identifiers stored into `ai_interaction_record` and returned in the public AI responses.
 - `merchantops.ai.provider` selects the active provider path. Current supported values are `OPENAI` and `DEEPSEEK`.
 - `merchantops.ai.base-url`, `merchantops.ai.api-key`, and `merchantops.ai.model-id` are the provider-neutral runtime keys. Use these first for new local and deployed setups.
@@ -118,6 +118,30 @@ Shared application configuration currently includes:
   - `OPENAI`: base URL defaults to `https://api.openai.com`
   - `DEEPSEEK`: base URL defaults to `https://api.deepseek.com` and model defaults to `deepseek-chat`
 - Leaving the required provider model or credentials blank keeps the rest of the application usable; only the current public AI generation endpoints degrade with controlled `503` responses.
+
+## Persisted Feature Flag Controls
+
+Current tenant-scoped persisted flags are managed through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` rather than `application.yml`.
+
+Current AI generation flags:
+
+- `ai.ticket.summary.enabled`
+- `ai.ticket.triage.enabled`
+- `ai.ticket.reply-draft.enabled`
+- `ai.import.error-summary.enabled`
+- `ai.import.mapping-suggestion.enabled`
+- `ai.import.fix-recommendation.enabled`
+
+Current workflow bridge flags:
+
+- `workflow.import.selective-replay-proposal.enabled`
+- `workflow.ticket.comment-proposal.enabled`
+
+Current flag behavior:
+
+- the six AI generation endpoints require both `merchantops.ai.enabled=true` and the matching persisted feature flag
+- `GET /api/v1/tickets/{id}/ai-interactions`, `GET /api/v1/import-jobs/{id}/ai-interactions`, and `GET /api/v1/ai-interactions/usage-summary` are not gated by the persisted flag set
+- the two Week 8 workflow proposal bridges use only their matching persisted workflow flag; they do not read `merchantops.ai.enabled`
 
 ## Import Processing Controls
 

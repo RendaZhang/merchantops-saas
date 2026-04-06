@@ -177,7 +177,7 @@ Content-Type: {{contentType}}
 }
 
 ### Verify refreshed token can use new permissions
-GET {{baseUrl}}/api/v1/rbac/users/manage
+GET {{baseUrl}}/api/v1/feature-flags
 Authorization: Bearer {{refreshedTargetUserToken}}
 
 ### List tenant tickets
@@ -229,19 +229,22 @@ Authorization: Bearer {{token}}
 ### Generate tenant ticket AI summary
 # For live provider smoke, first configure local `.env` per docs/reference/ai-provider-configuration.md
 # and follow docs/runbooks/ai-live-smoke-test.md. Start with this summary call once.
-# Requires merchantops.ai.enabled=true plus a configured instance-level provider.
+# Requires merchantops.ai.enabled=true, feature flag ai.ticket.summary.enabled=true,
+# and a configured instance-level provider.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-summary
 Authorization: Bearer {{token}}
 
 ### Generate tenant ticket AI triage
 # Run this only after summary succeeds in docs/runbooks/ai-live-smoke-test.md.
-# Requires merchantops.ai.enabled=true plus a configured instance-level provider.
+# Requires merchantops.ai.enabled=true, feature flag ai.ticket.triage.enabled=true,
+# and a configured instance-level provider.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-triage
 Authorization: Bearer {{token}}
 
 ### Generate tenant ticket AI internal reply draft
 # Run this only after summary succeeds in docs/runbooks/ai-live-smoke-test.md.
-# Requires merchantops.ai.enabled=true plus a configured instance-level provider.
+# Requires merchantops.ai.enabled=true, feature flag ai.ticket.reply-draft.enabled=true,
+# and a configured instance-level provider.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/ai-reply-draft
 Authorization: Bearer {{token}}
 
@@ -249,6 +252,7 @@ Authorization: Bearer {{token}}
 # Optional sourceInteractionId should come from a SUCCEEDED REPLY_DRAFT row in
 # GET /api/v1/tickets/{id}/ai-interactions. This creates a pending approval
 # request only; no comment is written until a different reviewer approves it.
+# Requires workflow.ticket.comment-proposal.enabled=true.
 # Duplicate pending creates for the same trimmed comment content now return 400
 # until the current pending request is approved or rejected.
 POST {{baseUrl}}/api/v1/tickets/{{ticketId}}/comments/proposals/ai-reply-draft
@@ -372,9 +376,45 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/rbac/users/manage
 Authorization: Bearer {{token}}
 
-### RBAC - feature flags
-GET {{baseUrl}}/api/v1/rbac/feature-flags
+### Feature flags - list
+GET {{baseUrl}}/api/v1/feature-flags
 Authorization: Bearer {{token}}
+
+### Feature flags - disable ticket AI summary
+PUT {{baseUrl}}/api/v1/feature-flags/ai.ticket.summary.enabled
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "enabled": false
+}
+
+### Feature flags - enable ticket AI summary
+PUT {{baseUrl}}/api/v1/feature-flags/ai.ticket.summary.enabled
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "enabled": true
+}
+
+### Feature flags - disable import selective replay proposal
+PUT {{baseUrl}}/api/v1/feature-flags/workflow.import.selective-replay-proposal.enabled
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "enabled": false
+}
+
+### Feature flags - enable import selective replay proposal
+PUT {{baseUrl}}/api/v1/feature-flags/workflow.import.selective-replay-proposal.enabled
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "enabled": true
+}
 
 ### Create import job (multipart)
 # Quote CSV fields that contain commas, double quotes, or embedded newlines.
@@ -423,6 +463,8 @@ Authorization: Bearer {{token}}
 ### Generate import AI error summary
 # Read-only and suggestion-only. The server uses import detail, errorCodeCounts, and
 # the first 20 failed rows after local sanitization; it does not send raw CSV payload values to the model.
+# Requires merchantops.ai.enabled=true, feature flag ai.import.error-summary.enabled=true,
+# and a configured instance-level provider.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-error-summary
 Authorization: Bearer {{token}}
 
@@ -456,6 +498,8 @@ Authorization: Bearer {{token}}
 # Read-only and suggestion-only. The server uses import detail, errorCodeCounts, sanitized
 # header/global parse signal, and bounded structural failure context; it does not rescan the
 # source file or send raw row values to the model.
+# Requires merchantops.ai.enabled=true, feature flag ai.import.mapping-suggestion.enabled=true,
+# and a configured instance-level provider.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-mapping-suggestion
 Authorization: Bearer {{token}}
 
@@ -463,6 +507,8 @@ Authorization: Bearer {{token}}
 # Read-only and suggestion-only. The server uses import detail, errorCodeCounts, grounded
 # row-level error groups, and bounded structural failure context; it does not rescan the
 # source file, send raw row values to the model, or return direct replacement values.
+# Requires merchantops.ai.enabled=true, feature flag ai.import.fix-recommendation.enabled=true,
+# and a configured instance-level provider.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/ai-fix-recommendation
 Authorization: Bearer {{token}}
 
@@ -470,6 +516,7 @@ Authorization: Bearer {{token}}
 # Optional sourceInteractionId should come from a SUCCEEDED FIX_RECOMMENDATION row in
 # GET /api/v1/import-jobs/{id}/ai-interactions. The proposal creates a pending approval
 # request only; it does not create a replay job until a different reviewer approves it.
+# Requires workflow.import.selective-replay-proposal.enabled=true.
 # Duplicate pending creates for the same source job plus canonical error-code set
 # now return 400 until the current pending request is approved or rejected.
 POST {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/replay-failures/selective/proposals

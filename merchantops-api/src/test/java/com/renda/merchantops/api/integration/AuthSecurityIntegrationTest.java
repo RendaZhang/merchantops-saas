@@ -185,6 +185,18 @@ class AuthSecurityIntegrationTest {
                 )
                 """);
         jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
+        jdbcTemplate.execute("""
+                CREATE TABLE feature_flag (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    flag_key VARCHAR(128) NOT NULL,
+                    enabled BOOLEAN NOT NULL,
+                    updated_by BIGINT,
+                    created_at TIMESTAMP NOT NULL,
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_feature_flag_tenant_key UNIQUE (tenant_id, flag_key)
+                )
+                """);
 
 
         seedTenants();
@@ -193,6 +205,7 @@ class AuthSecurityIntegrationTest {
         seedUsers();
         seedUserRoles();
         seedRolePermissions();
+        seedFeatureFlags();
     }
 
     @Test
@@ -757,7 +770,7 @@ class AuthSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
 
-        mockMvc.perform(get("/api/v1/rbac/feature-flags")
+        mockMvc.perform(get("/api/v1/feature-flags")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(refreshedViewerToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
@@ -882,6 +895,17 @@ class AuthSecurityIntegrationTest {
                 """, 1006L, 105L, 11L);
     }
 
+    private void seedFeatureFlags() {
+        insertFeatureFlag(1L, "ai.ticket.summary.enabled", true);
+        insertFeatureFlag(2L, "ai.ticket.triage.enabled", true);
+        insertFeatureFlag(3L, "ai.ticket.reply-draft.enabled", true);
+        insertFeatureFlag(4L, "ai.import.error-summary.enabled", true);
+        insertFeatureFlag(5L, "ai.import.mapping-suggestion.enabled", true);
+        insertFeatureFlag(6L, "ai.import.fix-recommendation.enabled", true);
+        insertFeatureFlag(7L, "workflow.import.selective-replay-proposal.enabled", true);
+        insertFeatureFlag(8L, "workflow.ticket.comment-proposal.enabled", true);
+    }
+
     private void seedTenants() {
         jdbcTemplate.update("""
                 INSERT INTO tenant (id, tenant_code, tenant_name, status, created_at, updated_at)
@@ -953,6 +977,21 @@ class AuthSecurityIntegrationTest {
                 INSERT INTO permission (id, permission_code, permission_name, created_at, updated_at)
                 VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """, id, permissionCode, permissionName);
+    }
+
+    private void insertFeatureFlag(Long id, String key, boolean enabled) {
+        insertFeatureFlag(1L, id, key, enabled);
+    }
+
+    private void insertFeatureFlag(Long tenantId, Long id, String key, boolean enabled) {
+        jdbcTemplate.update(
+                "INSERT INTO feature_flag (id, tenant_id, flag_key, enabled, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id,
+                tenantId,
+                key,
+                enabled,
+                tenantId == 1L ? 101L : 201L
+        );
     }
 
     private void insertRole(Long id, Long tenantId, String roleCode, String roleName) {

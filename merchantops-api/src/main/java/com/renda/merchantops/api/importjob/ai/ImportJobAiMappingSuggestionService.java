@@ -12,7 +12,9 @@ import com.renda.merchantops.api.ai.importjob.mappingsuggestion.ImportJobMapping
 import com.renda.merchantops.api.ai.importjob.mappingsuggestion.ImportJobMappingSuggestionProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiMappingSuggestionResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
 import com.renda.merchantops.api.importjob.ImportCsvSupport;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorCount;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
@@ -42,6 +44,7 @@ public class ImportJobAiMappingSuggestionService {
     private final ImportJobMappingSuggestionPromptBuilder importJobMappingSuggestionPromptBuilder;
     private final ImportJobMappingSuggestionAiProvider importJobMappingSuggestionAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public ImportJobAiMappingSuggestionResponse generateMappingSuggestion(Long tenantId, Long userId, String requestId, Long importJobId) {
@@ -74,6 +77,7 @@ public class ImportJobAiMappingSuggestionService {
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_IMPORT_MAPPING_SUGGESTION),
                 "import ai mapping suggestion is disabled",
                 "import ai mapping suggestion is unavailable"
         );

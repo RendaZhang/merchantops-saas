@@ -88,6 +88,7 @@ final class TicketSummaryEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketSummaryPromptBuilder(),
                 new OpenAiTicketSummaryProvider(objectMapper, structuredOutputAiClient),
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -140,6 +141,7 @@ final class TicketSummaryEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketSummaryPromptBuilder(),
                 ticketSummaryAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -174,6 +176,7 @@ final class TicketSummaryEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketSummaryPromptBuilder(),
                 ticketSummaryAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 

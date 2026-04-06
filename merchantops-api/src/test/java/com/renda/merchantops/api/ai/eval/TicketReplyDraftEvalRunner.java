@@ -88,6 +88,7 @@ final class TicketReplyDraftEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketReplyDraftPromptBuilder(),
                 new OpenAiTicketReplyDraftProvider(objectMapper, structuredOutputAiClient),
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -148,6 +149,7 @@ final class TicketReplyDraftEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketReplyDraftPromptBuilder(),
                 ticketReplyDraftAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 
@@ -190,6 +192,7 @@ final class TicketReplyDraftEvalRunner extends AbstractAiWorkflowEvalRunner {
                 new TicketReplyDraftPromptBuilder(),
                 ticketReplyDraftAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties(inventoryEntry.workflow())
         );
 

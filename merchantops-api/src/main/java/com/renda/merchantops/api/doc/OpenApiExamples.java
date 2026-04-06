@@ -17,6 +17,7 @@ public final class OpenApiExamples {
     public static final String REQ_TICKET_ASSIGN = "{\"assigneeId\":2}";
     public static final String REQ_TICKET_STATUS_UPDATE = "{\"status\":\"IN_PROGRESS\"}";
     public static final String REQ_TICKET_COMMENT_CREATE = "{\"content\":\"Checked the store network. Restarting the printer now.\"}";
+    public static final String REQ_FEATURE_FLAG_UPDATE = "{\"enabled\":false}";
 
     public static final String RESP_SUCCESS_LOGIN = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"accessToken\":\"<jwt-token>\",\"tokenType\":\"Bearer\",\"expiresIn\":7200}}";
     public static final String RESP_BAD_REQUEST_CREDENTIAL = "{\"code\":\"BAD_REQUEST\",\"message\":\"username or password is incorrect\",\"data\":null}";
@@ -83,6 +84,8 @@ public final class OpenApiExamples {
     public static final String RESP_TICKET_ASSIGNED = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":8,\"tenantId\":1,\"title\":\"POS printer offline\",\"description\":\"Store POS printer stopped responding during lunch peak.\",\"status\":\"OPEN\",\"assigneeId\":2,\"assigneeUsername\":\"ops\",\"createdAt\":\"2026-03-11T11:00:00\",\"updatedAt\":\"2026-03-11T11:05:00\"}}";
     public static final String RESP_TICKET_STATUS_UPDATED = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":8,\"tenantId\":1,\"title\":\"POS printer offline\",\"description\":\"Store POS printer stopped responding during lunch peak.\",\"status\":\"IN_PROGRESS\",\"assigneeId\":2,\"assigneeUsername\":\"ops\",\"createdAt\":\"2026-03-11T11:00:00\",\"updatedAt\":\"2026-03-11T11:10:00\"}}";
     public static final String RESP_TICKET_COMMENT_CREATED = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":51,\"ticketId\":8,\"content\":\"Checked the store network. Restarting the printer now.\",\"createdBy\":2,\"createdByUsername\":\"ops\",\"createdAt\":\"2026-03-11T11:15:00\"}}";
+    public static final String RESP_FEATURE_FLAG_ITEM = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"id\":1,\"key\":\"ai.ticket.summary.enabled\",\"enabled\":false,\"updatedAt\":\"2026-04-06T13:30:00\"}}";
+    public static final String RESP_FEATURE_FLAG_LIST = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"items\":[{\"id\":4,\"key\":\"ai.import.error-summary.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"},{\"id\":6,\"key\":\"ai.import.fix-recommendation.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"},{\"id\":5,\"key\":\"ai.import.mapping-suggestion.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"},{\"id\":3,\"key\":\"ai.ticket.reply-draft.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"},{\"id\":1,\"key\":\"ai.ticket.summary.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"},{\"id\":2,\"key\":\"ai.ticket.triage.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"},{\"id\":7,\"key\":\"workflow.import.selective-replay-proposal.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"},{\"id\":8,\"key\":\"workflow.ticket.comment-proposal.enabled\",\"enabled\":true,\"updatedAt\":\"2026-04-06T13:18:00\"}]}}";
 
     public static final String RESP_DEV_PING = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"status\":\"UP\",\"module\":\"merchantops-api\"}}";
     public static final String RESP_DEV_ECHO = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"message\":\"hello merchantops\"}}";
@@ -90,5 +93,4 @@ public final class OpenApiExamples {
 
     public static final String RESP_RBAC_READ_USERS = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"action\":\"read users\",\"result\":\"allowed\"}}";
     public static final String RESP_RBAC_MANAGE_USERS = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"action\":\"manage users\",\"result\":\"allowed\"}}";
-    public static final String RESP_RBAC_FEATURE_FLAGS = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"action\":\"manage feature flags\",\"result\":\"allowed\"}}";
 }

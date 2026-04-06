@@ -23,6 +23,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Java Code Style](contributing/java-code-style.md): package boundaries, comment strategy, and Java review baseline
 - [Java Architecture Map](architecture/java-architecture-map.md): module ownership, capability package map, and Java type placement guide
 - [Authentication and RBAC](reference/authentication-and-rbac.md): login flow, JWT usage, context propagation, and RBAC expectations
+- [Feature Flags Reference](reference/feature-flags.md): current tenant-scoped rollout-control API and the fixed eight-flag inventory
 - [User Management Reference](reference/user-management.md): current `/api/v1/users` contract and validation path
 - [Ticket Workflow Reference](reference/ticket-workflow.md): current `/api/v1/tickets` contract, state rules, and workflow-log behavior
 - [Import Jobs Reference](reference/import-jobs.md): current `/api/v1/import-jobs` contract, `USER_CSV` row execution, and status/error model

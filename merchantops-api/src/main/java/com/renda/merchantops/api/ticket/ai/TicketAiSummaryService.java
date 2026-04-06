@@ -11,6 +11,8 @@ import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryProviderRequest;
 import com.renda.merchantops.api.ai.ticket.summary.TicketSummaryProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiSummaryResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.ticket.TicketPromptContext;
 import com.renda.merchantops.domain.ticket.TicketQueryUseCase;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class TicketAiSummaryService {
     private final TicketSummaryPromptBuilder ticketSummaryPromptBuilder;
     private final TicketSummaryAiProvider ticketSummaryAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public TicketAiSummaryResponse generateSummary(Long tenantId, Long userId, String requestId, Long ticketId) {
@@ -48,6 +51,7 @@ public class TicketAiSummaryService {
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_TICKET_SUMMARY),
                 "ticket ai summary is disabled",
                 "ticket ai summary is unavailable"
         );
