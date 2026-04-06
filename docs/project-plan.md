@@ -144,8 +144,11 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 - 当前执行已经完成 Week 8 Agentic Workflows with Human Oversight。
 - Week 1-8 当前已形成稳定 workflow + dual-workflow AI read baseline + human-reviewed execution bridge baseline，其中 Week 8 已完成 import selective replay proposal -> approval -> execution、ticket reply-draft comment proposal -> approval -> execution，以及共享 approval hardening。
-- 当前 tagged baseline 已切到 `v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`。
-- 当前近期待办已经切到 Week 9 AI governance, eval, cost, and usage。
+- 当前 tagged baseline 已切到 `v0.6.0-beta`，对应 `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`。
+- 当前执行已经把 Week 9 Slice A / B / C 收口成完成态的 governance / eval / cost / usage baseline。
+- 当前近期待办已经从“完成 Week 9 tag 收口”切到“在 Week 10 中推进 delivery hardening、portfolio packaging 与更稳定的开源交付面”。
+- 上一枚 beta tag 是 `v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`。
+- Week 10 Delivery Hardening and Portfolio Packaging 现在是 next active phase。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -574,9 +577,10 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 推荐发布时间点
 
-- 当前 tagged baseline：`v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
+- 当前 tagged baseline：`v0.6.0-beta`，对应 `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`
+- 上一枚 beta tag：`v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
 - 详细版本历史以 `CHANGELOG.md` 和 `docs/contributing/release-versioning.md` 为准
-- Week 9 后：继续把公开叙事从当前 human-reviewed workflow baseline 推进到更可信的 governance / eval / cost / usage baseline，并再判断下一条 `v0.x` 版本线
+- Week 9 已完成：公开叙事已经从 human-reviewed workflow baseline 明确推进到更可信的 governance / eval / cost / usage beta baseline
 - Week 10 后：更稳定的开源参考实现，可作为商业探索起点
 
 ### 开源前最低准备项

@@ -6,6 +6,8 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+## [v0.6.0-beta] - 2026-04-06
+
 ### Added
 
 - Added the first Week 9 governance slice as an executable six-workflow AI prompt inventory plus shared eval-comparator baseline, centered on `AiGenerationWorkflow`, `AiWorkflowEvalInventory`, and a default-suite comparator pass that checks golden, failure, and policy datasets across the current ticket and import generation workflows.
