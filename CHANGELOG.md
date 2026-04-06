@@ -10,12 +10,13 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 - Added the first Week 9 governance slice as an executable six-workflow AI prompt inventory plus shared eval-comparator baseline, centered on `AiGenerationWorkflow`, `AiWorkflowEvalInventory`, and a default-suite comparator pass that checks golden, failure, and policy datasets across the current ticket and import generation workflows.
 - Added the second Week 9 governance slice through `GET /api/v1/ai-interactions/usage-summary`, a tenant-scoped aggregate read endpoint over stored `ai_interaction_record` metadata with optional inclusive `from` / `to` plus exact-match `entityType` / `interactionType` / `status` filters.
+- Added the third Week 9 governance slice by widening `GET /api/v1/ai-interactions/usage-summary` with aggregate `byPromptVersion` buckets, exposing prompt-version-level counts, success or failure totals, and token or cost totals without widening the endpoint into per-request cross-entity detail.
 
 ### Changed
 
 - Golden-sample AI regression coverage now reuses shared evaluator infrastructure instead of six separate assertion paths, and the checked-in AI datasets now include explicit failure and policy baselines alongside the existing golden samples.
-- The Week 9 governance baseline now combines the executable prompt inventory plus comparator pass with one narrow tenant usage-summary read surface that exposes aggregate interaction counts, token totals, and cost totals without exposing raw prompt text, raw provider payload, or billing / ledger semantics.
-- AI governance docs, AI regression guidance, automated test notes, API examples, and phase status/roadmap pages now reflect the Week 9 Slice A plus Slice B baseline without widening the existing ticket or import generation endpoints.
+- The Week 9 governance baseline now combines the executable prompt inventory plus comparator pass with one narrow tenant usage-summary read surface that exposes aggregate interaction counts, token totals, cost totals, and prompt-version breakdowns without exposing raw prompt text, raw provider payload, request-level cross-entity detail, or billing / ledger semantics.
+- AI governance docs, AI regression guidance, automated test notes, API examples, and phase status/roadmap pages now reflect the Week 9 Slice A plus Slice B plus Slice C baseline without widening the existing ticket or import generation endpoints.
 
 ## [v0.5.0-beta] - 2026-04-04
 

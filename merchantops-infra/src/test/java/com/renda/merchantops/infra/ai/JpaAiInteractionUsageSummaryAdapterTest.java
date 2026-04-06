@@ -31,6 +31,9 @@ class JpaAiInteractionUsageSummaryAdapterTest {
     @Mock
     private AiInteractionRecordRepository.AiInteractionUsageByStatusView byStatusView;
 
+    @Mock
+    private AiInteractionRecordRepository.AiInteractionUsageByPromptVersionView byPromptVersionView;
+
     @Test
     void summarizeShouldMapTotalsAndStableBreakdowns() {
         JpaAiInteractionUsageSummaryAdapter adapter = new JpaAiInteractionUsageSummaryAdapter(aiInteractionRecordRepository);
@@ -58,6 +61,12 @@ class JpaAiInteractionUsageSummaryAdapterTest {
         when(byStatusView.getInteractionCount()).thenReturn(2L);
         when(byStatusView.getTotalTokens()).thenReturn(300L);
         when(byStatusView.getTotalCostMicros()).thenReturn(3900L);
+        when(byPromptVersionView.getPromptVersion()).thenReturn("ticket-summary-v1");
+        when(byPromptVersionView.getInteractionCount()).thenReturn(3L);
+        when(byPromptVersionView.getSucceededCount()).thenReturn(2L);
+        when(byPromptVersionView.getFailedCount()).thenReturn(1L);
+        when(byPromptVersionView.getTotalTokens()).thenReturn(360L);
+        when(byPromptVersionView.getTotalCostMicros()).thenReturn(4000L);
         when(aiInteractionRecordRepository.summarizeUsageByTenant(
                 eq(1L), eq(criteria.from()), eq(criteria.to()), eq("TICKET"), eq("SUMMARY"), eq("SUCCEEDED")
         )).thenReturn(totalsView);
@@ -67,6 +76,9 @@ class JpaAiInteractionUsageSummaryAdapterTest {
         when(aiInteractionRecordRepository.summarizeUsageByStatus(
                 eq(1L), eq(criteria.from()), eq(criteria.to()), eq("TICKET"), eq("SUMMARY"), eq("SUCCEEDED")
         )).thenReturn(List.of(byStatusView));
+        when(aiInteractionRecordRepository.summarizeUsageByPromptVersion(
+                eq(1L), eq(criteria.from()), eq(criteria.to()), eq("TICKET"), eq("SUMMARY"), eq("SUCCEEDED")
+        )).thenReturn(List.of(byPromptVersionView));
 
         var result = adapter.summarize(1L, criteria);
 
@@ -87,6 +99,14 @@ class JpaAiInteractionUsageSummaryAdapterTest {
             assertThat(item.count()).isEqualTo(2L);
             assertThat(item.totalTokens()).isEqualTo(300L);
             assertThat(item.totalCostMicros()).isEqualTo(3900L);
+        });
+        assertThat(result.byPromptVersion()).singleElement().satisfies(item -> {
+            assertThat(item.promptVersion()).isEqualTo("ticket-summary-v1");
+            assertThat(item.count()).isEqualTo(3L);
+            assertThat(item.succeededCount()).isEqualTo(2L);
+            assertThat(item.failedCount()).isEqualTo(1L);
+            assertThat(item.totalTokens()).isEqualTo(360L);
+            assertThat(item.totalCostMicros()).isEqualTo(4000L);
         });
 
         ArgumentCaptor<LocalDateTime> fromCaptor = ArgumentCaptor.forClass(LocalDateTime.class);

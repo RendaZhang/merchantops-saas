@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-05
+Last updated: 2026-04-06
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -27,14 +27,15 @@ The current Week 9 implementation should build governance and observability on t
 - treat the completed Week 8 workflow baseline as fixed input: `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, action-aware approval routing, and shared pending-request-key hardening now form the human-reviewed execution bridge pattern
 - Week 9 Slice A is now complete on that baseline: executable prompt-version inventory, per-workflow golden plus failure plus policy datasets, and one shared comparator pass now run in the default Maven suite without widening the public AI surface
 - Week 9 Slice B is now complete on that baseline: `GET /api/v1/ai-interactions/usage-summary` adds one tenant-scoped governance read over stored `ai_interaction_record` rows with inclusive `from` / `to`, narrow exact-match filters, aggregate totals, and stable breakdown ordering while staying read-only and outside billing or ledger semantics
+- Week 9 Slice C is now complete on that same surface: the tenant usage-summary response now also exposes stable `byPromptVersion` aggregate visibility without adding a new endpoint, filter, billing surface, or per-request cross-entity detail list
 - continue governance and visibility on top of that baseline through narrow runtime reporting and rollout-safe verification rather than another immediate workflow mutation slice
 - keep approval payloads narrow and non-sensitive while governance work lands; avoid broader write-back, billing, ledger semantics, and generic chat tooling in the public workflow surface itself
 
 ## Recommended Next Steps
 
 - treat the completed Week 8 import selective replay proposal flow plus the completed Week 8 ticket reply-draft comment proposal flow, together with the shared pending-proposal uniqueness hardening, as the fixed proposal -> approval -> execution baseline for later work
-- treat the completed Week 9 Slice A prompt-inventory plus comparator baseline and the completed Week 9 Slice B tenant usage-summary read as the fixed governance input for the rest of Week 9
-- next, widen reporting only around current runtime metadata if needed, still reusing stored `ai_interaction_record` rows and still avoiding billing / ledger semantics or per-request cross-entity listing
+- treat the completed Week 9 Slice A prompt-inventory plus comparator baseline and the completed Week 9 Slice B plus Slice C tenant usage-summary read as the fixed governance input for the rest of Week 9
+- next, decide whether Week 9 still needs one more narrow aggregate reporting slice over current runtime metadata or whether the project should pivot into Week 10 delivery hardening from the now-credible governance baseline
 - keep the completed Week 6 ticket AI surface and the completed Week 7 import AI read surface stable while Week 9 adds governance and observability instead of widening the AI endpoints themselves
 - only consider another bonus workflow slice after the Week 9 governance/eval/cost baseline is credible enough to support a broader beta story
 

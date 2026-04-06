@@ -112,6 +112,16 @@ class AiInteractionUsageSummaryIntegrationTest {
                 .andExpect(jsonPath("$.data.byStatus[0].totalCostMicros").value(6200))
                 .andExpect(jsonPath("$.data.byStatus[1].status").value("INVALID_RESPONSE"))
                 .andExpect(jsonPath("$.data.byStatus[2].status").value("PROVIDER_TIMEOUT"))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].promptVersion").value("import-error-summary-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].count").value(2))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].succeededCount").value(1))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].failedCount").value(1))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].totalTokens").value(232))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].totalCostMicros").value(0))
+                .andExpect(jsonPath("$.data.byPromptVersion[1].promptVersion").value("import-mapping-suggestion-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[2].promptVersion").value("ticket-reply-draft-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[3].promptVersion").value("ticket-summary-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[4].promptVersion").value("ticket-triage-v1"))
                 .andExpect(jsonPath("$.data.requestId").doesNotExist())
                 .andExpect(jsonPath("$.data.outputSummary").doesNotExist())
                 .andExpect(jsonPath("$.data.promptVersion").doesNotExist())
@@ -119,7 +129,10 @@ class AiInteractionUsageSummaryIntegrationTest {
                 .andExpect(jsonPath("$.data.rawPrompt").doesNotExist())
                 .andExpect(jsonPath("$.data.providerPayload").doesNotExist())
                 .andExpect(jsonPath("$.data.byInteractionType[0].requestId").doesNotExist())
-                .andExpect(jsonPath("$.data.byStatus[0].promptVersion").doesNotExist());
+                .andExpect(jsonPath("$.data.byStatus[0].promptVersion").doesNotExist())
+                .andExpect(jsonPath("$.data.byPromptVersion[0].requestId").doesNotExist())
+                .andExpect(jsonPath("$.data.byPromptVersion[0].outputSummary").doesNotExist())
+                .andExpect(jsonPath("$.data.byPromptVersion[0].modelId").doesNotExist());
 
         assertReadOnlyAndNoMutation(7);
     }
@@ -157,7 +170,12 @@ class AiInteractionUsageSummaryIntegrationTest {
                 .andExpect(jsonPath("$.data.totalTokens").value(632))
                 .andExpect(jsonPath("$.data.totalCostMicros").value(4000))
                 .andExpect(jsonPath("$.data.byInteractionType[0].interactionType").value("ERROR_SUMMARY"))
-                .andExpect(jsonPath("$.data.byInteractionType[0].count").value(2));
+                .andExpect(jsonPath("$.data.byInteractionType[0].count").value(2))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].promptVersion").value("import-error-summary-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].count").value(2))
+                .andExpect(jsonPath("$.data.byPromptVersion[1].promptVersion").value("ticket-reply-draft-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[2].promptVersion").value("ticket-summary-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[3].promptVersion").value("ticket-triage-v1"));
 
         assertReadOnlyAndNoMutation(7);
     }
@@ -176,7 +194,9 @@ class AiInteractionUsageSummaryIntegrationTest {
                 .andExpect(jsonPath("$.data.totalTokens").value(393))
                 .andExpect(jsonPath("$.data.totalCostMicros").value(2200))
                 .andExpect(jsonPath("$.data.byInteractionType[0].interactionType").value("ERROR_SUMMARY"))
-                .andExpect(jsonPath("$.data.byInteractionType[1].interactionType").value("MAPPING_SUGGESTION"));
+                .andExpect(jsonPath("$.data.byInteractionType[1].interactionType").value("MAPPING_SUGGESTION"))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].promptVersion").value("import-error-summary-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[1].promptVersion").value("import-mapping-suggestion-v1"));
 
         assertReadOnlyAndNoMutation(7);
     }
@@ -198,7 +218,13 @@ class AiInteractionUsageSummaryIntegrationTest {
                 .andExpect(jsonPath("$.data.totalTokens").value(212))
                 .andExpect(jsonPath("$.data.totalCostMicros").value(0))
                 .andExpect(jsonPath("$.data.byInteractionType[0].interactionType").value("ERROR_SUMMARY"))
-                .andExpect(jsonPath("$.data.byStatus[0].status").value("SUCCEEDED"));
+                .andExpect(jsonPath("$.data.byStatus[0].status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].promptVersion").value("import-error-summary-v1"))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].count").value(1))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].succeededCount").value(1))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].failedCount").value(0))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].totalTokens").value(212))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].totalCostMicros").value(0));
 
         assertReadOnlyAndNoMutation(7);
     }

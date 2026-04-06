@@ -28,7 +28,9 @@ public record AiInteractionUsageSummaryResponse(
         @Schema(description = "Breakdown by interaction type")
         List<ByInteractionType> byInteractionType,
         @Schema(description = "Breakdown by interaction status")
-        List<ByStatus> byStatus
+        List<ByStatus> byStatus,
+        @Schema(description = "Breakdown by prompt version")
+        List<ByPromptVersion> byPromptVersion
 ) {
 
     @Schema(description = "Usage breakdown by interaction type")
@@ -57,6 +59,23 @@ public record AiInteractionUsageSummaryResponse(
             @Schema(description = "Summed total tokens across matched rows", example = "763")
             Long totalTokens,
             @Schema(description = "Summed runtime cost in raw micros across matched rows", example = "8200")
+            Long totalCostMicros
+    ) {
+    }
+
+    @Schema(description = "Usage breakdown by prompt version")
+    public record ByPromptVersion(
+            @Schema(description = "Stored prompt version", example = "ticket-summary-v1")
+            String promptVersion,
+            @Schema(description = "Matched row count", example = "2")
+            Long count,
+            @Schema(description = "Matched row count with status SUCCEEDED", example = "2")
+            Long succeededCount,
+            @Schema(description = "Matched row count with non-SUCCEEDED statuses", example = "0")
+            Long failedCount,
+            @Schema(description = "Summed total tokens across matched rows", example = "303")
+            Long totalTokens,
+            @Schema(description = "Summed runtime cost in raw micros across matched rows", example = "3100")
             Long totalCostMicros
     ) {
     }

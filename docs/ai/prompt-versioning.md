@@ -1,6 +1,6 @@
 # Prompt Versioning
 
-Last updated: 2026-04-05
+Last updated: 2026-04-06
 
 ## Goal
 
@@ -14,7 +14,7 @@ As of today:
 
 - eight public AI endpoints exist: two history read endpoints plus six generation endpoints across ticket and import workflows
 - the current generation prompt versions are `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, `import-mapping-suggestion-v1`, and `import-fix-recommendation-v1`
-- public generation responses return `promptVersion`, and the history endpoints reuse the stored prompt version from previous AI invocations
+- public generation responses return `promptVersion`, the history endpoints reuse the stored prompt version from previous AI invocations, and the tenant usage-summary endpoint now exposes aggregate `byPromptVersion` visibility without returning per-request cross-entity detail
 - `ai_interaction_record` persists the prompt version for each AI invocation
 - the active six-workflow prompt inventory is now executable in main code through `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java`
 - the test-side governance baseline lives alongside that runtime inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`, but it is maintained independently so prompt-version bumps fail the eval baseline until the governance inventory is intentionally updated

@@ -58,7 +58,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | Yes + `TICKET_READ` | Generate a suggestion-only AI summary for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | Yes + `TICKET_READ` | Generate a suggestion-only AI triage result for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Yes + `TICKET_READ` | Generate a suggestion-only AI internal reply draft for one current-tenant ticket |
-| `GET` | `/api/v1/ai-interactions/usage-summary` | Yes + `USER_READ` | Return tenant-scoped aggregate AI usage and cost summary from stored interaction metadata |
+| `GET` | `/api/v1/ai-interactions/usage-summary` | Yes + `USER_READ` | Return tenant-scoped aggregate AI usage, cost, and prompt-version summary from stored interaction metadata |
 | `POST` | `/api/v1/tickets` | Yes + `TICKET_WRITE` | Create a new `OPEN` ticket |
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Yes + `TICKET_WRITE` | Assign the ticket to an active user in current tenant |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Yes + `TICKET_WRITE` | Transition the ticket status |
@@ -118,6 +118,17 @@ Ticket Workflow tag note:
 - `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`, including reopen (`CLOSED -> OPEN`).
 - `POST /api/v1/tickets/{id}/comments` exposes comment content only; operator and request tracing are derived server-side.
 - See [ticket-workflow.md](ticket-workflow.md) for the current public contract and workflow notes.
+
+AI Governance tag note:
+
+- Swagger currently exposes `GET /api/v1/ai-interactions/usage-summary`.
+- the endpoint requires `USER_READ`.
+- query params are `from`, `to`, `entityType`, `interactionType`, and `status`.
+- the current read shape returns aggregate totals plus `byInteractionType`, `byStatus`, and `byPromptVersion`.
+- `byPromptVersion` ordering is `count DESC, promptVersion ASC`.
+- raw prompt text, raw provider payload, and request-level fields such as `requestId`, `outputSummary`, and `modelId` remain excluded; `promptVersion` is exposed only as aggregate breakdown data.
+- the endpoint remains outside billing or ledger semantics.
+- See [ai-integration.md](ai-integration.md) for the current AI governance contract.
 
 Audit Events tag note:
 

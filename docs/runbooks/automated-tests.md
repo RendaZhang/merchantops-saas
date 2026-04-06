@@ -1,12 +1,12 @@
 # Automated Tests
 
-Last updated: 2026-04-05
+Last updated: 2026-04-06
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-05:
+Latest local default regression result on 2026-04-06:
 
 - `BUILD SUCCESS`
 - `Tests run: 376, Failures: 0, Errors: 0, Skipped: 1`
@@ -152,8 +152,8 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `403` when `USER_READ` is missing
   - tenant isolation over aggregate totals and breakdowns
   - inclusive `from` and `to` filtering plus exact-match trimmed `entityType`, `interactionType`, and `status` filters
-  - aggregate totals math, stable `byInteractionType` and `byStatus` ordering, and zero-filled sums for null token or cost rows
-  - non-leakage of raw prompt or raw provider payload plus request-level fields such as `requestId`, `outputSummary`, `promptVersion`, and `modelId`
+  - aggregate totals math, stable `byInteractionType`, `byStatus`, and `byPromptVersion` ordering, and zero-filled sums for null token or cost rows
+  - non-leakage of raw prompt or raw provider payload plus request-level fields such as `requestId`, `outputSummary`, and `modelId`, while still allowing aggregate `byPromptVersion[*].promptVersion`
   - read-only assertions for `ai_interaction_record` row counts, business audit rows, ticket state, import state, and approval state
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
@@ -200,7 +200,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - request-scoped tenant resolution plus forwarding of `from`, `to`, `entityType`, `interactionType`, and `status`
 - `AiInteractionUsageSummaryQueryServiceTest`
   - mapping from HTTP query DTO to domain usage-summary criteria with exact-value forwarding
-  - response mapping for totals plus `byInteractionType` and `byStatus`
+  - response mapping for totals plus `byInteractionType`, `byStatus`, and `byPromptVersion`
 - `TicketAiSummaryControllerTest`
   - HTTP request binding for `POST /api/v1/tickets/{id}/ai-summary`
   - `401` when authentication is missing and `403` when `TICKET_READ` is missing

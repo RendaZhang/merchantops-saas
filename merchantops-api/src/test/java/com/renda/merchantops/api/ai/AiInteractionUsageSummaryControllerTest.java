@@ -106,7 +106,8 @@ class AiInteractionUsageSummaryControllerTest {
                 763L,
                 8200L,
                 List.of(new AiInteractionUsageSummaryResponse.ByInteractionType("SUMMARY", 2L, 2L, 0L, 303L, 3100L)),
-                List.of(new AiInteractionUsageSummaryResponse.ByStatus("SUCCEEDED", 4L, 743L, 8200L))
+                List.of(new AiInteractionUsageSummaryResponse.ByStatus("SUCCEEDED", 4L, 743L, 8200L)),
+                List.of(new AiInteractionUsageSummaryResponse.ByPromptVersion("ticket-summary-v1", 2L, 2L, 0L, 303L, 3100L))
         );
         when(aiInteractionUsageSummaryQueryService.getUsageSummary(
                 eq(9L),
@@ -134,7 +135,8 @@ class AiInteractionUsageSummaryControllerTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.totalInteractions").value(6))
                 .andExpect(jsonPath("$.data.byInteractionType[0].interactionType").value("SUMMARY"))
-                .andExpect(jsonPath("$.data.byStatus[0].status").value("SUCCEEDED"));
+                .andExpect(jsonPath("$.data.byStatus[0].status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.data.byPromptVersion[0].promptVersion").value("ticket-summary-v1"));
 
         ArgumentCaptor<AiInteractionUsageSummaryQuery> queryCaptor =
                 ArgumentCaptor.forClass(AiInteractionUsageSummaryQuery.class);

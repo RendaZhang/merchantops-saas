@@ -1,6 +1,6 @@
 # AI Regression Checklist
 
-Last updated: 2026-04-05
+Last updated: 2026-04-06
 
 > Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
@@ -35,7 +35,7 @@ The AI checklist is now active because public AI endpoints exist:
   - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`
 - those workflow endpoints may reference successful AI interactions as provenance, but the public AI endpoints themselves remain suggestion-only
 - interaction-history reads expose stored `outputSummary`, `promptVersion`, `modelId`, `latencyMs`, `requestId`, `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, `usageCostMicros`, and `createdAt`, but do not expose raw prompt or raw provider payload and do not establish billing semantics
-- tenant usage-summary reads expose aggregate counts, token totals, cost totals, and `byInteractionType` / `byStatus` breakdowns only; they do not expose raw prompt text, raw provider payload, or request-level cross-entity detail fields such as `requestId`, `outputSummary`, `promptVersion`, or `modelId`
+- tenant usage-summary reads expose aggregate counts, token totals, cost totals, and `byInteractionType` / `byStatus` / `byPromptVersion` breakdowns only; they do not expose raw prompt text, raw provider payload, or request-level cross-entity detail fields such as `requestId`, `outputSummary`, or `modelId`
 
 ## Environment And Control
 
@@ -123,12 +123,13 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] `from` and `to` filtering is inclusive on stored `createdAt`
 - [ ] `entityType` filtering accepts trim-only exact-match `TICKET` and `IMPORT_JOB`
 - [ ] `interactionType` and `status` filtering is trim-only exact-match on stored canonical values
-- [ ] the response returns `from`, `to`, `totalInteractions`, `succeededCount`, `failedCount`, `totalPromptTokens`, `totalCompletionTokens`, `totalTokens`, `totalCostMicros`, `byInteractionType`, and `byStatus`
+- [ ] the response returns `from`, `to`, `totalInteractions`, `succeededCount`, `failedCount`, `totalPromptTokens`, `totalCompletionTokens`, `totalTokens`, `totalCostMicros`, `byInteractionType`, `byStatus`, and `byPromptVersion`
 - [ ] `failedCount` equals every non-`SUCCEEDED` row and `succeededCount` equals `status=SUCCEEDED`
 - [ ] `byInteractionType` ordering is `count DESC, interactionType ASC`
 - [ ] `byStatus` ordering is `count DESC, status ASC`
+- [ ] `byPromptVersion` ordering is `count DESC, promptVersion ASC`
 - [ ] null token or cost rows still count toward interaction totals while contributing zero to aggregate sums
-- [ ] usage-summary responses do not leak raw prompt text, raw provider payload, `requestId`, `outputSummary`, `promptVersion`, or `modelId`
+- [ ] usage-summary responses do not leak raw prompt text, raw provider payload, `requestId`, `outputSummary`, or `modelId`, while still allowing aggregate `byPromptVersion[*].promptVersion`
 - [ ] usage-summary reads do not create new `ai_interaction_record` rows or mutate ticket state, import state, approvals, or business `audit_event`
 
 ## Output Quality

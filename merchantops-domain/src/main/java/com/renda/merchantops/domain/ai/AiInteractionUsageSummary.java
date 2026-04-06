@@ -14,6 +14,7 @@ public record AiInteractionUsageSummary(
         Long totalTokens,
         Long totalCostMicros,
         List<AiInteractionUsageByInteractionType> byInteractionType,
-        List<AiInteractionUsageByStatus> byStatus
+        List<AiInteractionUsageByStatus> byStatus,
+        List<AiInteractionUsageByPromptVersion> byPromptVersion
 ) {
 }

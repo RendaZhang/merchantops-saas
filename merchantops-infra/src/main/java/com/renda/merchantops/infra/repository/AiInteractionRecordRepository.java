@@ -102,6 +102,30 @@ public interface AiInteractionRecordRepository extends JpaRepository<AiInteracti
                                                                 @Param("interactionType") String interactionType,
                                                                 @Param("status") String status);
 
+    @Query("""
+            select a.promptVersion as promptVersion,
+                   count(a) as interactionCount,
+                   coalesce(sum(case when a.status = 'SUCCEEDED' then 1 else 0 end), 0) as succeededCount,
+                   coalesce(sum(case when a.status <> 'SUCCEEDED' then 1 else 0 end), 0) as failedCount,
+                   coalesce(sum(a.usageTotalTokens), 0) as totalTokens,
+                   coalesce(sum(a.usageCostMicros), 0) as totalCostMicros
+            from AiInteractionRecordEntity a
+            where a.tenantId = :tenantId
+              and (:from is null or a.createdAt >= :from)
+              and (:to is null or a.createdAt <= :to)
+              and (:entityType is null or a.entityType = :entityType)
+              and (:interactionType is null or a.interactionType = :interactionType)
+              and (:status is null or a.status = :status)
+            group by a.promptVersion
+            order by count(a) desc, a.promptVersion asc
+            """)
+    List<AiInteractionUsageByPromptVersionView> summarizeUsageByPromptVersion(@Param("tenantId") Long tenantId,
+                                                                              @Param("from") LocalDateTime from,
+                                                                              @Param("to") LocalDateTime to,
+                                                                              @Param("entityType") String entityType,
+                                                                              @Param("interactionType") String interactionType,
+                                                                              @Param("status") String status);
+
     interface AiInteractionUsageSummaryTotalsView {
 
         Long getTotalInteractions();
@@ -139,6 +163,21 @@ public interface AiInteractionRecordRepository extends JpaRepository<AiInteracti
         String getStatus();
 
         Long getInteractionCount();
+
+        Long getTotalTokens();
+
+        Long getTotalCostMicros();
+    }
+
+    interface AiInteractionUsageByPromptVersionView {
+
+        String getPromptVersion();
+
+        Long getInteractionCount();
+
+        Long getSucceededCount();
+
+        Long getFailedCount();
 
         Long getTotalTokens();
 

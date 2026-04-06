@@ -1,6 +1,6 @@
 # AI Integration
 
-Last updated: 2026-04-05
+Last updated: 2026-04-06
 
 ## Purpose
 
@@ -38,7 +38,7 @@ Current public AI scope is intentionally narrow:
 - no new public AI generation endpoint was added in Week 8; instead, the current workflow now includes two normal workflow endpoints outside the AI endpoint set:
   - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, which can optionally reference a successful import `FIX_RECOMMENDATION` interaction as provenance
   - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, which accepts final `commentContent` plus optional same-ticket `REPLY_DRAFT` provenance
-- the usage-summary endpoint returns aggregate counts plus usage/cost totals and breakdowns only; it does not return a cross-entity per-request detail list
+- the usage-summary endpoint returns aggregate counts plus usage/cost totals and `byInteractionType`, `byStatus`, and `byPromptVersion` breakdowns only; it does not return a cross-entity per-request detail list
 - no ticket status change, comment write, approval trigger, replay trigger, or other workflow mutation from the nine public AI endpoints themselves
 - no public raw prompt or raw provider response in the response body, and no billing or ledger semantics on the history or tenant-summary responses
 
@@ -495,6 +495,7 @@ Example:
 - `totalCostMicros`
 - `byInteractionType[]`
 - `byStatus[]`
+- `byPromptVersion[]`
 
 Each `byInteractionType[]` record includes:
 
@@ -512,6 +513,15 @@ Each `byStatus[]` record includes:
 - `totalTokens`
 - `totalCostMicros`
 
+Each `byPromptVersion[]` record includes:
+
+- `promptVersion`
+- `count`
+- `succeededCount`
+- `failedCount`
+- `totalTokens`
+- `totalCostMicros`
+
 Current usage-summary query behavior stays narrow:
 
 - tenant scope is enforced directly on stored `ai_interaction_record` rows, so no cross-tenant aggregate leakage is allowed
@@ -521,8 +531,9 @@ Current usage-summary query behavior stays narrow:
 - `failedCount` is every non-`SUCCEEDED` row, while `succeededCount` is `status=SUCCEEDED`
 - `byInteractionType[]` ordering is `count DESC, interactionType ASC`
 - `byStatus[]` ordering is `count DESC, status ASC`
+- `byPromptVersion[]` ordering is `count DESC, promptVersion ASC`
 - null token and cost fields still count toward interaction totals but contribute zero to aggregate sums
-- request-level fields such as `requestId`, `outputSummary`, `promptVersion`, and `modelId` are intentionally excluded
+- request-level fields such as `requestId`, `outputSummary`, and `modelId` are intentionally excluded; `promptVersion` is exposed only through aggregate `byPromptVersion[]` buckets
 - raw prompt text, raw provider payload, cross-entity per-request detail listing, and billing or ledger semantics are still excluded
 
 Example:
@@ -537,25 +548,25 @@ Example:
     "totalInteractions": 6,
     "succeededCount": 4,
     "failedCount": 2,
-    "totalPromptTokens": 520,
-    "totalCompletionTokens": 243,
-    "totalTokens": 763,
-    "totalCostMicros": 8200,
+    "totalPromptTokens": 530,
+    "totalCompletionTokens": 263,
+    "totalTokens": 793,
+    "totalCostMicros": 6200,
     "byInteractionType": [
-      {
-        "interactionType": "SUMMARY",
-        "count": 2,
-        "succeededCount": 2,
-        "failedCount": 0,
-        "totalTokens": 303,
-        "totalCostMicros": 3100
-      },
       {
         "interactionType": "ERROR_SUMMARY",
         "count": 2,
         "succeededCount": 1,
         "failedCount": 1,
-        "totalTokens": 212,
+        "totalTokens": 232,
+        "totalCostMicros": 0
+      },
+      {
+        "interactionType": "MAPPING_SUGGESTION",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 161,
         "totalCostMicros": 2200
       },
       {
@@ -564,14 +575,22 @@ Example:
         "succeededCount": 1,
         "failedCount": 0,
         "totalTokens": 228,
-        "totalCostMicros": 2900
+        "totalCostMicros": 2100
+      },
+      {
+        "interactionType": "SUMMARY",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 172,
+        "totalCostMicros": 1900
       },
       {
         "interactionType": "TRIAGE",
         "count": 1,
         "succeededCount": 0,
         "failedCount": 1,
-        "totalTokens": 20,
+        "totalTokens": 0,
         "totalCostMicros": 0
       }
     ],
@@ -579,8 +598,8 @@ Example:
       {
         "status": "SUCCEEDED",
         "count": 4,
-        "totalTokens": 743,
-        "totalCostMicros": 8200
+        "totalTokens": 773,
+        "totalCostMicros": 6200
       },
       {
         "status": "INVALID_RESPONSE",
@@ -592,6 +611,48 @@ Example:
         "status": "PROVIDER_TIMEOUT",
         "count": 1,
         "totalTokens": 20,
+        "totalCostMicros": 0
+      }
+    ],
+    "byPromptVersion": [
+      {
+        "promptVersion": "import-error-summary-v1",
+        "count": 2,
+        "succeededCount": 1,
+        "failedCount": 1,
+        "totalTokens": 232,
+        "totalCostMicros": 0
+      },
+      {
+        "promptVersion": "import-mapping-suggestion-v1",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 161,
+        "totalCostMicros": 2200
+      },
+      {
+        "promptVersion": "ticket-reply-draft-v1",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 228,
+        "totalCostMicros": 2100
+      },
+      {
+        "promptVersion": "ticket-summary-v1",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 172,
+        "totalCostMicros": 1900
+      },
+      {
+        "promptVersion": "ticket-triage-v1",
+        "count": 1,
+        "succeededCount": 0,
+        "failedCount": 1,
+        "totalTokens": 0,
         "totalCostMicros": 0
       }
     ]

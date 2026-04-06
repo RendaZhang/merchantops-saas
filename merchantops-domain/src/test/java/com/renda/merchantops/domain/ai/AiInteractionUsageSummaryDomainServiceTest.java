@@ -88,6 +88,7 @@ class AiInteractionUsageSummaryDomainServiceTest {
                     0L,
                     0L,
                     List.of(),
+                    List.of(),
                     List.of()
             );
         }

@@ -1,6 +1,7 @@
 package com.renda.merchantops.infra.ai;
 
 import com.renda.merchantops.domain.ai.AiInteractionUsageByInteractionType;
+import com.renda.merchantops.domain.ai.AiInteractionUsageByPromptVersion;
 import com.renda.merchantops.domain.ai.AiInteractionUsageByStatus;
 import com.renda.merchantops.domain.ai.AiInteractionUsageSummary;
 import com.renda.merchantops.domain.ai.AiInteractionUsageSummaryCriteria;
@@ -65,6 +66,25 @@ public class JpaAiInteractionUsageSummaryAdapter implements AiInteractionUsageSu
                         item.getTotalCostMicros()
                 ))
                 .toList();
+        List<AiInteractionUsageByPromptVersion> byPromptVersion = aiInteractionRecordRepository
+                .summarizeUsageByPromptVersion(
+                        tenantId,
+                        criteria.from(),
+                        criteria.to(),
+                        criteria.entityType(),
+                        criteria.interactionType(),
+                        criteria.status()
+                )
+                .stream()
+                .map(item -> new AiInteractionUsageByPromptVersion(
+                        item.getPromptVersion(),
+                        item.getInteractionCount(),
+                        item.getSucceededCount(),
+                        item.getFailedCount(),
+                        item.getTotalTokens(),
+                        item.getTotalCostMicros()
+                ))
+                .toList();
 
         return new AiInteractionUsageSummary(
                 criteria.from(),
@@ -77,7 +97,8 @@ public class JpaAiInteractionUsageSummaryAdapter implements AiInteractionUsageSu
                 totals.getTotalTokens(),
                 totals.getTotalCostMicros(),
                 byInteractionType,
-                byStatus
+                byStatus,
+                byPromptVersion
         );
     }
 }

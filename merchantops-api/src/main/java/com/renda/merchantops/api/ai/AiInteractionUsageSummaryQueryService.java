@@ -42,6 +42,16 @@ public class AiInteractionUsageSummaryQueryService {
                                 item.totalTokens(),
                                 item.totalCostMicros()
                         ))
+                        .toList(),
+                result.byPromptVersion().stream()
+                        .map(item -> new AiInteractionUsageSummaryResponse.ByPromptVersion(
+                                item.promptVersion(),
+                                item.count(),
+                                item.succeededCount(),
+                                item.failedCount(),
+                                item.totalTokens(),
+                                item.totalCostMicros()
+                        ))
                         .toList()
         );
     }

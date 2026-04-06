@@ -3,6 +3,7 @@ package com.renda.merchantops.api.ai;
 import com.renda.merchantops.api.dto.ai.query.AiInteractionUsageSummaryQuery;
 import com.renda.merchantops.api.dto.ai.query.AiInteractionUsageSummaryResponse;
 import com.renda.merchantops.domain.ai.AiInteractionUsageByInteractionType;
+import com.renda.merchantops.domain.ai.AiInteractionUsageByPromptVersion;
 import com.renda.merchantops.domain.ai.AiInteractionUsageByStatus;
 import com.renda.merchantops.domain.ai.AiInteractionUsageSummary;
 import com.renda.merchantops.domain.ai.AiInteractionUsageSummaryCriteria;
@@ -53,7 +54,8 @@ class AiInteractionUsageSummaryQueryServiceTest {
                         360L,
                         4000L,
                         List.of(new AiInteractionUsageByInteractionType("SUMMARY", 3L, 2L, 1L, 360L, 4000L)),
-                        List.of(new AiInteractionUsageByStatus("SUCCEEDED", 2L, 300L, 3900L))
+                        List.of(new AiInteractionUsageByStatus("SUCCEEDED", 2L, 300L, 3900L)),
+                        List.of(new AiInteractionUsageByPromptVersion("ticket-summary-v1", 3L, 2L, 1L, 360L, 4000L))
                 ));
 
         AiInteractionUsageSummaryResponse response = aiInteractionUsageSummaryQueryService.getUsageSummary(1L, query);
@@ -76,6 +78,10 @@ class AiInteractionUsageSummaryQueryServiceTest {
         assertThat(response.byStatus()).singleElement().satisfies(item -> {
             assertThat(item.status()).isEqualTo("SUCCEEDED");
             assertThat(item.count()).isEqualTo(2L);
+        });
+        assertThat(response.byPromptVersion()).singleElement().satisfies(item -> {
+            assertThat(item.promptVersion()).isEqualTo("ticket-summary-v1");
+            assertThat(item.count()).isEqualTo(3L);
         });
     }
 }
