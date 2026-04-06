@@ -879,6 +879,48 @@ class TicketWorkflowIntegrationTest {
     }
 
     @Test
+    void approveCommentProposalShouldRecheckBridgeFlagBeforeWritingComment() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long approvalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-flag-recheck-create",
+                "Reply drafted before flag shutdown",
+                9002L
+        );
+        setFeatureFlag("workflow.ticket.comment-proposal.enabled", false);
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-flag-recheck-approve"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("ticket comment proposal is disabled"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                approvalRequestId
+        )).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT reviewed_by FROM approval_request WHERE id = ?",
+                Long.class,
+                approvalRequestId
+        )).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE request_id = ?",
+                Integer.class,
+                "ticket-comment-proposal-flag-recheck-approve"
+        )).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'APPROVAL_REQUEST' AND entity_id = ? AND action_type = 'APPROVAL_ACTION_EXECUTED'",
+                Integer.class,
+                approvalRequestId
+        )).isZero();
+    }
+
+    @Test
     void reviewEndpointsShouldRejectAlreadyResolvedTicketCommentProposal() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
         String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
