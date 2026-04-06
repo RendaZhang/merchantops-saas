@@ -39,8 +39,9 @@ public class FeatureFlagCommandService {
         String resolvedRequestId = RequestIdPolicy.requireNormalized(requestId);
         FeatureFlagItem current = featureFlagQueryUseCase.findByKey(tenantId, key)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "feature flag not found"));
+        boolean requestedEnabled = requireEnabled(request == null ? null : request.getEnabled());
 
-        if (current.enabled() == Boolean.TRUE.equals(request == null ? null : request.getEnabled())) {
+        if (current.enabled() == requestedEnabled) {
             return featureFlagQueryService.toResponse(current);
         }
 
@@ -48,7 +49,7 @@ public class FeatureFlagCommandService {
                 tenantId,
                 operatorId,
                 key,
-                new UpdateFeatureFlagCommand(request == null ? null : request.getEnabled())
+                new UpdateFeatureFlagCommand(requestedEnabled)
         );
 
         auditEventService.recordEvent(
@@ -63,6 +64,13 @@ public class FeatureFlagCommandService {
         );
 
         return new FeatureFlagItemResponse(saved.id(), saved.key(), saved.enabled(), saved.updatedAt());
+    }
+
+    private boolean requireEnabled(Boolean enabled) {
+        if (enabled == null) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "enabled must not be null");
+        }
+        return enabled;
     }
 
     private Map<String, Object> snapshot(Long id,

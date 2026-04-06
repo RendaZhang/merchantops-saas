@@ -19,6 +19,7 @@ Current notes:
 - both endpoints require `FEATURE_FLAG_MANAGE` and operate on the authenticated user's current tenant
 - the list response returns one fixed persisted flag set for the current tenant in stable `key ASC` order
 - `PUT` accepts `{ "enabled": true|false }`
+- `enabled` must not be `null`
 - `PUT` returns `404` for an unknown key
 - `PUT` is idempotent when the requested state is unchanged
 - this API manages persisted rollout flags only; it does not manage config-level `merchantops.ai.enabled`
@@ -84,9 +85,11 @@ Response:
 Current notes:
 
 - updates one fixed persisted key only
+- `enabled` must be a concrete boolean; `null` is rejected with `400 BAD_REQUEST`, message `enabled must not be null`
 - leaves unrelated keys unchanged
 - writes an audit row when the stored state changes
 - returns the same stable item shape as the list endpoint
+- idempotent short-circuit applies only when the requested boolean equals the current stored value
 
 ## Current Fixed Flag Set
 

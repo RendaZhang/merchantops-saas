@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static com.renda.merchantops.api.doc.OpenApiExamples.REQ_FEATURE_FLAG_UPDATE;
+import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_BAD_REQUEST_FEATURE_FLAG_ENABLED_NULL;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FEATURE_FLAG_ITEM;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FEATURE_FLAG_LIST;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FORBIDDEN;
@@ -68,6 +69,11 @@ public interface FeatureFlagApi {
                     responseCode = "403",
                     description = "Missing FEATURE_FLAG_MANAGE permission",
                     content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "enabled must not be null",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_BAD_REQUEST_FEATURE_FLAG_ENABLED_NULL))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",

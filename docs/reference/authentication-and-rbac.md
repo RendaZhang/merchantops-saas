@@ -476,7 +476,7 @@ Current notes:
 - each item exposes `id`, `key`, `enabled`, and `updatedAt`
 - the current fixed flag set covers six AI generation endpoints plus the two Week 8 workflow proposal bridges
 - `merchantops.ai.enabled` stays config-only and is not managed through this API
-- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, returns `404` for an unknown key, and is idempotent when the requested state is unchanged
+- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, rejects `enabled=null` with `400 BAD_REQUEST`, returns `404` for an unknown key, and is idempotent when the requested state is unchanged
 
 ### `GET /api/v1/tickets`
 

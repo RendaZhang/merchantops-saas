@@ -416,6 +416,17 @@ Content-Type: {{contentType}}
   "enabled": true
 }
 
+### Feature flags - reject null enabled
+# Expected: 400 BAD_REQUEST / enabled must not be null.
+# This should not write a feature-flag audit row and should not short-circuit as an idempotent no-op.
+PUT {{baseUrl}}/api/v1/feature-flags/ai.ticket.summary.enabled
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "enabled": null
+}
+
 ### Create import job (multipart)
 # Quote CSV fields that contain commas, double quotes, or embedded newlines.
 POST {{baseUrl}}/api/v1/import-jobs

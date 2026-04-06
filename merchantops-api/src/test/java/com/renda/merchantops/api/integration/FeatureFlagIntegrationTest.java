@@ -20,6 +20,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -320,13 +321,43 @@ class FeatureFlagIntegrationTest {
                 .andReturn();
 
         JsonNode root = objectMapper.readTree(result.getResponse().getContentAsByteArray());
-        assertThat(root.path("data").path("updatedAt").asText()).isEqualTo(beforeUpdatedAt.toLocalDateTime().toString());
+        assertThat(LocalDateTime.parse(root.path("data").path("updatedAt").asText()))
+                .isEqualTo(beforeUpdatedAt.toLocalDateTime());
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT updated_at FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
                 Timestamp.class,
                 1L,
                 "ai.ticket.summary.enabled"
         )).isEqualTo(beforeUpdatedAt);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isZero();
+    }
+
+    @Test
+    void updateFeatureFlagShouldRejectNullEnabledEvenWhenCurrentFlagAlreadyDisabled() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        jdbcTemplate.update("""
+                UPDATE feature_flag
+                SET enabled = false, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE tenant_id = ? AND flag_key = ?
+                """, 101L, 1L, "ai.ticket.summary.enabled");
+
+        mockMvc.perform(put("/api/v1/feature-flags/ai.ticket.summary.enabled")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "feature-flag-null-enabled-disabled-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"enabled":null}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("enabled must not be null"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT enabled FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                Boolean.class,
+                1L,
+                "ai.ticket.summary.enabled"
+        )).isFalse();
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isZero();
     }
 
