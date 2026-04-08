@@ -4,6 +4,8 @@ import com.renda.merchantops.domain.featureflag.FeatureFlagCommandPort;
 import com.renda.merchantops.domain.featureflag.ManagedFeatureFlag;
 import com.renda.merchantops.infra.persistence.entity.FeatureFlagEntity;
 import com.renda.merchantops.infra.repository.FeatureFlagRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -12,14 +14,21 @@ import java.util.Optional;
 public class JpaFeatureFlagCommandAdapter implements FeatureFlagCommandPort {
 
     private final FeatureFlagRepository featureFlagRepository;
+    private final EntityManager entityManager;
 
-    public JpaFeatureFlagCommandAdapter(FeatureFlagRepository featureFlagRepository) {
+    public JpaFeatureFlagCommandAdapter(FeatureFlagRepository featureFlagRepository,
+                                        EntityManager entityManager) {
         this.featureFlagRepository = featureFlagRepository;
+        this.entityManager = entityManager;
     }
 
     @Override
-    public Optional<ManagedFeatureFlag> findByKey(Long tenantId, String key) {
-        return featureFlagRepository.findByTenantIdAndFlagKey(tenantId, key).map(this::toManagedFeatureFlag);
+    public Optional<ManagedFeatureFlag> findByKeyForUpdate(Long tenantId, String key) {
+        return featureFlagRepository.findByTenantIdAndFlagKeyForUpdate(tenantId, key)
+                .map(entity -> {
+                    entityManager.refresh(entity, LockModeType.PESSIMISTIC_WRITE);
+                    return toManagedFeatureFlag(entity);
+                });
     }
 
     @Override

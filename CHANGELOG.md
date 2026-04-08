@@ -15,6 +15,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - The six suggestion-only AI generation endpoints now require both config-level `merchantops.ai.enabled=true` and their matching persisted feature flag for the current tenant, while the three public AI read endpoints remain available when generation is gated off.
 - The Week 8 workflow proposal bridges now each require their own persisted workflow flag for the current tenant and degrade with controlled `503` responses without creating approval or audit side effects when disabled.
 - `PUT /api/v1/feature-flags/{key}` now rejects `enabled=null` with controlled `400 BAD_REQUEST` instead of letting an unchanged disabled row short-circuit as an idempotent no-op.
+- Feature-flag updates now return the final persisted row and suppress duplicate `FEATURE_FLAG_UPDATED` audit rows when a concurrent write already applied the requested boolean before the update path completes.
 - AI reference docs, auth/RBAC docs, configuration docs, API examples, automated test notes, smoke guidance, and Week 10 phase/roadmap docs now reflect the persisted feature-flag rollout-control baseline.
 
 ## [v0.6.0-beta] - 2026-04-06

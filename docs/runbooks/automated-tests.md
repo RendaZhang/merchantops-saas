@@ -37,7 +37,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 - auth and permission checks for the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
-- real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, and idempotent no-op updates
+- real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-request-key hardening across disable, import replay proposal, and ticket comment proposal flows
@@ -92,8 +92,13 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - real `PUT /api/v1/feature-flags/{key}` happy path with persisted state change plus `FEATURE_FLAG_UPDATED` audit snapshot
 - `403` when `FEATURE_FLAG_MANAGE` is missing and `404` for an unknown key
 - `400` when `enabled` is `null`, including the previously disabled-flag path where idempotent short-circuit no longer hides invalid input
+- concurrent already-applied update behavior returns the final persisted row and emits no duplicate `FEATURE_FLAG_UPDATED` audit row
 - tenant-scoped feature-flag isolation so one tenant's update does not alter another tenant's stored flag rows or runtime AI gate behavior
   - idempotent no-op update behavior with unchanged `updatedAt` and no extra audit row
+- `FeatureFlagCommandServiceTest`
+  - API service uses the domain-provided `after` snapshot and skips audit when the domain layer reports no mutation after a concurrent already-applied update
+- `FeatureFlagCommandDomainServiceTest`
+  - domain write results preserve explicit `before` / `after` snapshots and distinguish true mutations from no-change outcomes without forcing a redundant save
 - `ImportSelectiveReplayApprovalIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` happy path for a `USER_WRITE` user with approval-row and audit-row assertions
   - `403` when `USER_WRITE` is missing

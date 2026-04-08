@@ -52,18 +52,20 @@ public class FeatureFlagCommandService {
                 new UpdateFeatureFlagCommand(requestedEnabled)
         );
 
-        auditEventService.recordEvent(
-                tenantId,
-                ENTITY_FEATURE_FLAG,
-                saved.id(),
-                ACTION_FEATURE_FLAG_UPDATED,
-                operatorId,
-                resolvedRequestId,
-                snapshot(current.id(), current.tenantId(), current.key(), current.enabled(), current.updatedBy(), current.createdAt(), current.updatedAt()),
-                snapshot(saved.id(), saved.tenantId(), saved.key(), saved.enabled(), saved.updatedBy(), saved.createdAt(), saved.updatedAt())
-        );
+        if (saved.mutated()) {
+            auditEventService.recordEvent(
+                    tenantId,
+                    ENTITY_FEATURE_FLAG,
+                    saved.after().id(),
+                    ACTION_FEATURE_FLAG_UPDATED,
+                    operatorId,
+                    resolvedRequestId,
+                    snapshot(saved.before()),
+                    snapshot(saved.after())
+            );
+        }
 
-        return new FeatureFlagItemResponse(saved.id(), saved.key(), saved.enabled(), saved.updatedAt());
+        return featureFlagQueryService.toResponse(saved.after());
     }
 
     private boolean requireEnabled(Boolean enabled) {
@@ -73,21 +75,15 @@ public class FeatureFlagCommandService {
         return enabled;
     }
 
-    private Map<String, Object> snapshot(Long id,
-                                         Long tenantId,
-                                         String key,
-                                         boolean enabled,
-                                         Long updatedBy,
-                                         java.time.LocalDateTime createdAt,
-                                         java.time.LocalDateTime updatedAt) {
+    private Map<String, Object> snapshot(FeatureFlagItem item) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
-        snapshot.put("id", id);
-        snapshot.put("tenantId", tenantId);
-        snapshot.put("key", key);
-        snapshot.put("enabled", enabled);
-        snapshot.put("updatedBy", updatedBy);
-        snapshot.put("createdAt", createdAt);
-        snapshot.put("updatedAt", updatedAt);
+        snapshot.put("id", item.id());
+        snapshot.put("tenantId", item.tenantId());
+        snapshot.put("key", item.key());
+        snapshot.put("enabled", item.enabled());
+        snapshot.put("updatedBy", item.updatedBy());
+        snapshot.put("createdAt", item.createdAt());
+        snapshot.put("updatedAt", item.updatedAt());
         return snapshot;
     }
 }

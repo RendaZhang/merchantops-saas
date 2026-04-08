@@ -21,19 +21,11 @@ public class FeatureFlagCommandDomainService implements FeatureFlagCommandUseCas
                 .map(FeatureFlagKey::key)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "feature flag not found"));
         boolean enabled = requireEnabled(command == null ? null : command.enabled());
-        ManagedFeatureFlag current = featureFlagCommandPort.findByKey(resolvedTenantId, resolvedKey)
+        ManagedFeatureFlag current = featureFlagCommandPort.findByKeyForUpdate(resolvedTenantId, resolvedKey)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "feature flag not found"));
 
         if (current.enabled() == enabled) {
-            return new FeatureFlagWriteResult(
-                    current.id(),
-                    current.tenantId(),
-                    current.key(),
-                    current.enabled(),
-                    current.updatedBy(),
-                    current.createdAt(),
-                    current.updatedAt()
-            );
+            return FeatureFlagWriteResult.noChange(toItem(current));
         }
 
         ManagedFeatureFlag saved = featureFlagCommandPort.save(new ManagedFeatureFlag(
@@ -45,15 +37,7 @@ public class FeatureFlagCommandDomainService implements FeatureFlagCommandUseCas
                 current.createdAt(),
                 LocalDateTime.now()
         ));
-        return new FeatureFlagWriteResult(
-                saved.id(),
-                saved.tenantId(),
-                saved.key(),
-                saved.enabled(),
-                saved.updatedBy(),
-                saved.createdAt(),
-                saved.updatedAt()
-        );
+        return FeatureFlagWriteResult.mutated(toItem(current), toItem(saved));
     }
 
     private Long requireTenantId(Long tenantId) {
@@ -75,5 +59,17 @@ public class FeatureFlagCommandDomainService implements FeatureFlagCommandUseCas
             throw new BizException(ErrorCode.BAD_REQUEST, "enabled must not be null");
         }
         return enabled;
+    }
+
+    private FeatureFlagItem toItem(ManagedFeatureFlag featureFlag) {
+        return new FeatureFlagItem(
+                featureFlag.id(),
+                featureFlag.tenantId(),
+                featureFlag.key(),
+                featureFlag.enabled(),
+                featureFlag.updatedBy(),
+                featureFlag.createdAt(),
+                featureFlag.updatedAt()
+        );
     }
 }

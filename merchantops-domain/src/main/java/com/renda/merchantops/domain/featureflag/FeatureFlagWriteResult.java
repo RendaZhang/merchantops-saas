@@ -1,14 +1,16 @@
 package com.renda.merchantops.domain.featureflag;
 
-import java.time.LocalDateTime;
-
 public record FeatureFlagWriteResult(
-        Long id,
-        Long tenantId,
-        String key,
-        boolean enabled,
-        Long updatedBy,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        FeatureFlagItem before,
+        FeatureFlagItem after,
+        boolean mutated
 ) {
+
+    public static FeatureFlagWriteResult noChange(FeatureFlagItem current) {
+        return new FeatureFlagWriteResult(current, current, false);
+    }
+
+    public static FeatureFlagWriteResult mutated(FeatureFlagItem before, FeatureFlagItem after) {
+        return new FeatureFlagWriteResult(before, after, true);
+    }
 }

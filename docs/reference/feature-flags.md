@@ -87,7 +87,8 @@ Current notes:
 - updates one fixed persisted key only
 - `enabled` must be a concrete boolean; `null` is rejected with `400 BAD_REQUEST`, message `enabled must not be null`
 - leaves unrelated keys unchanged
-- writes an audit row when the stored state changes
+- writes an audit row only when the stored state actually changes
+- if a concurrent write already applied the requested boolean before the update path completes, the response reflects the final persisted row and emits no duplicate audit row
 - returns the same stable item shape as the list endpoint
 - idempotent short-circuit applies only when the requested boolean equals the current stored value
 
@@ -143,6 +144,7 @@ Feature-flag updates currently write audit rows with:
 - `entityType=FEATURE_FLAG`
 - `actionType=FEATURE_FLAG_UPDATED`
 - before/after snapshots over the stored tenant-scoped flag row, including `tenantId`
+- no extra audit row when the final persisted state already matches the requested boolean by the time the domain write path resolves
 
 Feature-flag changes do not reuse the AI interaction record model.
 

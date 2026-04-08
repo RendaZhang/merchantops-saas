@@ -5,6 +5,7 @@ import com.renda.merchantops.api.dto.featureflag.command.FeatureFlagUpdateReques
 import com.renda.merchantops.domain.featureflag.FeatureFlagCommandUseCase;
 import com.renda.merchantops.domain.featureflag.FeatureFlagItem;
 import com.renda.merchantops.domain.featureflag.FeatureFlagQueryUseCase;
+import com.renda.merchantops.domain.featureflag.FeatureFlagWriteResult;
 import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -88,15 +91,47 @@ class FeatureFlagCommandServiceTest {
         verifyNoInteractions(featureFlagCommandUseCase, auditEventService);
     }
 
+    @Test
+    void updateFlagShouldUseDomainAfterStateAndSkipAuditWhenDomainReportsNoMutation() {
+        FeatureFlagItem initialRead = flagItem(false);
+        FeatureFlagItem concurrentState = flagItem(
+                true,
+                202L,
+                LocalDateTime.of(2026, 4, 8, 11, 30)
+        );
+        when(featureFlagQueryUseCase.findByKey(1L, "ai.ticket.summary.enabled"))
+                .thenReturn(Optional.of(initialRead));
+        when(featureFlagCommandUseCase.updateFlag(eq(1L), eq(101L), eq("ai.ticket.summary.enabled"), any()))
+                .thenReturn(FeatureFlagWriteResult.noChange(concurrentState));
+
+        var response = featureFlagCommandService.updateFlag(
+                1L,
+                101L,
+                "feature-flag-race-no-mutation-1",
+                "ai.ticket.summary.enabled",
+                new FeatureFlagUpdateRequest(true)
+        );
+
+        assertThat(response.key()).isEqualTo("ai.ticket.summary.enabled");
+        assertThat(response.enabled()).isTrue();
+        assertThat(response.updatedAt()).isEqualTo(concurrentState.updatedAt());
+        verify(featureFlagQueryUseCase).findByKey(1L, "ai.ticket.summary.enabled");
+        verify(featureFlagCommandUseCase).updateFlag(eq(1L), eq(101L), eq("ai.ticket.summary.enabled"), any());
+        verifyNoInteractions(auditEventService);
+    }
+
     private FeatureFlagItem flagItem(boolean enabled) {
+        return flagItem(enabled, 101L, LocalDateTime.of(2026, 4, 6, 10, 5));
+    }
+
+    private FeatureFlagItem flagItem(boolean enabled, Long updatedBy, LocalDateTime updatedAt) {
         LocalDateTime createdAt = LocalDateTime.of(2026, 4, 6, 10, 0);
-        LocalDateTime updatedAt = LocalDateTime.of(2026, 4, 6, 10, 5);
         return new FeatureFlagItem(
                 1L,
                 1L,
                 "ai.ticket.summary.enabled",
                 enabled,
-                101L,
+                updatedBy,
                 createdAt,
                 updatedAt
         );

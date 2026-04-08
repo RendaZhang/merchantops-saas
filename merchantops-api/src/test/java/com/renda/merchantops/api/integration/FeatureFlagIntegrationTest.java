@@ -3,6 +3,9 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.dto.featureflag.command.FeatureFlagUpdateRequest;
+import com.renda.merchantops.api.dto.featureflag.query.FeatureFlagItemResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagCommandService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -22,8 +27,15 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -64,6 +76,12 @@ class FeatureFlagIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private FeatureFlagCommandService featureFlagCommandService;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @BeforeEach
     void setUpSchemaAndData() {
@@ -361,6 +379,91 @@ class FeatureFlagIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isZero();
     }
 
+    @Test
+    void updateFeatureFlagShouldSuppressDuplicateAuditWhenConcurrentWriterAlreadyAppliedTargetState() throws Exception {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch firstCompletedInsideTransaction = new CountDownLatch(1);
+        CountDownLatch secondStarted = new CountDownLatch(1);
+        CountDownLatch allowFirstCommit = new CountDownLatch(1);
+
+        try {
+            Future<FeatureFlagItemResponse> firstFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                FeatureFlagItemResponse response = featureFlagCommandService.updateFlag(
+                        1L,
+                        101L,
+                        "feature-flag-concurrent-1",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(false)
+                );
+                firstCompletedInsideTransaction.countDown();
+                awaitLatch(allowFirstCommit, "first transaction should be released for commit");
+                return response;
+            }));
+
+            assertThat(firstCompletedInsideTransaction.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Future<FeatureFlagItemResponse> secondFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                secondStarted.countDown();
+                return featureFlagCommandService.updateFlag(
+                        1L,
+                        103L,
+                        "feature-flag-concurrent-2",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(false)
+                );
+            }));
+
+            assertThat(secondStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> secondFuture.get(500, TimeUnit.MILLISECONDS))
+                    .isInstanceOf(TimeoutException.class);
+
+            allowFirstCommit.countDown();
+
+            FeatureFlagItemResponse firstResponse = firstFuture.get(10, TimeUnit.SECONDS);
+            FeatureFlagItemResponse secondResponse = secondFuture.get(10, TimeUnit.SECONDS);
+
+            assertThat(firstResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(firstResponse.enabled()).isFalse();
+            assertThat(secondResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(secondResponse.enabled()).isFalse();
+            Timestamp finalUpdatedAt = jdbcTemplate.queryForObject(
+                    "SELECT updated_at FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Timestamp.class,
+                    1L,
+                    "ai.ticket.summary.enabled"
+            );
+            assertThat(finalUpdatedAt).isNotNull();
+            assertThat(secondResponse.updatedAt()).isEqualTo(finalUpdatedAt.toLocalDateTime());
+
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT enabled FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Boolean.class,
+                    1L,
+                    "ai.ticket.summary.enabled"
+            )).isFalse();
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT updated_by FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Long.class,
+                    1L,
+                    "ai.ticket.summary.enabled"
+            )).isEqualTo(101L);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED'",
+                    Integer.class,
+                    1L
+            )).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT request_id FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED'",
+                    String.class,
+                    1L
+            )).isEqualTo("feature-flag-concurrent-1");
+        } finally {
+            allowFirstCommit.countDown();
+            executor.shutdownNow();
+        }
+    }
+
     private void seedTenants() {
         jdbcTemplate.update("""
                 INSERT INTO tenant (id, tenant_code, tenant_name, status, created_at, updated_at)
@@ -528,5 +631,14 @@ class FeatureFlagIntegrationTest {
                 "SELECT SETTING_VALUE FROM INFORMATION_SCHEMA.SETTINGS WHERE SETTING_NAME = 'MODE'",
                 String.class
         );
+    }
+
+    private void awaitLatch(CountDownLatch latch, String message) {
+        try {
+            assertThat(latch.await(5, TimeUnit.SECONDS)).as(message).isTrue();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError(message, ex);
+        }
     }
 }

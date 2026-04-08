@@ -4,7 +4,7 @@ import java.util.Optional;
 
 public interface FeatureFlagCommandPort {
 
-    Optional<ManagedFeatureFlag> findByKey(Long tenantId, String key);
+    Optional<ManagedFeatureFlag> findByKeyForUpdate(Long tenantId, String key);
 
     ManagedFeatureFlag save(ManagedFeatureFlag featureFlag);
 }
