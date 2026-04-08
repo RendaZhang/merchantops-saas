@@ -41,10 +41,6 @@ public class FeatureFlagCommandService {
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "feature flag not found"));
         boolean requestedEnabled = requireEnabled(request == null ? null : request.getEnabled());
 
-        if (current.enabled() == requestedEnabled) {
-            return featureFlagQueryService.toResponse(current);
-        }
-
         FeatureFlagWriteResult saved = featureFlagCommandUseCase.updateFlag(
                 tenantId,
                 operatorId,

@@ -71,10 +71,12 @@ class FeatureFlagCommandServiceTest {
     }
 
     @Test
-    void updateFlagShouldKeepIdempotentBehaviorForUnchangedEnabledValue() {
+    void updateFlagShouldDelegateIdempotentDecisionToDomainWhenEnabledValueIsUnchanged() {
         FeatureFlagItem current = flagItem(false);
         when(featureFlagQueryUseCase.findByKey(1L, "ai.ticket.summary.enabled"))
                 .thenReturn(Optional.of(current));
+        when(featureFlagCommandUseCase.updateFlag(eq(1L), eq(101L), eq("ai.ticket.summary.enabled"), any()))
+                .thenReturn(FeatureFlagWriteResult.noChange(current));
 
         var response = featureFlagCommandService.updateFlag(
                 1L,
@@ -88,7 +90,44 @@ class FeatureFlagCommandServiceTest {
         assertThat(response.enabled()).isFalse();
         assertThat(response.updatedAt()).isEqualTo(current.updatedAt());
         verify(featureFlagQueryUseCase).findByKey(1L, "ai.ticket.summary.enabled");
-        verifyNoInteractions(featureFlagCommandUseCase, auditEventService);
+        verify(featureFlagCommandUseCase).updateFlag(eq(1L), eq(101L), eq("ai.ticket.summary.enabled"), any());
+        verifyNoInteractions(auditEventService);
+    }
+
+    @Test
+    void updateFlagShouldNotShortCircuitWhenUnlockedReadAlreadyMatchesRequestedValue() {
+        FeatureFlagItem staleRead = flagItem(true, 101L, LocalDateTime.of(2026, 4, 8, 10, 0));
+        FeatureFlagItem lockedBefore = flagItem(false, 202L, LocalDateTime.of(2026, 4, 8, 10, 15));
+        FeatureFlagItem saved = flagItem(true, 101L, LocalDateTime.of(2026, 4, 8, 10, 30));
+        when(featureFlagQueryUseCase.findByKey(1L, "ai.ticket.summary.enabled"))
+                .thenReturn(Optional.of(staleRead));
+        when(featureFlagCommandUseCase.updateFlag(eq(1L), eq(101L), eq("ai.ticket.summary.enabled"), any()))
+                .thenReturn(FeatureFlagWriteResult.mutated(lockedBefore, saved));
+
+        var response = featureFlagCommandService.updateFlag(
+                1L,
+                101L,
+                "feature-flag-stale-read-1",
+                "ai.ticket.summary.enabled",
+                new FeatureFlagUpdateRequest(true)
+        );
+
+        assertThat(response.id()).isEqualTo(saved.id());
+        assertThat(response.key()).isEqualTo("ai.ticket.summary.enabled");
+        assertThat(response.enabled()).isTrue();
+        assertThat(response.updatedAt()).isEqualTo(saved.updatedAt());
+        verify(featureFlagQueryUseCase).findByKey(1L, "ai.ticket.summary.enabled");
+        verify(featureFlagCommandUseCase).updateFlag(eq(1L), eq(101L), eq("ai.ticket.summary.enabled"), any());
+        verify(auditEventService).recordEvent(
+                eq(1L),
+                eq("FEATURE_FLAG"),
+                eq(saved.id()),
+                eq("FEATURE_FLAG_UPDATED"),
+                eq(101L),
+                eq("feature-flag-stale-read-1"),
+                any(),
+                any()
+        );
     }
 
     @Test

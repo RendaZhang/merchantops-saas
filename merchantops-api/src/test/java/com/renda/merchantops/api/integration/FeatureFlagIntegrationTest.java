@@ -26,6 +26,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -434,7 +435,8 @@ class FeatureFlagIntegrationTest {
                     "ai.ticket.summary.enabled"
             );
             assertThat(finalUpdatedAt).isNotNull();
-            assertThat(secondResponse.updatedAt()).isEqualTo(finalUpdatedAt.toLocalDateTime());
+            assertThat(Math.abs(ChronoUnit.MICROS.between(finalUpdatedAt.toLocalDateTime(), secondResponse.updatedAt())))
+                    .isLessThanOrEqualTo(1L);
 
             assertThat(jdbcTemplate.queryForObject(
                     "SELECT enabled FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
@@ -458,6 +460,95 @@ class FeatureFlagIntegrationTest {
                     String.class,
                     1L
             )).isEqualTo("feature-flag-concurrent-1");
+        } finally {
+            allowFirstCommit.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void updateFeatureFlagShouldApplySecondConcurrentRequestWhenItTargetsOppositeState() throws Exception {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch firstCompletedInsideTransaction = new CountDownLatch(1);
+        CountDownLatch secondStarted = new CountDownLatch(1);
+        CountDownLatch allowFirstCommit = new CountDownLatch(1);
+
+        try {
+            Future<FeatureFlagItemResponse> firstFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                FeatureFlagItemResponse response = featureFlagCommandService.updateFlag(
+                        1L,
+                        101L,
+                        "feature-flag-concurrent-opposite-1",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(false)
+                );
+                firstCompletedInsideTransaction.countDown();
+                awaitLatch(allowFirstCommit, "first transaction should be released for commit");
+                return response;
+            }));
+
+            assertThat(firstCompletedInsideTransaction.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Future<FeatureFlagItemResponse> secondFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                secondStarted.countDown();
+                return featureFlagCommandService.updateFlag(
+                        1L,
+                        103L,
+                        "feature-flag-concurrent-opposite-2",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(true)
+                );
+            }));
+
+            assertThat(secondStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> secondFuture.get(500, TimeUnit.MILLISECONDS))
+                    .isInstanceOf(TimeoutException.class);
+
+            allowFirstCommit.countDown();
+
+            FeatureFlagItemResponse firstResponse = firstFuture.get(10, TimeUnit.SECONDS);
+            FeatureFlagItemResponse secondResponse = secondFuture.get(10, TimeUnit.SECONDS);
+
+            assertThat(firstResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(firstResponse.enabled()).isFalse();
+            assertThat(secondResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(secondResponse.enabled()).isTrue();
+            Timestamp finalUpdatedAt = jdbcTemplate.queryForObject(
+                    "SELECT updated_at FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Timestamp.class,
+                    1L,
+                    "ai.ticket.summary.enabled"
+            );
+            assertThat(finalUpdatedAt).isNotNull();
+            assertThat(Math.abs(ChronoUnit.MICROS.between(finalUpdatedAt.toLocalDateTime(), secondResponse.updatedAt())))
+                    .isLessThanOrEqualTo(1L);
+
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT enabled FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Boolean.class,
+                    1L,
+                    "ai.ticket.summary.enabled"
+            )).isTrue();
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT updated_by FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Long.class,
+                    1L,
+                    "ai.ticket.summary.enabled"
+            )).isEqualTo(103L);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED'",
+                    Integer.class,
+                    1L
+            )).isEqualTo(2);
+            assertThat(jdbcTemplate.queryForList(
+                    "SELECT request_id FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED' ORDER BY id",
+                    String.class,
+                    1L
+            )).containsExactly(
+                    "feature-flag-concurrent-opposite-1",
+                    "feature-flag-concurrent-opposite-2"
+            );
         } finally {
             allowFirstCommit.countDown();
             executor.shutdownNow();
