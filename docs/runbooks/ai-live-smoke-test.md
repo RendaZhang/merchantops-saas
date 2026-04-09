@@ -1,6 +1,6 @@
 # AI Live Smoke Test
 
-Last updated: 2026-04-04
+Last updated: 2026-04-09
 
 > Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
 
@@ -47,6 +47,20 @@ Copy-Item .env.example .env
 ```
 
 Add local AI provider settings to `.env`. Recommended provider-neutral DeepSeek example:
+
+If you are validating the OpenAI Spring AI transport pilot, use:
+
+```dotenv
+MERCHANTOPS_AI_ENABLED=true
+MERCHANTOPS_AI_PROVIDER=OPENAI
+MERCHANTOPS_AI_OPENAI_RUNTIME=SPRING_AI
+MERCHANTOPS_AI_MODEL_ID=gpt-4.1-mini
+MERCHANTOPS_AI_API_KEY=replace-with-local-openai-key
+```
+
+If you are validating the existing OpenAI rollback path instead, keep the same OpenAI settings and either omit `MERCHANTOPS_AI_OPENAI_RUNTIME` or set `MERCHANTOPS_AI_OPENAI_RUNTIME=RAW_HTTP`.
+
+Recommended provider-neutral DeepSeek example:
 
 ```dotenv
 MERCHANTOPS_AI_ENABLED=true
@@ -196,6 +210,7 @@ Expected result:
 - `status=SUCCEEDED`
 - `requestId` equals `$summaryRequestId`
 - `modelId` matches the resolved provider model
+- when validating `OPENAI + SPRING_AI`, confirm the stored row still keeps the same local status semantics and request-id correlation as the existing rollback path
 - usage fields are present when the provider returns them, otherwise `null`
 
 ## 10. Optional Stage 2 Expansion After Summary Success

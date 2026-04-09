@@ -16,6 +16,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - The Week 8 workflow proposal bridges now each require their own persisted workflow flag for the current tenant and degrade with controlled `503` responses without creating approval or audit side effects when disabled.
 - `PUT /api/v1/feature-flags/{key}` now rejects `enabled=null` with controlled `400 BAD_REQUEST` instead of letting an unchanged disabled row short-circuit as an idempotent no-op.
 - Feature-flag updates now return the final persisted row and suppress duplicate `FEATURE_FLAG_UPDATED` audit rows when a concurrent write already applied the requested boolean before the update path completes.
+- The shared AI runtime now supports an internal OpenAI transport selector under `merchantops.ai.openai-runtime`, keeping `RAW_HTTP` as the rollback-safe default `/v1/responses` path while adding a `SPRING_AI` OpenAI chat-completions transport pilot under the same `merchantops.ai.*` ownership model.
 - AI reference docs, auth/RBAC docs, configuration docs, API examples, automated test notes, smoke guidance, and Week 10 phase/roadmap docs now reflect the persisted feature-flag rollout-control baseline.
 
 ## [v0.6.0-beta] - 2026-04-06

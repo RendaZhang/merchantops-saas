@@ -1,15 +1,15 @@
 # Automated Tests
 
-Last updated: 2026-04-06
+Last updated: 2026-04-09
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-06 15:29:29 +08:00:
+Latest local default regression result on 2026-04-09 11:56:17 +08:00:
 
 - `BUILD SUCCESS`
-- `Tests run: 392, Failures: 0, Errors: 0, Skipped: 1`
+- `Tests run: 410, Failures: 0, Errors: 0, Skipped: 1`
 
 ## Recommended Commands
 
@@ -45,7 +45,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - Week 8 ticket comment proposal coverage for `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, including `TICKET_WRITE` enforcement, cross-tenant/missing ticket handling, blank and overlong comment rejection, invalid same-ticket `sourceInteractionId` rejection, safe approval payload persistence, duplicate suppression on trimmed `commentContent`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time single-comment execution, reject-without-execution behavior, and no-regression on the mixed-action approval queue
 - AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
 - a shared Week 9 governance comparator pass across all six generation workflows, with executable inventory plus golden, failure, and policy datasets in the default regression suite
-- provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
+- provider-normalized structured-output coverage for OpenAI Responses `RAW_HTTP`, OpenAI Spring AI chat-completions `SPRING_AI`, and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
 - shared AI interaction execution support coverage for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import entity types
 - persisted feature-flag gate coverage across all six AI generation endpoints plus both Week 8 workflow proposal bridges, including no cross-flag leakage between unrelated endpoints
@@ -243,7 +243,9 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 - `DotenvBootstrapTest`
   - repository-root detection, dev-profile gating, comment handling, quote trimming, and non-overwrite behavior for already-set properties
 - `OpenAiResponsesStructuredOutputAiClientTest`
-  - `POST /v1/responses` request contract, strict `json_schema` wiring, OpenAI output parsing, and timeout classification
+  - `POST /v1/responses` request contract, strict `json_schema` wiring, OpenAI output parsing, timeout classification, and rollback-path coverage for `merchantops.ai.openai-runtime=RAW_HTTP`
+- `SpringAiOpenAiStructuredOutputAiClientTest`
+  - `POST /v1/chat/completions` request contract, `response_format=json_schema` wiring, `X-Client-Request-Id` forwarding, OpenAI usage and model metadata extraction, blank-content invalid-response handling, and timeout/unavailable classification for `merchantops.ai.openai-runtime=SPRING_AI`
 - `DeepSeekChatCompletionsStructuredOutputAiClientTest`
   - `POST /chat/completions` request contract, `response_format=json_object`, JSON-only instruction and example wiring, DeepSeek message-content parsing, and timeout classification
 - `OpenAiTicketSummaryProviderTest`

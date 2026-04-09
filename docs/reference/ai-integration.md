@@ -1,6 +1,6 @@
 # AI Integration
 
-Last updated: 2026-04-06
+Last updated: 2026-04-09
 
 ## Purpose
 
@@ -728,10 +728,18 @@ The current runtime keeps AI plumbing narrow rather than introducing a general c
 - provider-configuration guard
 - timeout-based controlled degradation
 
-The current provider-normalized client supports two protocol paths:
+The current provider-normalized client supports three internal transport paths across two providers:
 
-- `OPENAI`: `POST /v1/responses` with strict `json_schema`
+- `OPENAI + RAW_HTTP`: direct `POST /v1/responses` with strict `json_schema`
+- `OPENAI + SPRING_AI`: Spring AI OpenAI chat-completions transport to `POST /v1/chat/completions` with `response_format=json_schema`
 - `DEEPSEEK`: `POST /chat/completions` with `response_format={type=json_object}` plus provider-aware JSON-only instructions and a minimal example JSON payload
+
+OpenAI transport selection stays internal behind `StructuredOutputAiClient`:
+
+- `merchantops.ai.openai-runtime=RAW_HTTP` is the default rollback-safe path
+- `merchantops.ai.openai-runtime=SPRING_AI` changes only the OpenAI transport layer
+- the six workflow providers, prompt builders, governance checks, persisted feature flags, history records, and public response contracts stay unchanged
+- runtime ownership remains under `merchantops.ai.*`; this slice does not introduce `spring.ai.*` as a second configuration source
 
 Endpoint-specific output policy remains strict across both providers:
 
@@ -741,8 +749,9 @@ Endpoint-specific output policy remains strict across both providers:
 - import error summary requires `summary`, `topErrorPatterns`, and `recommendedNextSteps`
 - import mapping suggestion requires `summary`, `suggestedFieldMappings`, `confidenceNotes`, and `recommendedOperatorChecks`
 - import fix recommendation requires `summary`, `recommendedFixes`, `confidenceNotes`, and `recommendedOperatorChecks`
-- request tests lock `Authorization`, `X-Client-Request-Id`, model id, system or user roles, and provider-specific structured-output wiring for both protocol paths
+- request tests lock `Authorization`, `X-Client-Request-Id`, model id, system or user roles, and provider-specific structured-output wiring for both OpenAI transport variants plus the DeepSeek path
 - OpenAI response parsing scans all `output[].content[]` parts, concatenates later `output_text` fragments in order, and ignores earlier non-text parts when valid text exists
+- Spring AI OpenAI response parsing extracts the first assistant text from `ChatResponse`, then applies the same workflow-local JSON validation and failure mapping as the existing OpenAI provider path
 - DeepSeek response parsing extracts the message content string, then applies the same endpoint-specific JSON validation and failure mapping
 - upstream `408` and `504` HTTP responses are classified as provider timeouts so the timeout degradation path and `ai_interaction_record.status=PROVIDER_TIMEOUT` stay aligned
 - provider-returned blank items in import `topErrorPatterns` or `recommendedNextSteps` stay mapped as `INVALID_RESPONSE`

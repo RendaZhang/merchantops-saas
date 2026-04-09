@@ -1,6 +1,6 @@
 # AI Regression Checklist
 
-Last updated: 2026-04-06
+Last updated: 2026-04-09
 
 > Maintenance note: keep this page focused on AI-specific safety, audit, eval, and provider behavior. Do not duplicate the normal non-AI API sign-off items from [regression-checklist.md](regression-checklist.md); link there when a change spans both the AI slice and the broader public business surface.
 
@@ -43,15 +43,18 @@ The AI checklist is now active because public AI endpoints exist:
 ## Environment And Control
 
 - [ ] provider credentials and model configuration are loaded from the expected `merchantops.ai.*` keys or the documented local `.env` aliases
+- [ ] `merchantops.ai.openai-runtime` defaults to `RAW_HTTP` and only changes OpenAI transport behavior when explicitly set to `SPRING_AI`
 - [ ] AI generation features can be disabled cleanly via `merchantops.ai.enabled`
 - [ ] each generation endpoint can also be disabled cleanly via its matching persisted feature flag without leaking into unrelated AI endpoints
 - [ ] adjacent workflow bridges can be disabled cleanly via `workflow.import.selective-replay-proposal.enabled` and `workflow.ticket.comment-proposal.enabled`
 - [ ] degraded mode behavior is verified when the provider is unavailable or not configured
 - [ ] request timeout behavior is explicit and covered by a simulated timeout path
+- [ ] `OPENAI + RAW_HTTP` and `OPENAI + SPRING_AI` both preserve `TIMEOUT`, `UNAVAILABLE`, `INVALID_RESPONSE`, resolved `modelId`, and usage-field persistence semantics
 
 ## Live Provider Smoke
 
 - [ ] local `.env` is prepared through [ai-live-smoke-test.md](ai-live-smoke-test.md) with provider-neutral `MERCHANTOPS_AI_*` keys or the documented DeepSeek aliases
+- [ ] when the change is specific to the Spring AI OpenAI transport, the live run uses `MERCHANTOPS_AI_PROVIDER=OPENAI` plus `MERCHANTOPS_AI_OPENAI_RUNTIME=SPRING_AI`
 - [ ] the first real provider probe is one `POST /api/v1/tickets/{id}/ai-summary` call against a fresh ticket with enough context
 - [ ] if the live summary fails, `ai-triage` and `ai-reply-draft` are not called in the same session
 - [ ] after a successful live summary, `GET /api/v1/tickets/{id}/ai-interactions` confirms a matching `SUMMARY` row with the expected `requestId`, `status`, and `modelId`
@@ -73,7 +76,10 @@ The AI checklist is now active because public AI endpoints exist:
 - [ ] `POST /api/v1/import-jobs/{id}/ai-error-summary` covers feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response as controlled `503` paths with specific `ai_interaction_record.status`
 - [ ] `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` covers `400` no-failure-signal, `400` no-sanitized-header-signal, feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response with specific `ai_interaction_record.status` only on the `503` paths
 - [ ] `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` covers `400` no-failure-signal, `400` unsupported-import-type, `400` no-sanitized-row-signal, feature disabled, provider not configured, provider unavailable, provider timeout, and invalid response with specific `ai_interaction_record.status` only on the `503` paths
-- [ ] summary, triage, reply-draft, import error-summary, and import mapping-suggestion adapter tests all cover request-contract assertions, unsupported content, refusal, invalid JSON payload handling, later-part `output_text` parsing, and `408` or `504` timeout classification
+- [ ] the OpenAI rollback-path client test still covers `POST /v1/responses`, strict `json_schema`, output parsing, and timeout classification
+- [ ] the Spring AI OpenAI client test covers `POST /v1/chat/completions`, `response_format=json_schema`, `X-Client-Request-Id`, model and usage metadata extraction, and timeout or unavailable classification
+- [ ] the runtime-selector test covers `OPENAI + RAW_HTTP`, `OPENAI + SPRING_AI`, and `DEEPSEEK` unaffected behavior
+- [ ] summary, triage, reply-draft, import error-summary, and import mapping-suggestion provider tests still cover invalid JSON payload handling and endpoint-specific required-field validation through the unchanged workflow-local validators
 - [ ] summary adapter rejects missing `summary`; triage adapter rejects missing `classification`, missing `reasoning`, missing `priority`, and invalid `priority`
 - [ ] reply-draft adapter rejects missing `opening`, missing `body`, missing `nextStep`, and missing `closing`
 - [ ] import error-summary adapter rejects missing `summary`, missing `topErrorPatterns`, missing `recommendedNextSteps`, and blank array items

@@ -46,6 +46,7 @@ Shared application configuration currently includes:
   - `merchantops.ai.api-key=`
   - `merchantops.ai.model-id=`
   - `merchantops.ai.timeout-ms=15000`
+  - `merchantops.ai.openai-runtime=RAW_HTTP`
   - `merchantops.ai.openai.base-url=`
   - `merchantops.ai.openai.api-key=`
 - import processing defaults:
@@ -84,6 +85,7 @@ Shared application configuration currently includes:
 - `MERCHANTOPS_AI_API_KEY`
 - `MERCHANTOPS_AI_MODEL_ID`
 - `MERCHANTOPS_AI_TIMEOUT_MS`
+- `MERCHANTOPS_AI_OPENAI_RUNTIME`
 - `MERCHANTOPS_AI_OPENAI_BASE_URL`
 - `MERCHANTOPS_AI_OPENAI_API_KEY`
 - `DEEPSEEK_API_KEY`
@@ -111,6 +113,7 @@ Shared application configuration currently includes:
 - `merchantops.ai.provider` selects the active provider path. Current supported values are `OPENAI` and `DEEPSEEK`.
 - `merchantops.ai.base-url`, `merchantops.ai.api-key`, and `merchantops.ai.model-id` are the provider-neutral runtime keys. Use these first for new local and deployed setups.
 - `merchantops.ai.timeout-ms` controls provider connect and read timeouts for the provider-normalized structured-output clients.
+- `merchantops.ai.openai-runtime` selects the internal OpenAI transport when `merchantops.ai.provider=OPENAI`. `RAW_HTTP` is the default existing `/v1/responses` path and `SPRING_AI` switches only the OpenAI transport to Spring AI's chat-completions client. This selector does not affect DeepSeek and does not introduce `spring.ai.*` configuration keys.
 - `merchantops.ai.openai.base-url` and `merchantops.ai.openai.api-key` remain supported as legacy OpenAI compatibility keys.
 - `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, and `DEEPSEEK_MODEL` are supported as local convenience aliases only when `merchantops.ai.provider=DEEPSEEK` and the provider-neutral key is blank.
 - Runtime resolution order is: provider-neutral `merchantops.ai.*`, then provider-specific compatibility keys, then provider defaults.
