@@ -49,6 +49,12 @@ Stop and remove volumes:
 docker compose down -v
 ```
 
+## Network Model
+
+- `docker compose` creates and reuses the pinned bridge network `merchantops-infra`
+- host-machine access still uses the published ports below
+- containers attached to `merchantops-infra` should use service hostnames `mysql`, `redis`, and `rabbitmq`
+
 ## Default Access
 
 - MySQL: `localhost:3306`
@@ -65,8 +71,35 @@ Credential values come from `.env`:
 - `RABBITMQ_DEFAULT_USER`
 - `RABBITMQ_DEFAULT_PASS`
 
+## Dockerized API Runtime
+
+Official container run command:
+
+```powershell
+docker run --rm --name merchantops-api-local `
+  --env-file .env `
+  --network merchantops-infra `
+  -p 8080:8080 `
+  -e MYSQL_HOST=mysql `
+  -e REDIS_HOST=redis `
+  -e RABBITMQ_HOST=rabbitmq `
+  merchantops-api:local
+```
+
+This path keeps the API on port `8080` and expects credentials plus optional overrides from `.env`, including:
+
+- `MYSQL_DATABASE`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `RABBITMQ_DEFAULT_USER`
+- `RABBITMQ_DEFAULT_PASS`
+- `TZ`
+- optional `JWT_SECRET`
+- optional `MERCHANTOPS_AI_*` overrides for AI-enabled local runs
+
 ## Notes
 
 - MySQL is required for the default `dev` profile because Flyway runs on startup.
 - Redis and RabbitMQ are configured in `application-dev.yml`. Keep them available if you want local config parity with the repository defaults.
 - When you start the API through dev-profile `spring-boot:run`, the main app entrypoint auto-loads the repository-root `.env`. That local bootstrap does not change `@SpringBootTest` behavior and does not search outside the repository root.
+- The Dockerized API path does not auto-load the repository-root `.env`; pass it explicitly with `--env-file` and `-e`.

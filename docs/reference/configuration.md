@@ -26,6 +26,7 @@ The `dev` profile contains local integration settings for:
 
 Shared application configuration currently includes:
 
+- `server.port=8080`
 - `spring.application.name=merchantops-saas`
 - `SPRING_PROFILES_ACTIVE=dev` by default
 - `springdoc.show-actuator=true`
@@ -105,6 +106,29 @@ Shared application configuration currently includes:
 - That bootstrap ignores blank lines and comments, trims simple quotes, and does not override already-set system properties or OS environment variables.
 - That bootstrap does not search outside the repository root and is skipped for non-dev profile startup.
 - This local bootstrap is intentionally limited to the main app entrypoint and does not change `@SpringBootTest` behavior.
+- This local bootstrap is also skipped for container launches. The Dockerized API path must receive env values explicitly through `docker run --env-file ...` and `-e ...`.
+
+## Dockerized API Runtime
+
+The official container delivery path keeps infra in `docker-compose.yml` and runs the API separately on the pinned bridge network `merchantops-infra`:
+
+```powershell
+docker build -t merchantops-api:local .
+docker run --rm --name merchantops-api-local `
+  --env-file .env `
+  --network merchantops-infra `
+  -p 8080:8080 `
+  -e MYSQL_HOST=mysql `
+  -e REDIS_HOST=redis `
+  -e RABBITMQ_HOST=rabbitmq `
+  merchantops-api:local
+```
+
+Container runtime expectations:
+
+- the image exposes port `8080`
+- `MYSQL_HOST`, `REDIS_HOST`, and `RABBITMQ_HOST` should point to the compose service names when the container joins `merchantops-infra`
+- `.env` continues to provide credentials, timezone, JWT overrides, and optional AI provider overrides, but those values are injected at runtime instead of being copied into the image
 
 ## AI Provider Controls
 

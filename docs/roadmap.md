@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-06
+Last updated: 2026-04-10
 
 > Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
 
@@ -21,7 +21,7 @@ Last updated: 2026-04-06
 
 ## Current Focus
 
-The current Week 10 active state now carries the completed Slice A delivery-hardening baseline on top of the completed Week 9 governance baseline:
+The current Week 10 active state now carries the completed Slice A plus Slice B delivery-hardening baseline on top of the completed Week 9 governance baseline:
 
 - keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the completed Week 7 import AI surface stable: `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
@@ -31,16 +31,16 @@ The current Week 10 active state now carries the completed Slice A delivery-hard
 - Week 9 Slice C is now complete on that same surface: the tenant usage-summary response now also exposes stable `byPromptVersion` aggregate visibility without adding a new endpoint, filter, billing surface, or per-request cross-entity detail list
 - treat the completed Week 9 governance baseline as fixed input: the executable six-workflow prompt inventory, shared comparator pass, tenant usage-summary aggregate reads, and `byPromptVersion` visibility are now part of the tagged baseline
 - Week 10 Slice A is now complete on that baseline: one real tenant-scoped persisted feature-flag set per current tenant now gates the six AI generation endpoints plus the two Week 8 workflow proposal bridges through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, keeping disabled paths controlled and non-silent
+- Week 10 Slice B is now complete on that baseline: the repository now ships a root multi-stage Dockerfile, `merchantops-api` packages a runnable boot jar for that image, the infra stack keeps a pinned `merchantops-infra` bridge network without adding an API compose service, and the documented shared-network `docker build` plus `docker run` path is now the formal local delivery baseline
 - keep approval payloads narrow and non-sensitive while Week 10 delivery hardening lands; avoid broader write-back, billing, ledger semantics, and generic chat tooling in the public workflow surface itself
 
 ## Recommended Next Steps
 
 - treat the completed Week 8 import selective replay proposal flow plus the completed Week 8 ticket reply-draft comment proposal flow, together with the shared pending-proposal uniqueness hardening, as the fixed proposal -> approval -> execution baseline for later work
 - treat the completed Week 9 Slice A prompt-inventory plus comparator baseline and the completed Week 9 Slice B plus Slice C tenant usage-summary read as the fixed governance input for Week 10
-- treat the completed Week 10 Slice A persisted feature-flag baseline as fixed rollout-safety input for the rest of Week 10
-- next, add a Dockerfile plus delivery documentation for local and open-source handoff
-- then add minimal CI/CD on top of the Docker and doc baseline rather than in parallel with unfinished delivery packaging
-- keep portfolio packaging and release-presentation cleanup after Dockerfile plus delivery docs and minimal CI/CD, not before them
+- treat the completed Week 10 Slice A persisted feature-flag baseline plus the completed Week 10 Slice B Dockerized API baseline as fixed rollout-safety and delivery input for the rest of Week 10
+- next, add minimal CI/CD on top of the Docker and documentation baseline rather than in parallel with unfinished delivery packaging
+- then keep portfolio packaging and release-presentation cleanup after the CI/CD slice, not before it
 - keep the completed Week 6 ticket AI surface, the completed Week 7 import AI read surface, and the completed Week 8 workflow bridges stable while Week 10 improves delivery readiness instead of widening the AI endpoints themselves
 
 ## Near-Term Sequence

@@ -1,6 +1,6 @@
 # Local Smoke Test
 
-Last updated: 2026-04-06
+Last updated: 2026-04-10
 
 > Maintenance note: keep this page as the current PowerShell-first live smoke path for the public workflow surface. Keep it step-by-step, happy-path-oriented, and reusable across phases. Broad negative-path coverage and environment-wide checks belong in [automated-tests.md](automated-tests.md) and [regression-checklist.md](regression-checklist.md), not as historical add-ons here.
 
@@ -55,7 +55,7 @@ Set-Location .\merchantops-api
 ..\mvnw.cmd spring-boot:run
 ```
 
-Do not default to `java -jar .\merchantops-api\target\merchantops-api-0.0.1-SNAPSHOT.jar` for local smoke tests. The current build is not packaged as a runnable fat jar.
+This runbook still defaults to `spring-boot:run` because repo-root `.env` auto-loading and live edit/restart loops are tied to that path. For delivery-baseline verification, you can instead build and run the Dockerized API with the documented `docker build` plus `docker run --env-file .env --network merchantops-infra ...` flow from [../getting-started/quick-start.md](../getting-started/quick-start.md).
 If port `8080` is already busy, stop the conflicting process or start the app on another port and update `$baseUrl` in the later smoke steps to match.
 
 ## 3. Prepare Reusable Variables

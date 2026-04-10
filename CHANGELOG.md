@@ -9,6 +9,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 ### Added
 
 - Added the first Week 10 delivery-hardening slice through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, a real public tenant-scoped persisted feature-flag surface for six AI generation endpoints plus two approval-backed workflow bridges.
+- Added the second Week 10 delivery-hardening slice through a repository-root multi-stage `Dockerfile`, runnable `merchantops-api` boot-jar packaging, and an official `docker build` plus `docker run --env-file .env --network merchantops-infra ...` local delivery path over the existing MySQL, Redis, and RabbitMQ stack.
 
 ### Changed
 
@@ -18,6 +19,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Feature-flag updates now return the final persisted row and suppress duplicate `FEATURE_FLAG_UPDATED` audit rows when a concurrent write already applied the requested boolean before the update path completes.
 - The shared AI runtime now supports an internal OpenAI transport selector under `merchantops.ai.openai-runtime`, keeping `RAW_HTTP` as the rollback-safe default `/v1/responses` path while adding a `SPRING_AI` OpenAI chat-completions transport pilot under the same `merchantops.ai.*` ownership model.
 - AI reference docs, auth/RBAC docs, configuration docs, API examples, automated test notes, smoke guidance, and Week 10 phase/roadmap docs now reflect the persisted feature-flag rollout-control baseline.
+- Getting-started docs, shared configuration docs, smoke/test guidance, and Week 10 phase docs now also reflect the Dockerized API delivery baseline, the pinned `merchantops-infra` bridge network, and the explicit container env-injection path.
 
 ## [v0.6.0-beta] - 2026-04-06
 

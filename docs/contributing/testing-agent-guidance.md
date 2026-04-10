@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-04-06
+Last updated: 2026-04-10
 
 ## Purpose
 
@@ -15,11 +15,12 @@ When you take over an in-flight change set, use this order:
 1. Inspect the staged scope first with `git diff --cached --name-only` and `git diff --cached --stat`.
 2. Map the staged files to the affected test layers, choose the smallest sufficient verification set, and execute enough of it to support a staged testing report.
 3. If the staged change touches controllers, security, repositories, entities, or a bug that only appears in real request flow, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`, and follow [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md).
-4. If the staged change touches AI provider wiring, `.env` loading, provider selection, or live vendor compatibility, use [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md) plus [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md) after the normal non-AI smoke path when needed.
-5. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
-6. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
-7. If the staged change affects status, roles, permissions, or JWT-claim propagation, verify both the stale-token rejection path and the refreshed-login success path before signing off.
-8. Report concrete findings first. Keep summaries and changelog-style recap secondary.
+4. If the staged change touches Docker delivery, container startup, or env injection behavior, also run the documented `docker build` plus `docker run --env-file .env --network merchantops-infra ...` path and verify at least `/health` plus one protected endpoint.
+5. If the staged change touches AI provider wiring, `.env` loading, provider selection, or live vendor compatibility, use [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md) plus [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md) after the normal non-AI smoke path when needed. When the same change also targets Docker delivery or explicit container env injection, prefer running the summary-first live smoke against the Dockerized API path instead of switching back to `spring-boot:run`.
+6. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
+7. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
+8. If the staged change affects status, roles, permissions, or JWT-claim propagation, verify both the stale-token rejection path and the refreshed-login success path before signing off.
+9. Report concrete findings first. Keep summaries and changelog-style recap secondary.
 
 ## `TT staged` Expectations
 
@@ -74,6 +75,7 @@ It does not replace manual checks for:
 
 - Swagger/OpenAPI rendering
 - real infra health such as `MySQL`, `Redis`, and `RabbitMQ`
+- Dockerized API image build and container startup on the documented shared-network path
 - authenticated endpoints outside the covered login + user-management + ticket + audit + approval + import path
 
 ## Default Test Entry Point
@@ -98,7 +100,7 @@ Use the full reactor only when broader verification is needed:
 ## Known Pitfalls
 
 - `spring-boot:run` does not magically use every fresh sibling-module compile output. If `merchantops-infra` signatures changed, install the reactor modules first.
-- Do not default to `java -jar .\merchantops-api\target\merchantops-api-0.0.1-SNAPSHOT.jar` for local smoke. The current package is not the default runnable entry point.
+- The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`, but the Dockerized API path is the right live-smoke target when you must prove container delivery or explicit runtime env injection.
 - For H2 tests that depend on MySQL compatibility, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify `MODE` through `INFORMATION_SCHEMA.SETTINGS` rather than through `DatabaseMetaData#getURL()`.
 - Treat password formatting as a cross-flow regression point. Whenever create-user or login password handling changes, verify that both flows enforce the same rule.
 - Do not let smoke docs over-claim coverage. If a runbook executes only the happy path, keep negative-path expectations in automated-test notes or the regression checklist and label them that way.

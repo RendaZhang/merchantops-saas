@@ -34,26 +34,49 @@ MerchantOps SaaS is an open-source, multi-tenant backend reference implementatio
 
 Requirements:
 
-- JDK 21
-- Maven Wrapper or Maven 3.9.x
-- Docker Compose
+- Docker Desktop or another Docker Engine runtime with `docker compose`
 - Access to Maven Central
+- JDK 21 for the local Maven startup path
 
-Start the local environment:
+Prepare the local infrastructure first:
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up -d
+```
+
+Choose one API startup path:
+
+1. Local Maven startup
+
+```powershell
 .\mvnw.cmd -pl merchantops-api -am -DskipTests install
 .\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 
 The API also auto-loads the repository-root local `.env` during dev-profile `spring-boot:run`, so local AI provider keys should stay there instead of in tracked files.
 
+2. Dockerized API startup
+
+```powershell
+docker build -t merchantops-api:local .
+docker run --rm --name merchantops-api-local `
+  --env-file .env `
+  --network merchantops-infra `
+  -p 8080:8080 `
+  -e MYSQL_HOST=mysql `
+  -e REDIS_HOST=redis `
+  -e RABBITMQ_HOST=rabbitmq `
+  merchantops-api:local
+```
+
+The Dockerized path keeps infra in `docker-compose.yml` and joins the same pinned bridge network. The API container expects the same `.env` values for database, Redis, RabbitMQ, JWT, timezone, and optional AI provider overrides, but they must be injected explicitly with `--env-file` and `-e`; the image does not auto-load the repository-root `.env`.
+
 After startup:
 
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - Health: `http://localhost:8080/health`
+- Actuator health: `http://localhost:8080/actuator/health`
 
 For the full setup flow, see [docs/getting-started/README.md](docs/getting-started/README.md).
 

@@ -1,12 +1,12 @@
 # Automated Tests
 
-Last updated: 2026-04-09
+Last updated: 2026-04-10
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-09 11:56:17 +08:00:
+Latest local default regression result on 2026-04-10 12:01:19 +08:00:
 
 - `BUILD SUCCESS`
 - `Tests run: 410, Failures: 0, Errors: 0, Skipped: 1`
@@ -30,6 +30,24 @@ Use the full reactor only when you want the broader baseline:
 ```powershell
 .\mvnw.cmd test
 ```
+
+For the Week 10 Slice B delivery baseline, add this manual container verification after the Maven suite:
+
+```powershell
+docker build -t merchantops-api:local .
+Copy-Item .env.example .env -ErrorAction SilentlyContinue
+docker compose up -d
+docker run --rm --name merchantops-api-local `
+  --env-file .env `
+  --network merchantops-infra `
+  -p 8080:8080 `
+  -e MYSQL_HOST=mysql `
+  -e REDIS_HOST=redis `
+  -e RABBITMQ_HOST=rabbitmq `
+  merchantops-api:local
+```
+
+If the same change also touches AI provider wiring or live vendor compatibility, keep that same Dockerized API path running and add the summary-first pass from [ai-live-smoke-test.md](ai-live-smoke-test.md). For containerized AI smoke, provide `MERCHANTOPS_AI_*` through the local `.env` or explicit `-e` flags; the container does not auto-load the repository-root `.env`.
 
 ## Coverage Baseline
 
@@ -406,8 +424,8 @@ Use [local-smoke-test.md](local-smoke-test.md), [ai-live-smoke-test.md](ai-live-
 ## Known Pitfalls
 
 - Keep `.\mvnw.cmd -pl merchantops-api -am test` as the default regression entry. Running only `-pl merchantops-api test` can hide sibling-module signature changes behind stale local Maven artifacts.
-- For live smoke tests after changing JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first, then start the app from the `merchantops-api` module with `..\mvnw.cmd spring-boot:run`. The `spring-boot:run` classpath resolves sibling modules from the local Maven repository, not from uninstalled reactor outputs.
-- Do not treat `merchantops-api/target/merchantops-api-0.0.1-SNAPSHOT.jar` as the default local smoke-test entry point. The current packaging does not produce a fat jar that is ready for `java -jar`.
+- For live smoke tests after changing JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first. Use `..\mvnw.cmd spring-boot:run` when the goal is the default local dev path; use the documented Dockerized API command when the verification also needs to prove container delivery or explicit env injection.
+- The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`, but Dockerized API startup is the correct path when the test target includes the image/runtime contract itself.
 - For H2-based native SQL tests that rely on `MODE=MySQL`, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify the mode through `INFORMATION_SCHEMA.SETTINGS`. `DatabaseMetaData#getURL()` does not reliably echo the `MODE=...` parameter.
 - If a change adds or edits a Flyway migration, do at least one real MySQL verification pass after `spring-boot:run`. The current H2 and manually-created integration-test schemas do not prove that Flyway applied the new migration exactly as intended.
 - If Flyway reports a checksum mismatch in a real local run, do not rewrite a tagged or shared migration just to make the error disappear. The current in-place `V12` repair is a narrow untagged pre-release exception; for already-shared baselines, create a new `Vx__...sql` migration instead.
