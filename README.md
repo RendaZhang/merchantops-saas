@@ -80,6 +80,16 @@ After startup:
 
 For the full setup flow, see [docs/getting-started/README.md](docs/getting-started/README.md).
 
+## Quality Gate
+
+The default local regression remains:
+
+```powershell
+.\mvnw.cmd -pl merchantops-api -am test
+```
+
+GitHub Actions runs the Linux equivalent on pull requests and `main` pushes, then verifies that the API image builds with `docker build -t merchantops-api:ci .`. The CI gate does not deploy, publish images, or require AI provider secrets. For the exact CI and manual-verification boundary, see [docs/runbooks/automated-tests.md](docs/runbooks/automated-tests.md).
+
 ## Documentation
 
 - [docs/README.md](docs/README.md): documentation index
