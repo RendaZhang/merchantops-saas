@@ -66,6 +66,14 @@ public class JpaApprovalRequestAdapter implements ApprovalRequestPort {
     }
 
     @Override
+    public boolean existsPendingRequestKey(Long tenantId, String pendingRequestKey) {
+        if (pendingRequestKey == null || pendingRequestKey.isBlank()) {
+            return false;
+        }
+        return approvalRequestRepository.existsByTenantIdAndPendingRequestKey(tenantId, pendingRequestKey);
+    }
+
+    @Override
     public Optional<ApprovalRequestRecord> findById(Long tenantId, Long approvalRequestId) {
         return approvalRequestRepository.findByIdAndTenantId(approvalRequestId, tenantId).map(this::toRecord);
     }

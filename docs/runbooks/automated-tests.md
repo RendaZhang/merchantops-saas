@@ -297,6 +297,8 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - request-scoped forwarding of `tenantId`, `userId`, and `requestId` to `ImportJobAiErrorSummaryService`, `ImportJobAiMappingSuggestionService`, and `ImportJobAiFixRecommendationService`
 - `ImportJobAuthzIntegrationTest`
   - real authz enforcement for import create plus all current replay write endpoints, including tenant-scoped persistence for authorized writes and `403` rejection for read-only callers
+- `ApprovalRequestDomainServiceTest`
+  - domain-level pending-request-key precheck rejects sequential duplicate ticket comment proposals before save, keeping the duplicate-pending `400` path controlled without relying on database uniqueness translation for normal repeats
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
   - import selective replay proposal creation delegates the normalized approval command and records approval audit
