@@ -10,6 +10,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 - Added the first Week 10 delivery-hardening slice through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, a real public tenant-scoped persisted feature-flag surface for six AI generation endpoints plus two approval-backed workflow bridges.
 - Added the second Week 10 delivery-hardening slice through a repository-root multi-stage `Dockerfile`, runnable `merchantops-api` boot-jar packaging, and an official `docker build` plus `docker run --env-file .env --network merchantops-infra ...` local delivery path over the existing MySQL, Redis, and RabbitMQ stack.
+- Added the third Week 10 delivery-hardening slice through a no-secret GitHub Actions CI quality gate on pull requests and `main` pushes, running the default Maven regression plus a root Docker image build.
 
 ### Changed
 
@@ -20,6 +21,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - The shared AI runtime now supports an internal OpenAI transport selector under `merchantops.ai.openai-runtime`, keeping `RAW_HTTP` as the rollback-safe default `/v1/responses` path while adding a `SPRING_AI` OpenAI chat-completions transport pilot under the same `merchantops.ai.*` ownership model.
 - AI reference docs, auth/RBAC docs, configuration docs, API examples, automated test notes, smoke guidance, and Week 10 phase/roadmap docs now reflect the persisted feature-flag rollout-control baseline.
 - Getting-started docs, shared configuration docs, smoke/test guidance, and Week 10 phase docs now also reflect the Dockerized API delivery baseline, the pinned `merchantops-infra` bridge network, and the explicit container env-injection path.
+- README, automated-test guidance, and phase/roadmap docs now describe the CI boundary explicitly: CI proves Maven regression and image construction, while deployment, image publishing, live AI provider checks, Dockerized API live smoke, and opt-in real MySQL migration verification remain outside the workflow.
 
 ## [v0.6.0-beta] - 2026-04-06
 

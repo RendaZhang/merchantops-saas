@@ -1,15 +1,19 @@
 # Automated Tests
 
-Last updated: 2026-04-10
+Last updated: 2026-04-11
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-10 12:01:19 +08:00:
+Latest local default regression result on 2026-04-11 10:50:41 +08:00:
 
 - `BUILD SUCCESS`
 - `Tests run: 410, Failures: 0, Errors: 0, Skipped: 1`
+
+Latest CI-parity Docker build result on 2026-04-11:
+
+- `docker build -t merchantops-api:ci .` completed successfully
 
 ## Recommended Commands
 
@@ -24,6 +28,20 @@ Why this is the default:
 - `merchantops-api` currently depends on in-repo changes from `merchantops-infra`
 - `-am` (`--also-make`) ensures dependent modules are rebuilt in the same reactor
 - this avoids false failures caused by `merchantops-api` compiling against stale jars in the local Maven cache
+
+GitHub Actions runs the Linux equivalent of the same default regression:
+
+```bash
+./mvnw -pl merchantops-api -am test
+```
+
+The CI quality gate also verifies the root Docker image build:
+
+```bash
+docker build -t merchantops-api:ci .
+```
+
+That CI Docker check only proves image construction. It does not start the API container, run compose-managed infrastructure, run Dockerized API live smoke, call OpenAI or DeepSeek, run live AI smoke, or enable the opt-in real MySQL migration suite.
 
 Use the full reactor only when you want the broader baseline:
 
@@ -51,7 +69,7 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, and the completed Week 10 Slice A persisted feature-flag hardening baseline. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, and the completed Week 10 Slice A persisted feature-flag hardening baseline. Week 10 Slice C now runs that same Maven baseline in GitHub Actions and adds Docker image build as a no-secret CI quality gate. Today that means:
 
 - auth and permission checks for the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
@@ -412,13 +430,14 @@ These areas still need manual verification even when the automated suite passes:
 
 - authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
+- Dockerized API live container smoke; CI verifies image build only
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
 Use [local-smoke-test.md](local-smoke-test.md), [ai-live-smoke-test.md](ai-live-smoke-test.md), and [regression-checklist.md](regression-checklist.md) for those checks.
 
 ## Recommended Workflow
 
-1. Run `.\mvnw.cmd -pl merchantops-api -am test`
+1. Run `.\mvnw.cmd -pl merchantops-api -am test`, which matches the CI Maven gate through the Linux equivalent `./mvnw -pl merchantops-api -am test`
 2. If that passes and the change touches public API flow, security wiring, SQL, or migrations, run the relevant path from [local-smoke-test.md](local-smoke-test.md)
 3. If the change touches AI provider wiring, `.env` loading, or live vendor compatibility, add the summary-first path from [ai-live-smoke-test.md](ai-live-smoke-test.md)
 4. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
@@ -426,6 +445,7 @@ Use [local-smoke-test.md](local-smoke-test.md), [ai-live-smoke-test.md](ai-live-
 ## Known Pitfalls
 
 - Keep `.\mvnw.cmd -pl merchantops-api -am test` as the default regression entry. Running only `-pl merchantops-api test` can hide sibling-module signature changes behind stale local Maven artifacts.
+- Treat a successful CI Docker build as image-construction evidence only. It does not prove runtime configuration, compose-managed infrastructure connectivity, or authenticated API behavior inside a running container.
 - For live smoke tests after changing JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first. Use `..\mvnw.cmd spring-boot:run` when the goal is the default local dev path; use the documented Dockerized API command when the verification also needs to prove container delivery or explicit env injection.
 - The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`, but Dockerized API startup is the correct path when the test target includes the image/runtime contract itself.
 - For H2-based native SQL tests that rely on `MODE=MySQL`, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify the mode through `INFORMATION_SCHEMA.SETTINGS`. `DatabaseMetaData#getURL()` does not reliably echo the `MODE=...` parameter.
