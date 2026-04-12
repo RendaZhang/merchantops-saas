@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-04-06
+Last updated: 2026-04-12
 
 ## Purpose
 
@@ -13,6 +13,14 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 - tag message: `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`
 
 This tag records the completed Week 9 baseline: the executable prompt-inventory plus eval-comparator line together with the tenant-scoped AI usage-summary read surface and its aggregate `byPromptVersion` visibility over stored runtime metadata.
+
+## Prepared Next Tag
+
+- prepared next tag: `v0.7.0-beta`
+- intended message: `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`
+- status: pre-tag readiness only; the tag does not exist yet
+
+This prepared tag is intended to record the completed Week 10 baseline: persisted tenant feature flags for AI generation and workflow bridges, Dockerized API delivery, the minimal no-secret GitHub Actions CI gate, and portfolio/open-source handoff packaging. Keep `v0.6.0-beta` as the current tag until the `v0.7.0-beta` tag is actually created.
 
 ## Previous Tagged Milestone
 
@@ -97,7 +105,8 @@ Recommended direction:
 - `v0.4.0-beta`: Week 7 AI Copilot for Import and Data Quality beta baseline
 - `v0.5.0-beta`: Week 8 Agentic Workflows with Human Oversight beta baseline
 - `v0.6.0-beta`: Week 9 AI Governance, Eval, Cost, and Usage beta baseline
-- later `v0.x` releases: delivery hardening, portfolio packaging, and later governance / usage / commercial-discovery milestones
+- prepared next `v0.7.0-beta`: Week 10 Delivery Hardening and Portfolio Packaging beta baseline
+- later `v0.x` releases: post-Week-10 planning, deeper delivery maturity, and later governance / usage / commercial-discovery milestones
 
 ## Practical Rules
 
