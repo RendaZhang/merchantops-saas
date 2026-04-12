@@ -11,6 +11,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added the first Week 10 delivery-hardening slice through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, a real public tenant-scoped persisted feature-flag surface for six AI generation endpoints plus two approval-backed workflow bridges.
 - Added the second Week 10 delivery-hardening slice through a repository-root multi-stage `Dockerfile`, runnable `merchantops-api` boot-jar packaging, and an official `docker build` plus `docker run --env-file .env --network merchantops-infra ...` local delivery path over the existing MySQL, Redis, and RabbitMQ stack.
 - Added the third Week 10 delivery-hardening slice through a no-secret GitHub Actions CI quality gate on pull requests and `main` pushes, running the default Maven regression plus a root Docker image build.
+- Added the fourth Week 10 portfolio-packaging slice through a concise root README plus `docs/getting-started/project-showcase.md`, giving reviewers and new contributors a 5-10 minute demo, architecture, governance-boundary, verification, and handoff path.
 
 ### Changed
 
@@ -22,6 +23,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - AI reference docs, auth/RBAC docs, configuration docs, API examples, automated test notes, smoke guidance, and Week 10 phase/roadmap docs now reflect the persisted feature-flag rollout-control baseline.
 - Getting-started docs, shared configuration docs, smoke/test guidance, and Week 10 phase docs now also reflect the Dockerized API delivery baseline, the pinned `merchantops-infra` bridge network, and the explicit container env-injection path.
 - README, automated-test guidance, and phase/roadmap docs now describe the CI boundary explicitly: CI proves Maven regression and image construction, while deployment, image publishing, live AI provider checks, Dockerized API live smoke, and opt-in real MySQL migration verification remain outside the workflow.
+- README and docs navigation now frame the repository as a workflow-first, AI-enhanced backend reference implementation with an explicit project-showcase path, while phase and roadmap docs now point toward Week 10 close-out and release-readiness instead of additional delivery automation.
 
 ## [v0.6.0-beta] - 2026-04-06
 
