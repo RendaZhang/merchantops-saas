@@ -15,13 +15,13 @@ Last updated: 2026-04-12
 - Week 7 AI Copilot For Import And Data Quality is complete.
 - Week 8 Agentic Workflows With Human Oversight is complete.
 - Week 9 AI Governance, Eval, Cost, and Usage is complete.
-- Week 10 Delivery Hardening and Portfolio Packaging is in close-out, with Slices A/B/C/D complete and prepared next tag `v0.7.0-beta` ready for release-cut/tag handoff.
+- Week 10 Delivery Hardening and Portfolio Packaging is complete and tagged as `v0.7.0-beta`.
 - Week 5 still provides the current async-operations baseline: import submission/list/detail/errors, narrowed `USER_CSV` business-row execution, replay variants, queued-job recovery, stale-processing handling, and throughput guardrails.
 - Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 
 ## Current Focus
 
-The current Week 10 close-out state carries the completed Slice A plus Slice B plus Slice C delivery-hardening baseline and the completed Slice D portfolio handoff packaging pass on top of the completed Week 9 governance baseline:
+The current `v0.7.0-beta` baseline carries the completed Week 10 Slice A plus Slice B plus Slice C delivery-hardening baseline and the completed Slice D portfolio handoff packaging pass on top of the completed Week 9 governance baseline:
 
 - keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - keep the completed Week 7 import AI surface stable: `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
@@ -34,16 +34,15 @@ The current Week 10 close-out state carries the completed Slice A plus Slice B p
 - Week 10 Slice B is now complete on that baseline: the repository now ships a root multi-stage Dockerfile, `merchantops-api` packages a runnable boot jar for that image, the infra stack keeps a pinned `merchantops-infra` bridge network without adding an API compose service, and the documented shared-network `docker build` plus `docker run` path is now the formal local delivery baseline
 - Week 10 Slice C is now complete on that baseline: `.github/workflows/ci.yml` runs a no-secret GitHub Actions quality gate on pull requests and `main` pushes, with independent default Maven regression and Docker image build jobs
 - Week 10 Slice D is now complete on that baseline: the root README now works as a concise open-source entry point, `docs/getting-started/project-showcase.md` provides a practical 5-10 minute demo and handoff path, and navigation now points new readers toward that showcase
-- keep approval payloads narrow and non-sensitive through the `v0.7.0-beta` release-readiness pass; avoid broader write-back, billing, ledger semantics, and generic chat tooling in the public workflow surface itself
+- keep approval payloads narrow and non-sensitive in post-Week-10 planning; avoid broader write-back, billing, ledger semantics, and generic chat tooling in the public workflow surface itself
 
 ## Recommended Next Steps
 
 - treat the completed Week 8 import selective replay proposal flow plus the completed Week 8 ticket reply-draft comment proposal flow, together with the shared pending-proposal uniqueness hardening, as the fixed proposal -> approval -> execution baseline for later work
 - treat the completed Week 9 Slice A prompt-inventory plus comparator baseline and the completed Week 9 Slice B plus Slice C tenant usage-summary read as the fixed governance input for Week 10
-- treat the completed Week 10 Slice A persisted feature-flag baseline, the completed Week 10 Slice B Dockerized API baseline, the completed Week 10 Slice C minimal CI/CD gate, and the completed Week 10 Slice D portfolio handoff packaging as fixed rollout-safety, delivery, and presentation input for the prepared `v0.7.0-beta` tag
-- next, finish the release-cut/tag handoff for `v0.7.0-beta` rather than widening delivery automation
-- only add more delivery automation if the release-readiness check finds a concrete blocker
-- after the `v0.7.0-beta` release cut, move into Week 11 / post-Week-10 planning from the completed delivery and portfolio baseline instead of treating Week 11 as current before the tag exists
+- treat the completed Week 10 Slice A persisted feature-flag baseline, the completed Week 10 Slice B Dockerized API baseline, the completed Week 10 Slice C minimal CI/CD gate, and the completed Week 10 Slice D portfolio handoff packaging as fixed rollout-safety, delivery, and presentation input for post-Week-10 planning
+- next, move into Week 11 / post-Week-10 planning from the completed delivery and portfolio baseline rather than widening Week 10 delivery automation by default
+- only add more delivery automation if the next planning pass finds a concrete blocker
 
 ## Near-Term Sequence
 
@@ -53,8 +52,8 @@ The current Week 10 close-out state carries the completed Slice A plus Slice B p
 - Week 8: agentic workflows with human oversight
 - Week 9: AI governance, eval, cost, and usage
 - Week 10: delivery hardening and portfolio packaging
-- Prepared next tag: `v0.7.0-beta` for Week 10 delivery hardening and portfolio packaging
-- Next after release cut: Week 11 / post-Week-10 planning
+- Current tag: `v0.7.0-beta` for Week 10 delivery hardening and portfolio packaging
+- Next: Week 11 / post-Week-10 planning
 - Stretch after Week 10: usage / ledger / invoice minimal loop
 
 ## Week 5 Outcome
@@ -65,13 +64,13 @@ The current Week 10 close-out state carries the completed Slice A plus Slice B p
 
 ## Open-Source Track
 
-- Current tagged milestone: `v0.6.0-beta` marks the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline on 2026-04-06.
-- Prepared next tag: `v0.7.0-beta` is intended to mark the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline, but it is not the current Git tag yet.
-- Previous tagged milestone: `v0.5.0-beta` marks the completed Week 8 Agentic Workflows with Human Oversight beta baseline on 2026-04-04.
+- Current tagged milestone: `v0.7.0-beta` marks the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline on 2026-04-12.
+- Previous tagged milestone: `v0.6.0-beta` marks the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline on 2026-04-06.
+- Earlier previous tagged milestone: `v0.5.0-beta` marks the completed Week 8 Agentic Workflows with Human Oversight beta baseline on 2026-04-04.
 - Earlier previous tagged milestone: `v0.4.0-beta` marks the completed Week 7 AI Copilot for Import and Data Quality beta baseline on 2026-03-28.
 - Earlier tagged milestones: `v0.2.0-alpha` marks the completed Week 5 async import and data operations preview on 2026-03-19, `v0.1.3` marks the completed Week 4 audit and approval baseline on 2026-03-12, `v0.1.2` marks the completed Week 3 ticket workflow baseline on 2026-03-11, `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11, and `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09.
-- The current open-source line can now honestly present the project as a workflow-first, AI-enhanced vertical SaaS backend through the completed Week 9 governance, eval, cost, and usage beta baseline plus the completed Week 10 feature-flag, Dockerized API, minimal CI, and portfolio handoff packaging slices.
-- Week 10 next step: finish the `v0.7.0-beta` release-cut/tag handoff for a more stable open-source reference-implementation milestone before gathering input for later commercial discovery.
+- The current open-source line can now honestly present the project as a workflow-first, AI-enhanced vertical SaaS backend through the completed Week 10 feature-flag, Dockerized API, minimal CI, and portfolio handoff packaging baseline on top of the Week 9 governance, eval, cost, and usage line.
+- Next step: start Week 11 / post-Week-10 planning from this more stable open-source reference-implementation milestone before gathering input for later commercial discovery.
 
 ## Notes
 

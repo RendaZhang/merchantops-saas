@@ -1,6 +1,6 @@
 # MerchantOps SaaS
 
-Current tag: `v0.6.0-beta` | prepared next tag: `v0.7.0-beta` | workflow-first, AI-enhanced backend reference implementation
+`v0.7.0-beta` | workflow-first, AI-enhanced backend reference implementation
 
 MerchantOps SaaS is an open-source, multi-tenant backend reference implementation for merchant operations workflows. It shows how tenant isolation, JWT/RBAC security, ticket execution, async import operations, audit/approval patterns, AI suggestions, feature flags, Docker delivery, and CI can fit together in a modular Spring Boot system.
 
@@ -8,13 +8,11 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 ## Current Milestone
 
-- Current tagged milestone: `v0.6.0-beta`
-- Tagged baseline meaning: Week 9 complete - AI governance, eval, cost, and usage beta baseline
-- Prepared next tag: `v0.7.0-beta` for the Week 10 Delivery Hardening and Portfolio Packaging beta baseline
-- Current phase state: Week 10 completion-ready release-cut handoff
+- Current tagged milestone: `v0.7.0-beta`
+- Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
+- Current phase state: Week 10 complete; Week 11 / post-Week-10 planning next
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
-- Next phase direction: Week 11 / post-Week-10 planning after the `v0.7.0-beta` release cut
-- Previous tagged milestone: `v0.5.0-beta` for the completed Week 8 Agentic Workflows with Human Oversight baseline
+- Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 
 ## Core Capabilities
 

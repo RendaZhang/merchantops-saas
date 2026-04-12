@@ -6,7 +6,11 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
-Prepared next tag: `v0.7.0-beta` for the Week 10 Delivery Hardening and Portfolio Packaging beta baseline. The current Git tag remains `v0.6.0-beta` until the release-cut tag is created.
+No release-level changes yet.
+
+## [v0.7.0-beta] - 2026-04-12
+
+Tagged as `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`.
 
 ### Added
 
@@ -26,9 +30,11 @@ Prepared next tag: `v0.7.0-beta` for the Week 10 Delivery Hardening and Portfoli
 - Getting-started docs, shared configuration docs, smoke/test guidance, and Week 10 phase docs now also reflect the Dockerized API delivery baseline, the pinned `merchantops-infra` bridge network, and the explicit container env-injection path.
 - README, automated-test guidance, and phase/roadmap docs now describe the CI boundary explicitly: CI proves Maven regression and image construction, while deployment, image publishing, live AI provider checks, Dockerized API live smoke, and opt-in real MySQL migration verification remain outside the workflow.
 - README and docs navigation now frame the repository as a workflow-first, AI-enhanced backend reference implementation with an explicit project-showcase path, while phase and roadmap docs now point toward Week 10 close-out and release-readiness instead of additional delivery automation.
-- Release docs now carry the Week 10 pre-tag readiness line for prepared next tag `v0.7.0-beta` while preserving `v0.6.0-beta` as the current tagged baseline until the tag exists.
+- Release docs now record `v0.7.0-beta` as the Week 10 delivery hardening and portfolio packaging beta baseline.
 
 ## [v0.6.0-beta] - 2026-04-06
+
+Tagged as `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`.
 
 ### Added
 

@@ -8,30 +8,25 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 
 ## Current Tagged Milestone
 
-- current tag: `v0.6.0-beta`
+- current tag: `v0.7.0-beta`
+- tag date: 2026-04-12
+- tag message: `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`
+
+This tag records the completed Week 10 baseline: persisted tenant feature flags for AI generation and workflow bridges, Dockerized API delivery, the minimal no-secret GitHub Actions CI gate, and portfolio/open-source handoff packaging.
+
+## Previous Tagged Milestone
+
+- previous tag: `v0.6.0-beta`
 - tag date: 2026-04-06
 - tag message: `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`
 
 This tag records the completed Week 9 baseline: the executable prompt-inventory plus eval-comparator line together with the tenant-scoped AI usage-summary read surface and its aggregate `byPromptVersion` visibility over stored runtime metadata.
 
-## Prepared Next Tag
-
-- prepared next tag: `v0.7.0-beta`
-- intended message: `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`
-- status: pre-tag readiness only; the tag does not exist yet
-
-This prepared tag is intended to record the completed Week 10 baseline: persisted tenant feature flags for AI generation and workflow bridges, Dockerized API delivery, the minimal no-secret GitHub Actions CI gate, and portfolio/open-source handoff packaging. Keep `v0.6.0-beta` as the current tag until the `v0.7.0-beta` tag is actually created.
-
-## Previous Tagged Milestone
-
-- previous tag: `v0.5.0-beta`
-- tag date: 2026-04-04
-- tag message: `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
-
-This tag records the completed Week 8 baseline: approval-backed import selective replay proposals, approval-backed ticket comment proposals from AI reply-draft output, shared approval hardening that deduplicates pending proposals on executable payload semantics across all three shipped approval action types, and the latest AI provider runtime hardening that now ships with the same cut.
-
 ## Earlier Tagged Milestones
 
+- earlier tag: `v0.5.0-beta`
+- tag date: 2026-04-04
+- tag message: `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
 - earlier tag: `v0.2.0-alpha`
 - tag date: 2026-03-19
 - tag message: `Week 5 complete: async import and data operations preview`
@@ -42,7 +37,7 @@ This tag records the completed Week 8 baseline: approval-backed import selective
 - tag date: 2026-03-11
 - tag message: `Week 3 complete: ticket workflow baseline`
 
-These tags record the first workflow baseline, the first reusable governance baseline, and the Week 5 async import/data-operations preview before the project broadened into public AI workflow lines.
+These tags record the first workflow baseline, the first reusable governance baseline, the Week 5 async import/data-operations preview, and the Week 8 human-reviewed workflow baseline before the project broadened into governance and delivery-hardening release lines.
 
 ## Initial Tagged Baseline
 
@@ -105,7 +100,7 @@ Recommended direction:
 - `v0.4.0-beta`: Week 7 AI Copilot for Import and Data Quality beta baseline
 - `v0.5.0-beta`: Week 8 Agentic Workflows with Human Oversight beta baseline
 - `v0.6.0-beta`: Week 9 AI Governance, Eval, Cost, and Usage beta baseline
-- prepared next `v0.7.0-beta`: Week 10 Delivery Hardening and Portfolio Packaging beta baseline
+- `v0.7.0-beta`: Week 10 Delivery Hardening and Portfolio Packaging beta baseline
 - later `v0.x` releases: post-Week-10 planning, deeper delivery maturity, and later governance / usage / commercial-discovery milestones
 
 ## Practical Rules

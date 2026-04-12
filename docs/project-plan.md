@@ -144,12 +144,11 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 - 当前执行已经完成 Week 10 Delivery Hardening and Portfolio Packaging 的 Slices A/B/C/D。
 - Week 1-10 当前已形成稳定 workflow + dual-workflow AI read baseline + human-reviewed execution bridge baseline + governance/eval/usage baseline + delivery/portfolio packaging baseline，其中 Week 10 已完成 feature flags、Dockerized API、minimal CI gate 和 portfolio/open-source handoff packaging。
-- 当前 tagged baseline 已切到 `v0.6.0-beta`，对应 `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`。
-- prepared next tag 是 `v0.7.0-beta`，用于即将收口的 `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`；在 tag 真正创建前，它不能写成 current tagged baseline。
-- 当前执行已经把 Week 9 Slice A / B / C 收口成完成态的 governance / eval / cost / usage baseline，并把 Week 10 Slice A / B / C / D 收口成 release-readiness 候选基线。
-- 当前近期待办已经从“继续扩 Week 10 delivery automation”切到“完成 `v0.7.0-beta` release-cut/tag handoff”。
-- 上一枚 beta tag 是 `v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`。
-- Week 11 / post-Week-10 planning 是 `v0.7.0-beta` release cut 之后的下一步，不是当前 tagged reality。
+- 当前 tagged baseline 已切到 `v0.7.0-beta`，对应 `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`。
+- 当前执行已经把 Week 9 Slice A / B / C 收口成完成态的 governance / eval / cost / usage baseline，并把 Week 10 Slice A / B / C / D 收口成当前 delivery / portfolio tagged baseline。
+- 当前近期待办已经从“继续扩 Week 10 delivery automation”切到“Week 11 / post-Week-10 planning”。
+- 上一枚 beta tag 是 `v0.6.0-beta`，对应 `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`。
+- Week 11 / post-Week-10 planning 是当前下一步。
 - 当前实现现实以 [project-status.md](project-status.md) 为准，当前近期待办和 slice 顺序以 [roadmap.md](roadmap.md) 为准。
 
 ---
@@ -578,12 +577,11 @@ MerchantOps SaaS 是一个面向跨境卖家团队的多租户运营支持平台
 
 ### 推荐发布时间点
 
-- 当前 tagged baseline：`v0.6.0-beta`，对应 `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`
-- prepared next tag：`v0.7.0-beta`，目标是记录 `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`
-- 上一枚 beta tag：`v0.5.0-beta`，对应 `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
+- 当前 tagged baseline：`v0.7.0-beta`，对应 `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`
+- 上一枚 beta tag：`v0.6.0-beta`，对应 `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`
 - 详细版本历史以 `CHANGELOG.md` 和 `docs/contributing/release-versioning.md` 为准
 - Week 9 已完成：公开叙事已经从 human-reviewed workflow baseline 明确推进到更可信的 governance / eval / cost / usage beta baseline
-- Week 10 已完成并进入 release-readiness：更稳定的开源参考实现可在 `v0.7.0-beta` release cut 后作为商业探索起点
+- Week 10 已完成：更稳定的开源参考实现可作为商业探索起点
 
 ### 开源前最低准备项
 
