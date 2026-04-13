@@ -1,78 +1,73 @@
 # Roadmap
 
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
-> Maintenance note: keep this page focused on the active phase, the next recommended slices, and near-term sequencing. Link to [project-status.md](project-status.md) and the relevant pages under [reference/](reference/README.md) for exact current contracts instead of repeating full implementation inventories here.
+> Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
-## Current Phase
+## Current Baseline
 
-- Week 1 Platform Foundation is complete.
-- Week 2 First Business Loop - Tenant User Management is complete.
-- Week 3 Ticket Workflow - System of Action is complete.
-- Week 4 Audit Trail And Approval Patterns is complete.
-- Week 5 Async Import And Data Operations is complete.
-- Week 6 AI Copilot For Ticket Operations is complete.
-- Week 7 AI Copilot For Import And Data Quality is complete.
-- Week 8 Agentic Workflows With Human Oversight is complete.
-- Week 9 AI Governance, Eval, Cost, and Usage is complete.
-- Week 10 Delivery Hardening and Portfolio Packaging is complete and tagged as `v0.7.0-beta`.
-- Week 5 still provides the current async-operations baseline: import submission/list/detail/errors, narrowed `USER_CSV` business-row execution, replay variants, queued-job recovery, stale-processing handling, and throughput guardrails.
-- Exact current endpoint inventory and current limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
+- Current tagged milestone: `v0.7.0-beta`, recording the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline.
+- Foundation status: Week 1-10 are complete and now treated as the archived foundation build-out.
+- Current public surface and limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
+- Long-term product direction lives in [product-strategy.md](product-strategy.md).
 
-## Current Focus
+## Release-Line Planning Format
 
-The current `v0.7.0-beta` baseline carries the completed Week 10 Slice A plus Slice B plus Slice C delivery-hardening baseline and the completed Slice D portfolio handoff packaging pass on top of the completed Week 9 governance baseline:
+Future roadmap updates should use a milestone-and-slice format rather than rebuilding another fixed 10-week plan:
 
-- keep the completed Week 6 ticket AI surface stable: ticket interaction history, ticket summary, ticket triage, and ticket internal reply draft remain `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
-- keep the completed Week 7 import AI surface stable: `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` stay `USER_READ`, read-only, tenant-scoped, and suggestion-only
-- treat the completed Week 8 workflow baseline as fixed input: `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, action-aware approval routing, and shared pending-request-key hardening now form the human-reviewed execution bridge pattern
-- Week 9 Slice A is now complete on that baseline: executable prompt-version inventory, per-workflow golden plus failure plus policy datasets, and one shared comparator pass now run in the default Maven suite without widening the public AI surface
-- Week 9 Slice B is now complete on that baseline: `GET /api/v1/ai-interactions/usage-summary` adds one tenant-scoped governance read over stored `ai_interaction_record` rows with inclusive `from` / `to`, narrow exact-match filters, aggregate totals, and stable breakdown ordering while staying read-only and outside billing or ledger semantics
-- Week 9 Slice C is now complete on that same surface: the tenant usage-summary response now also exposes stable `byPromptVersion` aggregate visibility without adding a new endpoint, filter, billing surface, or per-request cross-entity detail list
-- treat the completed Week 9 governance baseline as fixed input: the executable six-workflow prompt inventory, shared comparator pass, tenant usage-summary aggregate reads, and `byPromptVersion` visibility are now part of the tagged baseline
-- Week 10 Slice A is now complete on that baseline: one real tenant-scoped persisted feature-flag set per current tenant now gates the six AI generation endpoints plus the two Week 8 workflow proposal bridges through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, keeping disabled paths controlled and non-silent
-- Week 10 Slice B is now complete on that baseline: the repository now ships a root multi-stage Dockerfile, `merchantops-api` packages a runnable boot jar for that image, the infra stack keeps a pinned `merchantops-infra` bridge network without adding an API compose service, and the documented shared-network `docker build` plus `docker run` path is now the formal local delivery baseline
-- Week 10 Slice C is now complete on that baseline: `.github/workflows/ci.yml` runs a no-secret GitHub Actions quality gate on pull requests and `main` pushes, with independent default Maven regression and Docker image build jobs
-- Week 10 Slice D is now complete on that baseline: the root README now works as a concise open-source entry point, `docs/getting-started/project-showcase.md` provides a practical 5-10 minute demo and handoff path, and navigation now points new readers toward that showcase
-- keep approval payloads narrow and non-sensitive in post-Week-10 planning; avoid broader write-back, billing, ledger semantics, and generic chat tooling in the public workflow surface itself
+- Current milestone: the active release-line target or planning boundary.
+- Active slice: the single narrow implementation or documentation slice currently being worked.
+- Candidate next slices: the next one to three evidence-backed slices, grouped by strategic track when helpful.
+- Stop condition: what must be true before the slice can close, including implementation, tests, public docs, examples, runbooks, and release evidence when applicable.
 
-## Recommended Next Steps
+## Current Milestone
 
-- treat the completed Week 8 import selective replay proposal flow plus the completed Week 8 ticket reply-draft comment proposal flow, together with the shared pending-proposal uniqueness hardening, as the fixed proposal -> approval -> execution baseline for later work
-- treat the completed Week 9 Slice A prompt-inventory plus comparator baseline and the completed Week 9 Slice B plus Slice C tenant usage-summary read as the fixed governance input for Week 10
-- treat the completed Week 10 Slice A persisted feature-flag baseline, the completed Week 10 Slice B Dockerized API baseline, the completed Week 10 Slice C minimal CI/CD gate, and the completed Week 10 Slice D portfolio handoff packaging as fixed rollout-safety, delivery, and presentation input for post-Week-10 planning
-- next, move into Week 11 / post-Week-10 planning from the completed delivery and portfolio baseline rather than widening Week 10 delivery automation by default
-- only add more delivery automation if the next planning pass finds a concrete blocker
+- Milestone: Productization Baseline.
+- Strategic horizon: [Product Strategy](product-strategy.md) Horizon 1.
+- Candidate release line: the next beta milestone after `v0.7.0-beta`; keep the exact tag unset until release-readiness or pre-tag work.
+- Goal: make the project easier to run, demonstrate, and evaluate without widening AI autonomy or adding unrelated modules by default.
 
-## Near-Term Sequence
+## Active Slice
 
-- Week 5: async import and data operations
-- Week 6: AI Copilot for ticket operations
-- Week 7: AI Copilot for import and data quality
-- Week 8: agentic workflows with human oversight
-- Week 9: AI governance, eval, cost, and usage
-- Week 10: delivery hardening and portfolio packaging
-- Current tag: `v0.7.0-beta` for Week 10 delivery hardening and portfolio packaging
-- Next: Week 11 / post-Week-10 planning
-- Stretch after Week 10: usage / ledger / invoice minimal loop
+### Slice A: Minimal Admin Console Entry
 
-## Week 5 Outcome
+Goal: define and start the thinnest product-facing admin-console path over the existing backend.
 
-- Week 5 ended with a credible async import and data-operations baseline: create/list/detail/errors, filtered queue reads, row-level execution, replay variants, and derived-job lineage.
-- Runtime hardening includes sequential chunk execution, per-chunk counter visibility during `PROCESSING`, queued-job recovery after after-commit publish failure, stale-processing handling, and bounded import controls.
-- That remains the intended handoff into Week 6 AI ticket work rather than an invitation to keep widening Week 5 breadth.
+Expected scope:
 
-## Open-Source Track
+- choose the frontend placement and local run path for a minimal admin console
+- cover login and current-tenant context first, using existing auth/context endpoints
+- map the first demo navigation targets: tickets, approvals, import jobs, AI interactions, feature flags, and proposal review
+- identify any backend contract gaps before adding new public APIs
+- keep AI endpoints suggestion-only and keep state-changing AI output behind existing proposal and approval flows
 
-- Current tagged milestone: `v0.7.0-beta` marks the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline on 2026-04-12.
-- Previous tagged milestone: `v0.6.0-beta` marks the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline on 2026-04-06.
-- Earlier previous tagged milestone: `v0.5.0-beta` marks the completed Week 8 Agentic Workflows with Human Oversight beta baseline on 2026-04-04.
-- Earlier previous tagged milestone: `v0.4.0-beta` marks the completed Week 7 AI Copilot for Import and Data Quality beta baseline on 2026-03-28.
-- Earlier tagged milestones: `v0.2.0-alpha` marks the completed Week 5 async import and data operations preview on 2026-03-19, `v0.1.3` marks the completed Week 4 audit and approval baseline on 2026-03-12, `v0.1.2` marks the completed Week 3 ticket workflow baseline on 2026-03-11, `v0.1.1` marks Week 2 tenant user management loop complete on 2026-03-11, and `v0.1.0` marks Week 1 Platform Foundation on 2026-03-09.
-- The current open-source line can now honestly present the project as a workflow-first, AI-enhanced vertical SaaS backend through the completed Week 10 feature-flag, Dockerized API, minimal CI, and portfolio handoff packaging baseline on top of the Week 9 governance, eval, cost, and usage line.
-- Next step: start Week 11 / post-Week-10 planning from this more stable open-source reference-implementation milestone before gathering input for later commercial discovery.
+Stop condition:
+
+- the UI placement and run command are documented
+- the first login/context shell is either implemented or the exact implementation slice is ready with no unresolved architecture choice
+- required backend gaps are listed explicitly, not hidden inside UI work
+- `README.md`, getting-started docs, and runbooks are updated if the local run path changes
+
+## Candidate Next Slices
+
+- Slice B: Authentication Lifecycle Completion - add or plan refresh, logout, and token revocation behavior once the admin-console session boundary is clear.
+- Slice C: Deployment And Secret Management Path - document and harden the production-like environment contract, secret handling, and smoke-test boundary beyond the current local Docker baseline.
+- Slice D: Tenant Integrity Hardening - move high-value tenant consistency guarantees from service-only checks toward database-backed constraints, starting with the access-control gaps tracked in [architecture/access-control-evolution-plan.md](architecture/access-control-evolution-plan.md).
+
+## Default Deferrals
+
+- Do not add more AI endpoints or higher-autonomy agent behavior by default.
+- Do not build full billing, ledger, invoice, K8s, Helm, image publishing, or generic feature-flag platform scope before the Productization Baseline slice sequence creates a concrete need.
+- Do not expand import types, ticket SLA/priority/attachments, or additional approval action types until the productization baseline is stable enough to demo and run.
+
+## Release Evidence Expectations
+
+- Default backend regression remains `.\mvnw.cmd -pl merchantops-api -am test`.
+- Keep Docker build and local Docker smoke evidence when delivery or deployment docs change.
+- Add UI smoke or build verification if a frontend workspace is introduced.
+- Update [CHANGELOG.md](../CHANGELOG.md), [docs/contributing/release-versioning.md](contributing/release-versioning.md), and current-baseline docs only when preparing a release-cut or tag.
 
 ## Notes
 
-- This document tracks intended next-phase work, not committed delivery dates.
-- Historical implementation detail belongs in [project-status.md](project-status.md), [project-plan.md](project-plan.md), and [CHANGELOG.md](../CHANGELOG.md), not here.
+- This document tracks intended next work, not committed delivery dates.
+- Historical implementation detail belongs in [project-status.md](project-status.md), [archive/completed-10-week-foundation-plan.md](archive/completed-10-week-foundation-plan.md), and [CHANGELOG.md](../CHANGELOG.md), not here.

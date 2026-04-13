@@ -1,6 +1,6 @@
 # Documentation Maintenance
 
-Last updated: 2026-03-28
+Last updated: 2026-04-13
 
 ## Purpose
 
@@ -17,9 +17,10 @@ Use it as the routing table for answering two questions:
 - `docs/README.md` is the documentation entry page and should link to important new pages.
 - `docs/README.md` should prefer section-level entry points plus a short list of high-value jump targets; do not duplicate every child page that already has its own section index.
 - repeated multi-step contributor or agent workflows should live in `.agents/skills/`; keep `AGENTS.md` and `docs/contributing/README.md` as entry points and do not duplicate full skill step-by-step logic there.
-- `docs/project-plan.md` should stay milestone-level; do not mirror slice-level current implementation notes there when `docs/project-status.md` already records repository reality.
-- `docs/project-plan.md` may keep a short planning anchor for the current week, but detailed current status, near-term slice tracking, and detailed release history belong in `docs/project-status.md`, `docs/roadmap.md`, `CHANGELOG.md`, and `docs/contributing/release-versioning.md`.
-- `docs/roadmap.md` should stay focused on the active phase, next steps, and near-term sequencing; exact current endpoint inventories belong in `docs/project-status.md` and `docs/reference/`.
+- `docs/project-plan.md` is now a short planning entry point. Do not put long-term strategy, current status, or release history there.
+- `docs/product-strategy.md` owns long-term strategy from the `v0.7.0-beta` foundation baseline.
+- `docs/archive/completed-10-week-foundation-plan.md` owns the historical Week 1-10 foundation plan; do not extend it for new roadmap work.
+- `docs/roadmap.md` should stay focused on the active release-line milestone, active slice, candidate next slices, and stop condition; exact current endpoint inventories belong in `docs/project-status.md` and `docs/reference/`.
 - `docs/project-status.md` should stay phase-oriented and current-baseline-oriented; do not keep historical per-week completion checklists or long retrospective inventories there once they stop helping current iteration work.
 - Public API documentation must match what is actually exposed in controllers and visible in Swagger.
 - Internal groundwork that is not public yet must not be documented as a callable API.
@@ -40,8 +41,10 @@ Use it as the routing table for answering two questions:
 - `README.md`: project overview, major capabilities, and top-level navigation
 - `docs/README.md`: documentation navigation and reading order
 - `docs/project-status.md`: current implemented reality, current baseline, and limitations
-- `docs/roadmap.md`: next-phase work and intended near-term sequence
-- `docs/project-plan.md`: longer-range milestone plan
+- `docs/roadmap.md`: active release-line milestone, active slice, candidate next slices, and stop condition
+- `docs/project-plan.md`: planning entry point that links current status, roadmap, product strategy, and archived foundation plan
+- `docs/product-strategy.md`: longer-range product and engineering strategy
+- `docs/archive/`: completed planning records that no longer own current roadmap decisions
 - `docs/reference/`: stable technical reference pages for the system itself
 - `docs/contributing/`: contributor and agent workflow guidance
 - `docs/contributing/development-agent-guidance.md`: tenant-scoped implementation and contributor guidance for coding work
@@ -99,7 +102,7 @@ Examples:
 Update:
 
 - `docs/project-status.md`
-- `docs/roadmap.md` if it changes the next step or phase sequence
+- `docs/roadmap.md` if it changes the active release-line milestone, active slice, or candidate slice sequence
 
 Update when the internal rule or boundary changed:
 
@@ -166,8 +169,9 @@ Update:
 
 Update when needed:
 
-- `docs/project-plan.md` if the decision changes milestone shape
-- `docs/roadmap.md` if the decision changes near-term sequencing
+- `docs/product-strategy.md` if the decision changes long-term strategy or milestone shape
+- `docs/project-plan.md` only if planning navigation changes
+- `docs/roadmap.md` if the decision changes the active slice or candidate slice sequence
 - relevant reference page if the decision affects public guidance
 
 ### 6. AI Public Surface, AI Governance, Or Planning Changes
@@ -183,7 +187,8 @@ Update when needed:
 - `docs/reference/ai-provider-configuration.md`
 - `docs/runbooks/ai-live-smoke-test.md` when local provider setup, `.env` bootstrap, vendor compatibility, or live smoke scope changed
 - ADRs for AI workflow, audit, eval, or provider ownership
-- `docs/project-plan.md`, `docs/project-status.md`, and `docs/roadmap.md` if AI milestones changed
+- `docs/product-strategy.md`, `docs/project-status.md`, and `docs/roadmap.md` if AI milestones or long-term AI direction changed
+- `docs/project-plan.md` only if planning navigation changed
 
 Use this route both for:
 
@@ -209,12 +214,14 @@ Update:
 Update when needed:
 
 - `docs/project-status.md` if the current tagged baseline changed
-- `docs/roadmap.md` if the planned release sequence changed
+- `docs/roadmap.md` if the planned release-line milestone or slice sequence changed
 - `README.md` if the current tagged milestone summary changed
 
 For `DOC pre-tag` or another release-cut commit that will be tagged immediately:
 
-- align `docs/project-status.md`, `docs/roadmap.md`, and `docs/project-plan.md` with the current phase framing
+- align `docs/project-status.md` and `docs/roadmap.md` with the current baseline and release-line handoff framing
+- update `docs/product-strategy.md` when the release changes long-term strategy
+- update `docs/project-plan.md` only when planning navigation or the planning-entry summary changed
 - update `CHANGELOG.md`, `README.md`, and `docs/contributing/release-versioning.md` to the intended new tagged state on that same commit
 - create the Git tag immediately after that commit so docs and Git do not drift
 
@@ -234,7 +241,8 @@ Treat the following as the minimum tag-ready doc checklist:
 Also update when the tagged baseline summary or milestone framing changed:
 
 - `README.md`, including any top-of-file version banner or release-line wording
-- `docs/project-plan.md`
+- `docs/product-strategy.md`
+- `docs/project-plan.md` when planning navigation changed
 
 ## Update Matrix By Phase Or Node
 
@@ -257,7 +265,8 @@ Always review:
 
 - `docs/project-status.md`
 - `docs/roadmap.md`
-- `docs/project-plan.md` if milestone framing changed
+- `docs/product-strategy.md` if long-term milestone framing changed
+- `docs/project-plan.md` if planning navigation changed
 - `CHANGELOG.md` if the completion is release-worthy
 - `docs/contributing/release-versioning.md` if a new tag is created
 
@@ -306,5 +315,6 @@ Before staging doc changes, confirm:
 - [release-versioning.md](release-versioning.md): version and tag rules
 - [../reference/ai-integration.md](../reference/ai-integration.md): AI workflow and public-vs-planned boundaries
 - [../project-status.md](../project-status.md): current implementation reality
-- [../roadmap.md](../roadmap.md): intended next-phase work
+- [../roadmap.md](../roadmap.md): active release-line milestone and slice sequence
+- [../product-strategy.md](../product-strategy.md): long-term product and engineering strategy
 - [../../CHANGELOG.md](../../CHANGELOG.md): release-level change history

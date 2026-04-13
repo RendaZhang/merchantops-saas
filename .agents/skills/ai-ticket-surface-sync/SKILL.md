@@ -11,7 +11,7 @@ Use this skill when ticket AI work spreads across reference docs, runbooks, exam
 
 When the same ticket AI change also moves phase framing or release framing, combine this skill with the narrower companion skill that owns that concern:
 
-- pair it with [phase-status-sync](../phase-status-sync/SKILL.md) when `docs/project-status.md`, `docs/roadmap.md`, and `docs/project-plan.md` all need the same ticket-AI boundary or active-slice adjustment
+- pair it with [phase-status-sync](../phase-status-sync/SKILL.md) when `docs/project-status.md`, `docs/roadmap.md`, `docs/project-plan.md`, or `docs/product-strategy.md` need the same ticket-AI boundary or active-slice adjustment
 - pair it with [release-tag-prep](../release-tag-prep/SKILL.md) when the same AI doc change is part of pre-tag, post-tag, release-cut, or open-source milestone wording
 - prefer [doc-staged-sync](../doc-staged-sync/SKILL.md) when the work is a shared AI governance read or wording change that spans both ticket and import AI instead of a ticket-only surface update
 

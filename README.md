@@ -10,7 +10,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 - Current tagged milestone: `v0.7.0-beta`
 - Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
-- Current phase state: Week 10 complete; Week 11 / post-Week-10 planning next
+- Current phase state: Week 10 complete; Productization Baseline planning next
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
 - Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 
@@ -94,8 +94,10 @@ The CI gate is intentionally minimal. It does not deploy, publish Docker images,
 - [Getting Started](docs/getting-started/README.md): local environment, quick start, and project showcase
 - [Project Showcase](docs/getting-started/project-showcase.md): short demo and handoff path
 - [Project Status](docs/project-status.md): current implemented reality, CI evidence, and known gaps
-- [Roadmap](docs/roadmap.md): active phase and next recommended work
-- [Project Plan](docs/project-plan.md): 10-week workflow-first, AI-enhanced project plan
+- [Roadmap](docs/roadmap.md): active release-line milestone, active slice, candidate next slices, and stop condition
+- [Product Strategy](docs/product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline
+- [Project Plan](docs/project-plan.md): planning entry point and link to the archived foundation plan
+- [Completed 10-Week Foundation Plan](docs/archive/completed-10-week-foundation-plan.md): historical Week 1-10 build plan
 - [Reference](docs/reference/README.md): public contracts and technical reference pages
 - [Runbooks](docs/runbooks/README.md): smoke tests, regression sign-off, and verification guidance
 - [Architecture](docs/architecture/README.md): ADRs, diagrams, and structural notes

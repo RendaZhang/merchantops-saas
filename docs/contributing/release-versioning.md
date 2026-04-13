@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
 ## Purpose
 
@@ -62,7 +62,7 @@ Use the following ownership model:
 - Git tag: the authoritative release or milestone identifier
 - [../../CHANGELOG.md](../../CHANGELOG.md): the authoritative human-readable release history
 - [../project-status.md](../project-status.md): the authoritative description of current implementation status
-- [../roadmap.md](../roadmap.md): the authoritative description of intended next-phase work
+- [../roadmap.md](../roadmap.md): the authoritative description of the active release-line milestone and slice sequence
 
 Do not let version numbers live only inside planning text.
 
@@ -101,7 +101,7 @@ Recommended direction:
 - `v0.5.0-beta`: Week 8 Agentic Workflows with Human Oversight beta baseline
 - `v0.6.0-beta`: Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 - `v0.7.0-beta`: Week 10 Delivery Hardening and Portfolio Packaging beta baseline
-- later `v0.x` releases: post-Week-10 planning, deeper delivery maturity, and later governance / usage / commercial-discovery milestones
+- later `v0.x` releases: Productization Baseline, deeper delivery maturity, access-control hardening, workflow depth, and later governance / usage / commercial-discovery milestones
 
 ## Practical Rules
 
@@ -122,9 +122,10 @@ When a new release tag is created:
 
 When using `DOC pre-tag` or another release-cut commit that will be tagged immediately:
 
-1. align [../project-status.md](../project-status.md), [../roadmap.md](../roadmap.md), and [../project-plan.md](../project-plan.md) with the new tagged phase framing
+1. align [../project-status.md](../project-status.md) and [../roadmap.md](../roadmap.md) with the new tagged baseline and release-line handoff framing
 2. update [../../CHANGELOG.md](../../CHANGELOG.md), [../../README.md](../../README.md), and this page to the new tagged state on the same commit
-3. create the Git tag immediately after that commit so the docs do not temporarily drift from Git reality
+3. update [../product-strategy.md](../product-strategy.md) if the release changes long-term milestone framing, and [../project-plan.md](../project-plan.md) only if planning navigation changed
+4. create the Git tag immediately after that commit so the docs do not temporarily drift from Git reality
 
 When doing earlier planning or tag-readiness work before the release-cut commit exists:
 
@@ -134,7 +135,8 @@ When doing earlier planning or tag-readiness work before the release-cut commit 
 
 ## Related Documents
 
-- [../project-plan.md](../project-plan.md): long-range plan and milestone intent
+- [../product-strategy.md](../product-strategy.md): long-range product and engineering strategy
+- [../project-plan.md](../project-plan.md): planning entry point
 - [../project-status.md](../project-status.md): current implementation state
-- [../roadmap.md](../roadmap.md): next-phase work
+- [../roadmap.md](../roadmap.md): active release-line milestone and slice sequence
 - [../../CHANGELOG.md](../../CHANGELOG.md): detailed release history

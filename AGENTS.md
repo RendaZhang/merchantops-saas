@@ -32,7 +32,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Testing-focused work may update runbooks, automated test guidance, regression checklists, and related reference docs when coverage or verification reality changes.
 - Development-focused work may update docs when implementation changes, but must not present internal groundwork as public API.
 - Review and release work may update changelog, versioning, release notes, and milestone summaries when the staged diff supports it.
-- Execution-planning work may update status, roadmap, plan, and architecture guidance when it finds phase drift, scope mismatch, or planning assumptions that no longer match repository reality.
+- Execution-planning work may update status, roadmap, product strategy, planning entry points, and architecture guidance when it finds phase drift, scope mismatch, or planning assumptions that no longer match repository reality.
 - If a role updates a doc outside its usual focus area, it should keep the change scoped to the facts learned through that role's work rather than rewriting unrelated narrative.
 
 ## Repo Skills
@@ -46,7 +46,7 @@ This repository currently organizes handoff rules around five roles plus a small
 ## Current Repo Skills
 
 - [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md): staged or recent diff to documentation-routing and documentation-sync workflow, plus repo-wide doc maintenance when no diff exists
-- [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md): align `project-status`, `roadmap`, and `project-plan` without mixing current reality, near-term work, and long-range milestones
+- [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md): align `project-status`, `roadmap`, `project-plan`, and `product-strategy` without mixing current reality, near-term work, planning navigation, and long-range strategy
 - [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md): milestone and release-tag documentation preparation, open-source release-cut work, and post-tag cleanup
 - [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md): align import workflow docs, approval-backed import execution bridge docs, import AI docs, examples, runbooks, and milestone text with the current public import surface
 - [`.agents/skills/ai-ticket-surface-sync/SKILL.md`](.agents/skills/ai-ticket-surface-sync/SKILL.md): align public ticket AI docs, provider/runtime wording, runbooks, examples, and milestone text with the current public ticket AI surface
@@ -57,6 +57,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Read [docs/contributing/documentation-maintenance.md](docs/contributing/documentation-maintenance.md) before making documentation changes.
 - Read [docs/contributing/development-agent-guidance.md](docs/contributing/development-agent-guidance.md) before making development-facing documentation changes.
 - When Java package ownership, module boundaries, or shared-support placement rules change, sync [docs/contributing/java-code-style.md](docs/contributing/java-code-style.md), [docs/architecture/java-architecture-map.md](docs/architecture/java-architecture-map.md), and the relevant documentation-routing guidance together.
+- When long-term product direction changes from the `v0.7.0-beta` foundation baseline, update [docs/product-strategy.md](docs/product-strategy.md); when access-control strategy changes, update [docs/architecture/access-control-evolution-plan.md](docs/architecture/access-control-evolution-plan.md).
 - Keep root `README.md` high-level and move development detail into `docs/`.
 - Do not document an endpoint as public unless it is visible in Swagger.
 - Use the linked contributing pages for detailed wording rules around verification scope, environment-sensitive sample data, and stale-token versus re-login expectations instead of duplicating those details here.
@@ -123,7 +124,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Default review scope is the staged diff only.
 - Treat pasted findings from earlier review rounds as hints, not as still-open facts. Re-check whether they still apply to the current staged diff before repeating or carrying them forward.
 - Keep changelog, release versioning, and milestone docs aligned with the reviewed change set.
-- For tag readiness, treat `CHANGELOG.md`, `docs/contributing/release-versioning.md`, `docs/project-status.md`, and `docs/roadmap.md` as the minimum release-doc set; include `README.md` and `docs/project-plan.md` when the current tagged baseline summary or milestone framing changed.
+- For tag readiness, treat `CHANGELOG.md`, `docs/contributing/release-versioning.md`, `docs/project-status.md`, and `docs/roadmap.md` as the minimum release-doc set; include `README.md` when the current tagged baseline summary changed, `docs/product-strategy.md` when long-term milestone framing changed, and `docs/project-plan.md` only when planning navigation changed.
 - If a staged release-cut commit already moves docs to tagged-state wording, that same commit must be tagged immediately after it lands; do not leave tagged-state docs untagged across later commits.
 - Use [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md) when the task is centered on tag readiness, release-note drafting, or pre-tag / post-tag doc alignment.
 - Shortcut prefix: `RR`
@@ -151,7 +152,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Output concrete next tasks, validation steps, and doc-update expectations without dropping into code unless the requester asks for implementation.
 - If the current plan, architecture, or milestone sequencing no longer matches repository reality, call that out explicitly and point to the docs that should change.
 - When code, tests, and the current public contract have already consumed the roadmap's old near-term next step, prefer `EP adjust` or phase-doc sync before issuing a fresh `EP next`.
-- Use [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) when the task is centered on keeping `docs/project-status.md`, `docs/roadmap.md`, and `docs/project-plan.md` aligned without repeating the same current-state text across all three files.
+- Use [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) when the task is centered on keeping `docs/project-status.md`, `docs/roadmap.md`, `docs/project-plan.md`, and `docs/product-strategy.md` aligned without repeating current-state text across planning docs.
 - Shortcut prefix: `EP`
 - Supported shortcuts include:
   - `EP now`: summarize current phase, completed scope, and remaining work
