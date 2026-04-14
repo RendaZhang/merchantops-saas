@@ -4,11 +4,12 @@ Use this page when you need to explain MerchantOps SaaS quickly to a reviewer, i
 
 ## Purpose
 
-MerchantOps SaaS is a workflow-first backend reference implementation for merchant operations teams. The project is meant to demonstrate how a realistic SaaS backend can combine tenant isolation, RBAC, system-of-action workflows, async imports, audit/approval governance, AI-assisted operations, rollout control, Docker delivery, and CI without presenting unfinished infrastructure as production-ready.
+MerchantOps SaaS is a workflow-first SaaS reference implementation for merchant operations teams. The project is meant to demonstrate how a realistic Spring Boot backend plus a minimal admin-console entry can combine tenant isolation, RBAC, system-of-action workflows, async imports, audit/approval governance, AI-assisted operations, rollout control, Docker delivery, and CI without presenting unfinished infrastructure as production-ready.
 
 The short story:
 
 - it is not a CRUD-only demo
+- the first product-facing admin console now proves login, tenant context, token restoration, and workflow navigation
 - AI is embedded into ticket and import workflows instead of being a standalone chat surface
 - AI outputs stay read-only or suggestion-only unless a separate human-reviewed workflow bridge executes them
 - governance metadata is visible enough for operational review without becoming billing or ledger infrastructure
@@ -18,15 +19,16 @@ The short story:
 
 Start with the path that proves the project is runnable and workflow-centered:
 
-1. Open Swagger UI at `http://localhost:8080/swagger-ui/index.html`.
+1. Open the admin console at `http://localhost:5173`.
 2. Login as the seeded demo admin for tenant `demo-shop`.
-3. Show `GET /api/v1/context` to prove tenant, user, role, and permission context.
-4. Show ticket workflow operations before showing AI.
-5. Show AI suggestion endpoints and then the separate approval-backed execution bridge.
-6. Show import jobs and import AI reads.
-7. Close with feature flags, usage summary, Docker startup, and CI evidence.
+3. Show the dashboard tenant/operator context and workflow navigation placeholders.
+4. Open Swagger UI at `http://localhost:8080/swagger-ui/index.html` for the deeper API workflow demo.
+5. Show ticket workflow operations before showing AI.
+6. Show AI suggestion endpoints and then the separate approval-backed execution bridge.
+7. Show import jobs and import AI reads.
+8. Close with feature flags, usage summary, Docker startup, frontend verification, and CI evidence.
 
-Use [quick-start.md](quick-start.md) for startup commands and [../../api-demo.http](../../api-demo.http) for request examples.
+Use [quick-start.md](quick-start.md) for API startup commands, [admin-console.md](admin-console.md) for the frontend run path, and [../../api-demo.http](../../api-demo.http) for request examples.
 
 ## Suggested Demo Flow
 
@@ -110,6 +112,7 @@ Use [quick-start.md](quick-start.md) for startup commands and [../../api-demo.ht
 ## What To Say About Architecture
 
 - The codebase is a modular Spring Boot backend with MySQL, Redis, RabbitMQ, Flyway, JWT security, request tracing, and OpenAPI/Swagger support.
+- The admin console is a standalone Vite + React frontend at `merchantops-admin-web/`; it is not served from Spring Boot static resources in this slice.
 - Tenant scope is explicit across user, ticket, approval, import, feature-flag, and AI read paths.
 - The workflow model separates system-of-record data, system-of-action transitions, audit events, approval requests, and AI interaction records.
 - AI is intentionally bounded: suggestion endpoints store governance metadata, and execution happens only through separate approval-backed workflow bridges.
@@ -117,7 +120,7 @@ Use [quick-start.md](quick-start.md) for startup commands and [../../api-demo.ht
 
 ## Intentionally Out Of Scope
 
-- Frontend or tenant admin UI
+- Full workflow data screens beyond the minimal admin-console login/context shell
 - Production deployment automation
 - Docker image publishing
 - K8s or Helm manifests
@@ -133,12 +136,14 @@ Use this short checklist for a handoff review:
 
 - Local infra starts with `docker compose up -d`.
 - One API startup path works: local Maven or Dockerized API.
+- The admin console starts with `npm run dev` from `merchantops-admin-web`.
 - Swagger UI and `/health` load on port `8080`.
-- Seeded admin login works for `demo-shop`.
-- `GET /api/v1/context` returns the expected tenant and permission context.
+- Seeded admin login works for `demo-shop` in the admin console.
+- The dashboard renders tenant/operator context and restores the local token after refresh.
 - Ticket workflow reads and at least one ticket detail path work.
 - AI endpoints are described as read-only or suggestion-only, with approval bridges shown separately.
 - Import job reads and error reporting are shown before import AI.
 - `GET /api/v1/feature-flags` and `GET /api/v1/ai-interactions/usage-summary` are included in the governance story.
 - `.\mvnw.cmd -pl merchantops-api -am test` is the default local regression.
+- `npm run typecheck`, `npm run lint`, and `npm run build` are the frontend workspace checks.
 - Current remote CI evidence is checked in [../project-status.md](../project-status.md).

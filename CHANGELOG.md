@@ -6,7 +6,13 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
-No release-level changes yet.
+### Added
+
+- Added the Productization Baseline Slice A admin-console entry through `merchantops-admin-web/`, a standalone Vite + React + TypeScript app for login, current tenant context, local JWT restoration, and workflow navigation placeholders over the existing backend.
+
+### Changed
+
+- README, getting-started docs, architecture docs, roadmap/status pages, and automated-test guidance now document the admin-console run path, frontend architecture boundary, and separate frontend workspace verification commands.
 
 ## [v0.7.0-beta] - 2026-04-12
 

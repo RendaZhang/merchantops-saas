@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-13
+Last updated: 2026-04-14
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,30 +29,33 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice A: Minimal Admin Console Entry
+### Slice B: Authentication Lifecycle Completion
 
-Goal: define and start the thinnest product-facing admin-console path over the existing backend.
+Goal: turn the newly introduced admin-console session boundary into a clearer authentication lifecycle plan or implementation slice.
 
 Expected scope:
 
-- choose the frontend placement and local run path for a minimal admin console
-- cover login and current-tenant context first, using existing auth/context endpoints
-- map the first demo navigation targets: tickets, approvals, import jobs, AI interactions, feature flags, and proposal review
-- identify any backend contract gaps before adding new public APIs
-- keep AI endpoints suggestion-only and keep state-changing AI output behind existing proposal and approval flows
+- decide the refresh-token, logout, and token-revocation boundary for the backend and admin console
+- document whether Slice B is an implementation slice or an architecture/API decision slice before widening frontend workflow pages
+- keep stale-claim rejection and request-time access revalidation intact
+- update auth/RBAC reference docs, getting-started docs, and admin-console docs if the public auth contract changes
 
 Stop condition:
 
-- the UI placement and run command are documented
-- the first login/context shell is either implemented or the exact implementation slice is ready with no unresolved architecture choice
-- required backend gaps are listed explicitly, not hidden inside UI work
-- `README.md`, getting-started docs, and runbooks are updated if the local run path changes
+- refresh/logout/revocation behavior is explicitly implemented or explicitly deferred with a documented contract
+- the admin console session behavior matches the documented backend contract
+- stale-token, refreshed-login, and local session-clearing expectations are covered by the smallest sufficient automated or smoke checks
+- docs and runbooks no longer describe the Slice A local-token-only boundary as the intended final session model
+
+## Recently Closed
+
+- Slice A: Minimal Admin Console Entry - introduced `merchantops-admin-web/` as a standalone Vite + React + TypeScript app, wired login plus current context through the existing backend, added token restoration, established workflow navigation placeholders, and documented the local frontend run path and architecture boundary.
 
 ## Candidate Next Slices
 
-- Slice B: Authentication Lifecycle Completion - add or plan refresh, logout, and token revocation behavior once the admin-console session boundary is clear.
 - Slice C: Deployment And Secret Management Path - document and harden the production-like environment contract, secret handling, and smoke-test boundary beyond the current local Docker baseline.
 - Slice D: Tenant Integrity Hardening - move high-value tenant consistency guarantees from service-only checks toward database-backed constraints, starting with the access-control gaps tracked in [architecture/access-control-evolution-plan.md](architecture/access-control-evolution-plan.md).
+- Slice E: First Workflow Screen - add the narrowest useful admin-console data page after the session boundary is settled, starting with a read-only queue or summary view over an existing public API.
 
 ## Default Deferrals
 
@@ -64,7 +67,7 @@ Stop condition:
 
 - Default backend regression remains `.\mvnw.cmd -pl merchantops-api -am test`.
 - Keep Docker build and local Docker smoke evidence when delivery or deployment docs change.
-- Add UI smoke or build verification if a frontend workspace is introduced.
+- Frontend workspace verification is `npm run typecheck`, `npm run lint`, and `npm run build` from `merchantops-admin-web`.
 - Update [CHANGELOG.md](../CHANGELOG.md), [docs/contributing/release-versioning.md](contributing/release-versioning.md), and current-baseline docs only when preparing a release-cut or tag.
 
 ## Notes

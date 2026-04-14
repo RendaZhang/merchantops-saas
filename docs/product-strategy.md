@@ -56,7 +56,7 @@ These horizons describe the recommended execution order. They do not replace the
 
 ### Horizon 1: Productization Baseline
 
-- Add a minimal admin console for the existing login, ticket, approval, import, AI interaction, and proposal review flows.
+- Expand the minimal admin console from the current login/context shell into useful ticket, approval, import, AI interaction, and proposal review flows.
 - Complete the basic authentication lifecycle with refresh, logout, and revocation behavior.
 - Strengthen deployment and runtime readiness through documented environment, secret-management, bootstrap, and smoke-test paths.
 - Move high-value tenant consistency guarantees from service-only checks toward database-backed constraints where practical.

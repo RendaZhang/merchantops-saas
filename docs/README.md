@@ -9,6 +9,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Product Strategy](product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline
 - [Project Plan](project-plan.md): planning entry point for current status, roadmap, strategy, and archived foundation-plan links
 - [Getting Started](getting-started/README.md): local environment setup and the shortest path to a running API
+- [Admin Console](getting-started/admin-console.md): run the minimal Vite admin console against the local API
 - [Project Showcase](getting-started/project-showcase.md): 5-10 minute portfolio and open-source handoff path
 - [Contributing](contributing/README.md): contributor and agent workflow guidance, release rules, and documentation routing
 - [Reference](reference/README.md): configuration, migrations, API conventions, auth, observability, and API documentation
@@ -30,6 +31,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Java Code Style](contributing/java-code-style.md): package boundaries, comment strategy, and Java review baseline
 - [Java Architecture Map](architecture/java-architecture-map.md): module ownership, capability package map, and Java type placement guide
 - [Authentication and RBAC](reference/authentication-and-rbac.md): login flow, JWT usage, context propagation, and RBAC expectations
+- [Admin Console Architecture](architecture/admin-console-architecture.md): frontend module placement, token boundary, and API client boundary
 - [Feature Flags Reference](reference/feature-flags.md): current tenant-scoped rollout-control API and the fixed eight-flag inventory
 - [User Management Reference](reference/user-management.md): current `/api/v1/users` contract and validation path
 - [Ticket Workflow Reference](reference/ticket-workflow.md): current `/api/v1/tickets` contract, state rules, and workflow-log behavior
@@ -45,13 +47,14 @@ This directory contains the detailed project documentation that sits behind the 
 
 1. [Local Environment](getting-started/local-environment.md)
 2. [Quick Start](getting-started/quick-start.md)
-3. [Project Showcase](getting-started/project-showcase.md)
-4. [Project Status](project-status.md)
-5. [Roadmap](roadmap.md)
-6. [Product Strategy](product-strategy.md)
-7. [Project Plan](project-plan.md)
-8. [Reference](reference/README.md)
-9. [Runbooks](runbooks/README.md)
-10. [Contributing](contributing/README.md)
-11. [Architecture](architecture/README.md)
-12. [AI Docs](ai/README.md)
+3. [Admin Console](getting-started/admin-console.md)
+4. [Project Showcase](getting-started/project-showcase.md)
+5. [Project Status](project-status.md)
+6. [Roadmap](roadmap.md)
+7. [Product Strategy](product-strategy.md)
+8. [Project Plan](project-plan.md)
+9. [Reference](reference/README.md)
+10. [Runbooks](runbooks/README.md)
+11. [Contributing](contributing/README.md)
+12. [Architecture](architecture/README.md)
+13. [AI Docs](ai/README.md)

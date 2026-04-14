@@ -204,7 +204,25 @@ Keep the AI doc split explicit:
 
 If the change adds or updates a public AI endpoint, also apply the normal public API route above so reference pages, examples, runbooks, and status docs stay aligned.
 
-### 7. Version, Tag, Or Release Milestone Changes
+### 7. Frontend Or Admin Console Changes
+
+Update:
+
+- `merchantops-admin-web/README.md`
+- `docs/getting-started/admin-console.md`
+- `docs/architecture/admin-console-architecture.md`
+- `docs/runbooks/automated-tests.md`
+
+Update when needed:
+
+- `README.md` if the top-level capability summary or quick start changed
+- `docs/getting-started/README.md` and `docs/README.md` when navigation changes
+- `docs/project-status.md` and `docs/roadmap.md` when the frontend change closes, opens, or resequences a productization slice
+- `CHANGELOG.md` when the change is release-level, such as adding a new workspace or a user-visible admin-console capability
+
+Do not treat frontend-only pages or placeholders as new backend public API. Only update Swagger-facing reference docs and `api-demo.http` when the backend controller contract changed.
+
+### 8. Version, Tag, Or Release Milestone Changes
 
 Update:
 

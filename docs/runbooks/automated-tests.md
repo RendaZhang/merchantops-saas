@@ -1,12 +1,12 @@
 # Automated Tests
 
-Last updated: 2026-04-11
+Last updated: 2026-04-14
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-11 10:50:41 +08:00:
+Latest local default regression result on 2026-04-14 10:42:19 +08:00:
 
 - `BUILD SUCCESS`
 - `Tests run: 410, Failures: 0, Errors: 0, Skipped: 1`
@@ -14,6 +14,12 @@ Latest local default regression result on 2026-04-11 10:50:41 +08:00:
 Latest CI-parity Docker build result on 2026-04-11:
 
 - `docker build -t merchantops-api:ci .` completed successfully
+
+Latest Productization Baseline Slice A frontend workspace result on 2026-04-14:
+
+- `npm run typecheck` from `merchantops-admin-web` completed successfully
+- `npm run lint` from `merchantops-admin-web` completed successfully
+- `npm run build` from `merchantops-admin-web` completed successfully
 
 ## Recommended Commands
 
@@ -43,6 +49,17 @@ docker build -t merchantops-api:ci .
 
 That CI Docker check only proves image construction. It does not start the API container, run compose-managed infrastructure, run Dockerized API live smoke, call OpenAI or DeepSeek, run live AI smoke, or enable the opt-in real MySQL migration suite.
 
+When a change touches the admin console, also run the frontend workspace checks:
+
+```powershell
+cd merchantops-admin-web
+npm run typecheck
+npm run lint
+npm run build
+```
+
+The current GitHub Actions quality gate does not run these frontend checks yet.
+
 Use the full reactor only when you want the broader baseline:
 
 ```powershell
@@ -69,7 +86,7 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, and the completed Week 10 Slice A persisted feature-flag hardening baseline. Week 10 Slice C now runs that same Maven baseline in GitHub Actions and adds Docker image build as a no-secret CI quality gate. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, and the completed Week 10 Slice A persisted feature-flag hardening baseline. Week 10 Slice C now runs that same Maven baseline in GitHub Actions and adds Docker image build as a no-secret CI quality gate. Productization Baseline Slice A adds separate frontend workspace checks for the minimal admin console, but those checks are not part of GitHub Actions yet. Today that means:
 
 - auth and permission checks for the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
