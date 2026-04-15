@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummaryAiProvider;
 import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummaryProviderResult;
 import com.renda.merchantops.api.ai.importjob.fixrecommendation.ImportJobFixRecommendationAiProvider;
@@ -109,6 +110,8 @@ class ImportJobAiInteractionHistoryIntegrationTest {
 
         jdbcTemplate.execute("DROP ALL OBJECTS");
         createSchema();
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
+
         seedTenants();
         seedPermissions();
         seedRoles();

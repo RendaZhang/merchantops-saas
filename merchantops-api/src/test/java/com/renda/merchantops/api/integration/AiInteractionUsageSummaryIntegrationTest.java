@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,6 +70,8 @@ class AiInteractionUsageSummaryIntegrationTest {
 
         jdbcTemplate.execute("DROP ALL OBJECTS");
         createSchema();
+
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
 
         seedTenants();
         seedPermissions();

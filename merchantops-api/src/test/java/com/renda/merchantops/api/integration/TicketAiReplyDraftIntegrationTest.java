@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftAiProvider;
@@ -105,6 +106,8 @@ class TicketAiReplyDraftIntegrationTest {
 
         jdbcTemplate.execute("DROP ALL OBJECTS");
         createSchema();
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
+
         seedTenants();
         seedPermissions();
         seedRoles();

@@ -3,8 +3,11 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.JwtTokenService;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +23,13 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import javax.sql.DataSource;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -199,6 +207,8 @@ class AuthSecurityIntegrationTest {
                 """);
 
 
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
+
         seedTenants();
         seedPermissions();
         seedRoles();
@@ -218,9 +228,44 @@ class AuthSecurityIntegrationTest {
         assertThat(currentUser.getTenantId()).isEqualTo(1L);
         assertThat(currentUser.getTenantCode()).isEqualTo("demo-shop");
         assertThat(currentUser.getUsername()).isEqualTo("admin");
+        assertThat(currentUser.getSessionId()).isNotBlank();
         assertThat(currentUser.getRoles()).containsExactly("TENANT_ADMIN");
         assertThat(currentUser.getPermissions())
                 .containsExactly("USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE");
+    }
+
+    @Test
+    void loginShouldCreateActiveAuthSession() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+        String sessionId = sessionIdFromToken(token);
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(1) FROM auth_session", Integer.class))
+                .isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT tenant_id FROM auth_session WHERE session_id = ?",
+                Long.class,
+                sessionId
+        )).isEqualTo(1L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT user_id FROM auth_session WHERE session_id = ?",
+                Long.class,
+                sessionId
+        )).isEqualTo(101L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM auth_session WHERE session_id = ?",
+                String.class,
+                sessionId
+        )).isEqualTo("ACTIVE");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT expires_at FROM auth_session WHERE session_id = ?",
+                LocalDateTime.class,
+                sessionId
+        )).isAfter(LocalDateTime.now());
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT revoked_at FROM auth_session WHERE session_id = ?",
+                Object.class,
+                sessionId
+        )).isNull();
     }
 
     @Test
@@ -231,6 +276,129 @@ class AuthSecurityIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.message").value("username or password is incorrect"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(1) FROM auth_session", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    void activeAuthSessionTokenShouldAccessContext() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.tenantId").value(1))
+                .andExpect(jsonPath("$.data.tenantCode").value("demo-shop"))
+                .andExpect(jsonPath("$.data.userId").value(101))
+                .andExpect(jsonPath("$.data.username").value("admin"));
+    }
+
+    @Test
+    void logoutShouldRevokeCurrentSessionAndRejectSameToken() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+        String sessionId = sessionIdFromToken(token);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("ok"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM auth_session WHERE session_id = ?",
+                String.class,
+                sessionId
+        )).isEqualTo("REVOKED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT revoked_at FROM auth_session WHERE session_id = ?",
+                LocalDateTime.class,
+                sessionId
+        )).isNotNull();
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
+    void sidlessSignedTokenShouldReturnControlledUnauthorized() throws Exception {
+        String sidlessToken = createSidlessToken(
+                101L,
+                1L,
+                "demo-shop",
+                "admin",
+                List.of("TENANT_ADMIN"),
+                List.of("USER_READ", "USER_WRITE", "ORDER_READ", "BILLING_READ", "FEATURE_FLAG_MANAGE", "TICKET_READ", "TICKET_WRITE")
+        );
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(sidlessToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
+    void manuallyExpiredSessionShouldReturnControlledUnauthorized() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+        String sessionId = sessionIdFromToken(token);
+
+        jdbcTemplate.update(
+                "UPDATE auth_session SET expires_at = DATEADD('SECOND', -1, CURRENT_TIMESTAMP) WHERE session_id = ?",
+                sessionId
+        );
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
+    void logoutShouldNotRevokeOtherActiveSessionsForSameUser() throws Exception {
+        String firstToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String secondToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String firstSessionId = sessionIdFromToken(firstToken);
+        String secondSessionId = sessionIdFromToken(secondToken);
+
+        assertThat(firstSessionId).isNotEqualTo(secondSessionId);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM auth_session WHERE tenant_id = ? AND user_id = ? AND status = ?",
+                Integer.class,
+                1L,
+                101L,
+                "ACTIVE"
+        )).isEqualTo(2);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(firstToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM auth_session WHERE session_id = ?",
+                String.class,
+                firstSessionId
+        )).isEqualTo("REVOKED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM auth_session WHERE session_id = ?",
+                String.class,
+                secondSessionId
+        )).isEqualTo("ACTIVE");
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(firstToken)))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(secondToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
     @Test
@@ -1042,6 +1210,34 @@ class AuthSecurityIntegrationTest {
         String token = root.path("data").path("accessToken").asText();
         assertThat(token).isNotBlank();
         return token;
+    }
+
+    private String sessionIdFromToken(String token) {
+        String sessionId = jwtTokenService.parseCurrentUser(token).getSessionId();
+        assertThat(sessionId).isNotBlank();
+        return sessionId;
+    }
+
+    private String createSidlessToken(Long userId,
+                                      Long tenantId,
+                                      String tenantCode,
+                                      String username,
+                                      List<String> roles,
+                                      List<String> permissions) {
+        Instant issuedAt = Instant.now();
+        Instant expiresAt = issuedAt.plusSeconds(7200);
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim("tenantId", tenantId)
+                .claim("tenantCode", tenantCode)
+                .claim("username", username)
+                .claim("roles", roles)
+                .claim("permissions", permissions)
+                .issuedAt(Date.from(issuedAt))
+                .expiration(Date.from(expiresAt))
+                .signWith(Keys.hmacShaKeyFor("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                        .getBytes(StandardCharsets.UTF_8)))
+                .compact();
     }
 
     private String loginRequest(String tenantCode, String username, String password) {

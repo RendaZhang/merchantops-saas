@@ -1,10 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { AppShell } from '../../components/AppShell'
 import { TenantContextPanel } from '../../components/TenantContextPanel'
-import { getContext, isAuthenticationError } from '../../lib/api-client'
+import { getContext, isAuthenticationError, logout } from '../../lib/api-client'
 import { clearAuthSession, readAuthSession } from '../../lib/auth-token'
 
 const workflowPlaceholders = [
@@ -32,29 +32,37 @@ const workflowPlaceholders = [
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const session = readAuthSession()
   const contextQuery = useQuery({
     queryKey: ['context'],
     queryFn: getContext,
   })
+  const signOutMutation = useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      clearAuthSession()
+      queryClient.removeQueries({ queryKey: ['context'] })
+      navigate('/login', { replace: true })
+    },
+  })
 
   useEffect(() => {
     if (isAuthenticationError(contextQuery.error)) {
       clearAuthSession()
+      queryClient.removeQueries({ queryKey: ['context'] })
       navigate('/login', {
         replace: true,
         state: { sessionMessage: 'Session ended. Sign in again to continue.' },
       })
     }
-  }, [contextQuery.error, navigate])
-
-  function clearSession() {
-    clearAuthSession()
-    navigate('/login', { replace: true })
-  }
+  }, [contextQuery.error, navigate, queryClient])
 
   return (
-    <AppShell onClearSession={clearSession}>
+    <AppShell
+      onSignOut={() => signOutMutation.mutate()}
+      signOutPending={signOutMutation.isPending}
+    >
       <div className="grid gap-6">
         {contextQuery.isPending ? (
           <StatusPanel title="Loading context" message="Checking the current tenant." />
@@ -80,8 +88,8 @@ export function DashboardPage() {
               </h2>
             </div>
             <p className="max-w-xl text-sm text-neutral-600">
-              Slice A establishes the shell. Workflow data screens stay behind later
-              slices.
+              Slice B keeps the shell thin while adding revocable sign-out.
+              Workflow data screens stay behind later slices.
             </p>
           </div>
 

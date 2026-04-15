@@ -14,6 +14,8 @@ import com.renda.merchantops.domain.audit.AuditEventPort;
 import com.renda.merchantops.domain.audit.AuditEventUseCase;
 import com.renda.merchantops.domain.auth.AccessValidationUseCase;
 import com.renda.merchantops.domain.auth.AuthAccessPort;
+import com.renda.merchantops.domain.auth.AuthSessionPort;
+import com.renda.merchantops.domain.auth.AuthSessionUseCase;
 import com.renda.merchantops.domain.auth.AuthenticationUseCase;
 import com.renda.merchantops.domain.featureflag.FeatureFlagCommandPort;
 import com.renda.merchantops.domain.featureflag.FeatureFlagCommandUseCase;
@@ -83,6 +85,11 @@ public class DomainUseCaseConfig {
     @Bean
     public AccessValidationUseCase accessValidationUseCase(AuthAccessPort authAccessPort) {
         return new com.renda.merchantops.domain.auth.AccessValidationService(authAccessPort);
+    }
+
+    @Bean
+    public AuthSessionUseCase authSessionUseCase(AuthSessionPort authSessionPort) {
+        return new com.renda.merchantops.domain.auth.AuthSessionService(authSessionPort);
     }
 
     @Bean

@@ -9,7 +9,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Product Strategy](product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline
 - [Project Plan](project-plan.md): planning entry point for current status, roadmap, strategy, and archived foundation-plan links
 - [Getting Started](getting-started/README.md): local environment setup and the shortest path to a running API
-- [Admin Console](getting-started/admin-console.md): run the minimal Vite admin console against the local API
+- [Admin Console](getting-started/admin-console.md): run the minimal Vite admin console with login, context restoration, and sign-out against the local API
 - [Project Showcase](getting-started/project-showcase.md): 5-10 minute portfolio and open-source handoff path
 - [Contributing](contributing/README.md): contributor and agent workflow guidance, release rules, and documentation routing
 - [Reference](reference/README.md): configuration, migrations, API conventions, auth, observability, and API documentation

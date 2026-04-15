@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -268,6 +269,8 @@ class TicketWorkflowIntegrationTest {
                     created_at TIMESTAMP NOT NULL
                 )
                 """);
+
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
 
         seedTenants();
         seedPermissions();

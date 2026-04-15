@@ -10,6 +10,8 @@ import org.springframework.util.StringUtils;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -30,20 +32,24 @@ public class JwtTokenService {
                                 String tenantCode,
                                 String username,
                                 List<String> roles,
-                                List<String> permissions) {
+                                List<String> permissions,
+                                String sessionId,
+                                LocalDateTime issuedAt,
+                                LocalDateTime expiresAt) {
 
-        Instant now = Instant.now();
-        Instant expireAt = now.plusSeconds(jwtProperties.getExpireSeconds());
+        Instant issuedAtInstant = issuedAt.atZone(ZoneId.systemDefault()).toInstant();
+        Instant expiresAtInstant = expiresAt.atZone(ZoneId.systemDefault()).toInstant();
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
+                .claim("sid", sessionId)
                 .claim("tenantId", tenantId)
                 .claim("tenantCode", tenantCode)
                 .claim("username", username)
                 .claim("roles", roles)
                 .claim("permissions", permissions)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expireAt))
+                .issuedAt(Date.from(issuedAtInstant))
+                .expiration(Date.from(expiresAtInstant))
                 .signWith(secretKey)
                 .compact();
     }
@@ -61,8 +67,12 @@ public class JwtTokenService {
 
         Long userId = parseRequiredLong(claims.getSubject(), "sub");
         Long tenantId = parseRequiredLong(claims.get("tenantId"), "tenantId");
+        String sessionId = claims.get("sid", String.class);
         String tenantCode = claims.get("tenantCode", String.class);
         String username = claims.get("username", String.class);
+        if (!StringUtils.hasText(sessionId)) {
+            throw new IllegalArgumentException("missing claim: sid");
+        }
         if (!StringUtils.hasText(tenantCode)) {
             throw new IllegalArgumentException("missing claim: tenantCode");
         }
@@ -79,7 +89,8 @@ public class JwtTokenService {
                 tenantCode,
                 username,
                 roles,
-                permissions
+                permissions,
+                sessionId
         );
     }
 

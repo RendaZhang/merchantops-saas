@@ -11,10 +11,11 @@ const navigationItems = [
 
 type AppShellProps = {
   children: ReactNode
-  onClearSession: () => void
+  onSignOut: () => void
+  signOutPending?: boolean
 }
 
-export function AppShell({ children, onClearSession }: AppShellProps) {
+export function AppShell({ children, onSignOut, signOutPending = false }: AppShellProps) {
   return (
     <div className="min-h-svh bg-neutral-50 text-neutral-950">
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[264px_1fr]">
@@ -27,9 +28,10 @@ export function AppShell({ children, onClearSession }: AppShellProps) {
             <button
               className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-950"
               type="button"
-              onClick={onClearSession}
+              onClick={onSignOut}
+              disabled={signOutPending}
             >
-              Clear session
+              {signOutPending ? 'Signing out...' : 'Sign out'}
             </button>
           </div>
 
@@ -64,11 +66,11 @@ export function AppShell({ children, onClearSession }: AppShellProps) {
         <div className="min-w-0">
           <header className="flex min-h-20 flex-col justify-center gap-2 border-b border-neutral-200 bg-white px-5 md:px-8">
             <p className="text-sm font-medium text-emerald-700">
-              Productization Baseline Slice A
+              Productization Baseline Slice B
             </p>
             <p className="max-w-3xl text-sm text-neutral-600">
-              Login and current tenant context are connected. Workflow pages are
-              staged as navigation targets.
+              Login, current tenant context, and sign out are connected. Workflow
+              pages are staged as navigation targets.
             </p>
           </header>
 

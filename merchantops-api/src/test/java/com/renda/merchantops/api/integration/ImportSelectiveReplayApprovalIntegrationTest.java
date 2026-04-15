@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.importjob.messaging.ImportJobPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -238,6 +239,8 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                     CONSTRAINT fk_ai_interaction_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
+
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
 
         seedCoreData();
         seedImportReplayableSource();

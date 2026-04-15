@@ -392,7 +392,7 @@ Current automated tests for user management focus on:
 
 Current automated tests do not replace:
 
-- authenticated verification for endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` flow
+- authenticated verification for endpoints outside the covered login/session/logout + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` flow
 - Swagger rendering validation
 
 Use [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md) after the automated suite passes.

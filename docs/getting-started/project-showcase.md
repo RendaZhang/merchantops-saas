@@ -9,7 +9,7 @@ MerchantOps SaaS is a workflow-first SaaS reference implementation for merchant 
 The short story:
 
 - it is not a CRUD-only demo
-- the first product-facing admin console now proves login, tenant context, token restoration, and workflow navigation
+- the first product-facing admin console now proves login, tenant context, token restoration, sign-out, and workflow navigation
 - AI is embedded into ticket and import workflows instead of being a standalone chat surface
 - AI outputs stay read-only or suggestion-only unless a separate human-reviewed workflow bridge executes them
 - governance metadata is visible enough for operational review without becoming billing or ledger infrastructure

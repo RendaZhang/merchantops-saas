@@ -20,6 +20,7 @@ public final class OpenApiExamples {
     public static final String REQ_FEATURE_FLAG_UPDATE = "{\"enabled\":false}";
 
     public static final String RESP_SUCCESS_LOGIN = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"accessToken\":\"<jwt-token>\",\"tokenType\":\"Bearer\",\"expiresIn\":7200}}";
+    public static final String RESP_SUCCESS_LOGOUT = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":null}";
     public static final String RESP_BAD_REQUEST_CREDENTIAL = "{\"code\":\"BAD_REQUEST\",\"message\":\"username or password is incorrect\",\"data\":null}";
     public static final String RESP_FORBIDDEN_USER_INACTIVE = "{\"code\":\"FORBIDDEN\",\"message\":\"user is not active\",\"data\":null}";
     public static final String RESP_BAD_REQUEST_USERNAME_EXISTS = "{\"code\":\"BAD_REQUEST\",\"message\":\"username already exists in tenant\",\"data\":null}";

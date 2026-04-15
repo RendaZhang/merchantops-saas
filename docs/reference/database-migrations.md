@@ -25,6 +25,8 @@
 - `V11__add_ai_interaction_record.sql`: adds tenant-scoped `ai_interaction_record` for Week 6 AI runtime traceability, including same-tenant linkage between `tenant_id` and `user_id` plus indexed lookup by entity and request id
 - `V12__enforce_pending_disable_uniqueness.sql`: adds nullable `approval_request.pending_request_key`, converts superseded historical duplicate pending `USER_STATUS_DISABLE` rows for the same tenant user to `REJECTED`, backfills only the canonical newest pending row with the derived key, and creates a unique index so future pending disable requests stay unique per tenant user at the database layer
 - `V13__harden_pending_proposal_uniqueness.java`: extends pending-request-key governance across `IMPORT_JOB_SELECTIVE_REPLAY` and `TICKET_COMMENT_CREATE`, backfills canonical pending keys for those actions, clears stale keys from resolved rows, and converts superseded duplicate pending proposal rows to `REJECTED` before the shared unique index continues enforcing one pending executable intent per key
+- `V14__add_feature_flags.sql`: adds tenant-scoped fixed-key `feature_flag` rows for AI generation and workflow-bridge rollout control
+- `V15__add_auth_session.sql`: adds `auth_session` for server-side access-token session state, including unique `session_id`, tenant/user linkage, `ACTIVE` / `REVOKED` status, expiry, revocation timestamp, and lookup indexes
 
 ## Demo Accounts
 
@@ -81,6 +83,8 @@ SELECT COUNT(*) AS approval_request_cnt FROM approval_request;
 SELECT COUNT(*) AS import_job_cnt FROM import_job;
 SELECT COUNT(*) AS import_job_item_error_cnt FROM import_job_item_error;
 SELECT COUNT(*) AS ai_interaction_record_cnt FROM ai_interaction_record;
+SELECT COUNT(*) AS feature_flag_cnt FROM feature_flag;
+SELECT COUNT(*) AS auth_session_cnt FROM auth_session;
 ```
 
 To inspect recent AI interaction rows for ticket summary or ticket triage:
@@ -123,7 +127,9 @@ SELECT
   (SELECT COUNT(*) FROM ticket) AS ticket_cnt,
   (SELECT COUNT(*) FROM ticket_comment) AS ticket_comment_cnt,
   (SELECT COUNT(*) FROM ticket_operation_log) AS ticket_operation_log_cnt,
-  (SELECT COUNT(*) FROM ai_interaction_record) AS ai_interaction_record_cnt;
+  (SELECT COUNT(*) FROM ai_interaction_record) AS ai_interaction_record_cnt,
+  (SELECT COUNT(*) FROM feature_flag) AS feature_flag_cnt,
+  (SELECT COUNT(*) FROM auth_session) AS auth_session_cnt;
 ```
 
 ## Related Notes

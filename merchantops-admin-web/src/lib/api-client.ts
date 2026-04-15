@@ -21,6 +21,7 @@ const apiEnvelopeSchema = <T extends ZodType>(dataSchema: T) =>
 
 type ApiRequestOptions = RequestInit & {
   authenticated?: boolean
+  allowNullData?: boolean
 }
 
 export class ApiClientError extends Error {
@@ -53,6 +54,14 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 export function getContext(): Promise<ContextResponse> {
   return apiRequest('/api/v1/context', contextResponseSchema, {
     authenticated: true,
+  })
+}
+
+export async function logout(): Promise<void> {
+  await apiRequest('/api/v1/auth/logout', z.null(), {
+    method: 'POST',
+    authenticated: true,
+    allowNullData: true,
   })
 }
 
@@ -110,14 +119,17 @@ async function apiRequest<T>(
     throw new ApiClientError('The server returned an unexpected response.')
   }
 
-  if (parsedEnvelope.data.code !== SUCCESS_CODE || parsedEnvelope.data.data === null) {
+  if (
+    parsedEnvelope.data.code !== SUCCESS_CODE ||
+    (parsedEnvelope.data.data === null && !options.allowNullData)
+  ) {
     throw new ApiClientError(parsedEnvelope.data.message, {
       status: response.status,
       code: parsedEnvelope.data.code,
     })
   }
 
-  return parsedEnvelope.data.data
+  return parsedEnvelope.data.data as T
 }
 
 async function parseResponseBody(response: Response): Promise<unknown> {

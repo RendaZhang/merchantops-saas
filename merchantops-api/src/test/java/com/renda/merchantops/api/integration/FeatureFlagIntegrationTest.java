@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.dto.featureflag.command.FeatureFlagUpdateRequest;
 import com.renda.merchantops.api.dto.featureflag.query.FeatureFlagItemResponse;
 import com.renda.merchantops.api.featureflag.FeatureFlagCommandService;
@@ -177,6 +178,8 @@ class FeatureFlagIntegrationTest {
                     CONSTRAINT uk_feature_flag_tenant_key UNIQUE (tenant_id, flag_key)
                 )
                 """);
+
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
 
         seedTenants();
         seedPermissions();

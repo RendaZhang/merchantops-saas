@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-14
+Last updated: 2026-04-15
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,33 +29,34 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice B: Authentication Lifecycle Completion
+### Slice C: Deployment And Secret Management Path
 
-Goal: turn the newly introduced admin-console session boundary into a clearer authentication lifecycle plan or implementation slice.
+Goal: document and harden the production-like runtime contract after the local admin-console and auth-session baseline, without adding deployment automation before secrets and smoke expectations are clear.
 
 Expected scope:
 
-- decide the refresh-token, logout, and token-revocation boundary for the backend and admin console
-- document whether Slice B is an implementation slice or an architecture/API decision slice before widening frontend workflow pages
-- keep stale-claim rejection and request-time access revalidation intact
-- update auth/RBAC reference docs, getting-started docs, and admin-console docs if the public auth contract changes
+- define required runtime configuration for API and admin console outside the local Vite proxy
+- clarify secret ownership for JWT signing, database credentials, Redis, RabbitMQ, and AI provider keys
+- decide the next smoke boundary for Dockerized API plus frontend delivery without introducing refresh tokens or cookie rotation yet
+- update getting-started, deployment, and runbook docs before adding workflow screens that depend on a production-like host model
 
 Stop condition:
 
-- refresh/logout/revocation behavior is explicitly implemented or explicitly deferred with a documented contract
-- the admin console session behavior matches the documented backend contract
-- stale-token, refreshed-login, and local session-clearing expectations are covered by the smallest sufficient automated or smoke checks
-- docs and runbooks no longer describe the Slice A local-token-only boundary as the intended final session model
+- required environment variables and secret-handling assumptions are documented
+- local Dockerized API and admin-console smoke expectations are explicit and reproducible
+- refresh-token, cookie/session-rotation, CORS, and hosting assumptions remain either implemented or deliberately deferred
+- docs and runbooks no longer rely on implicit local-only deployment assumptions
 
 ## Recently Closed
 
+- Slice B: Server-Side Auth Session + Logout Foundation - login now creates an `auth_session`, JWTs carry required `sid` claims, protected requests validate active server-side session state before stale tenant/user/role checks, `POST /api/v1/auth/logout` revokes only the current session, and the admin console now signs out through the backend while keeping refresh tokens, cookies, rotation, logout-all, and cleanup scheduling deferred.
 - Slice A: Minimal Admin Console Entry - introduced `merchantops-admin-web/` as a standalone Vite + React + TypeScript app, wired login plus current context through the existing backend, added token restoration, established workflow navigation placeholders, and documented the local frontend run path and architecture boundary.
 
 ## Candidate Next Slices
 
-- Slice C: Deployment And Secret Management Path - document and harden the production-like environment contract, secret handling, and smoke-test boundary beyond the current local Docker baseline.
 - Slice D: Tenant Integrity Hardening - move high-value tenant consistency guarantees from service-only checks toward database-backed constraints, starting with the access-control gaps tracked in [architecture/access-control-evolution-plan.md](architecture/access-control-evolution-plan.md).
 - Slice E: First Workflow Screen - add the narrowest useful admin-console data page after the session boundary is settled, starting with a read-only queue or summary view over an existing public API.
+- Slice F: Authentication Lifecycle Widening - revisit refresh tokens, cookies, CORS, token rotation, and logout-all only after the deployment and secret-management contract is clear.
 
 ## Default Deferrals
 

@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-03-29
+Last updated: 2026-04-15
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -44,12 +44,20 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] viewer login works
 - [ ] wrong password returns a unified error
 - [ ] wrong tenant returns a unified error
+- [ ] successful login creates one `ACTIVE` `auth_session` row with the expected tenant/user and future `expires_at`
+- [ ] login with bad credentials does not create an `auth_session` row
+- [ ] `POST /api/v1/auth/logout` revokes only the current session and sets `revoked_at`
+- [ ] reusing the same token after logout returns `401` with `authentication required`
+- [ ] two logins for the same user create independent sessions, and logging out one token does not invalidate the other token
 
 ## JWT
 
 - [ ] `/api/v1/user/me` requires a token
 - [ ] a valid token returns the current user
 - [ ] an invalid token returns `401`
+- [ ] login JWTs include a non-blank `sid` claim
+- [ ] sidless signed tokens return `401` with `authentication required`
+- [ ] tokens whose `auth_session` row is expired, revoked, missing, or mismatched return `401`
 
 ## Tenant Context
 
@@ -111,6 +119,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] import selective replay approval payload stores only safe proposal fields and does not persist raw CSV rows, replacement values, passwords, or emails
 - [ ] a `DISABLED` user is rejected by `POST /api/v1/auth/login`
 - [ ] a token issued before a user was disabled is rejected on protected endpoints with `403` / `user is not active`
+- [ ] current-session logout remains `401` after revocation, while disabled-user and inactive-tenant stale-token paths remain `403`
 - [ ] `PUT /api/v1/users/{id}/roles` replaces the old role set rather than appending to it
 - [ ] `PUT /api/v1/users/{id}/roles` rejects role codes outside the current tenant
 - [ ] a token issued before role or permission changes is rejected on protected endpoints with `403` / `token claims are stale, please login again`

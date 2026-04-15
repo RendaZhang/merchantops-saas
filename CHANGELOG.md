@@ -9,10 +9,12 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 ### Added
 
 - Added the Productization Baseline Slice A admin-console entry through `merchantops-admin-web/`, a standalone Vite + React + TypeScript app for login, current tenant context, local JWT restoration, and workflow navigation placeholders over the existing backend.
+- Added the Productization Baseline Slice B auth-session foundation: login now creates a server-side `auth_session`, JWTs carry a required `sid` claim, `POST /api/v1/auth/logout` revokes the current session, and the admin console signs out through the backend.
 
 ### Changed
 
 - README, getting-started docs, architecture docs, roadmap/status pages, and automated-test guidance now document the admin-console run path, frontend architecture boundary, and separate frontend workspace verification commands.
+- Protected requests now reject sidless, revoked, expired, missing, or mismatched auth sessions with controlled `401` responses before tenant/user/role revalidation, while refresh tokens, cookie/session rotation, logout-all-devices, and session cleanup scheduling remain deferred.
 
 ## [v0.7.0-beta] - 2026-04-12
 

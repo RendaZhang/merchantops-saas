@@ -2,7 +2,7 @@
 
 Minimal Vite + React admin console for the Productization Baseline.
 
-This app is intentionally thin. Slice A proves the frontend placement, local run path, login flow, current tenant context, token restoration, and navigation placeholders before adding workflow screens.
+This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend sign-out, and navigation placeholders before adding workflow screens.
 
 ## Stack
 
@@ -56,16 +56,19 @@ The dashboard calls:
 
 - `POST /api/v1/auth/login`
 - `GET /api/v1/context`
+- `POST /api/v1/auth/logout`
 
 Roles and permissions displayed in the dashboard are decoded from JWT claims for operator visibility only. They are not used as an authorization source.
 
 ## Session Boundary
 
-Slice A stores the JWT access token in `localStorage` under `merchantops.admin.auth.v1` with a client-side expiry timestamp derived from `expiresIn`.
+The app stores the JWT access token in `localStorage` under `merchantops.admin.auth.v1` with a client-side expiry timestamp derived from `expiresIn`.
 
 On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or `403` responses.
 
-There is no backend refresh-token, logout, or token-revocation flow yet. The `Clear session` action only removes the local token. Authentication lifecycle completion is planned as the next Productization Baseline slice.
+Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context query cache, and returns to login even if the logout request fails.
+
+There is still no refresh-token flow, cookie/session rotation, logout-all-devices flow, or session cleanup scheduler in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
 ## Verification
 
@@ -83,7 +86,8 @@ Manual smoke:
 4. Log in with `demo-shop` / `admin` / `123456`.
 5. Confirm the dashboard shows tenant, operator, token roles, and token permissions.
 6. Refresh the page and confirm context reloads.
-7. Use `Clear session` and confirm the app returns to login.
+7. Use `Sign out` and confirm the app returns to login.
+8. Reusing the signed-out token against `/api/v1/context` should return `401`.
 
 ## Image Credit
 

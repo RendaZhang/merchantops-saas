@@ -35,7 +35,8 @@ public class CurrentUserAccessValidator {
                         result.currentUser().tenantCode(),
                         result.currentUser().username(),
                         result.currentUser().roles(),
-                        result.currentUser().permissions()
+                        result.currentUser().permissions(),
+                        tokenUser.getSessionId()
                 )
         );
     }

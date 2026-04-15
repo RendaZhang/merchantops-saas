@@ -1,25 +1,30 @@
 # Automated Tests
 
-Last updated: 2026-04-14
+Last updated: 2026-04-15
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-14 10:42:19 +08:00:
+Latest local default regression result on 2026-04-15:
 
 - `BUILD SUCCESS`
-- `Tests run: 410, Failures: 0, Errors: 0, Skipped: 1`
+- `Tests run: 416, Failures: 0, Errors: 0, Skipped: 1`
 
 Latest CI-parity Docker build result on 2026-04-11:
 
 - `docker build -t merchantops-api:ci .` completed successfully
 
-Latest Productization Baseline Slice A frontend workspace result on 2026-04-14:
+Latest Productization Baseline frontend workspace result on 2026-04-15:
 
 - `npm run typecheck` from `merchantops-admin-web` completed successfully
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
+
+Latest focused Productization Baseline Slice B auth regression on 2026-04-15:
+
+- `.\mvnw.cmd -pl merchantops-api -am -Dtest=AuthSecurityIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
+- `Tests run: 37, Failures: 0, Errors: 0, Skipped: 0`
 
 ## Recommended Commands
 
@@ -86,9 +91,9 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, and the completed Week 10 Slice A persisted feature-flag hardening baseline. Week 10 Slice C now runs that same Maven baseline in GitHub Actions and adds Docker image build as a no-secret CI quality gate. Productization Baseline Slice A adds separate frontend workspace checks for the minimal admin console, but those checks are not part of GitHub Actions yet. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout foundation. Week 10 Slice C now runs that same Maven baseline in GitHub Actions and adds Docker image build as a no-secret CI quality gate. Productization Baseline frontend checks are separate from GitHub Actions for now. Today that means:
 
-- auth and permission checks for the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, logout revocation, revoked/sidless/expired session `401` behavior, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
 - real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
@@ -119,7 +124,8 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
-  - JWT claim generation and parsing for tenant, role, and permission data
+  - JWT claim generation and parsing for tenant, role, permission, and required `sid` data
+  - server-side `auth_session` creation, future expiry, bad-credential no-session behavior, active-session `/api/v1/context`, current-session logout revocation, same-token-after-logout `401`, sidless signed token `401`, manually expired session `401`, and independent multi-session behavior
   - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `GET /api/v1/feature-flags`
   - `401` when Bearer token is missing or invalid
   - `403` when login succeeds but `USER_READ` is absent
@@ -445,7 +451,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - Dockerized API live container smoke; CI verifies image build only
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
