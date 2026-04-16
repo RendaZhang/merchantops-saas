@@ -9,7 +9,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Product Strategy](product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline
 - [Project Plan](project-plan.md): planning entry point for current status, roadmap, strategy, and archived foundation-plan links
 - [Getting Started](getting-started/README.md): local environment setup and the shortest path to a running API
-- [Admin Console](getting-started/admin-console.md): run the minimal Vite admin console with login, context restoration, and sign-out against the local API
+- [Admin Console](getting-started/admin-console.md): run the minimal admin console through either the Vite dev server or the same-origin Nginx runtime
 - [Project Showcase](getting-started/project-showcase.md): 5-10 minute portfolio and open-source handoff path
 - [Contributing](contributing/README.md): contributor and agent workflow guidance, release rules, and documentation routing
 - [Reference](reference/README.md): configuration, migrations, API conventions, auth, observability, and API documentation
@@ -39,6 +39,7 @@ This directory contains the detailed project documentation that sits behind the 
 - [Import Replay Strategy](architecture/import-replay-derived-job-strategy.md): keep failed-row replay as a new derived import job instead of resetting an existing one
 - [Import AI Sanitized Context](architecture/import-ai-sanitized-context-strategy.md): keep import AI prompts on structural, sanitized context instead of forwarding raw failed-row payloads
 - [Automated Test Runbook](runbooks/automated-tests.md): preferred Maven test commands and current automated coverage
+- [Deployment Runtime Smoke Test](runbooks/deployment-runtime-smoke-test.md): production-like admin + API smoke through the Nginx same-origin `/api` proxy
 - [Regression Checklist](runbooks/regression-checklist.md): broader sign-off checklist before merge, release, or phase close
 - [Non-Blocking Backlog](architecture/non-blocking-backlog.md): tracked follow-up items that should stay visible without blocking the active phase
 - [Target Architecture Diagram](diagrams/target-architecture.md): visual runtime shape for the modular-monolith-first architecture and later selective extraction

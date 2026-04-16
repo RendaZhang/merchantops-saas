@@ -1,0 +1,48 @@
+services:
+  merchantops-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: merchantops-api:local
+    container_name: merchantops-api-runtime
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: runtime
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE must be set for runtime profile}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER must be set for runtime profile}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set for runtime profile}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?RABBITMQ_DEFAULT_USER must be set for runtime profile}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS must be set for runtime profile}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set for runtime profile}
+      IMPORT_STORAGE_LOCAL_DIR: /app/data/imports
+    ports:
+      - "8080:8080"
+    volumes:
+      - api_import_data:/app/data/imports
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  merchantops-admin-web:
+    build:
+      context: ./merchantops-admin-web
+      dockerfile: Dockerfile
+    image: merchantops-admin-web:local
+    container_name: merchantops-admin-web-runtime
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - merchantops-api
+
+volumes:
+  api_import_data:

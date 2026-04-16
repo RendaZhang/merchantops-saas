@@ -31,6 +31,24 @@ npm run dev
 
 The Vite app runs at `http://localhost:5173` by default. API calls use relative `/api/...` paths and the Vite dev proxy forwards them to `http://localhost:8080`.
 
+## Production-Like Runtime
+
+Build the admin image from the repository root:
+
+```powershell
+docker build -t merchantops-admin-web:local .\merchantops-admin-web
+```
+
+Run the full same-origin runtime stack:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Open `http://localhost:8081`.
+
+The image builds the Vite app with Node, serves `dist/` through Nginx, and proxies `/api/...` to `http://merchantops-api:8080` inside the compose network. The browser uses one origin and does not need CORS for this slice.
+
 ## Backend Prerequisite
 
 Start the backend from the repository root before logging in:
@@ -42,7 +60,7 @@ docker compose up -d
 .\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 
-The Dockerized API path documented in `../docs/getting-started/quick-start.md` also works.
+The Dockerized API path documented in `../docs/getting-started/quick-start.md` also works. For the same-origin admin + API runtime path, use `../docs/runbooks/deployment-runtime-smoke-test.md`.
 
 ## Demo Login
 
@@ -88,6 +106,8 @@ Manual smoke:
 6. Refresh the page and confirm context reloads.
 7. Use `Sign out` and confirm the app returns to login.
 8. Reusing the signed-out token against `/api/v1/context` should return `401`.
+
+Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
 
 ## Image Credit
 

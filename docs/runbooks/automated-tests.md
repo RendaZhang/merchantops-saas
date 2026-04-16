@@ -1,25 +1,34 @@
 # Automated Tests
 
-Last updated: 2026-04-15
+Last updated: 2026-04-16
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-15:
+Latest local default regression result on 2026-04-16:
 
 - `BUILD SUCCESS`
 - `Tests run: 416, Failures: 0, Errors: 0, Skipped: 1`
 
-Latest CI-parity Docker build result on 2026-04-11:
+Latest local Docker image build result on 2026-04-16:
 
-- `docker build -t merchantops-api:ci .` completed successfully
+- `docker build -t merchantops-api:local .` completed successfully
+- `docker build -t merchantops-admin-web:local .\merchantops-admin-web` completed successfully
 
-Latest Productization Baseline frontend workspace result on 2026-04-15:
+Latest Productization Baseline frontend workspace result on 2026-04-16:
 
 - `npm run typecheck` from `merchantops-admin-web` completed successfully
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
+
+Latest Productization Baseline same-origin runtime smoke result on 2026-04-16:
+
+- `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build --pull never` completed successfully from locally available base images after a transient Docker Hub metadata EOF on the first plain `--build` attempt
+- `http://localhost:8080/health` and `http://localhost:8080/actuator/health` returned `UP`
+- `http://localhost:8081/` and the SPA fallback path returned `200`
+- same-origin `POST /api/v1/auth/login`, `GET /api/v1/context`, and `POST /api/v1/auth/logout` through `http://localhost:8081/api/...` succeeded
+- reusing the signed-out token against `http://localhost:8081/api/v1/context` returned controlled `401` with `{"code":"UNAUTHORIZED","message":"authentication required","data":null}`
 
 Latest focused Productization Baseline Slice B auth regression on 2026-04-15:
 
@@ -46,15 +55,16 @@ GitHub Actions runs the Linux equivalent of the same default regression:
 ./mvnw -pl merchantops-api -am test
 ```
 
-The CI quality gate also verifies the root Docker image build:
+The CI quality gate also verifies runtime image construction:
 
 ```bash
 docker build -t merchantops-api:ci .
+docker build -t merchantops-admin-web:ci ./merchantops-admin-web
 ```
 
-That CI Docker check only proves image construction. It does not start the API container, run compose-managed infrastructure, run Dockerized API live smoke, call OpenAI or DeepSeek, run live AI smoke, or enable the opt-in real MySQL migration suite.
+That CI Docker check only proves image construction. It does not start the API or admin containers, run compose-managed infrastructure, run Dockerized runtime live smoke, call OpenAI or DeepSeek, run live AI smoke, or enable the opt-in real MySQL migration suite.
 
-When a change touches the admin console, also run the frontend workspace checks:
+GitHub Actions also runs the admin frontend workspace checks. Run the same checks locally when a change touches the admin console:
 
 ```powershell
 cd merchantops-admin-web
@@ -63,7 +73,7 @@ npm run lint
 npm run build
 ```
 
-The current GitHub Actions quality gate does not run these frontend checks yet.
+The current GitHub Actions quality gate runs these frontend checks but still does not run browser or runtime-container smoke.
 
 Use the full reactor only when you want the broader baseline:
 
@@ -71,27 +81,22 @@ Use the full reactor only when you want the broader baseline:
 .\mvnw.cmd test
 ```
 
-For the Week 10 Slice B delivery baseline, add this manual container verification after the Maven suite:
+For the production-like admin + API runtime baseline, add this manual container verification after the Maven and frontend suites:
 
 ```powershell
 docker build -t merchantops-api:local .
+docker build -t merchantops-admin-web:local .\merchantops-admin-web
 Copy-Item .env.example .env -ErrorAction SilentlyContinue
-docker compose up -d
-docker run --rm --name merchantops-api-local `
-  --env-file .env `
-  --network merchantops-infra `
-  -p 8080:8080 `
-  -e MYSQL_HOST=mysql `
-  -e REDIS_HOST=redis `
-  -e RABBITMQ_HOST=rabbitmq `
-  merchantops-api:local
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
 ```
+
+Then follow [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md) for health, admin page load, login, context, sign-out, and old-token `401` checks.
 
 If the same change also touches AI provider wiring or live vendor compatibility, keep that same Dockerized API path running and add the summary-first pass from [ai-live-smoke-test.md](ai-live-smoke-test.md). For containerized AI smoke, provide `MERCHANTOPS_AI_*` through the local `.env` or explicit `-e` flags; the container does not auto-load the repository-root `.env`.
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout foundation. Week 10 Slice C now runs that same Maven baseline in GitHub Actions and adds Docker image build as a no-secret CI quality gate. Productization Baseline frontend checks are separate from GitHub Actions for now. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout plus same-origin runtime foundation. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
 - auth and permission checks for login, server-side auth-session creation, required JWT `sid`, logout revocation, revoked/sidless/expired session `401` behavior, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
@@ -453,24 +458,25 @@ These areas still need manual verification even when the automated suite passes:
 
 - authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
-- Dockerized API live container smoke; CI verifies image build only
+- Dockerized same-origin admin + API runtime smoke; CI verifies image builds only
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
-Use [local-smoke-test.md](local-smoke-test.md), [ai-live-smoke-test.md](ai-live-smoke-test.md), and [regression-checklist.md](regression-checklist.md) for those checks.
+Use [local-smoke-test.md](local-smoke-test.md), [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md), [ai-live-smoke-test.md](ai-live-smoke-test.md), and [regression-checklist.md](regression-checklist.md) for those checks.
 
 ## Recommended Workflow
 
 1. Run `.\mvnw.cmd -pl merchantops-api -am test`, which matches the CI Maven gate through the Linux equivalent `./mvnw -pl merchantops-api -am test`
 2. If that passes and the change touches public API flow, security wiring, SQL, or migrations, run the relevant path from [local-smoke-test.md](local-smoke-test.md)
-3. If the change touches AI provider wiring, `.env` loading, or live vendor compatibility, add the summary-first path from [ai-live-smoke-test.md](ai-live-smoke-test.md)
-4. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
+3. If the change touches Docker delivery, runtime env injection, or admin packaging, run [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md)
+4. If the change touches AI provider wiring, `.env` loading, or live vendor compatibility, add the summary-first path from [ai-live-smoke-test.md](ai-live-smoke-test.md)
+5. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
 
 ## Known Pitfalls
 
 - Keep `.\mvnw.cmd -pl merchantops-api -am test` as the default regression entry. Running only `-pl merchantops-api test` can hide sibling-module signature changes behind stale local Maven artifacts.
-- Treat a successful CI Docker build as image-construction evidence only. It does not prove runtime configuration, compose-managed infrastructure connectivity, or authenticated API behavior inside a running container.
+- Treat a successful CI Docker build as image-construction evidence only. It does not prove runtime configuration, compose-managed infrastructure connectivity, same-origin admin proxying, or authenticated API behavior inside a running container.
 - For live smoke tests after changing JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first. Use `..\mvnw.cmd spring-boot:run` when the goal is the default local dev path; use the documented Dockerized API command when the verification also needs to prove container delivery or explicit env injection.
-- The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`, but Dockerized API startup is the correct path when the test target includes the image/runtime contract itself.
+- The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`, but the runtime compose path is the correct target when the test must prove API image startup, admin image startup, explicit env injection, and same-origin `/api` proxying.
 - For H2-based native SQL tests that rely on `MODE=MySQL`, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify the mode through `INFORMATION_SCHEMA.SETTINGS`. `DatabaseMetaData#getURL()` does not reliably echo the `MODE=...` parameter.
 - If a change adds or edits a Flyway migration, do at least one real MySQL verification pass after `spring-boot:run`. The current H2 and manually-created integration-test schemas do not prove that Flyway applied the new migration exactly as intended.
 - If Flyway reports a checksum mismatch in a real local run, do not rewrite a tagged or shared migration just to make the error disappear. The current in-place `V12` repair is a narrow untagged pre-release exception; for already-shared baselines, create a new `Vx__...sql` migration instead.

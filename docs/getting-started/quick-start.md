@@ -16,7 +16,7 @@ docker compose up -d
 
 The local infra stack keeps MySQL, Redis, and RabbitMQ on the pinned bridge network `merchantops-infra`. Containers on that network can reach the services by hostname `mysql`, `redis`, and `rabbitmq`.
 
-## 2. Choose An API Startup Path
+## 2. Choose A Startup Path
 
 ### Option A. Local Maven Startup
 
@@ -109,12 +109,28 @@ Notes:
 - the image does not read the repository-root `.env` automatically; use `--env-file .env` plus explicit `MYSQL_HOST`, `REDIS_HOST`, and `RABBITMQ_HOST` values
 - port `8080` stays the default API port on both startup paths
 
+### Option C. Production-Like API + Admin Runtime
+
+Use this path when you want to run the built admin console without the Vite dev server:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Open:
+
+- Admin runtime: `http://localhost:8081`
+- API health/debug: `http://localhost:8080`
+
+This path uses the `runtime` API profile, serves the admin `dist/` output through Nginx, and proxies same-origin `/api/...` requests from the admin container to the API container.
+
 ## 3. Verify Startup
 
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 - Health endpoint: `http://localhost:8080/health`
 - Actuator health endpoint: `http://localhost:8080/actuator/health`
+- Production-like admin runtime: `http://localhost:8081`
 
 Minimal protected smoke:
 
@@ -134,4 +150,4 @@ $token = $login.data.accessToken
 Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/context" -Headers @{ Authorization = "Bearer $token" }
 ```
 
-For a fuller verification flow, see [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md).
+For a fuller API verification flow, see [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md). For the production-like admin + API path, see [../runbooks/deployment-runtime-smoke-test.md](../runbooks/deployment-runtime-smoke-test.md).

@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-15
+Last updated: 2026-04-16
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,32 +29,32 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice C: Deployment And Secret Management Path
+### Slice D: Tenant Integrity Hardening
 
-Goal: document and harden the production-like runtime contract after the local admin-console and auth-session baseline, without adding deployment automation before secrets and smoke expectations are clear.
+Goal: move the highest-value tenant consistency guarantees from service-only checks toward database-backed constraints now that the admin, auth-session, and production-like runtime boundary are stable.
 
 Expected scope:
 
-- define required runtime configuration for API and admin console outside the local Vite proxy
-- clarify secret ownership for JWT signing, database credentials, Redis, RabbitMQ, and AI provider keys
-- decide the next smoke boundary for Dockerized API plus frontend delivery without introducing refresh tokens or cookie rotation yet
-- update getting-started, deployment, and runbook docs before adding workflow screens that depend on a production-like host model
+- review the access-control and tenant-integrity gaps tracked in [architecture/access-control-evolution-plan.md](architecture/access-control-evolution-plan.md)
+- add the narrowest safe database-backed constraint or migration for a high-risk tenant consistency gap, starting with `user_role` or ticket actor/assignee relationships only if the existing data and H2/MySQL test fixtures can support it cleanly
+- keep service-layer tenant checks in place and treat database constraints as defense-in-depth rather than a replacement for request-time validation
+- update migration docs, test fixtures, and regression guidance for any new tenant-integrity invariant
 
 Stop condition:
 
-- required environment variables and secret-handling assumptions are documented
-- local Dockerized API and admin-console smoke expectations are explicit and reproducible
-- refresh-token, cookie/session-rotation, CORS, and hosting assumptions remain either implemented or deliberately deferred
-- docs and runbooks no longer rely on implicit local-only deployment assumptions
+- the selected tenant-integrity invariant is enforced by migration plus automated tests
+- existing auth/session, stale-token, import, ticket, and approval regressions remain green
+- docs clearly distinguish the new database invariant from still-service-only tenant checks
+- follow-up tenant-integrity gaps remain tracked without widening into a broad schema rewrite
 
 ## Recently Closed
 
+- Slice C: Same-Origin Admin + API Runtime Contract - `merchantops-admin-web` now builds into an Nginx static runtime container on `http://localhost:8081`, same-origin `/api/...` proxies to the API container, `docker-compose.runtime.yml` runs API plus admin on the existing infra network, the `runtime` Spring profile defines container defaults and runtime-injected secret requirements, docs/runbooks cover the secret contract and runtime smoke path, and CI now runs admin checks plus API/admin image builds while leaving CORS, cookies, refresh tokens, token rotation, real secret-manager integration, image publishing, K8s, Helm, TLS, and deployment automation deferred.
 - Slice B: Server-Side Auth Session + Logout Foundation - login now creates an `auth_session`, JWTs carry required `sid` claims, protected requests validate active server-side session state before stale tenant/user/role checks, `POST /api/v1/auth/logout` revokes only the current session, and the admin console now signs out through the backend while keeping refresh tokens, cookies, rotation, logout-all, and cleanup scheduling deferred.
 - Slice A: Minimal Admin Console Entry - introduced `merchantops-admin-web/` as a standalone Vite + React + TypeScript app, wired login plus current context through the existing backend, added token restoration, established workflow navigation placeholders, and documented the local frontend run path and architecture boundary.
 
 ## Candidate Next Slices
 
-- Slice D: Tenant Integrity Hardening - move high-value tenant consistency guarantees from service-only checks toward database-backed constraints, starting with the access-control gaps tracked in [architecture/access-control-evolution-plan.md](architecture/access-control-evolution-plan.md).
 - Slice E: First Workflow Screen - add the narrowest useful admin-console data page after the session boundary is settled, starting with a read-only queue or summary view over an existing public API.
 - Slice F: Authentication Lifecycle Widening - revisit refresh tokens, cookies, CORS, token rotation, and logout-all only after the deployment and secret-management contract is clear.
 

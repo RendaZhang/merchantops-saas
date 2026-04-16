@@ -19,7 +19,7 @@ The short story:
 
 Start with the path that proves the project is runnable and workflow-centered:
 
-1. Open the admin console at `http://localhost:5173`.
+1. Open the admin console at `http://localhost:8081` for the production-like runtime, or `http://localhost:5173` for local Vite development.
 2. Login as the seeded demo admin for tenant `demo-shop`.
 3. Show the dashboard tenant/operator context and workflow navigation placeholders.
 4. Open Swagger UI at `http://localhost:8080/swagger-ui/index.html` for the deeper API workflow demo.
@@ -101,22 +101,24 @@ Use [quick-start.md](quick-start.md) for API startup commands, [admin-console.md
 
 ### 9. Docker And CI Proof
 
-- Show the two local startup paths:
+- Show the local startup paths:
   - Maven: `.\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run`
   - Dockerized API: `docker build -t merchantops-api:local .` plus the documented `docker run --env-file .env --network merchantops-infra ...` command
-- Show that GitHub Actions currently runs two no-secret jobs for pull requests and `main` pushes:
+  - Same-origin admin + API runtime: `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build`
+- Show that GitHub Actions currently runs three no-secret jobs for pull requests and `main` pushes:
   - `Maven Test`
+  - `Admin Web Check`
   - `Docker Build`
-- Keep the boundary clear: CI proves default Maven regression and image construction, not deployment, image publishing, Dockerized live smoke, live AI provider behavior, or the opt-in real MySQL migration suite.
+- Keep the boundary clear: CI proves default Maven regression, admin frontend checks, and image construction, not deployment, image publishing, Dockerized live smoke, live AI provider behavior, or the opt-in real MySQL migration suite.
 
 ## What To Say About Architecture
 
 - The codebase is a modular Spring Boot backend with MySQL, Redis, RabbitMQ, Flyway, JWT security, request tracing, and OpenAPI/Swagger support.
-- The admin console is a standalone Vite + React frontend at `merchantops-admin-web/`; it is not served from Spring Boot static resources in this slice.
+- The admin console is a standalone Vite + React frontend at `merchantops-admin-web/`; it is not served from Spring Boot static resources.
 - Tenant scope is explicit across user, ticket, approval, import, feature-flag, and AI read paths.
 - The workflow model separates system-of-record data, system-of-action transitions, audit events, approval requests, and AI interaction records.
 - AI is intentionally bounded: suggestion endpoints store governance metadata, and execution happens only through separate approval-backed workflow bridges.
-- Docker support is focused on a reproducible local API image that connects to the compose-managed infra network.
+- Docker support includes a reproducible API image and an Nginx-served admin image that proxies same-origin `/api` traffic to the API container on the compose-managed infra network.
 
 ## Intentionally Out Of Scope
 
@@ -136,7 +138,7 @@ Use this short checklist for a handoff review:
 
 - Local infra starts with `docker compose up -d`.
 - One API startup path works: local Maven or Dockerized API.
-- The admin console starts with `npm run dev` from `merchantops-admin-web`.
+- The admin console starts either with `npm run dev` from `merchantops-admin-web` for local development or at `http://localhost:8081` through `docker-compose.runtime.yml` for production-like runtime.
 - Swagger UI and `/health` load on port `8080`.
 - Seeded admin login works for `demo-shop` in the admin console.
 - The dashboard renders tenant/operator context and restores the local token after refresh.

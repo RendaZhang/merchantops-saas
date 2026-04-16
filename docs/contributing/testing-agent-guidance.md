@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-04-15
+Last updated: 2026-04-16
 
 ## Purpose
 
@@ -15,7 +15,7 @@ When you take over an in-flight change set, use this order:
 1. Inspect the staged scope first with `git diff --cached --name-only` and `git diff --cached --stat`.
 2. Map the staged files to the affected test layers, choose the smallest sufficient verification set, and execute enough of it to support a staged testing report.
 3. If the staged change touches controllers, security, repositories, entities, or a bug that only appears in real request flow, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`, and follow [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md).
-4. If the staged change touches Docker delivery, container startup, or env injection behavior, also run the documented `docker build` plus `docker run --env-file .env --network merchantops-infra ...` path and verify at least `/health` plus one protected endpoint.
+4. If the staged change touches Docker delivery, container startup, env injection behavior, admin image packaging, or same-origin proxying, also run the documented runtime compose path and verify at least `/health`, admin page load, login, context, sign-out, and old-token rejection.
 5. If the staged change touches CI workflow files, compare the workflow commands against [../runbooks/automated-tests.md](../runbooks/automated-tests.md) and keep the documented CI boundary explicit.
 6. If the staged change touches AI provider wiring, `.env` loading, provider selection, or live vendor compatibility, use [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md) plus [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md) after the normal non-AI smoke path when needed. When the same change also targets Docker delivery or explicit container env injection, prefer running the summary-first live smoke against the Dockerized API path instead of switching back to `spring-boot:run`.
 7. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
@@ -50,7 +50,7 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout foundation, and the completed Week 10 Slice C no-secret CI quality gate.
+The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout plus same-origin runtime foundation, and the no-secret CI quality gate.
 
 Today it covers:
 
@@ -72,13 +72,13 @@ Today it covers:
 - symmetric AI hardening parity across the current public ticket and import AI endpoints, including provider-not-configured, provider-unavailable, timeout, invalid-response or output-policy-validation failure paths, `ai_interaction_record.status` assertions, response-shape / golden-sample expectations, import prompt sanitization, and fix-recommendation sensitive-output rejection
 - Week 9 shared AI governance baseline through the executable six-workflow prompt inventory, shared comparator pass, golden plus failure plus policy datasets, and tenant-scoped AI usage-summary aggregate coverage
 - stale-token rejection after user status, role, or permission changes, plus refreshed-login success when newly granted access now includes `FEATURE_FLAG_MANAGE`
-- GitHub Actions CI parity for the default Maven regression command plus Docker image construction through `docker build -t merchantops-api:ci .`
+- GitHub Actions CI parity for the default Maven regression command, admin frontend typecheck/lint/build, and Docker image construction for both API and admin web images
 
 It does not replace manual checks for:
 
 - Swagger/OpenAPI rendering
 - real infra health such as `MySQL`, `Redis`, and `RabbitMQ`
-- Dockerized API container startup, shared-network connectivity, and authenticated runtime smoke on the documented shared-network path
+- Dockerized API/admin container startup, shared-network connectivity, same-origin `/api` proxying, and authenticated runtime smoke on the documented shared-network path
 - authenticated endpoints outside the covered login/session/logout + user-management + ticket + audit + approval + import path
 
 ## Default Test Entry Point
@@ -103,7 +103,7 @@ Use the full reactor only when broader verification is needed:
 ## Known Pitfalls
 
 - `spring-boot:run` does not magically use every fresh sibling-module compile output. If `merchantops-infra` signatures changed, install the reactor modules first.
-- The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`, but the Dockerized API path is the right live-smoke target when you must prove container delivery or explicit runtime env injection.
+- The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`; use the Dockerized API path for API-only container proof, and use the runtime compose path when the change must prove admin image startup, explicit runtime env injection, or same-origin `/api` proxying.
 - For H2 tests that depend on MySQL compatibility, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify `MODE` through `INFORMATION_SCHEMA.SETTINGS` rather than through `DatabaseMetaData#getURL()`.
 - Treat password formatting as a cross-flow regression point. Whenever create-user or login password handling changes, verify that both flows enforce the same rule.
 - Do not let smoke docs over-claim coverage. If a runbook executes only the happy path, keep negative-path expectations in automated-test notes or the regression checklist and label them that way.

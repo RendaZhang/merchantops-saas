@@ -20,7 +20,7 @@ This section stores architecture notes, technical decisions, and recorded struct
 ## Other Pages
 
 - [java-architecture-map.md](java-architecture-map.md): current Java module ownership, capability package map, and type-placement guide
-- [admin-console-architecture.md](admin-console-architecture.md): standalone Vite admin-console module, API client boundary, token storage boundary, server-side auth-session boundary, and deferred refresh-token lifecycle
+- [admin-console-architecture.md](admin-console-architecture.md): standalone Vite admin-console module, same-origin Nginx runtime, API client boundary, token storage boundary, server-side auth-session boundary, and deferred refresh-token lifecycle
 - [access-control-evolution-plan.md](access-control-evolution-plan.md): long-term RBAC, tenant-integrity, permission-taxonomy, and authorization-governance direction
 - [../../merchantops-api/README.md](../../merchantops-api/README.md): module-level ownership notes for HTTP contracts, orchestration, and platform support
 - [../../merchantops-domain/README.md](../../merchantops-domain/README.md): module-level ownership notes for use cases, ports, and shared business errors

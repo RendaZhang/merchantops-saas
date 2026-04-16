@@ -88,8 +88,8 @@ export function DashboardPage() {
               </h2>
             </div>
             <p className="max-w-xl text-sm text-neutral-600">
-              Slice B keeps the shell thin while adding revocable sign-out.
-              Workflow data screens stay behind later slices.
+              Runtime-ready shell with revocable sign-out. Workflow data screens
+              stay behind later slices.
             </p>
           </div>
 

@@ -65,12 +65,10 @@ export function AppShell({ children, onSignOut, signOutPending = false }: AppShe
 
         <div className="min-w-0">
           <header className="flex min-h-20 flex-col justify-center gap-2 border-b border-neutral-200 bg-white px-5 md:px-8">
-            <p className="text-sm font-medium text-emerald-700">
-              Productization Baseline Slice B
-            </p>
+            <p className="text-sm font-medium text-emerald-700">Productization Baseline</p>
             <p className="max-w-3xl text-sm text-neutral-600">
-              Login, current tenant context, and sign out are connected. Workflow
-              pages are staged as navigation targets.
+              Same-origin runtime, current tenant context, and sign out are connected.
+              Workflow pages are staged as navigation targets.
             </p>
           </header>
 

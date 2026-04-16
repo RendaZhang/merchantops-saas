@@ -31,6 +31,37 @@ jobs:
       - name: Run Maven regression
         run: ./mvnw -pl merchantops-api -am test
 
+  admin-web-check:
+    name: Admin Web Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: merchantops-admin-web/package-lock.json
+
+      - name: Install admin web dependencies
+        working-directory: merchantops-admin-web
+        run: npm ci
+
+      - name: Run admin web typecheck
+        working-directory: merchantops-admin-web
+        run: npm run typecheck
+
+      - name: Run admin web lint
+        working-directory: merchantops-admin-web
+        run: npm run lint
+
+      - name: Build admin web
+        working-directory: merchantops-admin-web
+        run: npm run build
+
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -41,3 +72,6 @@ jobs:
 
       - name: Build API image
         run: docker build -t merchantops-api:ci .
+
+      - name: Build admin web image
+        run: docker build -t merchantops-admin-web:ci ./merchantops-admin-web

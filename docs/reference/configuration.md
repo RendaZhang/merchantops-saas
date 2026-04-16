@@ -9,8 +9,14 @@
 Override example:
 
 ```bash
-SPRING_PROFILES_ACTIVE=prod ./mvnw -f merchantops-api/pom.xml spring-boot:run
+SPRING_PROFILES_ACTIVE=runtime ./mvnw -f merchantops-api/pom.xml spring-boot:run
 ```
+
+The production-like Docker runtime uses:
+
+- `SPRING_PROFILES_ACTIVE=runtime`
+
+The `runtime` profile is for container execution with explicit environment injection. It does not auto-load the repository-root `.env`.
 
 ## `application-dev.yml`
 
@@ -21,6 +27,22 @@ The `dev` profile contains local integration settings for:
 - RabbitMQ
 - JWT
 - local import storage root
+
+The `dev` profile provides local defaults for developer startup. Do not treat those defaults as the production-like runtime contract.
+
+## `application-runtime.yml`
+
+The `runtime` profile contains container runtime settings for:
+
+- MySQL service hostname default: `mysql`
+- Redis service hostname default: `redis`
+- RabbitMQ service hostname default: `rabbitmq`
+- runtime import storage default: `/app/data/imports`
+- required runtime-injected database credentials
+- required runtime-injected RabbitMQ credentials
+- required runtime-injected `JWT_SECRET`
+
+If required runtime variables are missing, the API should fail startup instead of silently falling back to dev credentials.
 
 ## `application.yml`
 
@@ -99,6 +121,7 @@ Shared application configuration currently includes:
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_BATCH_SIZE`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_DELAY_MS`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_MIN_AGE_SECONDS`
+- `SPRING_PROFILES_ACTIVE`
 
 ## Local `.env` Bootstrap
 
@@ -106,7 +129,43 @@ Shared application configuration currently includes:
 - That bootstrap ignores blank lines and comments, trims simple quotes, and does not override already-set system properties or OS environment variables.
 - That bootstrap does not search outside the repository root and is skipped for non-dev profile startup.
 - This local bootstrap is intentionally limited to the main app entrypoint and does not change `@SpringBootTest` behavior.
-- This local bootstrap is also skipped for container launches. The Dockerized API path must receive env values explicitly through `docker run --env-file ...` and `-e ...`.
+- This local bootstrap is also skipped for container launches. Dockerized API and runtime-compose paths must receive env values explicitly through `--env-file`, compose `env_file`, or platform-provided environment variables.
+
+## Secret Contract
+
+Required local infra values:
+
+- `MYSQL_ROOT_PASSWORD`
+- `MYSQL_DATABASE`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `RABBITMQ_DEFAULT_USER`
+- `RABBITMQ_DEFAULT_PASS`
+- `TZ`
+
+Required API runtime secret:
+
+- `JWT_SECRET`
+
+Required API runtime connectivity values:
+
+- `MYSQL_DATABASE`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `RABBITMQ_DEFAULT_USER`
+- `RABBITMQ_DEFAULT_PASS`
+
+The runtime compose overlay supplies container service hosts for `MYSQL_HOST`, `REDIS_HOST`, and `RABBITMQ_HOST`. Other deployment environments must provide equivalent host and port values.
+
+Optional runtime secrets:
+
+- `MERCHANTOPS_AI_API_KEY`
+- `MERCHANTOPS_AI_OPENAI_API_KEY`
+- `DEEPSEEK_API_KEY`
+
+Optional AI provider keys can stay blank for non-AI operation. When AI generation is enabled but provider credentials are absent, the AI endpoints keep their controlled degraded-mode behavior.
+
+Tracked files may contain local demo defaults only. Real deployment secrets must be injected by the runtime environment and must not be copied into Docker images.
 
 ## Dockerized API Runtime
 
@@ -129,6 +188,23 @@ Container runtime expectations:
 - the image exposes port `8080`
 - `MYSQL_HOST`, `REDIS_HOST`, and `RABBITMQ_HOST` should point to the compose service names when the container joins `merchantops-infra`
 - `.env` continues to provide credentials, timezone, JWT overrides, and optional AI provider overrides, but those values are injected at runtime instead of being copied into the image
+
+## Same-Origin Admin Runtime
+
+Productization Baseline Slice C adds a production-like local runtime overlay:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Runtime shape:
+
+- `merchantops-api` runs the API image with `SPRING_PROFILES_ACTIVE=runtime`
+- `merchantops-admin-web` serves the built Vite app through Nginx on `http://localhost:8081`
+- Nginx proxies browser requests from `/api/...` to `http://merchantops-api:8080`
+- the browser sees one origin for the admin shell and API calls
+
+This same-origin path deliberately avoids CORS, cookies, refresh tokens, and token rotation in this slice.
 
 ## AI Provider Controls
 

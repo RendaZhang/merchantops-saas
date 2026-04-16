@@ -10,7 +10,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 - Current tagged milestone: `v0.7.0-beta`
 - Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
-- Current phase state: Productization Baseline active; Slice B added server-side auth sessions and real admin-console sign-out
+- Current phase state: Productization Baseline active; Slice C added the same-origin admin + API runtime contract, and Slice D Tenant Integrity Hardening is next
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
 - Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 
@@ -23,8 +23,8 @@ This repository is built for portfolio review, open-source handoff, and implemen
 - AI-assisted ticket and import workflows where public AI endpoints remain read-only or suggestion-only.
 - AI governance reads for narrowed interaction history and tenant-scoped aggregate usage/cost metadata, including prompt-version breakdowns.
 - Fixed tenant-scoped feature flags for six AI generation endpoints and two approval-backed workflow bridges.
-- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, and workflow navigation placeholders.
-- Local Maven startup, Dockerized API startup, OpenAPI/Swagger docs, and a minimal no-secret GitHub Actions quality gate.
+- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, workflow navigation placeholders, and same-origin Nginx runtime packaging.
+- Local Maven startup, Dockerized API startup, production-like admin + API runtime compose, OpenAPI/Swagger docs, and a minimal no-secret GitHub Actions quality gate.
 
 ## Quick Start
 
@@ -82,6 +82,14 @@ npm run dev
 
 Open `http://localhost:5173` and log in with tenant `demo-shop`, username `admin`, and password `123456`.
 
+Production-like admin + API runtime:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Open `http://localhost:8081` for the Nginx-served admin console with same-origin `/api` proxying.
+
 For the full setup flow, use [Getting Started](docs/getting-started/README.md). For the frontend path, use [Admin Console](docs/getting-started/admin-console.md). For a 5-10 minute review path, use the [Project Showcase](docs/getting-started/project-showcase.md).
 
 ## CI And Verification
@@ -101,13 +109,14 @@ npm run lint
 npm run build
 ```
 
-GitHub Actions runs the Linux equivalent on pull requests and `main` pushes, then verifies that the API image builds with:
+GitHub Actions runs the Linux equivalent on pull requests and `main` pushes, runs the admin web typecheck/lint/build, then verifies that both runtime images build with:
 
 ```bash
 docker build -t merchantops-api:ci .
+docker build -t merchantops-admin-web:ci ./merchantops-admin-web
 ```
 
-The CI gate is intentionally minimal. It does not deploy, publish Docker images, start the Dockerized API for live smoke, run live AI provider checks, run frontend npm checks, or run the opt-in real MySQL migration suite. Current CI evidence and exact verification boundaries are tracked in [Project Status](docs/project-status.md) and [Automated Tests](docs/runbooks/automated-tests.md).
+The CI gate is intentionally minimal. It does not deploy, publish Docker images, start the Dockerized runtime stack for live smoke, run live AI provider checks, or run the opt-in real MySQL migration suite. Current CI evidence and exact verification boundaries are tracked in [Project Status](docs/project-status.md) and [Automated Tests](docs/runbooks/automated-tests.md).
 
 ## Docs Map
 
@@ -133,7 +142,7 @@ The CI gate is intentionally minimal. It does not deploy, publish Docker images,
 - Public AI endpoints are read-only or suggestion-only. AI-generated ticket comments and import selective replay still go through separate human-reviewed approval bridges before execution.
 - AI usage/cost metadata is a governance read surface over stored runtime metadata, not billing, ledger, invoice, or commercial metering infrastructure.
 - CI does not require AI provider secrets and does not prove live vendor behavior.
-- K8s, Helm, production secret-management guidance, performance artifacts, refresh tokens, cookie/session rotation, logout-all-devices, and a broader reporting system remain outside the current baseline.
+- K8s, Helm, real secret-manager integration, performance artifacts, refresh tokens, cookie/session rotation, logout-all-devices, and a broader reporting system remain outside the current baseline.
 
 ## Contributing, Security, And License
 

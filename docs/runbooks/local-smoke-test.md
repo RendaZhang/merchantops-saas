@@ -55,7 +55,7 @@ Set-Location .\merchantops-api
 ..\mvnw.cmd spring-boot:run
 ```
 
-This runbook still defaults to `spring-boot:run` because repo-root `.env` auto-loading and live edit/restart loops are tied to that path. For delivery-baseline verification, you can instead build and run the Dockerized API with the documented `docker build` plus `docker run --env-file .env --network merchantops-infra ...` flow from [../getting-started/quick-start.md](../getting-started/quick-start.md).
+This runbook still defaults to `spring-boot:run` because repo-root `.env` auto-loading and live edit/restart loops are tied to that path. For delivery-baseline verification, use [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md) to run the Dockerized API plus Nginx-served admin console through the same-origin `/api` proxy.
 If port `8080` is already busy, stop the conflicting process or start the app on another port and update `$baseUrl` in the later smoke steps to match.
 
 ## 3. Prepare Reusable Variables

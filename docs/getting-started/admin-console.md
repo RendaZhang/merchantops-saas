@@ -1,6 +1,11 @@
 # Admin Console
 
-The admin console is the first product-facing frontend entry for the Productization Baseline. It lives in `merchantops-admin-web/` as a standalone Vite + React app and talks to the existing backend through the Vite dev proxy.
+The admin console is the first product-facing frontend entry for the Productization Baseline. It lives in `merchantops-admin-web/` as a standalone Vite + React app.
+
+There are two supported local paths:
+
+- local development: Vite serves the app at `http://localhost:5173` and proxies `/api/...` to `http://localhost:8080`
+- production-like runtime: Nginx serves the built app at `http://localhost:8081` and proxies same-origin `/api/...` to the API container
 
 The current Productization Baseline frontend is intentionally narrow:
 
@@ -33,7 +38,7 @@ docker compose up -d
 
 The API should be available at `http://localhost:8080`.
 
-## Start The Admin Console
+## Start The Admin Console For Local Development
 
 In a second terminal:
 
@@ -47,7 +52,22 @@ Open `http://localhost:5173`.
 
 The frontend calls `/api/v1/auth/login`, `/api/v1/context`, and `/api/v1/auth/logout` with relative `/api/...` paths. During local development, Vite proxies those calls to `http://localhost:8080`.
 
-## Smoke Test
+## Start The Production-Like Admin Runtime
+
+From the repository root:
+
+```powershell
+Copy-Item .env.example .env -ErrorAction SilentlyContinue
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Open `http://localhost:8081`.
+
+This path does not use the Vite dev server. The admin image serves `dist/` through Nginx, and Nginx proxies same-origin `/api/...` requests to `merchantops-api:8080` inside the compose network.
+
+The API container uses `SPRING_PROFILES_ACTIVE=runtime`. Required secrets and credentials, including `JWT_SECRET`, must be injected through `.env` or the runtime environment; they are not baked into the image.
+
+## Local Development Smoke Test
 
 1. Open `http://localhost:5173`.
 2. Log in with tenant `demo-shop`, username `admin`, and password `123456`.
@@ -57,13 +77,28 @@ The frontend calls `/api/v1/auth/login`, `/api/v1/context`, and `/api/v1/auth/lo
 6. Select `Sign out` and confirm the app returns to the login screen.
 7. Reusing the signed-out token against `/api/v1/context` should return `401`.
 
+## Production-Like Runtime Smoke Test
+
+Use [../runbooks/deployment-runtime-smoke-test.md](../runbooks/deployment-runtime-smoke-test.md) for the same-origin admin + API runtime smoke.
+
+Minimum acceptance:
+
+1. Open `http://localhost:8081`.
+2. Log in with tenant `demo-shop`, username `admin`, and password `123456`.
+3. Confirm dashboard context is loaded through same-origin `/api/v1/context`.
+4. Refresh and confirm context restores while the server-side session is active.
+5. Select `Sign out` and confirm the app returns to login.
+6. Reusing the signed-out token against `http://localhost:8081/api/v1/context` should return `401`.
+
 ## Current Session Limits
 
-The frontend stores the JWT access token in `localStorage` for this local baseline. It clears that token when it expires locally or when `/api/v1/context` returns `401` or `403`.
+The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context` returns `401` or `403`.
 
 Login creates a server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context query cache, and returns to login even if the logout request fails or the token is already invalid.
 
 There is still no refresh-token flow, cookie/session rotation, logout-all-devices flow, or session cleanup scheduler in this slice. When the access token expires or the server-side session is invalid, the user must log in again.
+
+The production-like runtime keeps the same bearer-token model and uses same-origin reverse proxying instead of CORS.
 
 ## Verification Commands
 

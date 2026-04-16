@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-04-15
+Last updated: 2026-04-16
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -17,6 +17,7 @@ Use this checklist after foundation-level changes, security changes, environment
 ## Infra
 
 - [ ] `docker compose up -d` works
+- [ ] if runtime packaging changed, `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` works
 - [ ] MySQL is reachable
 - [ ] Redis `PING` returns `PONG`
 - [ ] RabbitMQ UI is accessible
@@ -27,6 +28,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] if live smoke was needed after module-signature changes, `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` was run before `spring-boot:run`
 - [ ] `/health` returns `UP`
 - [ ] `/actuator/health` shows `db`, `redis`, and `rabbit` as `UP`
+- [ ] if admin runtime packaging changed, `http://localhost:8081` serves the admin app and same-origin `/api/v1/context` works through the Nginx proxy
 - [ ] Swagger UI is accessible
 - [ ] Swagger UI shows documented business endpoints and actuator health coverage
 - [ ] Swagger UI preserves Bearer authorization across requests after login
@@ -205,4 +207,5 @@ Use this checklist after foundation-level changes, security changes, environment
 - Use [../../api-demo.http](../../api-demo.http) for the main request flow
 - Compare the current user-list behavior against [../reference/user-management.md](../reference/user-management.md)
 - Use [local-smoke-test.md](local-smoke-test.md) when you want a shorter step-by-step validation path
+- Use [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md) when Docker runtime env injection, admin image packaging, or same-origin `/api` proxy behavior changed
 - Use [ai-regression-checklist.md](ai-regression-checklist.md) when the staged change touches the current public AI surface, including ticket AI and import AI endpoints
