@@ -58,16 +58,16 @@ class JpaUserCommandAdapterTest {
     void replaceUserRolesShouldDeleteOldRowsAndInsertRequestedBindings() {
         JpaUserCommandAdapter adapter = new JpaUserCommandAdapter(userRepository, userRoleRepository);
 
-        adapter.replaceUserRoles(205L, java.util.List.of(12L, 13L));
+        adapter.replaceUserRoles(1L, 205L, java.util.List.of(12L, 13L));
 
-        verify(userRoleRepository).deleteByUserId(205L);
+        verify(userRoleRepository).deleteByTenantIdAndUserId(1L, 205L);
         ArgumentCaptor<Iterable<UserRoleEntity>> captor = userRoleEntitiesCaptor();
         verify(userRoleRepository).saveAll(captor.capture());
         assertThat(StreamSupport.stream(captor.getValue().spliterator(), false).toList())
-                .extracting("userId", "roleId")
+                .extracting("tenantId", "userId", "roleId")
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(205L, 12L),
-                        org.assertj.core.groups.Tuple.tuple(205L, 13L)
+                        org.assertj.core.groups.Tuple.tuple(1L, 205L, 12L),
+                        org.assertj.core.groups.Tuple.tuple(1L, 205L, 13L)
                 );
     }
 

@@ -123,7 +123,8 @@ class AuthSecurityIntegrationTest {
                     role_code VARCHAR(64) NOT NULL,
                     role_name VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_role_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
 
@@ -140,8 +141,11 @@ class AuthSecurityIntegrationTest {
         jdbcTemplate.execute("""
                 CREATE TABLE user_role (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
                     user_id BIGINT NOT NULL,
-                    role_id BIGINT NOT NULL
+                    role_id BIGINT NOT NULL,
+                    CONSTRAINT fk_user_role_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_user_role_role_tenant FOREIGN KEY (role_id, tenant_id) REFERENCES `role`(id, tenant_id)
                 )
                 """);
 
@@ -780,6 +784,21 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void userRoleShouldRejectCrossTenantRoleBindingAtDatabaseLayer() {
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO user_role (id, tenant_id, user_id, role_id)
+                        VALUES (?, ?, ?, ?)
+                        """, 1999L, 1L, 101L, 21L))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user_role WHERE id = ?",
+                Integer.class,
+                1999L
+        )).isZero();
+    }
+
+    @Test
     void updateUserShouldPersistProfileWithinTenantWhenPermissionIsGranted() throws Exception {
         String token = loginAndGetToken("demo-shop", "admin", "123456");
 
@@ -908,10 +927,11 @@ class AuthSecurityIntegrationTest {
         assertThat(jdbcTemplate.queryForList("""
                         SELECT r.role_code
                         FROM user_role ur
-                        JOIN `role` r ON r.id = ur.role_id
+                        JOIN `role` r ON r.id = ur.role_id AND r.tenant_id = ur.tenant_id
                         WHERE ur.user_id = ?
+                          AND ur.tenant_id = ?
                         ORDER BY r.id
-                        """, String.class, 103L))
+                        """, String.class, 103L, 1L))
                 .containsExactly("TENANT_ADMIN");
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT updated_by FROM users WHERE id = ?",
@@ -1022,10 +1042,11 @@ class AuthSecurityIntegrationTest {
         assertThat(jdbcTemplate.queryForList("""
                         SELECT r.role_code
                         FROM user_role ur
-                        JOIN `role` r ON r.id = ur.role_id
+                        JOIN `role` r ON r.id = ur.role_id AND r.tenant_id = ur.tenant_id
                         WHERE ur.user_id = ?
+                          AND ur.tenant_id = ?
                         ORDER BY r.id
-                        """, String.class, userId))
+                        """, String.class, userId, 1L))
                 .containsExactly("READ_ONLY");
 
         String createdUserToken = loginAndGetToken("demo-shop", "cashier", "123456");
@@ -1058,9 +1079,9 @@ class AuthSecurityIntegrationTest {
                 VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """, 105L, 1L, "approver", encodedPassword, "Approver User", "approver@demo-shop.local", "ACTIVE");
         jdbcTemplate.update("""
-                INSERT INTO user_role (id, user_id, role_id)
-                VALUES (?, ?, ?)
-                """, 1006L, 105L, 11L);
+                INSERT INTO user_role (id, tenant_id, user_id, role_id)
+                VALUES (?, ?, ?, ?)
+                """, 1006L, 1L, 105L, 11L);
     }
 
     private void seedFeatureFlags() {
@@ -1183,10 +1204,11 @@ class AuthSecurityIntegrationTest {
     }
 
     private void insertUserRole(Long id, Long userId, Long roleId) {
+        Long tenantId = jdbcTemplate.queryForObject("SELECT tenant_id FROM users WHERE id = ?", Long.class, userId);
         jdbcTemplate.update("""
-                INSERT INTO user_role (id, user_id, role_id)
-                VALUES (?, ?, ?)
-                """, id, userId, roleId);
+                INSERT INTO user_role (id, tenant_id, user_id, role_id)
+                VALUES (?, ?, ?, ?)
+                """, id, tenantId, userId, roleId);
     }
 
     private void insertRolePermission(Long id, Long roleId, Long permissionId) {

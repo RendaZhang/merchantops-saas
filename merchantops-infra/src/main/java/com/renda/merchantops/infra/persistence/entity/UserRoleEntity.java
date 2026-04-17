@@ -22,6 +22,9 @@ public class UserRoleEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "tenant_id", nullable = false)
+    private Long tenantId;
+
     @Column(name = "role_id", nullable = false)
     private Long roleId;
 }

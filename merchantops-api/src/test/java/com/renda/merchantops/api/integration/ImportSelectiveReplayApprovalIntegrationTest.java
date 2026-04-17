@@ -110,7 +110,8 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                     role_code VARCHAR(64) NOT NULL,
                     role_name VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_role_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
@@ -125,8 +126,11 @@ class ImportSelectiveReplayApprovalIntegrationTest {
         jdbcTemplate.execute("""
                 CREATE TABLE user_role (
                     id BIGINT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
                     user_id BIGINT NOT NULL,
-                    role_id BIGINT NOT NULL
+                    role_id BIGINT NOT NULL,
+                    CONSTRAINT fk_user_role_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_user_role_role_tenant FOREIGN KEY (role_id, tenant_id) REFERENCES `role`(id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
@@ -724,10 +728,10 @@ class ImportSelectiveReplayApprovalIntegrationTest {
         insertPermission(1L, "USER_READ", "Read users");
         insertPermission(2L, "USER_WRITE", "Write users");
 
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1001, 101, 11)");
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1003, 103, 13)");
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1005, 105, 11)");
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (2001, 201, 21)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1001, 1, 101, 11)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1003, 1, 103, 13)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1005, 1, 105, 11)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (2001, 2, 201, 21)");
 
         insertRolePermission(3001L, 11L, 1L);
         insertRolePermission(3002L, 11L, 2L);

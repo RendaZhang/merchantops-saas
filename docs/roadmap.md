@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-16
+Last updated: 2026-04-17
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,34 +29,35 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice D: Tenant Integrity Hardening
+### Slice E: First Workflow Screen
 
-Goal: move the highest-value tenant consistency guarantees from service-only checks toward database-backed constraints now that the admin, auth-session, and production-like runtime boundary are stable.
+Goal: turn the admin console from a login/context shell into one useful workflow screen without widening backend contracts.
 
 Expected scope:
 
-- review the access-control and tenant-integrity gaps tracked in [architecture/access-control-evolution-plan.md](architecture/access-control-evolution-plan.md)
-- add the narrowest safe database-backed constraint or migration for a high-risk tenant consistency gap, starting with `user_role` or ticket actor/assignee relationships only if the existing data and H2/MySQL test fixtures can support it cleanly
-- keep service-layer tenant checks in place and treat database constraints as defense-in-depth rather than a replacement for request-time validation
-- update migration docs, test fixtures, and regression guidance for any new tenant-integrity invariant
+- start with a read-only admin tickets queue over the existing `GET /api/v1/tickets` public API unless repository reality points to an even narrower workflow screen
+- reuse the existing admin auth/session/context boundary and same-origin `/api/...` runtime path
+- add the smallest query-client, route, page, loading, empty, and error-state support needed for the screen
+- keep ticket mutation, approval execution, import execution, AI generation, refresh tokens, and new backend APIs out of this slice unless the read-only screen cannot function without a tiny supporting fix
 
 Stop condition:
 
-- the selected tenant-integrity invariant is enforced by migration plus automated tests
-- existing auth/session, stale-token, import, ticket, and approval regressions remain green
-- docs clearly distinguish the new database invariant from still-service-only tenant checks
-- follow-up tenant-integrity gaps remain tracked without widening into a broad schema rewrite
+- the selected workflow screen renders real backend data after login in local dev and same-origin runtime modes
+- token restoration, sign-out, and context display remain intact
+- frontend typecheck/lint/build and the backend default regression pass
+- docs identify the screen as the first productized workflow surface while keeping remaining pages as placeholders
 
 ## Recently Closed
 
+- Slice D: Tenant Integrity Hardening - `V16__enforce_user_role_tenant_integrity.sql` now adds and backfills `user_role.tenant_id`, enforces same-tenant composite foreign keys to both `users` and `role`, updates role-binding writes to include tenant id, updates RBAC read joins to express the invariant, and adds focused database-level rejection coverage while leaving ticket actor, assignee, comment-author, and operation-log operator constraints as later follow-up work.
 - Slice C: Same-Origin Admin + API Runtime Contract - `merchantops-admin-web` now builds into an Nginx static runtime container on `http://localhost:8081`, same-origin `/api/...` proxies to the API container, `docker-compose.runtime.yml` runs API plus admin on the existing infra network, the `runtime` Spring profile defines container defaults and runtime-injected secret requirements, docs/runbooks cover the secret contract and runtime smoke path, and CI now runs admin checks plus API/admin image builds while leaving CORS, cookies, refresh tokens, token rotation, real secret-manager integration, image publishing, K8s, Helm, TLS, and deployment automation deferred.
 - Slice B: Server-Side Auth Session + Logout Foundation - login now creates an `auth_session`, JWTs carry required `sid` claims, protected requests validate active server-side session state before stale tenant/user/role checks, `POST /api/v1/auth/logout` revokes only the current session, and the admin console now signs out through the backend while keeping refresh tokens, cookies, rotation, logout-all, and cleanup scheduling deferred.
 - Slice A: Minimal Admin Console Entry - introduced `merchantops-admin-web/` as a standalone Vite + React + TypeScript app, wired login plus current context through the existing backend, added token restoration, established workflow navigation placeholders, and documented the local frontend run path and architecture boundary.
 
 ## Candidate Next Slices
 
-- Slice E: First Workflow Screen - add the narrowest useful admin-console data page after the session boundary is settled, starting with a read-only queue or summary view over an existing public API.
-- Slice F: Authentication Lifecycle Widening - revisit refresh tokens, cookies, CORS, token rotation, and logout-all only after the deployment and secret-management contract is clear.
+- Slice F: Tenant Actor Integrity Follow-Up - add database-level same-tenant constraints for the highest-value ticket actor references after the `user_role` invariant has settled.
+- Slice G: Authentication Lifecycle Widening - revisit refresh tokens, cookies, CORS, token rotation, and logout-all only after the same-origin runtime contract and first workflow screen are stable.
 
 ## Default Deferrals
 

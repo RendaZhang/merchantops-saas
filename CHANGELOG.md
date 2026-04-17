@@ -11,12 +11,14 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added the Productization Baseline Slice A admin-console entry through `merchantops-admin-web/`, a standalone Vite + React + TypeScript app for login, current tenant context, local JWT restoration, and workflow navigation placeholders over the existing backend.
 - Added the Productization Baseline Slice B auth-session foundation: login now creates a server-side `auth_session`, JWTs carry a required `sid` claim, `POST /api/v1/auth/logout` revokes the current session, and the admin console signs out through the backend.
 - Added the Productization Baseline Slice C same-origin admin + API runtime contract through `docker-compose.runtime.yml`, a `runtime` Spring profile, an Nginx-served admin web image, and a dedicated deployment runtime smoke runbook.
+- Added Productization Baseline Slice D tenant-integrity hardening for `user_role`, including `tenant_id` backfill, same-tenant composite foreign keys to `users` and `role`, tenant-aware role-binding writes, and focused database-level rejection coverage.
 
 ### Changed
 
 - README, getting-started docs, architecture docs, roadmap/status pages, and automated-test guidance now document the admin-console run path, frontend architecture boundary, and separate frontend workspace verification commands.
 - Protected requests now reject sidless, revoked, expired, missing, or mismatched auth sessions with controlled `401` responses before tenant/user/role revalidation, while refresh tokens, cookie/session rotation, logout-all-devices, and session cleanup scheduling remain deferred.
 - GitHub Actions now runs admin frontend checks and verifies both API and admin image construction, while runtime-container smoke, image publishing, real secret-manager integration, TLS/domain management, and deployment automation remain manual or deferred.
+- Access-control, user-management, migration, status, roadmap, and regression docs now distinguish the resolved `user_role` database invariant from the remaining ticket actor, assignee, comment-author, and operation-log tenant-integrity follow-ups.
 
 ## [v0.7.0-beta] - 2026-04-12
 

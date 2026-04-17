@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-04-16
+Last updated: 2026-04-17
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -10,6 +10,7 @@ Use this checklist after foundation-level changes, security changes, environment
 
 - [ ] `.\mvnw.cmd -pl merchantops-api -am test` passes
 - [ ] `AuthSecurityIntegrationTest`, `UserQueryServiceTest`, `UserCommandServiceTest`, and `UserManagementControllerTest` cover the code path you changed
+- [ ] if role-binding schema or RBAC SQL changed, `AuthSecurityIntegrationTest` proves cross-tenant `user_role` inserts fail at the database layer
 - [ ] for import-job changes, `ImportJobControllerTest`, `ImportJobCommandServiceTest`, `ImportJobQueryServiceTest`, `ImportJobWorkerTest`, `ImportJobIntegrationTest`, and `ImportJobMigrationTest` cover the staged path
 - [ ] if repository signatures changed, tests were run with `-am` rather than `-pl merchantops-api test` only
 - [ ] if H2 native SQL tests changed, `@AutoConfigureTestDatabase(replace = NONE)` is still preserved and MySQL-mode assertions still verify the runtime mode
@@ -38,6 +39,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] Flyway migrations run automatically
 - [ ] core tables exist
 - [ ] seed data exists
+- [ ] `user_role.tenant_id` is present, populated, and protected by same-tenant composite foreign keys to both `users` and `role`
 
 ## Auth
 
@@ -124,6 +126,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] current-session logout remains `401` after revocation, while disabled-user and inactive-tenant stale-token paths remain `403`
 - [ ] `PUT /api/v1/users/{id}/roles` replaces the old role set rather than appending to it
 - [ ] `PUT /api/v1/users/{id}/roles` rejects role codes outside the current tenant
+- [ ] new `user_role` rows are written with the current tenant id, and direct cross-tenant user/role bindings are rejected by the database
 - [ ] a token issued before role or permission changes is rejected on protected endpoints with `403` / `token claims are stale, please login again`
 - [ ] after role reassignment, the affected user can log in again and the new token reflects the new RBAC access
 - [ ] password edge cases, especially leading and trailing whitespace, behave consistently between create and login

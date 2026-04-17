@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-04-16
+Last updated: 2026-04-17
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -55,6 +55,7 @@ Expected result:
 - `merchantops-mysql`, `merchantops-redis`, and `merchantops-rabbitmq` become healthy.
 - `merchantops-api-runtime` starts on port `8080`.
 - `merchantops-admin-web-runtime` starts on port `8081`.
+- if a new Flyway migration was added, `docker logs merchantops-api-runtime` shows Flyway validating and applying through the new version.
 
 ## 4. Health Checks
 

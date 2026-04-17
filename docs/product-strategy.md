@@ -29,7 +29,7 @@ The archived foundation plan used a fixed week-by-week cadence. Future planning 
 ### Access Control And Tenant Integrity
 
 - Strengthen authorization from endpoint-level permissions into a clearer product-grade access-control model.
-- Prioritize database-level same-tenant integrity for role bindings and workflow actors before adding broader admin surfaces.
+- Maintain database-level same-tenant integrity for role bindings and prioritize workflow actor constraints before adding broader admin surfaces.
 - Use [architecture/access-control-evolution-plan.md](architecture/access-control-evolution-plan.md) as the dedicated access-control strategy.
 
 ### Workflow Depth

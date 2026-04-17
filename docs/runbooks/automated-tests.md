@@ -1,20 +1,24 @@
 # Automated Tests
 
-Last updated: 2026-04-16
+Last updated: 2026-04-17
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-16:
+Latest local default regression result on 2026-04-17:
 
 - `BUILD SUCCESS`
-- `Tests run: 416, Failures: 0, Errors: 0, Skipped: 1`
+- `merchantops-api` module summary: `Tests run: 417, Failures: 0, Errors: 0, Skipped: 1`
 
-Latest local Docker image build result on 2026-04-16:
+Latest focused Productization Baseline Slice D auth/RBAC result on 2026-04-17:
 
-- `docker build -t merchantops-api:local .` completed successfully
-- `docker build -t merchantops-admin-web:local .\merchantops-admin-web` completed successfully
+- `.\mvnw.cmd -pl merchantops-api -am -Dtest=AuthSecurityIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
+- `Tests run: 38, Failures: 0, Errors: 0, Skipped: 0`
+
+Latest local Docker image build result on 2026-04-17:
+
+- `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` rebuilt `merchantops-api:local` and `merchantops-admin-web:local` successfully
 
 Latest Productization Baseline frontend workspace result on 2026-04-16:
 
@@ -22,18 +26,14 @@ Latest Productization Baseline frontend workspace result on 2026-04-16:
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
 
-Latest Productization Baseline same-origin runtime smoke result on 2026-04-16:
+Latest Productization Baseline same-origin runtime smoke result on 2026-04-17:
 
-- `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build --pull never` completed successfully from locally available base images after a transient Docker Hub metadata EOF on the first plain `--build` attempt
+- `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` completed successfully
+- Flyway validated 16 migrations and applied `V16__enforce_user_role_tenant_integrity.sql` on the MySQL-backed runtime schema
 - `http://localhost:8080/health` and `http://localhost:8080/actuator/health` returned `UP`
-- `http://localhost:8081/` and the SPA fallback path returned `200`
+- `http://localhost:8081/` returned `200`
 - same-origin `POST /api/v1/auth/login`, `GET /api/v1/context`, and `POST /api/v1/auth/logout` through `http://localhost:8081/api/...` succeeded
 - reusing the signed-out token against `http://localhost:8081/api/v1/context` returned controlled `401` with `{"code":"UNAUTHORIZED","message":"authentication required","data":null}`
-
-Latest focused Productization Baseline Slice B auth regression on 2026-04-15:
-
-- `.\mvnw.cmd -pl merchantops-api -am -Dtest=AuthSecurityIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
-- `Tests run: 37, Failures: 0, Errors: 0, Skipped: 0`
 
 ## Recommended Commands
 
@@ -96,9 +96,9 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout plus same-origin runtime foundation. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, same-origin runtime foundation, and `user_role` tenant-integrity hardening. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
-- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, logout revocation, revoked/sidless/expired session `401` behavior, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, logout revocation, revoked/sidless/expired session `401` behavior, database-level rejection of cross-tenant `user_role` bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
 - real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
@@ -131,6 +131,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
   - JWT claim generation and parsing for tenant, role, permission, and required `sid` data
   - server-side `auth_session` creation, future expiry, bad-credential no-session behavior, active-session `/api/v1/context`, current-session logout revocation, same-token-after-logout `401`, sidless signed token `401`, manually expired session `401`, and independent multi-session behavior
+  - database-level rejection when a `user_role` row tries to bind a user from one tenant to a role from another tenant
   - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `GET /api/v1/feature-flags`
   - `401` when Bearer token is missing or invalid
   - `403` when login succeeds but `USER_READ` is absent
@@ -246,11 +247,11 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
   - duplicate username rejection
   - duplicate username rejection with `excludeUserId`
   - role-code rejection when requested roles are not available in the current tenant
-  - create-user persistence with `ACTIVE` default status, BCrypt hashing, `user_role` writes, and operator attribution
+  - create-user persistence with `ACTIVE` default status, BCrypt hashing, tenant-id-bearing `user_role` writes, and operator attribution
   - profile update persistence for mutable fields only plus operator attribution
   - status update persistence for `ACTIVE` and `DISABLED` plus operator attribution
   - invalid status rejection
-  - role reassignment with clear-then-write `user_role` semantics plus operator attribution
+  - role reassignment with tenant-scoped clear-then-write `user_role` semantics plus operator attribution
   - role reassignment rejection when requested role codes are not available in the current tenant
   - tenant-scoped missing-user rejection
   - current password-update placeholder returning unified `BIZ_ERROR` rather than an uncaught runtime exception
@@ -437,9 +438,12 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 
 - `UserRepositoryTest`
   - tenant-scoped native page query
-  - `username`, `status`, and `roleCode` filtering
+  - `username`, `status`, and `roleCode` filtering with role joins through `user_role.tenant_id`
   - `DISTINCT` deduplication across joined role rows
   - pagination ordering and count stability
+- `JpaUserCommandAdapterTest`
+  - role replacement deletes by `tenantId + userId`
+  - saved `user_role` bindings include `tenantId`, `userId`, and `roleId`
 - `JpaAiInteractionUsageSummaryAdapterTest`
   - aggregate repository delegation for tenant-scoped totals plus `byInteractionType` and `byStatus`
   - zero-filled mapping for nullable token or cost sums

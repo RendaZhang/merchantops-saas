@@ -9,6 +9,7 @@ This page defines the long-term access-control and authorization strategy from t
 - Protected requests re-check current tenant status, user status, roles, and permissions so stale claims are rejected until re-login.
 - Approval queue, detail, approve, and reject behavior is action-aware rather than controller-wide.
 - Feature-flag management is tenant-scoped and requires `FEATURE_FLAG_MANAGE`.
+- `user_role` now has a database-level same-tenant invariant: every binding must match both `users.tenant_id` and `role.tenant_id`.
 
 Reference sources:
 
@@ -22,7 +23,7 @@ Reference sources:
 
 ### Database-Level Tenant Integrity
 
-- Resolve the `user_role` same-tenant integrity gap before widening role-management capabilities.
+- Keep the resolved `user_role` same-tenant invariant covered by migrations, fixtures, and regression tests before widening role-management capabilities.
 - Add database-level same-tenant constraints for ticket actor references where service logic already enforces the boundary.
 - Keep migrations narrow, backfilled, and covered by integration tests before making tenant-admin surfaces broader.
 

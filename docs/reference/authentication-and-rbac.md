@@ -409,6 +409,7 @@ Current notes:
 - `ops` and `viewer` are denied because they do not hold `USER_WRITE` in the seeded data
 - passwords are stored as BCrypt and can be used immediately for login
 - role codes outside the current tenant return `BAD_REQUEST`
+- the database also enforces that every `user_role` row has the same `tenant_id` as both its `users` row and its `role` row; direct cross-tenant role bindings fail below the service layer
 
 ### `PUT /api/v1/users/{id}`
 
@@ -481,6 +482,7 @@ Current notes:
 - requires `USER_WRITE`
 - reassigns roles by clearing old `user_role` rows first, then writing the new role set
 - only role codes from the current tenant are allowed
+- new `user_role` bindings are written with the current tenant id, and database-level composite foreign keys enforce that the bound user and role belong to that same tenant
 - tokens issued before the role or permission change are rejected on protected endpoints with `token claims are stale, please login again`
 - the affected user must login again so the new token carries the new roles and permissions
 
@@ -586,7 +588,7 @@ Approval routing notes:
 - `ops` can create ticket comment proposals and can review `TICKET_COMMENT_CREATE` requests because the role carries `TICKET_WRITE`, but still cannot review `USER_STATUS_DISABLE` or `IMPORT_JOB_SELECTIVE_REPLAY` without `USER_WRITE`
 - `viewer` can read only the approval action types exposed by its read permissions and cannot approve or reject any approval request
 
-The automated suite now covers the login -> server-side session -> JWT -> `/api/v1/context`, `/api/v1/auth/logout`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`), `/api/v1/feature-flags` (`GET` and `PUT`), `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, `POST /comments`, and `POST /comments/proposals/ai-reply-draft`), `/api/v1/ai-interactions/usage-summary`, the current import read / AI read surface (`GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`), plus the Week 8 import and ticket proposal/approval paths (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and the shared approval review endpoints) permission paths end to end, including active auth-session creation, required `sid` parsing, sidless token rejection, revoked-session rejection, expired-session rejection, independent multi-session behavior, inactive-tenant rejection, disabled-user rejection, stale-claim rejection, mixed-action approval visibility, ticket status-transition rejection, import-job tenant isolation, tenant AI usage-summary isolation, approval self-review rejection, feature-flag `403` and stale-claim re-login coverage, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, Swagger authorization behavior, and the remaining RBAC demo endpoints.
+The automated suite now covers the login -> server-side session -> JWT -> `/api/v1/context`, `/api/v1/auth/logout`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`), `/api/v1/feature-flags` (`GET` and `PUT`), `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, `POST /comments`, and `POST /comments/proposals/ai-reply-draft`), `/api/v1/ai-interactions/usage-summary`, the current import read / AI read surface (`GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`), plus the Week 8 import and ticket proposal/approval paths (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and the shared approval review endpoints) permission paths end to end, including active auth-session creation, required `sid` parsing, sidless token rejection, revoked-session rejection, expired-session rejection, independent multi-session behavior, inactive-tenant rejection, disabled-user rejection, stale-claim rejection, database-level rejection of cross-tenant `user_role` bindings, mixed-action approval visibility, ticket status-transition rejection, import-job tenant isolation, tenant AI usage-summary isolation, approval self-review rejection, feature-flag `403` and stale-claim re-login coverage, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, Swagger authorization behavior, and the remaining RBAC demo endpoints.
 
 ## Current Public RBAC Boundary
 
@@ -616,4 +618,4 @@ The automated suite now covers the login -> server-side session -> JWT -> `/api/
 
 ## Tenant Isolation Note
 
-Role and permission lookup during login is constrained by both `userId` and `tenantId` to reduce cross-tenant claim pollution risk when inconsistent link data exists.
+Role and permission lookup during login and protected-request revalidation is constrained by `userId`, `tenantId`, and `user_role.tenant_id`. Since `V16`, the `user_role` table also carries database-level same-tenant composite foreign keys to both `users` and `role`, so direct cross-tenant role bindings are rejected before they can affect JWT claims.

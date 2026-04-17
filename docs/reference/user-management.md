@@ -1,6 +1,6 @@
 # User Management
 
-Last updated: 2026-03-28
+Last updated: 2026-04-17
 
 ## Public API Surface
 
@@ -134,6 +134,7 @@ Current behavior:
 - new users are always created with status `ACTIVE`
 - every requested role code must already exist in the current tenant
 - cross-tenant role binding is rejected
+- `user_role` rows store the current `tenant_id`, and `V16` database constraints enforce that the bound user and role belong to that same tenant
 
 Example request:
 
@@ -178,6 +179,7 @@ Implementation notes:
 - query-side implementation lives in `UserQueryService` and always requires explicit `tenantId`
 - write-side implementation lives in `UserCommandService` and wraps create work in a transaction
 - `user_role` writes are derived from tenant-filtered `role` lookups rather than trusting request role IDs
+- `user_role` writes pass the current tenant id through the command port so adapter deletes and inserts stay tenant-scoped even before database constraints are considered
 - password handling is regression-sensitive: create and login must enforce the same rule, especially for leading and trailing whitespace
 
 ## `PUT /api/v1/users/{id}`
@@ -293,6 +295,7 @@ Current behavior:
 - request body accepts `roleCodes` only
 - every role code must already exist in the current tenant
 - role reassignment clears previous `user_role` rows first, then writes the new set
+- role reassignment deletes and inserts `user_role` rows by current tenant plus user id; direct cross-tenant user/role combinations are rejected by the database
 - role and permission claim changes make old JWT tokens stale immediately
 - the affected user must login again to get a new token with the new roles and permissions
 - returns `404` if the target user is not in the current tenant
@@ -384,6 +387,7 @@ Current automated tests for user management focus on:
 - disable-user status flow, login rejection, and old-token rejection for `DISABLED` users
 - duplicate pending disable-request rejection plus approval queue normalization and stable ordering in the approval service layer
 - role reassignment flow, stale-token rejection after claim changes, and re-login with new permissions
+- database-level rejection of cross-tenant `user_role` bindings
 - query-side page normalization and DTO mapping
 - query-side list and username-exists helper paths
 - detail lookup success mapping, role-code hydration, and `NOT_FOUND` handling

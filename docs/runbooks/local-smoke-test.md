@@ -523,6 +523,7 @@ WHERE title LIKE 'smoke-% POS register frozen';
 DELETE ur
 FROM user_role ur
 JOIN users u ON u.id = ur.user_id
+  AND u.tenant_id = ur.tenant_id
 WHERE u.username LIKE 'smoke-%';
 
 DELETE FROM users

@@ -102,7 +102,8 @@ class ImportJobAuthzIntegrationTest {
                     role_code VARCHAR(64) NOT NULL,
                     role_name VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_role_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
@@ -117,8 +118,11 @@ class ImportJobAuthzIntegrationTest {
         jdbcTemplate.execute("""
                 CREATE TABLE user_role (
                     id BIGINT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
                     user_id BIGINT NOT NULL,
-                    role_id BIGINT NOT NULL
+                    role_id BIGINT NOT NULL,
+                    CONSTRAINT fk_user_role_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_user_role_role_tenant FOREIGN KEY (role_id, tenant_id) REFERENCES `role`(id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
@@ -217,8 +221,8 @@ class ImportJobAuthzIntegrationTest {
                 INSERT INTO permission (id, permission_code, permission_name, created_at, updated_at)
                 VALUES (2, 'USER_WRITE', 'Write user', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """);
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1001, 101, 11)");
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1003, 103, 13)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1001, 1, 101, 11)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1003, 1, 103, 13)");
         jdbcTemplate.update("INSERT INTO role_permission (id, role_id, permission_id) VALUES (2001, 11, 1)");
         jdbcTemplate.update("INSERT INTO role_permission (id, role_id, permission_id) VALUES (2002, 11, 2)");
         jdbcTemplate.update("INSERT INTO role_permission (id, role_id, permission_id) VALUES (2013, 13, 1)");
