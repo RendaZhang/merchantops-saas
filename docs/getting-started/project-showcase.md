@@ -9,7 +9,7 @@ MerchantOps SaaS is a workflow-first SaaS reference implementation for merchant 
 The short story:
 
 - it is not a CRUD-only demo
-- the first product-facing admin console now proves login, tenant context, token restoration, sign-out, and workflow navigation
+- the first product-facing admin console now proves login, tenant context, token restoration, sign-out, and a read-only Tickets workflow screen
 - AI is embedded into ticket and import workflows instead of being a standalone chat surface
 - AI outputs stay read-only or suggestion-only unless a separate human-reviewed workflow bridge executes them
 - governance metadata is visible enough for operational review without becoming billing or ledger infrastructure
@@ -21,9 +21,9 @@ Start with the path that proves the project is runnable and workflow-centered:
 
 1. Open the admin console at `http://localhost:8081` for the production-like runtime, or `http://localhost:5173` for local Vite development.
 2. Login as the seeded demo admin for tenant `demo-shop`.
-3. Show the dashboard tenant/operator context and workflow navigation placeholders.
+3. Show the dashboard tenant/operator context, then open the read-only Tickets queue.
 4. Open Swagger UI at `http://localhost:8080/swagger-ui/index.html` for the deeper API workflow demo.
-5. Show ticket workflow operations before showing AI.
+5. Use Swagger or `api-demo.http` for deeper ticket workflow operations before showing AI.
 6. Show AI suggestion endpoints and then the separate approval-backed execution bridge.
 7. Show import jobs and import AI reads.
 8. Close with feature flags, usage summary, Docker startup, frontend verification, and CI evidence.

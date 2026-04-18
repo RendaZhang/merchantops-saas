@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react'
+import { NavLink } from 'react-router-dom'
 
-const navigationItems = [
-  { label: 'Dashboard', state: 'Ready' },
-  { label: 'Tickets', state: 'Placeholder' },
+const readyNavigationItems = [
+  { label: 'Dashboard', path: '/' },
+  { label: 'Tickets', path: '/tickets' },
+] as const
+
+const placeholderNavigationItems = [
   { label: 'Approvals', state: 'Placeholder' },
   { label: 'Imports', state: 'Placeholder' },
   { label: 'AI Interactions', state: 'Placeholder' },
@@ -36,30 +40,37 @@ export function AppShell({ children, onSignOut, signOutPending = false }: AppShe
           </div>
 
           <nav className="flex gap-2 overflow-x-auto border-t border-neutral-200 px-3 py-3 lg:flex-col lg:overflow-visible lg:px-4">
-            {navigationItems.map((item) => {
-              const isReady = item.state === 'Ready'
-
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  disabled={!isReady}
-                  className={[
+            {readyNavigationItems.map((item) => (
+              <NavLink
+                key={item.label}
+                to={item.path}
+                end={item.path === '/'}
+                className={({ isActive }) =>
+                  [
                     'flex min-w-36 items-center justify-between gap-3 rounded-md px-3 py-3 text-left text-sm transition lg:min-w-0',
-                    isReady
+                    isActive
                       ? 'bg-neutral-950 font-medium text-white'
-                      : 'border border-neutral-200 bg-white text-neutral-500',
-                  ].join(' ')}
-                >
-                  <span>{item.label}</span>
-                  {!isReady ? (
-                    <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs text-neutral-500">
-                      Soon
-                    </span>
-                  ) : null}
-                </button>
-              )
-            })}
+                      : 'border border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400 hover:text-neutral-950',
+                  ].join(' ')
+                }
+              >
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+
+            {placeholderNavigationItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                disabled
+                className="flex min-w-36 items-center justify-between gap-3 rounded-md border border-neutral-200 bg-white px-3 py-3 text-left text-sm text-neutral-500 transition lg:min-w-0"
+              >
+                <span>{item.label}</span>
+                <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs text-neutral-500">
+                  Soon
+                </span>
+              </button>
+            ))}
           </nav>
         </aside>
 
@@ -67,8 +78,8 @@ export function AppShell({ children, onSignOut, signOutPending = false }: AppShe
           <header className="flex min-h-20 flex-col justify-center gap-2 border-b border-neutral-200 bg-white px-5 md:px-8">
             <p className="text-sm font-medium text-emerald-700">Productization Baseline</p>
             <p className="max-w-3xl text-sm text-neutral-600">
-              Same-origin runtime, current tenant context, and sign out are connected.
-              Workflow pages are staged as navigation targets.
+              Same-origin runtime, current tenant context, sign out, and the
+              read-only ticket queue are connected.
             </p>
           </header>
 

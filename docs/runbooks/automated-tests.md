@@ -1,12 +1,12 @@
 # Automated Tests
 
-Last updated: 2026-04-17
+Last updated: 2026-04-18
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-17:
+Latest local default regression result on 2026-04-18:
 
 - `BUILD SUCCESS`
 - `merchantops-api` module summary: `Tests run: 417, Failures: 0, Errors: 0, Skipped: 1`
@@ -16,23 +16,30 @@ Latest focused Productization Baseline Slice D auth/RBAC result on 2026-04-17:
 - `.\mvnw.cmd -pl merchantops-api -am -Dtest=AuthSecurityIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
 - `Tests run: 38, Failures: 0, Errors: 0, Skipped: 0`
 
-Latest local Docker image build result on 2026-04-17:
+Latest local Docker image build result on 2026-04-18:
 
 - `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` rebuilt `merchantops-api:local` and `merchantops-admin-web:local` successfully
 
-Latest Productization Baseline frontend workspace result on 2026-04-16:
+Latest Productization Baseline frontend workspace result on 2026-04-18:
 
 - `npm run typecheck` from `merchantops-admin-web` completed successfully
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
 
-Latest Productization Baseline same-origin runtime smoke result on 2026-04-17:
+Latest Productization Baseline Vite dev-proxy smoke result on 2026-04-18:
+
+- `http://localhost:5173/` and `http://localhost:5173/tickets` returned `200`
+- Vite proxied `POST /api/v1/auth/login`, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, and `POST /api/v1/auth/logout` to the API successfully
+- seeded `admin`, `ops`, and `viewer` users all loaded the current tenant ticket queue
+- reusing the signed-out admin token against `http://localhost:5173/api/v1/context` returned controlled `401`
+
+Latest Productization Baseline same-origin runtime smoke result on 2026-04-18:
 
 - `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` completed successfully
-- Flyway validated 16 migrations and applied `V16__enforce_user_role_tenant_integrity.sql` on the MySQL-backed runtime schema
 - `http://localhost:8080/health` and `http://localhost:8080/actuator/health` returned `UP`
-- `http://localhost:8081/` returned `200`
-- same-origin `POST /api/v1/auth/login`, `GET /api/v1/context`, and `POST /api/v1/auth/logout` through `http://localhost:8081/api/...` succeeded
+- `http://localhost:8081/` and `http://localhost:8081/tickets` returned `200`
+- same-origin `POST /api/v1/auth/login`, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, and `POST /api/v1/auth/logout` through `http://localhost:8081/api/...` succeeded
+- seeded `admin`, `ops`, and `viewer` users all loaded the current tenant ticket queue
 - reusing the signed-out token against `http://localhost:8081/api/v1/context` returned controlled `401` with `{"code":"UNAUTHORIZED","message":"authentication required","data":null}`
 
 ## Recommended Commands

@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-04-17
+Last updated: 2026-04-18
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -66,6 +66,7 @@ $adminBaseUrl = "http://localhost:8081"
 Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/health"
 Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/actuator/health"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/"
+Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/tickets"
 ```
 
 Expected result:
@@ -73,6 +74,7 @@ Expected result:
 - `/health` returns `UP`.
 - `/actuator/health` returns `UP`.
 - `http://localhost:8081/` returns the admin HTML shell.
+- `http://localhost:8081/tickets` returns the same admin HTML shell through SPA history fallback.
 
 ## 5. Same-Origin Auth Smoke
 
@@ -97,6 +99,11 @@ $context = Invoke-RestMethod `
   -Uri "$adminBaseUrl/api/v1/context" `
   -Headers $headers
 
+$tickets = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$adminBaseUrl/api/v1/tickets?page=0&size=10" `
+  -Headers $headers
+
 $logout = Invoke-RestMethod `
   -Method Post `
   -Uri "$adminBaseUrl/api/v1/auth/logout" `
@@ -107,6 +114,7 @@ Expected result:
 
 - login returns an access token
 - context returns `tenantCode=demo-shop` and `username=admin`
+- tickets returns `page=0`, `size=10`, an `items` array, and the current tenant's first ticket page
 - logout returns `SUCCESS` with `data=null`
 
 Verify the old token is revoked:
@@ -126,8 +134,9 @@ Open `http://localhost:8081`.
 
 1. Log in with `demo-shop` / `admin` / `123456`.
 2. Confirm the dashboard renders tenant and operator context.
-3. Refresh the page and confirm context restores while the session is active.
-4. Select `Sign out` and confirm the login screen returns.
+3. Open `Tickets` and confirm `/tickets` renders the read-only current tenant ticket queue.
+4. Refresh `/tickets` and confirm context plus tickets restore while the session is active.
+5. Select `Sign out` and confirm the login screen returns.
 
 Do not use `http://localhost:5173` for this runbook; that is the Vite dev-server path.
 

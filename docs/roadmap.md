@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-17
+Last updated: 2026-04-18
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,26 +29,26 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice E: First Workflow Screen
+### Slice F: Tenant Actor Integrity Follow-Up
 
-Goal: turn the admin console from a login/context shell into one useful workflow screen without widening backend contracts.
+Goal: extend the Slice D defense-in-depth pattern to the highest-value ticket actor references without broad schema rewrite.
 
 Expected scope:
 
-- start with a read-only admin tickets queue over the existing `GET /api/v1/tickets` public API unless repository reality points to an even narrower workflow screen
-- reuse the existing admin auth/session/context boundary and same-origin `/api/...` runtime path
-- add the smallest query-client, route, page, loading, empty, and error-state support needed for the screen
-- keep ticket mutation, approval execution, import execution, AI generation, refresh tokens, and new backend APIs out of this slice unless the read-only screen cannot function without a tiny supporting fix
+- inventory ticket actor references that already have service-layer tenant validation
+- choose the narrowest database-level same-tenant invariant that materially reduces cross-tenant risk
+- add an additive migration, focused integration coverage, and hand-written test fixture updates for that invariant
+- keep service-layer validation in place and avoid ticket workflow redesign, admin workflow changes, AI changes, refresh tokens, or broad actor rewrites
 
 Stop condition:
 
-- the selected workflow screen renders real backend data after login in local dev and same-origin runtime modes
-- token restoration, sign-out, and context display remain intact
-- frontend typecheck/lint/build and the backend default regression pass
-- docs identify the screen as the first productized workflow surface while keeping remaining pages as placeholders
+- the selected cross-tenant actor binding is rejected at the database layer
+- existing ticket, approval, auth, import, AI, and admin-console regressions remain green
+- docs identify the resolved invariant and leave broader ticket actor constraints as later work
 
 ## Recently Closed
 
+- Slice E: First Workflow Screen - the admin console now includes a protected `/tickets` route over the existing `GET /api/v1/tickets?page=0&size=10` API, with a shared authenticated layout, Zod-validated ticket page contract, loading/empty/error states, read-only table rendering, Vite dev-proxy smoke, and Nginx same-origin runtime smoke while keeping ticket detail, mutations, filters, pagination controls, AI actions, approval actions, refresh tokens, and backend API changes deferred.
 - Slice D: Tenant Integrity Hardening - `V16__enforce_user_role_tenant_integrity.sql` now adds and backfills `user_role.tenant_id`, enforces same-tenant composite foreign keys to both `users` and `role`, updates role-binding writes to include tenant id, updates RBAC read joins to express the invariant, and adds focused database-level rejection coverage while leaving ticket actor, assignee, comment-author, and operation-log operator constraints as later follow-up work.
 - Slice C: Same-Origin Admin + API Runtime Contract - `merchantops-admin-web` now builds into an Nginx static runtime container on `http://localhost:8081`, same-origin `/api/...` proxies to the API container, `docker-compose.runtime.yml` runs API plus admin on the existing infra network, the `runtime` Spring profile defines container defaults and runtime-injected secret requirements, docs/runbooks cover the secret contract and runtime smoke path, and CI now runs admin checks plus API/admin image builds while leaving CORS, cookies, refresh tokens, token rotation, real secret-manager integration, image publishing, K8s, Helm, TLS, and deployment automation deferred.
 - Slice B: Server-Side Auth Session + Logout Foundation - login now creates an `auth_session`, JWTs carry required `sid` claims, protected requests validate active server-side session state before stale tenant/user/role checks, `POST /api/v1/auth/logout` revokes only the current session, and the admin console now signs out through the backend while keeping refresh tokens, cookies, rotation, logout-all, and cleanup scheduling deferred.
@@ -56,8 +56,8 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Slice F: Tenant Actor Integrity Follow-Up - add database-level same-tenant constraints for the highest-value ticket actor references after the `user_role` invariant has settled.
 - Slice G: Authentication Lifecycle Widening - revisit refresh tokens, cookies, CORS, token rotation, and logout-all only after the same-origin runtime contract and first workflow screen are stable.
+- Slice H: Next Admin Workflow Screen - add another narrow read-only or low-risk admin screen over an existing public API after the first ticket queue has settled.
 
 ## Default Deferrals
 

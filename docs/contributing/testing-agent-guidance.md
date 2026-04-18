@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-04-17
+Last updated: 2026-04-18
 
 ## Purpose
 
@@ -15,7 +15,7 @@ When you take over an in-flight change set, use this order:
 1. Inspect the staged scope first with `git diff --cached --name-only` and `git diff --cached --stat`.
 2. Map the staged files to the affected test layers, choose the smallest sufficient verification set, and execute enough of it to support a staged testing report.
 3. If the staged change touches controllers, security, repositories, entities, or a bug that only appears in real request flow, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests`, start the API from `merchantops-api` with `..\mvnw.cmd spring-boot:run`, and follow [../runbooks/local-smoke-test.md](../runbooks/local-smoke-test.md).
-4. If the staged change touches Docker delivery, container startup, env injection behavior, admin image packaging, or same-origin proxying, also run the documented runtime compose path and verify at least `/health`, admin page load, login, context, sign-out, and old-token rejection.
+4. If the staged change touches Docker delivery, container startup, env injection behavior, admin image packaging, or same-origin proxying, also run the documented runtime compose path and verify at least `/health`, admin page load, login, context, the current protected admin workflow route such as `/tickets`, sign-out, and old-token rejection.
 5. If the staged change touches CI workflow files, compare the workflow commands against [../runbooks/automated-tests.md](../runbooks/automated-tests.md) and keep the documented CI boundary explicit.
 6. If the staged change touches AI provider wiring, `.env` loading, provider selection, or live vendor compatibility, use [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md) plus [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md) after the normal non-AI smoke path when needed. When the same change also targets Docker delivery or explicit container env injection, prefer running the summary-first live smoke against the Dockerized API path instead of switching back to `spring-boot:run`.
 7. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
@@ -50,7 +50,7 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout, same-origin runtime foundation, and `user_role` tenant-integrity hardening, plus the no-secret CI quality gate.
+The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout, same-origin runtime foundation, `user_role` tenant-integrity hardening, and first read-only admin Tickets screen, plus the no-secret CI quality gate.
 
 Today it covers:
 
@@ -74,6 +74,7 @@ Today it covers:
 - Week 9 shared AI governance baseline through the executable six-workflow prompt inventory, shared comparator pass, golden plus failure plus policy datasets, and tenant-scoped AI usage-summary aggregate coverage
 - stale-token rejection after user status, role, or permission changes, plus refreshed-login success when newly granted access now includes `FEATURE_FLAG_MANAGE`
 - GitHub Actions CI parity for the default Maven regression command, admin frontend typecheck/lint/build, and Docker image construction for both API and admin web images
+- focused admin-console smoke coverage for Vite dev-proxy and same-origin runtime paths, including login, context, `/tickets`, sign-out, and old-token rejection
 
 It does not replace manual checks for:
 

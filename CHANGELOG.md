@@ -12,6 +12,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added the Productization Baseline Slice B auth-session foundation: login now creates a server-side `auth_session`, JWTs carry a required `sid` claim, `POST /api/v1/auth/logout` revokes the current session, and the admin console signs out through the backend.
 - Added the Productization Baseline Slice C same-origin admin + API runtime contract through `docker-compose.runtime.yml`, a `runtime` Spring profile, an Nginx-served admin web image, and a dedicated deployment runtime smoke runbook.
 - Added Productization Baseline Slice D tenant-integrity hardening for `user_role`, including `tenant_id` backfill, same-tenant composite foreign keys to `users` and `role`, tenant-aware role-binding writes, and focused database-level rejection coverage.
+- Added Productization Baseline Slice E as the first read-only admin workflow screen: a protected `/tickets` route backed by the existing `GET /api/v1/tickets?page=0&size=10` API, with shared authenticated layout, ticket schema validation, and loading/empty/error states.
 
 ### Changed
 
@@ -19,6 +20,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Protected requests now reject sidless, revoked, expired, missing, or mismatched auth sessions with controlled `401` responses before tenant/user/role revalidation, while refresh tokens, cookie/session rotation, logout-all-devices, and session cleanup scheduling remain deferred.
 - GitHub Actions now runs admin frontend checks and verifies both API and admin image construction, while runtime-container smoke, image publishing, real secret-manager integration, TLS/domain management, and deployment automation remain manual or deferred.
 - Access-control, user-management, migration, status, roadmap, and regression docs now distinguish the resolved `user_role` database invariant from the remaining ticket actor, assignee, comment-author, and operation-log tenant-integrity follow-ups.
+- Admin console docs, smoke runbooks, roadmap/status pages, and the project showcase now describe the read-only Tickets queue as the first productized workflow screen while keeping ticket detail, mutations, filters, pagination controls, AI actions, approval actions, and backend API changes deferred.
 
 ## [v0.7.0-beta] - 2026-04-12
 

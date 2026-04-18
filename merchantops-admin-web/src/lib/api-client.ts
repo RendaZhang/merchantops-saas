@@ -5,9 +5,11 @@ import {
   type ContextResponse,
   type LoginRequest,
   type LoginResponse,
+  type TicketPage,
   contextResponseSchema,
   loginRequestSchema,
   loginResponseSchema,
+  ticketPageSchema,
 } from './schemas'
 
 const SUCCESS_CODE = 'SUCCESS'
@@ -22,6 +24,11 @@ const apiEnvelopeSchema = <T extends ZodType>(dataSchema: T) =>
 type ApiRequestOptions = RequestInit & {
   authenticated?: boolean
   allowNullData?: boolean
+}
+
+type TicketPageRequest = {
+  page?: number
+  size?: number
 }
 
 export class ApiClientError extends Error {
@@ -53,6 +60,17 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 
 export function getContext(): Promise<ContextResponse> {
   return apiRequest('/api/v1/context', contextResponseSchema, {
+    authenticated: true,
+  })
+}
+
+export function getTickets({ page = 0, size = 10 }: TicketPageRequest = {}): Promise<TicketPage> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  })
+
+  return apiRequest(`/api/v1/tickets?${searchParams.toString()}`, ticketPageSchema, {
     authenticated: true,
   })
 }

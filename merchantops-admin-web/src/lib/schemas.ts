@@ -19,6 +19,24 @@ export const contextResponseSchema = z.object({
   username: z.string(),
 })
 
+export const ticketListItemSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  status: z.string(),
+  assigneeId: z.number().nullable(),
+  assigneeUsername: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export const ticketPageSchema = z.object({
+  items: z.array(ticketListItemSchema),
+  page: z.number(),
+  size: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+})
+
 export const jwtDisplayClaimsSchema = z
   .object({
     tenantId: z.union([z.number(), z.string()]).transform(Number),
@@ -32,4 +50,6 @@ export const jwtDisplayClaimsSchema = z
 export type LoginRequest = z.infer<typeof loginRequestSchema>
 export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type ContextResponse = z.infer<typeof contextResponseSchema>
+export type TicketListItem = z.infer<typeof ticketListItemSchema>
+export type TicketPage = z.infer<typeof ticketPageSchema>
 export type JwtDisplayClaims = z.infer<typeof jwtDisplayClaimsSchema>

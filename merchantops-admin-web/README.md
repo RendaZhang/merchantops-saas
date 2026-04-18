@@ -1,8 +1,8 @@
 # MerchantOps Admin Web
 
-Minimal Vite + React admin console for the Productization Baseline.
+Vite + React admin console for the Productization Baseline.
 
-This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend sign-out, and navigation placeholders before adding workflow screens.
+This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend sign-out, and the first read-only workflow screen: the current tenant tickets queue. Approvals, Imports, AI Interactions, and Feature Flags remain navigation placeholders.
 
 ## Stack
 
@@ -70,21 +70,24 @@ Use the seeded admin account:
 - Username: `admin`
 - Password: `123456`
 
-The dashboard calls:
+The admin console calls:
 
 - `POST /api/v1/auth/login`
 - `GET /api/v1/context`
 - `POST /api/v1/auth/logout`
+- `GET /api/v1/tickets?page=0&size=10`
 
 Roles and permissions displayed in the dashboard are decoded from JWT claims for operator visibility only. They are not used as an authorization source.
+
+The Tickets route is available at `/tickets`. It renders the first page of the current tenant ticket queue as a read-only table and does not include ticket detail, pagination controls, filters, assignment, status changes, AI actions, or approval actions.
 
 ## Session Boundary
 
 The app stores the JWT access token in `localStorage` under `merchantops.admin.auth.v1` with a client-side expiry timestamp derived from `expiresIn`.
 
-On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or `403` responses.
+On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or `403` responses. Ticket queue `401` or `403` responses use the same session-ended path.
 
-Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context query cache, and returns to login even if the logout request fails.
+Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context and tickets query caches, and returns to login even if the logout request fails.
 
 There is still no refresh-token flow, cookie/session rotation, logout-all-devices flow, or session cleanup scheduler in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
@@ -103,11 +106,12 @@ Manual smoke:
 3. Open `http://localhost:5173`.
 4. Log in with `demo-shop` / `admin` / `123456`.
 5. Confirm the dashboard shows tenant, operator, token roles, and token permissions.
-6. Refresh the page and confirm context reloads.
-7. Use `Sign out` and confirm the app returns to login.
-8. Reusing the signed-out token against `/api/v1/context` should return `401`.
+6. Open `Tickets` from the sidebar and confirm `/tickets` renders the current tenant queue from `/api/v1/tickets?page=0&size=10`.
+7. Refresh `/tickets` and confirm context plus tickets reload while the session is active.
+8. Use `Sign out` and confirm the app returns to login.
+9. Reusing the signed-out token against `/api/v1/context` should return `401`.
 
-Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
+Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the same `/tickets` route through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
 
 ## Image Credit
 
