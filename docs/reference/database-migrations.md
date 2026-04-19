@@ -28,6 +28,7 @@
 - `V14__add_feature_flags.sql`: adds tenant-scoped fixed-key `feature_flag` rows for AI generation and workflow-bridge rollout control
 - `V15__add_auth_session.sql`: adds `auth_session` for server-side access-token session state, including unique `session_id`, tenant/user linkage, `ACTIVE` / `REVOKED` status, expiry, revocation timestamp, and lookup indexes
 - `V16__enforce_user_role_tenant_integrity.sql`: adds `user_role.tenant_id`, backfills it from `users.tenant_id`, adds `role(id, tenant_id)` uniqueness plus child indexes, and enforces `user_role(user_id, tenant_id) -> users(id, tenant_id)` plus `user_role(role_id, tenant_id) -> role(id, tenant_id)` so role bindings must stay within one tenant
+- `V17__enforce_ticket_actor_tenant_integrity.sql`: adds child indexes and enforces `ticket(assignee_id, tenant_id) -> users(id, tenant_id)` plus `ticket(created_by, tenant_id) -> users(id, tenant_id)` so root ticket assignee and creator references must stay within the ticket tenant; `assignee_id` remains nullable for unassigned tickets
 
 ## Demo Accounts
 
@@ -104,6 +105,25 @@ WHERE ur.tenant_id <> u.tenant_id
 
 The query should return no rows. Direct inserts that try to bind a user from one tenant to a role from another tenant should fail at the database layer.
 
+To verify the root ticket actor tenant-integrity invariant after `V17`:
+
+```sql
+SELECT tk.id,
+       tk.tenant_id,
+       tk.assignee_id,
+       assignee.tenant_id AS assignee_tenant_id,
+       tk.created_by,
+       creator.tenant_id AS creator_tenant_id
+FROM ticket tk
+LEFT JOIN users assignee ON assignee.id = tk.assignee_id
+LEFT JOIN users creator ON creator.id = tk.created_by
+WHERE (tk.assignee_id IS NOT NULL AND (assignee.id IS NULL OR assignee.tenant_id <> tk.tenant_id))
+   OR creator.id IS NULL
+   OR creator.tenant_id <> tk.tenant_id;
+```
+
+The query should return no rows. Direct inserts that try to create a ticket with a cross-tenant assignee or creator should fail at the database layer, while `assignee_id = NULL` remains valid for unassigned tickets.
+
 To inspect recent AI interaction rows for ticket summary or ticket triage:
 
 ```sql
@@ -156,4 +176,6 @@ SELECT
 - If a local development database already applied the pre-fix `V12`, prefer dropping and recreating that schema so Flyway can replay the corrected migration chain cleanly. If the schema must be kept, confirm the rewritten `V12` is semantically equivalent first, then repair the `flyway_schema_history` checksum with an external Flyway client before the next startup.
 - `created_by` and `updated_by` are intentionally nullable so historical seed rows do not pretend to have a synthetic operator.
 - `ai_interaction_record` is intentionally separate from `audit_event`; see [../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md](../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md).
-- `user_role` now carries its own `tenant_id` and is protected by same-tenant composite foreign keys. Remaining actor-link schema gaps are tracked separately in [../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer](../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer).
+- `user_role` now carries its own `tenant_id` and is protected by same-tenant composite foreign keys.
+- Root ticket assignee and creator references are protected by same-tenant composite foreign keys from `ticket` to `users`.
+- Remaining ticket actor-link schema gaps are tracked separately in [../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer](../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer).

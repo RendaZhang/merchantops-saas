@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-04-17
+Last updated: 2026-04-19
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -11,6 +11,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `.\mvnw.cmd -pl merchantops-api -am test` passes
 - [ ] `AuthSecurityIntegrationTest`, `UserQueryServiceTest`, `UserCommandServiceTest`, and `UserManagementControllerTest` cover the code path you changed
 - [ ] if role-binding schema or RBAC SQL changed, `AuthSecurityIntegrationTest` proves cross-tenant `user_role` inserts fail at the database layer
+- [ ] if root ticket actor schema changed, `TicketWorkflowIntegrationTest` proves cross-tenant ticket assignee/creator inserts fail at the database layer and nullable assignee rows still work
 - [ ] for import-job changes, `ImportJobControllerTest`, `ImportJobCommandServiceTest`, `ImportJobQueryServiceTest`, `ImportJobWorkerTest`, `ImportJobIntegrationTest`, and `ImportJobMigrationTest` cover the staged path
 - [ ] if repository signatures changed, tests were run with `-am` rather than `-pl merchantops-api test` only
 - [ ] if H2 native SQL tests changed, `@AutoConfigureTestDatabase(replace = NONE)` is still preserved and MySQL-mode assertions still verify the runtime mode
@@ -40,6 +41,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] core tables exist
 - [ ] seed data exists
 - [ ] `user_role.tenant_id` is present, populated, and protected by same-tenant composite foreign keys to both `users` and `role`
+- [ ] `ticket.assignee_id` and `ticket.created_by` are protected by same-tenant composite foreign keys to `users(id, tenant_id)` while nullable assignees remain valid
 
 ## Auth
 

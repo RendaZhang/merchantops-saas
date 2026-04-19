@@ -1,24 +1,33 @@
 # Automated Tests
 
-Last updated: 2026-04-18
+Last updated: 2026-04-19
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-18:
+Latest local default regression result on 2026-04-19:
 
 - `BUILD SUCCESS`
-- `merchantops-api` module summary: `Tests run: 417, Failures: 0, Errors: 0, Skipped: 1`
+- `merchantops-api` module summary: `Tests run: 418, Failures: 0, Errors: 0, Skipped: 1`
 
-Latest focused Productization Baseline Slice D auth/RBAC result on 2026-04-17:
+Latest focused Productization Baseline Slice F ticket workflow result on 2026-04-19:
+
+- `.\mvnw.cmd -pl merchantops-api -am -Dtest=TicketWorkflowIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
+- `Tests run: 31, Failures: 0, Errors: 0, Skipped: 0`
+
+Latest focused Productization Baseline Slice F auth/RBAC result on 2026-04-19:
 
 - `.\mvnw.cmd -pl merchantops-api -am -Dtest=AuthSecurityIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
 - `Tests run: 38, Failures: 0, Errors: 0, Skipped: 0`
 
-Latest local Docker image build result on 2026-04-18:
+Latest local Docker image build and runtime migration result on 2026-04-19:
 
 - `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` rebuilt `merchantops-api:local` and `merchantops-admin-web:local` successfully
+- Flyway validated 17 migrations and applied `V17__enforce_ticket_actor_tenant_integrity.sql`
+- `http://localhost:8080/health` and `http://localhost:8080/actuator/health` returned `UP`
+- admin runtime `http://localhost:8081/` returned `200`
+- same-origin login, `GET /api/v1/context`, `POST /api/v1/auth/logout`, and old-token `401` checks succeeded through `http://localhost:8081/api/...`
 
 Latest Productization Baseline frontend workspace result on 2026-04-18:
 
@@ -103,9 +112,9 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, same-origin runtime foundation, and `user_role` tenant-integrity hardening. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, same-origin runtime foundation, `user_role` tenant-integrity hardening, and root ticket actor tenant-integrity hardening. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
-- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, logout revocation, revoked/sidless/expired session `401` behavior, database-level rejection of cross-tenant `user_role` bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, logout revocation, revoked/sidless/expired session `401` behavior, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
 - real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
@@ -193,6 +202,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
   - `400` for `assigneeId` + `unassignedOnly=true` invalid query combination
   - `403` when `viewer` attempts ticket write operations
   - `400` when assignment tries to use an assignee outside the current tenant
+  - database-level rejection when a ticket row tries to reference a cross-tenant assignee or creator, while nullable `assignee_id` remains valid for unassigned tickets
   - `400` when ticket status transition rules are violated (including no-op transitions)
   - `200` for `CLOSED -> OPEN` reopen with status/detail verification, `updated_at` refresh, and appended `STATUS_CHANGED` log
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`

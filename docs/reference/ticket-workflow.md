@@ -1,6 +1,6 @@
 # Ticket Workflow
 
-Last updated: 2026-04-06
+Last updated: 2026-04-19
 
 ## Public API Surface
 
@@ -48,6 +48,8 @@ Current public ticket workflow keeps the business state model narrow:
 - AI summary, triage, and reply-draft behavior: suggestion-only, read-only, and non-mutating
 - AI reply-draft comment proposal behavior: a separate `TICKET_WRITE` workflow endpoint creates a pending approval request only; approve-time execution later reuses the existing comment write chain
 - AI interaction history behavior: read-only operator visibility over stored `ai_interaction_record` rows only
+- root ticket actor tenant-integrity behavior: `ticket.created_by` and non-null `ticket.assignee_id` are protected by database-level same-tenant foreign keys to `users(id, tenant_id)` in addition to the service-level current-tenant checks
+- remaining ticket actor-link hardening: ticket comment creators and operation-log operators are still later schema follow-up items; current public writes continue to validate tenant scope in service logic
 
 Current transition rules:
 

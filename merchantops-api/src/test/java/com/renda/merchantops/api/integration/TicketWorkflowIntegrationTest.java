@@ -221,9 +221,13 @@ class TicketWorkflowIntegrationTest {
                     created_by BIGINT NOT NULL,
                     request_id VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT fk_ticket_assignee_tenant FOREIGN KEY (assignee_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_ticket_created_by_tenant FOREIGN KEY (created_by, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_assignee_tenant ON ticket (assignee_id, tenant_id)");
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_created_by_tenant ON ticket (created_by, tenant_id)");
 
         jdbcTemplate.execute("""
                 CREATE TABLE ai_interaction_record (
@@ -394,6 +398,50 @@ class TicketWorkflowIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("ticket not found"));
+    }
+
+    @Test
+    void ticketTableShouldRejectCrossTenantRootActors() {
+        assertThatThrownBy(() -> insertTicket(
+                501L,
+                1L,
+                "Cross tenant assignee",
+                "desc",
+                "OPEN",
+                201L,
+                101L,
+                "ticket-actor-integrity-assignee"
+        )).isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> insertTicket(
+                502L,
+                1L,
+                "Cross tenant creator",
+                "desc",
+                "OPEN",
+                null,
+                201L,
+                "ticket-actor-integrity-created-by"
+        )).isInstanceOf(DataIntegrityViolationException.class);
+
+        insertTicket(
+                503L,
+                1L,
+                "Unassigned same tenant creator",
+                "desc",
+                "OPEN",
+                null,
+                101L,
+                "ticket-actor-integrity-null-assignee"
+        );
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket WHERE id = ? AND tenant_id = ? AND assignee_id IS NULL AND created_by = ?",
+                Integer.class,
+                503L,
+                1L,
+                101L
+        )).isEqualTo(1);
     }
 
     @Test
