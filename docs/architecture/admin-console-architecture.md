@@ -57,9 +57,11 @@ Refresh restores the token and refetches `/api/v1/context`. Protected route data
 
 Login creates a backend `auth_session` row. The JWT carries a required `sid` claim, and protected backend requests validate that the session exists, belongs to the same tenant/user, is `ACTIVE`, is not revoked, and has not expired before current tenant/user/role revalidation runs.
 
+A background server-side cleanup scheduler now prunes only retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions. This does not change the frontend contract: restore still depends on the stored access token plus a successful `/api/v1/context` refetch, and old tokens whose session rows were later deleted still fail through the same controlled `401` path.
+
 `Sign out` calls `POST /api/v1/auth/logout`, then clears the local token plus context and tickets caches regardless of logout success, network failure, or `401` / `403`. Logout revokes only the current session; separate logins remain active.
 
-Backend refresh tokens, cookies, token rotation, logout-all-devices, cross-origin CORS policy, and session cleanup scheduling remain deferred to later productization slices.
+Backend refresh tokens, cookies, token rotation, logout-all-devices, and cross-origin CORS policy remain deferred to later productization slices.
 
 ## Deferred Screens
 

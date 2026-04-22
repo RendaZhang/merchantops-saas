@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-19
+Last updated: 2026-04-22
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,30 +29,31 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice G: Authentication Lifecycle Widening
+### Slice G-B: Authentication Lifecycle Contract Follow-Up
 
-Goal: revisit the remaining authentication lifecycle gaps now that the same-origin runtime contract, first workflow screen, and highest-priority tenant-integrity follow-ups are stable.
+Goal: choose the next narrow authentication lifecycle step now that server-side auth sessions, current-session logout, and status-aware auth-session cleanup are all in place.
 
 Expected scope:
 
-- choose the narrowest lifecycle addition based on the current same-origin admin/API runtime contract
-- keep the current server-side `auth_session` and current-session logout baseline intact
+- choose the narrowest post-cleanup lifecycle addition based on the current same-origin admin/API runtime contract
+- keep the current server-side `auth_session`, current-session logout, and cleanup scheduler baseline intact
 - update the admin console only when backend auth contract changes require it
 - avoid broad deployment automation, secret-manager integration, K8s/Helm scope, workflow screens, or AI changes
 
 Stop condition:
 
-- the selected auth lifecycle behavior is implemented, tested, and documented
+- the selected post-cleanup auth lifecycle behavior is implemented, tested, and documented
 - same-origin admin login, context restore, tickets, and sign-out remain green
-- docs clearly distinguish implemented auth behavior from deferred refresh-token, cookie, rotation, logout-all, and cleanup work
+- docs clearly distinguish implemented auth behavior from deferred refresh-token, cookie, rotation, and logout-all work
 
 ## Recently Closed
 
+- Slice G-A: Auth Session Cleanup Scheduler - the backend now exposes `merchantops.auth.session.cleanup.*`, runs a bounded scheduled cleanup pass that deletes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions, keeps request-time auth behavior unchanged, and records focused auth regression plus same-origin runtime smoke evidence while leaving refresh tokens, cookies, rotation, and logout-all deferred.
 - Slice F: Tenant Actor Integrity Follow-Up - `V17__enforce_ticket_actor_tenant_integrity.sql` now adds child indexes and composite same-tenant foreign keys for `ticket.assignee_id` and `ticket.created_by` to `users(id, tenant_id)`, with focused database-level rejection coverage while leaving ticket comments, operation logs, and child-table ticket tenant constraints as later work.
 - Slice E: First Workflow Screen - the admin console now includes a protected `/tickets` route over the existing `GET /api/v1/tickets?page=0&size=10` API, with a shared authenticated layout, Zod-validated ticket page contract, loading/empty/error states, read-only table rendering, Vite dev-proxy smoke, and Nginx same-origin runtime smoke while keeping ticket detail, mutations, filters, pagination controls, AI actions, approval actions, refresh tokens, and backend API changes deferred.
 - Slice D: Tenant Integrity Hardening - `V16__enforce_user_role_tenant_integrity.sql` now adds and backfills `user_role.tenant_id`, enforces same-tenant composite foreign keys to both `users` and `role`, updates role-binding writes to include tenant id, updates RBAC read joins to express the invariant, and adds focused database-level rejection coverage while separating ticket actor constraints into follow-up slices.
 - Slice C: Same-Origin Admin + API Runtime Contract - `merchantops-admin-web` now builds into an Nginx static runtime container on `http://localhost:8081`, same-origin `/api/...` proxies to the API container, `docker-compose.runtime.yml` runs API plus admin on the existing infra network, the `runtime` Spring profile defines container defaults and runtime-injected secret requirements, docs/runbooks cover the secret contract and runtime smoke path, and CI now runs admin checks plus API/admin image builds while leaving CORS, cookies, refresh tokens, token rotation, real secret-manager integration, image publishing, K8s, Helm, TLS, and deployment automation deferred.
-- Slice B: Server-Side Auth Session + Logout Foundation - login now creates an `auth_session`, JWTs carry required `sid` claims, protected requests validate active server-side session state before stale tenant/user/role checks, `POST /api/v1/auth/logout` revokes only the current session, and the admin console now signs out through the backend while keeping refresh tokens, cookies, rotation, logout-all, and cleanup scheduling deferred.
+- Slice B: Server-Side Auth Session + Logout Foundation - login now creates an `auth_session`, JWTs carry required `sid` claims, protected requests validate active server-side session state before stale tenant/user/role checks, `POST /api/v1/auth/logout` revokes only the current session, and the admin console now signs out through the backend while keeping refresh tokens, cookies, rotation, and logout-all deferred.
 - Slice A: Minimal Admin Console Entry - introduced `merchantops-admin-web/` as a standalone Vite + React + TypeScript app, wired login plus current context through the existing backend, added token restoration, established workflow navigation placeholders, and documented the local frontend run path and architecture boundary.
 
 ## Candidate Next Slices

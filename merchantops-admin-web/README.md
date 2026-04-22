@@ -89,7 +89,7 @@ On page refresh, the app restores the token, refetches `/api/v1/context`, and cl
 
 Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context and tickets query caches, and returns to login even if the logout request fails.
 
-There is still no refresh-token flow, cookie/session rotation, logout-all-devices flow, or session cleanup scheduler in this slice. When the access token expires or the server-side session is invalid, sign in again.
+A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, or logout-all-devices flow in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
 ## Verification
 

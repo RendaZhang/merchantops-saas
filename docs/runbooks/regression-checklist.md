@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-04-19
+Last updated: 2026-04-22
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -53,6 +53,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] successful login creates one `ACTIVE` `auth_session` row with the expected tenant/user and future `expires_at`
 - [ ] login with bad credentials does not create an `auth_session` row
 - [ ] `POST /api/v1/auth/logout` revokes only the current session and sets `revoked_at`
+- [ ] if auth-session cleanup changed, retention-aged expired `ACTIVE` rows and retention-aged `REVOKED` rows are deleted in bounded batches while recently revoked rows remain
 - [ ] reusing the same token after logout returns `401` with `authentication required`
 - [ ] two logins for the same user create independent sessions, and logging out one token does not invalidate the other token
 
@@ -64,6 +65,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] login JWTs include a non-blank `sid` claim
 - [ ] sidless signed tokens return `401` with `authentication required`
 - [ ] tokens whose `auth_session` row is expired, revoked, missing, or mismatched return `401`
+- [ ] if auth-session cleanup changed, tokens whose already-invalid `auth_session` row was later deleted by cleanup still return `401`
 
 ## Tenant Context
 

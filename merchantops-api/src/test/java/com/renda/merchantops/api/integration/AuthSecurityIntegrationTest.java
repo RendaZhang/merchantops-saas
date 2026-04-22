@@ -3,6 +3,8 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.auth.AuthSessionCleanupScheduler;
+import com.renda.merchantops.api.config.AuthSessionCleanupProperties;
 import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.JwtTokenService;
@@ -80,6 +82,12 @@ class AuthSecurityIntegrationTest {
 
     @Autowired
     private JwtTokenService jwtTokenService;
+
+    @Autowired
+    private AuthSessionCleanupScheduler authSessionCleanupScheduler;
+
+    @Autowired
+    private AuthSessionCleanupProperties authSessionCleanupProperties;
 
     @BeforeEach
     void setUpSchemaAndData() {
@@ -220,6 +228,11 @@ class AuthSecurityIntegrationTest {
         seedUserRoles();
         seedRolePermissions();
         seedFeatureFlags();
+
+        authSessionCleanupProperties.setEnabled(true);
+        authSessionCleanupProperties.setRetentionSeconds(604800);
+        authSessionCleanupProperties.setFixedDelayMs(3600000);
+        authSessionCleanupProperties.setBatchSize(100);
     }
 
     @Test
@@ -403,6 +416,84 @@ class AuthSecurityIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(secondToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
+    }
+
+    @Test
+    void cleanupShouldDeleteExpiredActiveAndOldRevokedSessionsWhileRespectingBatchSize() {
+        LocalDateTime now = LocalDateTime.now();
+        authSessionCleanupProperties.setBatchSize(2);
+
+        insertAuthSession(9001L, "cleanup-expired-active-1", 1L, 101L, "ACTIVE",
+                now.minusDays(9), now.minusDays(8), null);
+        insertAuthSession(9002L, "cleanup-expired-active-2", 1L, 102L, "ACTIVE",
+                now.minusDays(10), now.minusDays(9), null);
+        insertAuthSession(9003L, "cleanup-revoked-old", 1L, 101L, "REVOKED",
+                now.minusDays(15), now.minusDays(14), now.minusDays(8));
+        insertAuthSession(9004L, "keep-active", 1L, 101L, "ACTIVE",
+                now.minusDays(1), now.plusDays(1), null);
+        insertAuthSession(9005L, "keep-revoked-recent", 1L, 101L, "REVOKED",
+                now.minusDays(15), now.minusDays(14), now.minusDays(2));
+
+        int firstDeletedCount = authSessionCleanupScheduler.cleanupOnce();
+
+        assertThat(firstDeletedCount).isEqualTo(2);
+        assertThat(countAuthSessionById(9001L)).isZero();
+        assertThat(countAuthSessionById(9002L)).isZero();
+        assertThat(countAuthSessionById(9003L)).isEqualTo(1);
+        assertThat(countAuthSessionById(9004L)).isEqualTo(1);
+        assertThat(countAuthSessionById(9005L)).isEqualTo(1);
+
+        int secondDeletedCount = authSessionCleanupScheduler.cleanupOnce();
+
+        assertThat(secondDeletedCount).isEqualTo(1);
+        assertThat(countAuthSessionById(9003L)).isZero();
+        assertThat(countAuthSessionById(9004L)).isEqualTo(1);
+        assertThat(countAuthSessionById(9005L)).isEqualTo(1);
+    }
+
+    @Test
+    void cleanupDeletedExpiredSessionTokenShouldReturnControlledUnauthorized() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+        String sessionId = sessionIdFromToken(token);
+
+        jdbcTemplate.update(
+                "UPDATE auth_session SET expires_at = DATEADD('DAY', -8, CURRENT_TIMESTAMP) WHERE session_id = ?",
+                sessionId
+        );
+
+        assertThat(authSessionCleanupScheduler.cleanupOnce()).isEqualTo(1);
+        assertThat(countAuthSessionBySessionId(sessionId)).isZero();
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
+    void cleanupShouldRetainRecentlyRevokedSessionButTokenShouldStillReturnUnauthorized() throws Exception {
+        String token = loginAndGetToken("demo-shop", "admin", "123456");
+        String sessionId = sessionIdFromToken(token);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        jdbcTemplate.update(
+                "UPDATE auth_session SET expires_at = DATEADD('DAY', -30, CURRENT_TIMESTAMP), revoked_at = DATEADD('DAY', -2, CURRENT_TIMESTAMP) WHERE session_id = ?",
+                sessionId
+        );
+
+        assertThat(authSessionCleanupScheduler.cleanupOnce()).isZero();
+        assertThat(countAuthSessionBySessionId(sessionId)).isEqualTo(1);
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
     }
 
     @Test
@@ -1216,6 +1307,36 @@ class AuthSecurityIntegrationTest {
                 INSERT INTO role_permission (id, role_id, permission_id)
                 VALUES (?, ?, ?)
                 """, id, roleId, permissionId);
+    }
+
+    private void insertAuthSession(Long id,
+                                   String sessionId,
+                                   Long tenantId,
+                                   Long userId,
+                                   String status,
+                                   LocalDateTime createdAt,
+                                   LocalDateTime expiresAt,
+                                   LocalDateTime revokedAt) {
+        jdbcTemplate.update("""
+                INSERT INTO auth_session (id, session_id, tenant_id, user_id, status, created_at, expires_at, revoked_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, id, sessionId, tenantId, userId, status, createdAt, expiresAt, revokedAt);
+    }
+
+    private int countAuthSessionById(Long id) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM auth_session WHERE id = ?",
+                Integer.class,
+                id
+        );
+    }
+
+    private int countAuthSessionBySessionId(String sessionId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM auth_session WHERE session_id = ?",
+                Integer.class,
+                sessionId
+        );
     }
 
     private String loginAndGetToken(String tenantCode, String username, String password) throws Exception {

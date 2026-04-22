@@ -52,4 +52,14 @@ public final class AuthSessionService implements AuthSessionUseCase {
                 .filter(session -> session.revokedAt() == null)
                 .ifPresent(session -> authSessionPort.revoke(session.sessionId(), revokedAt));
     }
+
+    @Override
+    public int cleanupExpiredOrRevokedSessions(LocalDateTime now,
+                                               long retentionSeconds,
+                                               int batchSize) {
+        return authSessionPort.cleanupExpiredOrRevokedSessions(
+                now.minusSeconds(retentionSeconds),
+                batchSize
+        );
+    }
 }

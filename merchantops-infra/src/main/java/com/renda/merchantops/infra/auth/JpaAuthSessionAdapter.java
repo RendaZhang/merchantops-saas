@@ -5,10 +5,12 @@ import com.renda.merchantops.domain.auth.AuthSessionPort;
 import com.renda.merchantops.domain.auth.AuthSessionStatus;
 import com.renda.merchantops.infra.persistence.entity.AuthSessionEntity;
 import com.renda.merchantops.infra.repository.AuthSessionRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -51,6 +53,21 @@ public class JpaAuthSessionAdapter implements AuthSessionPort {
             entity.setRevokedAt(revokedAt);
             authSessionRepository.save(entity);
         });
+    }
+
+    @Override
+    @Transactional
+    public int cleanupExpiredOrRevokedSessions(LocalDateTime cutoff, int limit) {
+        List<Long> candidateIds = authSessionRepository.findCleanupCandidateIds(
+                AuthSessionStatus.ACTIVE.name(),
+                AuthSessionStatus.REVOKED.name(),
+                cutoff,
+                PageRequest.of(0, limit)
+        );
+        if (candidateIds.isEmpty()) {
+            return 0;
+        }
+        return authSessionRepository.deleteByIdIn(candidateIds);
     }
 
     private AuthSession toDomain(AuthSessionEntity entity) {

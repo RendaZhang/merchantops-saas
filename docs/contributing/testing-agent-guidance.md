@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-04-19
+Last updated: 2026-04-22
 
 ## Purpose
 
@@ -50,12 +50,12 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout, same-origin runtime foundation, `user_role` tenant-integrity hardening, first read-only admin Tickets screen, and root ticket actor tenant-integrity hardening, plus the no-secret CI quality gate.
+The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, first read-only admin Tickets screen, and root ticket actor tenant-integrity hardening, plus the no-secret CI quality gate.
 
 Today it covers:
 
 - login success and wrong-password failure
-- server-side auth-session creation, required JWT `sid`, current-session logout revocation, sidless/revoked/expired-session `401` behavior, and independent multi-session behavior
+- server-side auth-session creation, required JWT `sid`, current-session logout revocation, sidless/revoked/expired-session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, post-cleanup old-token `401` behavior, and independent multi-session behavior
 - database-level rejection of cross-tenant `user_role` bindings
 - database-level rejection of cross-tenant root ticket assignee/creator bindings while nullable ticket assignees remain valid
 - real JWT parsing and permission claims

@@ -14,4 +14,6 @@ public interface AuthSessionPort {
     Optional<AuthSession> findBySessionId(String sessionId);
 
     void revoke(String sessionId, LocalDateTime revokedAt);
+
+    int cleanupExpiredOrRevokedSessions(LocalDateTime cutoff, int limit);
 }

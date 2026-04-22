@@ -79,6 +79,11 @@ Shared application configuration currently includes:
   - `merchantops.import.processing.enqueue-recovery-batch-size=100`
   - `merchantops.import.processing.enqueue-recovery-delay-ms=300000`
   - `merchantops.import.processing.enqueue-recovery-min-age-seconds=60`
+- auth-session cleanup defaults:
+  - `merchantops.auth.session.cleanup.enabled=true`
+  - `merchantops.auth.session.cleanup.retention-seconds=604800`
+  - `merchantops.auth.session.cleanup.fixed-delay-ms=3600000`
+  - `merchantops.auth.session.cleanup.batch-size=100`
 
 ## Supported Environment Variable Overrides
 
@@ -121,6 +126,10 @@ Shared application configuration currently includes:
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_BATCH_SIZE`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_DELAY_MS`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_MIN_AGE_SECONDS`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_ENABLED`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_RETENTION_SECONDS`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_FIXED_DELAY_MS`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_BATCH_SIZE`
 - `SPRING_PROFILES_ACTIVE`
 
 ## Local `.env` Bootstrap
@@ -205,6 +214,20 @@ Runtime shape:
 - the browser sees one origin for the admin shell and API calls
 
 This same-origin path deliberately avoids CORS, cookies, refresh tokens, and token rotation in this slice.
+
+## Auth Session Cleanup Controls
+
+- `merchantops.auth.session.cleanup.enabled` enables or disables the scheduled cleanup task. Default: `true`.
+- `merchantops.auth.session.cleanup.retention-seconds` defines how long already-invalid auth sessions remain queryable before deletion. Default: `604800` seconds (7 days).
+- `merchantops.auth.session.cleanup.fixed-delay-ms` defines both the fixed delay and initial delay for the cleanup scheduler. Default: `3600000` ms (1 hour).
+- `merchantops.auth.session.cleanup.batch-size` caps one cleanup pass to a single bounded delete batch. Default: `100`.
+
+Cleanup rules are status-aware:
+
+- `ACTIVE` sessions become cleanup candidates only when `expires_at < now - retention`
+- `REVOKED` sessions become cleanup candidates only when `revoked_at < now - retention`
+
+The cleanup task deletes at most one batch per run. Disabling the task stops scheduled deletion but does not change login, logout, JWT `sid`, or protected-request auth behavior.
 
 ## AI Provider Controls
 
