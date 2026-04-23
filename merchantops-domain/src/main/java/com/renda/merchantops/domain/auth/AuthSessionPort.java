@@ -15,5 +15,7 @@ public interface AuthSessionPort {
 
     void revoke(String sessionId, LocalDateTime revokedAt);
 
+    int revokeActiveSessionsForUser(Long tenantId, Long userId, LocalDateTime revokedAt);
+
     int cleanupExpiredOrRevokedSessions(LocalDateTime cutoff, int limit);
 }

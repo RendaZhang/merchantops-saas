@@ -108,6 +108,35 @@ $logout = Invoke-RestMethod `
   -Method Post `
   -Uri "$adminBaseUrl/api/v1/auth/logout" `
   -Headers $headers
+
+$logoutAllLoginA = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$adminBaseUrl/api/v1/auth/login" `
+  -ContentType "application/json" `
+  -Body (@{
+    tenantCode = "demo-shop"
+    username = "admin"
+    password = "123456"
+  } | ConvertTo-Json -Compress)
+
+$logoutAllLoginB = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$adminBaseUrl/api/v1/auth/login" `
+  -ContentType "application/json" `
+  -Body (@{
+    tenantCode = "demo-shop"
+    username = "admin"
+    password = "123456"
+  } | ConvertTo-Json -Compress)
+
+$logoutAllTokenA = $logoutAllLoginA.data.accessToken
+$logoutAllTokenB = $logoutAllLoginB.data.accessToken
+$logoutAllHeaders = @{ Authorization = "Bearer $logoutAllTokenA" }
+
+$logoutAll = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$adminBaseUrl/api/v1/auth/logout-all" `
+  -Headers $logoutAllHeaders
 ```
 
 Expected result:
@@ -116,11 +145,14 @@ Expected result:
 - context returns `tenantCode=demo-shop` and `username=admin`
 - tickets returns `page=0`, `size=10`, an `items` array, and the current tenant's first ticket page
 - logout returns `SUCCESS` with `data=null`
+- logout-all returns `SUCCESS` with `data=null`
 
-Verify the old token is revoked:
+Verify the old tokens are revoked:
 
 ```powershell
 curl.exe -i -H "Authorization: Bearer $token" "$adminBaseUrl/api/v1/context"
+curl.exe -i -H "Authorization: Bearer $logoutAllTokenA" "$adminBaseUrl/api/v1/context"
+curl.exe -i -H "Authorization: Bearer $logoutAllTokenB" "$adminBaseUrl/api/v1/context"
 ```
 
 Expected result:
@@ -137,6 +169,7 @@ Open `http://localhost:8081`.
 3. Open `Tickets` and confirm `/tickets` renders the read-only current tenant ticket queue.
 4. Refresh `/tickets` and confirm context plus tickets restore while the session is active.
 5. Select `Sign out` and confirm the login screen returns.
+6. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
 
 Do not use `http://localhost:5173` for this runbook; that is the Vite dev-server path.
 

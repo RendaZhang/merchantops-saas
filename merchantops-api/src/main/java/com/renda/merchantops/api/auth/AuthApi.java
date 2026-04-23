@@ -99,4 +99,32 @@ public interface AuthApi {
     })
     @PostMapping("/logout")
     ApiResponse<Void> logout(@Parameter(hidden = true) @AuthenticationPrincipal CurrentUser currentUser);
+
+    @Operation(
+            summary = "Logout all current-user auth sessions",
+            description = "Revoke every active auth session for the authenticated user in the current tenant, including the current JWT session.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "All current-user sessions revoked",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_SUCCESS_LOGOUT))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or revoked auth session",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Tenant, user, or token claims are no longer active",
+                    content = @Content(mediaType = "application/json", examples = {
+                            @ExampleObject(name = "userInactive", value = RESP_FORBIDDEN_USER_INACTIVE),
+                            @ExampleObject(name = "staleClaims", value = RESP_FORBIDDEN_STALE_TOKEN)
+                    })
+            )
+    })
+    @PostMapping("/logout-all")
+    ApiResponse<Void> logoutAll(@Parameter(hidden = true) @AuthenticationPrincipal CurrentUser currentUser);
 }

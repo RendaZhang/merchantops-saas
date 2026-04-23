@@ -10,7 +10,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 - Current tagged milestone: `v0.7.0-beta`
 - Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
-- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, and Slice G-A auth-session cleanup scheduler are complete; Slice G-B Authentication Lifecycle Contract Follow-Up is next
+- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, Slice G-A auth-session cleanup scheduler, and Slice G-B1 logout-all sessions contract are complete; Slice H Next Admin Workflow Screen is next
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
 - Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 
@@ -142,7 +142,7 @@ The CI gate is intentionally minimal. It does not deploy, publish Docker images,
 - Public AI endpoints are read-only or suggestion-only. AI-generated ticket comments and import selective replay still go through separate human-reviewed approval bridges before execution.
 - AI usage/cost metadata is a governance read surface over stored runtime metadata, not billing, ledger, invoice, or commercial metering infrastructure.
 - CI does not require AI provider secrets and does not prove live vendor behavior.
-- K8s, Helm, real secret-manager integration, performance artifacts, refresh tokens, cookie/session rotation, logout-all-devices, and a broader reporting system remain outside the current baseline.
+- K8s, Helm, real secret-manager integration, performance artifacts, refresh tokens, cookie/session rotation, device-aware session management, and a broader reporting system remain outside the current baseline.
 
 ## Contributing, Security, And License
 

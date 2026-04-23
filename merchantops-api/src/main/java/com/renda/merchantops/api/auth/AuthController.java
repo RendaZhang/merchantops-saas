@@ -26,4 +26,10 @@ public class AuthController implements AuthApi {
         authService.logout(currentUser);
         return ApiResponse.success(null);
     }
+
+    @Override
+    public ApiResponse<Void> logoutAll(@AuthenticationPrincipal CurrentUser currentUser) {
+        authService.logoutAll(currentUser);
+        return ApiResponse.success(null);
+    }
 }

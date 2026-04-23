@@ -16,10 +16,18 @@ const placeholderNavigationItems = [
 type AppShellProps = {
   children: ReactNode
   onSignOut: () => void
+  onSignOutAll: () => void
   signOutPending?: boolean
+  signOutAllPending?: boolean
 }
 
-export function AppShell({ children, onSignOut, signOutPending = false }: AppShellProps) {
+export function AppShell({
+  children,
+  onSignOut,
+  onSignOutAll,
+  signOutPending = false,
+  signOutAllPending = false,
+}: AppShellProps) {
   return (
     <div className="min-h-svh bg-neutral-50 text-neutral-950">
       <div className="grid min-h-svh grid-cols-1 lg:grid-cols-[264px_1fr]">
@@ -29,14 +37,24 @@ export function AppShell({ children, onSignOut, signOutPending = false }: AppShe
               <p className="text-sm font-semibold text-emerald-700">MerchantOps</p>
               <h1 className="text-xl font-semibold text-neutral-950">Admin Console</h1>
             </div>
-            <button
-              className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-950"
-              type="button"
-              onClick={onSignOut}
-              disabled={signOutPending}
-            >
-              {signOutPending ? 'Signing out...' : 'Sign out'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-950 disabled:border-neutral-200 disabled:text-neutral-400"
+                type="button"
+                onClick={onSignOut}
+                disabled={signOutPending}
+              >
+                {signOutPending && !signOutAllPending ? 'Signing out...' : 'Sign out'}
+              </button>
+              <button
+                className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-950 disabled:border-neutral-200 disabled:text-neutral-400"
+                type="button"
+                onClick={onSignOutAll}
+                disabled={signOutPending}
+              >
+                {signOutAllPending ? 'Signing out all...' : 'Sign out all sessions'}
+              </button>
+            </div>
           </div>
 
           <nav className="flex gap-2 overflow-x-auto border-t border-neutral-200 px-3 py-3 lg:flex-col lg:overflow-visible lg:px-4">

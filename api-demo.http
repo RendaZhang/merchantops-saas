@@ -605,3 +605,12 @@ Authorization: Bearer {{token}}
 # protected endpoints such as GET /api/v1/context should return 401.
 POST {{baseUrl}}/api/v1/auth/logout
 Authorization: Bearer {{token}}
+
+### Logout all current-user auth sessions
+# Run this at the end of a multi-session smoke flow with a fresh active token.
+# If you ran the previous logout request with {{token}}, log in again before
+# running this request. After it succeeds, every active token for the same
+# current tenant/user should return 401 on protected endpoints such as
+# GET /api/v1/context.
+POST {{baseUrl}}/api/v1/auth/logout-all
+Authorization: Bearer {{token}}

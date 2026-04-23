@@ -54,6 +54,13 @@ public final class AuthSessionService implements AuthSessionUseCase {
     }
 
     @Override
+    public int revokeAllSessions(Long tenantId,
+                                 Long userId,
+                                 LocalDateTime revokedAt) {
+        return authSessionPort.revokeActiveSessionsForUser(tenantId, userId, revokedAt);
+    }
+
+    @Override
     public int cleanupExpiredOrRevokedSessions(LocalDateTime now,
                                                long retentionSeconds,
                                                int batchSize) {

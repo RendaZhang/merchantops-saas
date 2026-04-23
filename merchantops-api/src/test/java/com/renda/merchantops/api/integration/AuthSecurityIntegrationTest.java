@@ -419,6 +419,69 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void logoutAllShouldRevokeOnlyCurrentTenantUserActiveSessions() throws Exception {
+        String firstAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String secondAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+        String otherTenantToken = loginAndGetToken("other-shop", "outsider", "123456");
+        String firstAdminSessionId = sessionIdFromToken(firstAdminToken);
+        String secondAdminSessionId = sessionIdFromToken(secondAdminToken);
+        String opsSessionId = sessionIdFromToken(opsToken);
+        String otherTenantSessionId = sessionIdFromToken(otherTenantToken);
+
+        mockMvc.perform(post("/api/v1/auth/logout-all")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(firstAdminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("ok"));
+
+        assertThat(sessionStatus(firstAdminSessionId)).isEqualTo("REVOKED");
+        assertThat(sessionStatus(secondAdminSessionId)).isEqualTo("REVOKED");
+        assertThat(sessionRevokedAt(firstAdminSessionId)).isNotNull();
+        assertThat(sessionRevokedAt(secondAdminSessionId)).isNotNull();
+        assertThat(sessionStatus(opsSessionId)).isEqualTo("ACTIVE");
+        assertThat(sessionStatus(otherTenantSessionId)).isEqualTo("ACTIVE");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM auth_session WHERE tenant_id = ? AND user_id = ? AND status = ?",
+                Integer.class,
+                1L,
+                101L,
+                "REVOKED"
+        )).isEqualTo(2);
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(firstAdminToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(secondAdminToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(102));
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(otherTenantToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.tenantId").value(2))
+                .andExpect(jsonPath("$.data.userId").value(201));
+    }
+
+    @Test
+    void logoutAllShouldRequireAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout-all"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
     void cleanupShouldDeleteExpiredActiveAndOldRevokedSessionsWhileRespectingBatchSize() {
         LocalDateTime now = LocalDateTime.now();
         authSessionCleanupProperties.setBatchSize(2);
@@ -1335,6 +1398,22 @@ class AuthSecurityIntegrationTest {
         return jdbcTemplate.queryForObject(
                 "SELECT COUNT(1) FROM auth_session WHERE session_id = ?",
                 Integer.class,
+                sessionId
+        );
+    }
+
+    private String sessionStatus(String sessionId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT status FROM auth_session WHERE session_id = ?",
+                String.class,
+                sessionId
+        );
+    }
+
+    private LocalDateTime sessionRevokedAt(String sessionId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT revoked_at FROM auth_session WHERE session_id = ?",
+                LocalDateTime.class,
                 sessionId
         );
     }

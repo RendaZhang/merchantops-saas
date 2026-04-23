@@ -1,6 +1,6 @@
 # Admin Console Architecture
 
-The admin console is a standalone frontend module at `merchantops-admin-web/`. It is not served from Spring Boot static resources. The current Productization Baseline surface uses the existing login/context APIs, the Slice B logout API, and the existing read-only ticket queue API.
+The admin console is a standalone frontend module at `merchantops-admin-web/`. It is not served from Spring Boot static resources. The current Productization Baseline surface uses the existing login/context APIs, current-session logout, current-user logout-all, and the existing read-only ticket queue API.
 
 Productization Baseline Slice C defines the production-like runtime boundary: the built admin app is served by an Nginx container, and that container proxies same-origin `/api/...` requests to the API container.
 
@@ -15,7 +15,7 @@ Productization Baseline Slice C defines the production-like runtime boundary: th
 ## Frontend Runtime Shape
 
 - React Router owns the login route plus the protected Dashboard and Tickets routes.
-- The shared authenticated layout owns the app shell, current context query, sign-out mutation, and auth-expired redirect behavior for protected child routes.
+- The shared authenticated layout owns the app shell, current context query, sign-out mutations, and auth-expired redirect behavior for protected child routes.
 - TanStack Query owns the authenticated `/api/v1/context` and `/api/v1/tickets` fetch and refresh behavior.
 - `src/lib/api-client.ts` is the only fetch boundary for backend calls.
 - `src/lib/auth-token.ts` is the only local token persistence boundary.
@@ -39,6 +39,7 @@ The current frontend calls only:
 - `POST /api/v1/auth/login`
 - `GET /api/v1/context`
 - `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/logout-all`
 - `GET /api/v1/tickets?page=0&size=10`
 
 `/api/v1/context` is authoritative for the current tenant and operator identity displayed on the dashboard.
@@ -61,7 +62,9 @@ A background server-side cleanup scheduler now prunes only retention-aged expire
 
 `Sign out` calls `POST /api/v1/auth/logout`, then clears the local token plus context and tickets caches regardless of logout success, network failure, or `401` / `403`. Logout revokes only the current session; separate logins remain active.
 
-Backend refresh tokens, cookies, token rotation, logout-all-devices, and cross-origin CORS policy remain deferred to later productization slices.
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, including the caller's current session, while preserving other users and other tenants; the frontend then clears the same local token and query caches. If the request fails, the frontend still clears the local token and returns to login with a warning that other sessions may still be active.
+
+Backend refresh tokens, cookies, token rotation, session lists, device metadata, selective device logout, and cross-origin CORS policy remain deferred to later productization slices.
 
 ## Deferred Screens
 

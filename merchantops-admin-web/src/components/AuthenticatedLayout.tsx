@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
-import { getContext, isAuthenticationError, logout } from '../lib/api-client'
+import { getContext, isAuthenticationError, logout, logoutAll } from '../lib/api-client'
 import { clearAuthSession, readAuthSession } from '../lib/auth-token'
 import type { AuthenticatedRouteContext } from './authenticated-route-context'
 import { AppShell } from './AppShell'
@@ -27,6 +27,23 @@ export function AuthenticatedLayout() {
     onSettled: () => {
       clearSessionState()
       navigate('/login', { replace: true })
+    },
+  })
+  const signOutAllMutation = useMutation({
+    mutationFn: logoutAll,
+    onSuccess: () => {
+      clearSessionState()
+      navigate('/login', {
+        replace: true,
+        state: { sessionMessage: 'All sessions signed out. Sign in again to continue.' },
+      })
+    },
+    onError: () => {
+      clearSessionState()
+      navigate('/login', {
+        replace: true,
+        state: { sessionMessage: 'Local session cleared. Other sessions may still be active.' },
+      })
     },
   })
   const handleAuthenticationError = useCallback(
@@ -56,7 +73,9 @@ export function AuthenticatedLayout() {
   return (
     <AppShell
       onSignOut={() => signOutMutation.mutate()}
-      signOutPending={signOutMutation.isPending}
+      onSignOutAll={() => signOutAllMutation.mutate()}
+      signOutPending={signOutMutation.isPending || signOutAllMutation.isPending}
+      signOutAllPending={signOutAllMutation.isPending}
     >
       <div className="grid gap-6">
         {contextQuery.isPending ? (

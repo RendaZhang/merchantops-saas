@@ -25,6 +25,30 @@ class JpaAuthSessionAdapterTest {
     private AuthSessionRepository authSessionRepository;
 
     @Test
+    void revokeActiveSessionsForUserShouldDelegateTenantScopedBulkUpdate() {
+        JpaAuthSessionAdapter adapter = new JpaAuthSessionAdapter(authSessionRepository);
+        LocalDateTime revokedAt = LocalDateTime.of(2026, 4, 23, 10, 30);
+        when(authSessionRepository.revokeActiveSessionsForUser(
+                1L,
+                101L,
+                "ACTIVE",
+                "REVOKED",
+                revokedAt
+        )).thenReturn(2);
+
+        int revokedCount = adapter.revokeActiveSessionsForUser(1L, 101L, revokedAt);
+
+        assertThat(revokedCount).isEqualTo(2);
+        verify(authSessionRepository).revokeActiveSessionsForUser(
+                1L,
+                101L,
+                "ACTIVE",
+                "REVOKED",
+                revokedAt
+        );
+    }
+
+    @Test
     void cleanupExpiredOrRevokedSessionsShouldQueryOnePageAndDeleteCandidateIds() {
         JpaAuthSessionAdapter adapter = new JpaAuthSessionAdapter(authSessionRepository);
         LocalDateTime cutoff = LocalDateTime.of(2026, 4, 15, 10, 0);

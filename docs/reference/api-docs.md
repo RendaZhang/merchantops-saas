@@ -12,6 +12,7 @@
 - Security scheme: `bearerAuth` (HTTP Bearer JWT)
 - Login endpoint: `POST /api/v1/auth/login`
 - Logout endpoint: `POST /api/v1/auth/logout`
+- Logout-all endpoint: `POST /api/v1/auth/logout-all`
 - Demo tenant and users:
   - tenant: `demo-shop`
   - `admin / 123456`
@@ -41,6 +42,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/actuator/health` | No | Spring Boot actuator health |
 | `POST` | `/api/v1/auth/login` | No | Login and get JWT token |
 | `POST` | `/api/v1/auth/logout` | Yes | Revoke the current auth session |
+| `POST` | `/api/v1/auth/logout-all` | Yes | Revoke all active auth sessions for the current tenant/user |
 | `GET` | `/api/v1/dev/ping` | No | Dev ping test |
 | `POST` | `/api/v1/dev/echo` | No | Dev echo test |
 | `GET` | `/api/v1/dev/biz-error` | No | Dev error-shape test |
@@ -247,6 +249,20 @@ Response:
 ```
 
 Logout revokes only the current session. Reusing the same token on protected endpoints returns `401`.
+
+### 2a. Logout All (`POST /api/v1/auth/logout-all`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": null
+}
+```
+
+Logout-all revokes every active session for the current authenticated user in the current tenant, including the caller's current session. It does not revoke sessions for other users or other tenants. Reusing any token from the revoked current user sessions on protected endpoints returns `401`.
 
 ### 3. Current User (`GET /api/v1/user/me`)
 

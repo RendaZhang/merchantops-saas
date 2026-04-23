@@ -14,6 +14,7 @@ The current Productization Baseline frontend is intentionally narrow:
 - fetch current tenant and operator context
 - show JWT role and permission claims for display
 - sign out through the backend auth-session revocation endpoint
+- sign out all current-user sessions through the backend bulk revocation endpoint
 - render the first read-only workflow screen at `/tickets` using the current tenant ticket queue
 - expose navigation placeholders for Approvals, Imports, AI Interactions, and Feature Flags
 
@@ -51,7 +52,7 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-The frontend calls `/api/v1/auth/login`, `/api/v1/context`, `/api/v1/auth/logout`, and `/api/v1/tickets?page=0&size=10` with relative `/api/...` paths. During local development, Vite proxies those calls to `http://localhost:8080`.
+The frontend calls `/api/v1/auth/login`, `/api/v1/context`, `/api/v1/auth/logout`, `/api/v1/auth/logout-all`, and `/api/v1/tickets?page=0&size=10` with relative `/api/...` paths. During local development, Vite proxies those calls to `http://localhost:8080`.
 
 ## Start The Production-Like Admin Runtime
 
@@ -77,7 +78,8 @@ The API container uses `SPRING_PROFILES_ACTIVE=runtime`. Required secrets and cr
 5. Confirm Approvals, Imports, AI Interactions, and Feature Flags remain disabled placeholders.
 6. Refresh `/tickets` and confirm context plus tickets reload without returning to login.
 7. Select `Sign out` and confirm the app returns to the login screen.
-8. Reusing the signed-out token against `/api/v1/context` should return `401`.
+8. Log in again, select `Sign out all sessions`, and confirm the app returns to the login screen.
+9. Reusing a signed-out token against `/api/v1/context` should return `401`.
 
 The seeded `admin`, `ops`, and `viewer` users all have `TICKET_READ` and can load the read-only queue.
 
@@ -93,7 +95,8 @@ Minimum acceptance:
 4. Open `Tickets` and confirm the queue loads through same-origin `/api/v1/tickets?page=0&size=10`.
 5. Refresh `/tickets` and confirm context restores while the server-side session is active.
 6. Select `Sign out` and confirm the app returns to login.
-7. Reusing the signed-out token against `http://localhost:8081/api/v1/context` should return `401`.
+7. Log in again, select `Sign out all sessions`, and confirm the app returns to login.
+8. Reusing a signed-out token against `http://localhost:8081/api/v1/context` should return `401`.
 
 ## Current Session Limits
 
@@ -101,7 +104,9 @@ The frontend stores the JWT access token in `localStorage` for this baseline. It
 
 Login creates a server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context and tickets query caches, and returns to login even if the logout request fails or the token is already invalid.
 
-A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, or logout-all-devices flow in this slice. When the access token expires or the server-side session is invalid, the user must log in again.
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, then the frontend clears the same local token and query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
+
+A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, session list, device metadata, or selective device logout in this slice. When the access token expires or the server-side session is invalid, the user must log in again.
 
 The production-like runtime keeps the same bearer-token model and uses same-origin reverse proxying instead of CORS.
 

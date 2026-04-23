@@ -2,7 +2,7 @@
 
 Vite + React admin console for the Productization Baseline.
 
-This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend sign-out, and the first read-only workflow screen: the current tenant tickets queue. Approvals, Imports, AI Interactions, and Feature Flags remain navigation placeholders.
+This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, and the first read-only workflow screen: the current tenant tickets queue. Approvals, Imports, AI Interactions, and Feature Flags remain navigation placeholders.
 
 ## Stack
 
@@ -75,6 +75,7 @@ The admin console calls:
 - `POST /api/v1/auth/login`
 - `GET /api/v1/context`
 - `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/logout-all`
 - `GET /api/v1/tickets?page=0&size=10`
 
 Roles and permissions displayed in the dashboard are decoded from JWT claims for operator visibility only. They are not used as an authorization source.
@@ -89,7 +90,9 @@ On page refresh, the app restores the token, refetches `/api/v1/context`, and cl
 
 Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context and tickets query caches, and returns to login even if the logout request fails.
 
-A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, or logout-all-devices flow in this slice. When the access token expires or the server-side session is invalid, sign in again.
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token and query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
+
+A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, session list, device metadata, or selective device logout in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
 ## Verification
 
@@ -109,7 +112,8 @@ Manual smoke:
 6. Open `Tickets` from the sidebar and confirm `/tickets` renders the current tenant queue from `/api/v1/tickets?page=0&size=10`.
 7. Refresh `/tickets` and confirm context plus tickets reload while the session is active.
 8. Use `Sign out` and confirm the app returns to login.
-9. Reusing the signed-out token against `/api/v1/context` should return `401`.
+9. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
+10. Reusing a signed-out token against `/api/v1/context` should return `401`.
 
 Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the same `/tickets` route through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
 

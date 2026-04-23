@@ -4,6 +4,7 @@
 
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/logout-all`
 - `GET /api/v1/user/me`
 - `GET /api/v1/context`
 - `GET /api/v1/roles` (requires `USER_WRITE`; see [user-management.md](user-management.md))
@@ -130,11 +131,12 @@ Password handling note:
 
 ## Logout Flow
 
-Endpoint:
+Endpoints:
 
-- `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/logout` revokes only the current `sid` session.
+- `POST /api/v1/auth/logout-all` revokes every `ACTIVE` session for the authenticated user in the current tenant, including the current session.
 
-Behavior:
+Current-session logout behavior:
 
 - requires `Authorization: Bearer <accessToken>`
 - revokes only the current `sid` session by setting `status=REVOKED` and `revoked_at`
@@ -142,6 +144,15 @@ Behavior:
 - returns `200` with the standard success envelope and `data: null`
 - reusing the same token after logout returns `401 UNAUTHORIZED` on protected endpoints such as `/api/v1/context`
 - stale tenant, user, role, or permission state follows the same protected-request `403 FORBIDDEN` rules as other authenticated endpoints
+
+Logout-all behavior:
+
+- requires `Authorization: Bearer <accessToken>`
+- bulk-revokes all `ACTIVE` sessions for the current `tenantId + userId` by setting `status=REVOKED` and a shared `revoked_at`
+- includes the caller's current session
+- does not revoke sessions for other users or other tenants
+- returns `200` with the standard success envelope and `data: null`
+- every previously active token for the same current user returns `401 UNAUTHORIZED` on the next protected request
 
 Success response:
 
@@ -157,7 +168,7 @@ Deferred lifecycle scope:
 
 - there is no refresh token in this slice
 - there is no cookie/session rotation in this slice
-- there is no logout-all-devices flow in this slice
+- there is no session list, device metadata, selective device logout, or logout-all-except-current flow in this slice
 - a background auth-session cleanup scheduler now deletes only retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions
 - after the access token expires, the user must log in again
 
@@ -225,6 +236,9 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
 LOGOUT_TOKEN=<paste-accessToken-from-logout-check-login-response>
 curl -i -X POST -H "Authorization: Bearer $LOGOUT_TOKEN" http://localhost:8080/api/v1/auth/logout
 curl -i -H "Authorization: Bearer $LOGOUT_TOKEN" http://localhost:8080/api/v1/context
+LOGOUT_ALL_TOKEN=<paste-accessToken-from-logout-all-check-login-response>
+curl -i -X POST -H "Authorization: Bearer $LOGOUT_ALL_TOKEN" http://localhost:8080/api/v1/auth/logout-all
+curl -i -H "Authorization: Bearer $LOGOUT_ALL_TOKEN" http://localhost:8080/api/v1/context
 ```
 
 PowerShell:
@@ -260,6 +274,9 @@ curl.exe -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: ap
 $logoutToken = "<paste-accessToken-from-logout-check-login-response>"
 curl.exe -i -X POST -H "Authorization: Bearer $logoutToken" http://localhost:8080/api/v1/auth/logout
 curl.exe -i -H "Authorization: Bearer $logoutToken" http://localhost:8080/api/v1/context
+$logoutAllToken = "<paste-accessToken-from-logout-all-check-login-response>"
+curl.exe -i -X POST -H "Authorization: Bearer $logoutAllToken" http://localhost:8080/api/v1/auth/logout-all
+curl.exe -i -H "Authorization: Bearer $logoutAllToken" http://localhost:8080/api/v1/context
 ```
 
 ## Core Response Examples
@@ -572,7 +589,7 @@ Current notes:
 
 ## Expected RBAC Behavior
 
-- any authenticated active session can call `POST /api/v1/auth/logout` for its own session
+- any authenticated active session can call `POST /api/v1/auth/logout` for its own session or `POST /api/v1/auth/logout-all` for all active sessions of the same current tenant/user
 - `admin` can access `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `GET /api/v1/ai-interactions/usage-summary`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, `POST /api/v1/import-jobs`, `POST /api/v1/import-jobs/{id}/replay-failures`, `POST /api/v1/import-jobs/{id}/replay-file`, `POST /api/v1/import-jobs/{id}/replay-failures/selective`, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/import-jobs/{id}/replay-failures/edited`, `GET /api/v1/feature-flags`, `PUT /api/v1/feature-flags/{key}`, `/api/v1/rbac/users`, and `/api/v1/rbac/users/manage`
 - `ops` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `GET /api/v1/ai-interactions/usage-summary`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, and `/api/v1/rbac/users`
 - `viewer` can access `GET /api/v1/users`, `GET /api/v1/users/{id}`, `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `GET /api/v1/ai-interactions/usage-summary`, `GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`, and `/api/v1/rbac/users`
@@ -589,12 +606,12 @@ Approval routing notes:
 - `ops` can create ticket comment proposals and can review `TICKET_COMMENT_CREATE` requests because the role carries `TICKET_WRITE`, but still cannot review `USER_STATUS_DISABLE` or `IMPORT_JOB_SELECTIVE_REPLAY` without `USER_WRITE`
 - `viewer` can read only the approval action types exposed by its read permissions and cannot approve or reject any approval request
 
-The automated suite now covers the login -> server-side session -> JWT -> `/api/v1/context`, `/api/v1/auth/logout`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`), `/api/v1/feature-flags` (`GET` and `PUT`), `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, `POST /comments`, and `POST /comments/proposals/ai-reply-draft`), `/api/v1/ai-interactions/usage-summary`, the current import read / AI read surface (`GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`), plus the Week 8 import and ticket proposal/approval paths (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and the shared approval review endpoints) permission paths end to end, including active auth-session creation, required `sid` parsing, sidless token rejection, revoked-session rejection, expired-session rejection, retention-window auth-session cleanup of old `ACTIVE` and `REVOKED` rows, old-token `401` behavior after cleanup, independent multi-session behavior, inactive-tenant rejection, disabled-user rejection, stale-claim rejection, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, mixed-action approval visibility, ticket status-transition rejection, import-job tenant isolation, tenant AI usage-summary isolation, approval self-review rejection, feature-flag `403` and stale-claim re-login coverage, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, Swagger authorization behavior, and the remaining RBAC demo endpoints.
+The automated suite now covers the login -> server-side session -> JWT -> `/api/v1/context`, `/api/v1/auth/logout`, `/api/v1/auth/logout-all`, `/api/v1/users` (`GET`, `GET /{id}`, `POST`, `PUT`, `PATCH`, and `PUT /api/v1/users/{id}/roles`), `/api/v1/feature-flags` (`GET` and `PUT`), `/api/v1/tickets` (`GET`, `GET /{id}`, `POST`, `PATCH /assignee`, `PATCH /status`, `POST /comments`, and `POST /comments/proposals/ai-reply-draft`), `/api/v1/ai-interactions/usage-summary`, the current import read / AI read surface (`GET /api/v1/import-jobs`, `GET /api/v1/import-jobs/{id}`, `GET /api/v1/import-jobs/{id}/errors`, `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`), plus the Week 8 import and ticket proposal/approval paths (`POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and the shared approval review endpoints) permission paths end to end, including active auth-session creation, required `sid` parsing, sidless token rejection, revoked-session rejection, expired-session rejection, retention-window auth-session cleanup of old `ACTIVE` and `REVOKED` rows, old-token `401` behavior after cleanup, independent multi-session behavior, logout-all same-user token invalidation with other-user and other-tenant preservation, inactive-tenant rejection, disabled-user rejection, stale-claim rejection, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, mixed-action approval visibility, ticket status-transition rejection, import-job tenant isolation, tenant AI usage-summary isolation, approval self-review rejection, feature-flag `403` and stale-claim re-login coverage, and re-login with refreshed permissions. Manual permission verification is still necessary for `/api/v1/user/me`, Swagger authorization behavior, and the remaining RBAC demo endpoints.
 
 ## Current Public RBAC Boundary
 
 - Swagger currently exposes `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles` under the `User Management` tag
-- Swagger exposes `POST /api/v1/auth/login` and `POST /api/v1/auth/logout` under the `Authentication` tag
+- Swagger exposes `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, and `POST /api/v1/auth/logout-all` under the `Authentication` tag
 - Swagger exposes `GET /api/v1/roles` under the `Role Management` tag
 - Swagger exposes `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` under the `Feature Flags` tag
 - Swagger exposes `GET /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/tickets`, `PATCH /api/v1/tickets/{id}/assignee`, `PATCH /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, and `POST /api/v1/tickets/{id}/comments` under the `Ticket Workflow` tag

@@ -19,6 +19,10 @@ public interface AuthSessionUseCase {
                        Long userId,
                        LocalDateTime revokedAt);
 
+    int revokeAllSessions(Long tenantId,
+                          Long userId,
+                          LocalDateTime revokedAt);
+
     int cleanupExpiredOrRevokedSessions(LocalDateTime now,
                                         long retentionSeconds,
                                         int batchSize);

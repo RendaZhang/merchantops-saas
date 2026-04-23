@@ -63,4 +63,12 @@ public class AuthService {
                 LocalDateTime.now()
         );
     }
+
+    public int logoutAll(CurrentUser currentUser) {
+        return authSessionUseCase.revokeAllSessions(
+                currentUser.getTenantId(),
+                currentUser.getUserId(),
+                LocalDateTime.now()
+        );
+    }
 }

@@ -1,25 +1,25 @@
 # Automated Tests
 
-Last updated: 2026-04-22
+Last updated: 2026-04-23
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-22:
+Latest local default regression result on 2026-04-23:
 
 - `BUILD SUCCESS`
-- `merchantops-api` module summary: `Tests run: 425, Failures: 0, Errors: 0, Skipped: 1`
+- `merchantops-api` module summary: `Tests run: 427, Failures: 0, Errors: 0, Skipped: 1`
 
 Latest focused Productization Baseline Slice F ticket workflow result on 2026-04-19:
 
 - `.\mvnw.cmd -pl merchantops-api -am -Dtest=TicketWorkflowIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
 - `Tests run: 31, Failures: 0, Errors: 0, Skipped: 0`
 
-Latest focused Productization Baseline Slice G-A auth/RBAC result on 2026-04-22:
+Latest focused Productization Baseline Slice G-B1 auth/RBAC result on 2026-04-23:
 
 - `.\mvnw.cmd -pl merchantops-api -am -Dtest=AuthSecurityIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
-- `Tests run: 41, Failures: 0, Errors: 0, Skipped: 0`
+- `Tests run: 43, Failures: 0, Errors: 0, Skipped: 0`
 
 Latest local Docker image build and runtime migration result on 2026-04-22:
 
@@ -29,7 +29,7 @@ Latest local Docker image build and runtime migration result on 2026-04-22:
 - admin runtime `http://localhost:8081/` returned `200`
 - same-origin login, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, `POST /api/v1/auth/logout`, and old-token `401` checks succeeded through `http://localhost:8081/api/...`
 
-Latest Productization Baseline frontend workspace result on 2026-04-18:
+Latest Productization Baseline frontend workspace result on 2026-04-23:
 
 - `npm run typecheck` from `merchantops-admin-web` completed successfully
 - `npm run lint` from `merchantops-admin-web` completed successfully
@@ -112,9 +112,9 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, and root ticket actor tenant-integrity hardening. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, and root ticket actor tenant-integrity hardening. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
-- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, logout revocation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
 - real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
@@ -146,7 +146,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
   - JWT claim generation and parsing for tenant, role, permission, and required `sid` data
-  - server-side `auth_session` creation, future expiry, bad-credential no-session behavior, active-session `/api/v1/context`, current-session logout revocation, same-token-after-logout `401`, sidless signed token `401`, manually expired session `401`, retention-window cleanup of expired `ACTIVE` and old `REVOKED` rows, cleanup batch-size enforcement, recently revoked session retention, old-token `401` after cleanup, and independent multi-session behavior
+  - server-side `auth_session` creation, future expiry, bad-credential no-session behavior, active-session `/api/v1/context`, current-session logout revocation, same-token-after-logout `401`, logout-all same-user token invalidation, logout-all other-user and other-tenant preservation, sidless signed token `401`, manually expired session `401`, retention-window cleanup of expired `ACTIVE` and old `REVOKED` rows, cleanup batch-size enforcement, recently revoked session retention, old-token `401` after cleanup, and independent multi-session behavior
   - database-level rejection when a `user_role` row tries to bind a user from one tenant to a role from another tenant
   - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `GET /api/v1/feature-flags`
   - `401` when Bearer token is missing or invalid
@@ -477,7 +477,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/auth/logout-all` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - Dockerized same-origin admin + API runtime smoke; CI verifies image builds only
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)

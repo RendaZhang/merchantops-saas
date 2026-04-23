@@ -30,4 +30,19 @@ public interface AuthSessionRepository extends JpaRepository<AuthSessionEntity, 
     @Modifying
     @Query("delete from AuthSessionEntity a where a.id in :ids")
     int deleteByIdIn(@Param("ids") List<Long> ids);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update AuthSessionEntity a
+            set a.status = :revokedStatus,
+                a.revokedAt = :revokedAt
+            where a.tenantId = :tenantId
+              and a.userId = :userId
+              and a.status = :activeStatus
+            """)
+    int revokeActiveSessionsForUser(@Param("tenantId") Long tenantId,
+                                    @Param("userId") Long userId,
+                                    @Param("activeStatus") String activeStatus,
+                                    @Param("revokedStatus") String revokedStatus,
+                                    @Param("revokedAt") LocalDateTime revokedAt);
 }
