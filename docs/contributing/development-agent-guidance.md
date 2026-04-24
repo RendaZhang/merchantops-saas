@@ -207,6 +207,7 @@ For future repository additions:
 - permission enforcement stays at controller/interceptor level, not repository level
 - protected JWT requests that depend on current roles or permissions must reject stale claims after status, role, or permission changes
 - when access changes are supposed to take effect immediately, do not treat successful re-login alone as sufficient verification; the pre-change token must also be rejected on the next protected request
+- for revoke-style auth UI actions such as logout or logout-all, only show success wording when the backend confirmed the revoke request; if the frontend clears local session state after a failed revoke-style call, keep the user-visible message explicit that server-side revocation may not have happened
 
 ### Extension Checklist
 

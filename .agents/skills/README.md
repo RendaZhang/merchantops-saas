@@ -9,6 +9,7 @@ Current skills:
 - [release-tag-prep/SKILL.md](release-tag-prep/SKILL.md): prepare or finalize release-tag documentation, changelog text, milestone baselines, and open-source release-cut docs.
 - [import-surface-sync/SKILL.md](import-surface-sync/SKILL.md): align import workflow docs, approval-backed import execution bridge docs, import AI docs, examples, runbooks, and milestone text with the current public import surface.
 - [ai-ticket-surface-sync/SKILL.md](ai-ticket-surface-sync/SKILL.md): align public ticket AI docs, provider/runtime wording, runbooks, examples, and milestone text with the current public ticket AI surface.
+- [auth-surface-sync/SKILL.md](auth-surface-sync/SKILL.md): align login/logout/logout-all, JWT `sid`, auth-session cleanup, admin auth UX wording, auth examples, runbooks, and phase docs with the current public auth surface.
 - [tdr-last-cycle/SKILL.md](tdr-last-cycle/SKILL.md): iterate `TT last`, `DOC last`, and `RR last` against the most recent commit until no fixable findings remain.
 
 Keep repo-local skills concise. Prefer linking existing repository docs over copying long rules into skill files.

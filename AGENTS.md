@@ -50,6 +50,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md): milestone and release-tag documentation preparation, open-source release-cut work, and post-tag cleanup
 - [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md): align import workflow docs, approval-backed import execution bridge docs, import AI docs, examples, runbooks, and milestone text with the current public import surface
 - [`.agents/skills/ai-ticket-surface-sync/SKILL.md`](.agents/skills/ai-ticket-surface-sync/SKILL.md): align public ticket AI docs, provider/runtime wording, runbooks, examples, and milestone text with the current public ticket AI surface
+- [`.agents/skills/auth-surface-sync/SKILL.md`](.agents/skills/auth-surface-sync/SKILL.md): align login/logout/logout-all, JWT `sid`, auth-session cleanup, admin auth UX wording, auth examples, runbooks, and phase docs with the current public auth surface
 - [`.agents/skills/tdr-last-cycle/SKILL.md`](.agents/skills/tdr-last-cycle/SKILL.md): run the `TT last`, `DOC last`, `RR last` cleanup loop against the most recent commit until no fixable findings remain
 
 ## Documentation Role
@@ -66,6 +67,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Use [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md) when the task is centered on `DOC staged`, `DOC last`, Swagger-visible doc sync, or documentation routing after implementation changes.
 - Use [`.agents/skills/import-surface-sync/SKILL.md`](.agents/skills/import-surface-sync/SKILL.md) when the task is centered on import endpoints, replay modes, `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, import AI endpoints, import AI runbooks, or import-specific doc alignment across reference, approval docs, AI docs, examples, and milestone pages.
 - Use [`.agents/skills/ai-ticket-surface-sync/SKILL.md`](.agents/skills/ai-ticket-surface-sync/SKILL.md) when the task is centered on `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, or ticket-only AI provider/runtime and runbook alignment across the current public ticket AI surface.
+- Use [`.agents/skills/auth-surface-sync/SKILL.md`](.agents/skills/auth-surface-sync/SKILL.md) when the task is centered on `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/logout-all`, JWT `sid`, `auth_session` cleanup behavior, or admin-console sign-out / restore wording that must stay aligned across auth reference docs, admin docs, runbooks, examples, and phase pages.
 - When the task is centered on shared AI governance reads or wording that spans both ticket and import AI, prefer [`.agents/skills/doc-staged-sync/SKILL.md`](.agents/skills/doc-staged-sync/SKILL.md) unless the change is clearly ticket-only or import-only.
 - Use [`.agents/skills/release-tag-prep/SKILL.md`](.agents/skills/release-tag-prep/SKILL.md) and [`.agents/skills/phase-status-sync/SKILL.md`](.agents/skills/phase-status-sync/SKILL.md) together when the task is centered on the final release-doc sync across status, roadmap, plan, changelog, README, and release-versioning.
 - Shortcut prefix: `DOC`
@@ -110,6 +112,7 @@ This repository currently organizes handoff rules around five roles plus a small
 - Read [docs/contributing/java-code-style.md](docs/contributing/java-code-style.md) before large package refactors, shared-support extraction, or Java style cleanup.
 - Read [docs/architecture/java-architecture-map.md](docs/architecture/java-architecture-map.md) before moving Java types across modules or capability packages.
 - This is a multi-module Maven repository. When `merchantops-api` depends on sibling-module changes, prefer reactor commands with `-am`; before standalone `spring-boot:run` or API-only verification after repository/entity/signature changes, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first so local SNAPSHOT dependencies are current.
+- Keep security-sensitive auth UI wording aligned with server-confirmed outcomes; use the linked development guidance for revoke-style fallback wording.
 - Keep tenant scoping explicit and keep query/write models separated.
 - On mixed-action approval surfaces, route queue/detail/approve/reject authorization by approval action capability instead of hard-coding a controller-wide `USER_*` gate.
 - Use the linked development guidance for detailed rules on `operatorId` / `requestId` propagation, internal attribution fields, and request-time access revalidation.

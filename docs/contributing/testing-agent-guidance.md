@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-04-23
+Last updated: 2026-04-24
 
 ## Purpose
 
@@ -19,9 +19,10 @@ When you take over an in-flight change set, use this order:
 5. If the staged change touches CI workflow files, compare the workflow commands against [../runbooks/automated-tests.md](../runbooks/automated-tests.md) and keep the documented CI boundary explicit.
 6. If the staged change touches AI provider wiring, `.env` loading, provider selection, or live vendor compatibility, use [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md) plus [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md) after the normal non-AI smoke path when needed. When the same change also targets Docker delivery or explicit container env injection, prefer running the summary-first live smoke against the Dockerized API path instead of switching back to `spring-boot:run`.
 7. If the staged change adds or edits a Flyway migration, verify the intended schema/data effect against the real local MySQL path rather than trusting only H2 or manually-created test schemas.
-8. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
-9. If the staged change affects status, roles, permissions, or JWT-claim propagation, verify both the stale-token rejection path and the refreshed-login success path before signing off.
-10. Report concrete findings first. Keep summaries and changelog-style recap secondary.
+8. If the staged change hardens schema invariants, composite foreign keys, or tenant-integrity constraints, update every hand-written H2 schema and seed helper that creates the touched tables before trusting focused regression; Flyway-backed production changes do not automatically update manual fixtures.
+9. Use unique generated usernames for write-path smoke tests and clean `user_role` rows before deleting the corresponding `users` rows.
+10. If the staged change affects status, roles, permissions, or JWT-claim propagation, verify both the stale-token rejection path and the refreshed-login success path before signing off.
+11. Report concrete findings first. Keep summaries and changelog-style recap secondary.
 
 ## `TT staged` Expectations
 
