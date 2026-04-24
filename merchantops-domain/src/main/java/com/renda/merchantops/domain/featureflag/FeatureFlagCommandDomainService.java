@@ -17,25 +17,26 @@ public class FeatureFlagCommandDomainService implements FeatureFlagCommandUseCas
     public FeatureFlagWriteResult updateFlag(Long tenantId, Long operatorId, String key, UpdateFeatureFlagCommand command) {
         Long resolvedTenantId = requireTenantId(tenantId);
         Long resolvedOperatorId = requireOperatorId(operatorId);
-        String resolvedKey = FeatureFlagKey.fromKey(key)
-                .map(FeatureFlagKey::key)
+        FeatureFlagKey resolvedFeatureFlag = FeatureFlagKey.fromKey(key)
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "feature flag not found"));
+        String resolvedKey = resolvedFeatureFlag.key();
         boolean enabled = requireEnabled(command == null ? null : command.enabled());
         ManagedFeatureFlag current = featureFlagCommandPort.findByKeyForUpdate(resolvedTenantId, resolvedKey)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "feature flag not found"));
+                .orElseGet(() -> resolvedFeatureFlag.defaultManagedFlag(resolvedTenantId));
 
         if (current.enabled() == enabled) {
             return FeatureFlagWriteResult.noChange(toItem(current));
         }
 
+        LocalDateTime now = LocalDateTime.now();
         ManagedFeatureFlag saved = featureFlagCommandPort.save(new ManagedFeatureFlag(
                 current.id(),
                 current.tenantId(),
                 current.key(),
                 enabled,
                 resolvedOperatorId,
-                current.createdAt(),
-                LocalDateTime.now()
+                current.createdAt() == null ? now : current.createdAt(),
+                now
         ));
         return FeatureFlagWriteResult.mutated(toItem(current), toItem(saved));
     }

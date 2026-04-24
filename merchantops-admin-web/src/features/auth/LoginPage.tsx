@@ -40,6 +40,7 @@ export function LoginPage() {
     onSuccess: (response) => {
       saveAuthSession(response)
       queryClient.removeQueries({ queryKey: ['context'] })
+      queryClient.removeQueries({ queryKey: ['tickets'] })
       navigate('/', { replace: true })
     },
   })

@@ -377,10 +377,15 @@ GET {{baseUrl}}/api/v1/rbac/users/manage
 Authorization: Bearer {{token}}
 
 ### Feature flags - list
+# For a tenant with no persisted feature_flag rows yet, this still returns the
+# fixed eight-key inventory as default-enabled items.
 GET {{baseUrl}}/api/v1/feature-flags
 Authorization: Bearer {{token}}
 
 ### Feature flags - disable ticket AI summary
+# If the current tenant does not have a stored row for this known key yet, this
+# update creates that row from the default inventory baseline before applying
+# `"enabled": false`.
 PUT {{baseUrl}}/api/v1/feature-flags/ai.ticket.summary.enabled
 Authorization: Bearer {{token}}
 Content-Type: {{contentType}}

@@ -141,10 +141,10 @@ Feature Flags tag note:
 
 - Swagger currently exposes `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`.
 - both endpoints require `FEATURE_FLAG_MANAGE`.
-- the list response returns the current tenant's fixed flag rows in stable `key ASC` order.
-- each item exposes `id`, `key`, `enabled`, and `updatedAt`.
+- the list response returns the current tenant's fixed eight-key flag inventory in stable `key ASC` order.
+- each item exposes `id`, `key`, `enabled`, and `updatedAt`; missing known rows are synthesized as default-enabled items with `id=null` and `updatedAt=null`.
 - the current fixed flag set covers six AI generation endpoints plus the two Week 8 workflow proposal bridges.
-- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, rejects `enabled=null` with `400`, returns `404` for an unknown key, and is idempotent when the requested state is unchanged.
+- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, rejects `enabled=null` with `400`, returns `404` for an unknown key, creates a missing known row for the current tenant from the default inventory baseline when needed, and is idempotent when the requested state is unchanged.
 - the feature-flag API does not manage config-level `merchantops.ai.enabled`; that remains a separate deployment setting.
 - See [feature-flags.md](feature-flags.md) for the current fixed-key inventory and rollout-control boundary.
 

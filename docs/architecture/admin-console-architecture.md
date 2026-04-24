@@ -54,7 +54,7 @@ The `/tickets` route renders the first page of the current tenant ticket queue a
 
 The frontend stores the access token in `localStorage` under `merchantops.admin.auth.v1`, together with a client-side expiry timestamp derived from the login response `expiresIn`.
 
-Refresh restores the token and refetches `/api/v1/context`. Protected route data requests such as `/api/v1/context` and `/api/v1/tickets` clear the local token and send the user back to login on expired local sessions, invalid stored sessions, `401`, or `403`.
+Refresh restores the token and refetches `/api/v1/context`. Protected route data requests such as `/api/v1/context` and `/api/v1/tickets` clear the local token and send the user back to login on expired local sessions, invalid stored sessions, `401`, or the current auth-ending `403` responses `tenant is not active`, `user is not active`, and `token claims are stale, please login again`. A generic permission `403` is not treated as session expiry.
 
 Login creates a backend `auth_session` row. The JWT carries a required `sid` claim, and protected backend requests validate that the session exists, belongs to the same tenant/user, is `ACTIVE`, is not revoked, and has not expired before current tenant/user/role revalidation runs.
 

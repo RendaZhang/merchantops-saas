@@ -542,11 +542,11 @@ Current notes:
 Current notes:
 
 - requires `FEATURE_FLAG_MANAGE`
-- returns the current tenant's persisted feature flags in stable `key ASC` order
-- each item exposes `id`, `key`, `enabled`, and `updatedAt`
+- returns the current tenant's fixed eight-key feature-flag inventory in stable `key ASC` order
+- each item exposes `id`, `key`, `enabled`, and `updatedAt`; missing known rows are synthesized as default-enabled items with `id=null` and `updatedAt=null`
 - the current fixed flag set covers six AI generation endpoints plus the two Week 8 workflow proposal bridges
 - `merchantops.ai.enabled` stays config-only and is not managed through this API
-- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, rejects `enabled=null` with `400 BAD_REQUEST`, returns `404` for an unknown key, and is idempotent when the requested state is unchanged
+- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, rejects `enabled=null` with `400 BAD_REQUEST`, returns `404` for an unknown key, creates a missing known row for the current tenant from the default inventory baseline when needed, and is idempotent when the requested state is unchanged
 
 ### `GET /api/v1/tickets`
 

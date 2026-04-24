@@ -100,7 +100,7 @@ Minimum acceptance:
 
 ## Current Session Limits
 
-The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context` or `/api/v1/tickets` returns `401` or `403`.
+The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context` or `/api/v1/tickets` returns `401` or one of the current auth-ending `403` messages: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. A generic permission `403` does not clear the local session.
 
 Login creates a server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context and tickets query caches, and returns to login even if the logout request fails or the token is already invalid.
 

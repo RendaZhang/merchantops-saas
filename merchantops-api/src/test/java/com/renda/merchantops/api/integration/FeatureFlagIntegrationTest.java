@@ -227,6 +227,35 @@ class FeatureFlagIntegrationTest {
     }
 
     @Test
+    void listFeatureFlagsShouldReturnDefaultsForTenantWithoutPersistedRows() throws Exception {
+        seedTenantAdminWithFeatureFlagManagePermission(3L, "fresh-shop", "Fresh Shop", 301L, "freshadmin", 31L);
+        String freshAdminToken = loginAndGetToken("fresh-shop", "freshadmin", "123456");
+
+        mockMvc.perform(get("/api/v1/feature-flags")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(freshAdminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items.length()").value(8))
+                .andExpect(jsonPath("$.data.items[*].key", contains(
+                        "ai.import.error-summary.enabled",
+                        "ai.import.fix-recommendation.enabled",
+                        "ai.import.mapping-suggestion.enabled",
+                        "ai.ticket.reply-draft.enabled",
+                        "ai.ticket.summary.enabled",
+                        "ai.ticket.triage.enabled",
+                        "workflow.import.selective-replay-proposal.enabled",
+                        "workflow.ticket.comment-proposal.enabled"
+                )))
+                .andExpect(jsonPath("$.data.items[4].enabled").value(true));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM feature_flag WHERE tenant_id = ?",
+                Integer.class,
+                3L
+        )).isZero();
+    }
+
+    @Test
     void updateFeatureFlagShouldPersistStateAndWriteAuditSnapshot() throws Exception {
         String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
 
@@ -273,6 +302,43 @@ class FeatureFlagIntegrationTest {
                 1L,
                 1L
         )).contains("\"tenantId\":1").contains("\"enabled\":false");
+    }
+
+    @Test
+    void updateFeatureFlagShouldCreateMissingRowForTenantWithoutPersistedFlags() throws Exception {
+        seedTenantAdminWithFeatureFlagManagePermission(3L, "fresh-shop", "Fresh Shop", 301L, "freshadmin", 31L);
+        String freshAdminToken = loginAndGetToken("fresh-shop", "freshadmin", "123456");
+
+        mockMvc.perform(put("/api/v1/feature-flags/ai.ticket.summary.enabled")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(freshAdminToken))
+                        .header("X-Request-Id", "feature-flag-create-missing-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"enabled":false}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.key").value("ai.ticket.summary.enabled"))
+                .andExpect(jsonPath("$.data.enabled").value(false));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                Integer.class,
+                3L,
+                "ai.ticket.summary.enabled"
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT enabled FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                Boolean.class,
+                3L,
+                "ai.ticket.summary.enabled"
+        )).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT updated_by FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                Long.class,
+                3L,
+                "ai.ticket.summary.enabled"
+        )).isEqualTo(301L);
     }
 
     @Test
@@ -562,6 +628,197 @@ class FeatureFlagIntegrationTest {
         }
     }
 
+    @Test
+    void updateFeatureFlagShouldSuppressDuplicateAuditWhenConcurrentWriterBootstrapsMissingRowToSameState() throws Exception {
+        insertTenant(3L, "fresh-shop", "Fresh Shop");
+
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch firstCompletedInsideTransaction = new CountDownLatch(1);
+        CountDownLatch secondStarted = new CountDownLatch(1);
+        CountDownLatch allowFirstCommit = new CountDownLatch(1);
+
+        try {
+            Future<FeatureFlagItemResponse> firstFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                FeatureFlagItemResponse response = featureFlagCommandService.updateFlag(
+                        3L,
+                        301L,
+                        "feature-flag-bootstrap-concurrent-1",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(false)
+                );
+                firstCompletedInsideTransaction.countDown();
+                awaitLatch(allowFirstCommit, "first bootstrap transaction should be released for commit");
+                return response;
+            }));
+
+            assertThat(firstCompletedInsideTransaction.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Future<FeatureFlagItemResponse> secondFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                secondStarted.countDown();
+                return featureFlagCommandService.updateFlag(
+                        3L,
+                        303L,
+                        "feature-flag-bootstrap-concurrent-2",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(false)
+                );
+            }));
+
+            assertThat(secondStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> secondFuture.get(500, TimeUnit.MILLISECONDS))
+                    .isInstanceOf(TimeoutException.class);
+
+            allowFirstCommit.countDown();
+
+            FeatureFlagItemResponse firstResponse = firstFuture.get(10, TimeUnit.SECONDS);
+            FeatureFlagItemResponse secondResponse = secondFuture.get(10, TimeUnit.SECONDS);
+
+            assertThat(firstResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(firstResponse.enabled()).isFalse();
+            assertThat(secondResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(secondResponse.enabled()).isFalse();
+            Timestamp finalUpdatedAt = jdbcTemplate.queryForObject(
+                    "SELECT updated_at FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Timestamp.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            );
+            assertThat(finalUpdatedAt).isNotNull();
+            assertThat(Math.abs(ChronoUnit.MICROS.between(finalUpdatedAt.toLocalDateTime(), secondResponse.updatedAt())))
+                    .isLessThanOrEqualTo(1L);
+
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Integer.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            )).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT enabled FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Boolean.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            )).isFalse();
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT updated_by FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Long.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            )).isEqualTo(301L);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED'",
+                    Integer.class,
+                    3L
+            )).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT request_id FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED'",
+                    String.class,
+                    3L
+            )).isEqualTo("feature-flag-bootstrap-concurrent-1");
+        } finally {
+            allowFirstCommit.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void updateFeatureFlagShouldApplySecondConcurrentRequestWhenBootstrapWriterTargetsOppositeState() throws Exception {
+        insertTenant(3L, "fresh-shop", "Fresh Shop");
+
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch firstCompletedInsideTransaction = new CountDownLatch(1);
+        CountDownLatch secondStarted = new CountDownLatch(1);
+        CountDownLatch allowFirstCommit = new CountDownLatch(1);
+
+        try {
+            Future<FeatureFlagItemResponse> firstFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                FeatureFlagItemResponse response = featureFlagCommandService.updateFlag(
+                        3L,
+                        301L,
+                        "feature-flag-bootstrap-opposite-1",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(false)
+                );
+                firstCompletedInsideTransaction.countDown();
+                awaitLatch(allowFirstCommit, "first bootstrap transaction should be released for commit");
+                return response;
+            }));
+
+            assertThat(firstCompletedInsideTransaction.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Future<FeatureFlagItemResponse> secondFuture = executor.submit(() -> transactionTemplate.execute(status -> {
+                secondStarted.countDown();
+                return featureFlagCommandService.updateFlag(
+                        3L,
+                        303L,
+                        "feature-flag-bootstrap-opposite-2",
+                        "ai.ticket.summary.enabled",
+                        new FeatureFlagUpdateRequest(true)
+                );
+            }));
+
+            assertThat(secondStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> secondFuture.get(500, TimeUnit.MILLISECONDS))
+                    .isInstanceOf(TimeoutException.class);
+
+            allowFirstCommit.countDown();
+
+            FeatureFlagItemResponse firstResponse = firstFuture.get(10, TimeUnit.SECONDS);
+            FeatureFlagItemResponse secondResponse = secondFuture.get(10, TimeUnit.SECONDS);
+
+            assertThat(firstResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(firstResponse.enabled()).isFalse();
+            assertThat(secondResponse.key()).isEqualTo("ai.ticket.summary.enabled");
+            assertThat(secondResponse.enabled()).isTrue();
+            Timestamp finalUpdatedAt = jdbcTemplate.queryForObject(
+                    "SELECT updated_at FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Timestamp.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            );
+            assertThat(finalUpdatedAt).isNotNull();
+            assertThat(Math.abs(ChronoUnit.MICROS.between(finalUpdatedAt.toLocalDateTime(), secondResponse.updatedAt())))
+                    .isLessThanOrEqualTo(1L);
+
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Integer.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            )).isEqualTo(1);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT enabled FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Boolean.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            )).isTrue();
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT updated_by FROM feature_flag WHERE tenant_id = ? AND flag_key = ?",
+                    Long.class,
+                    3L,
+                    "ai.ticket.summary.enabled"
+            )).isEqualTo(303L);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED'",
+                    Integer.class,
+                    3L
+            )).isEqualTo(2);
+            assertThat(jdbcTemplate.queryForList(
+                    "SELECT request_id FROM audit_event WHERE tenant_id = ? AND entity_type = 'FEATURE_FLAG' AND action_type = 'FEATURE_FLAG_UPDATED' ORDER BY id",
+                    String.class,
+                    3L
+            )).containsExactly(
+                    "feature-flag-bootstrap-opposite-1",
+                    "feature-flag-bootstrap-opposite-2"
+            );
+        } finally {
+            allowFirstCommit.countDown();
+            executor.shutdownNow();
+        }
+    }
+
     private void seedTenants() {
         jdbcTemplate.update("""
                 INSERT INTO tenant (id, tenant_code, tenant_name, status, created_at, updated_at)
@@ -688,6 +945,37 @@ class FeatureFlagIntegrationTest {
                 INSERT INTO feature_flag (id, tenant_id, flag_key, enabled, updated_by, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """, id, tenantId, key, enabled, tenantId == 1L ? 101L : 201L);
+    }
+
+    private void insertTenant(Long id, String tenantCode, String tenantName) {
+        jdbcTemplate.update("""
+                INSERT INTO tenant (id, tenant_code, tenant_name, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, id, tenantCode, tenantName, "ACTIVE");
+    }
+
+    private void seedTenantAdminWithFeatureFlagManagePermission(Long tenantId,
+                                                                String tenantCode,
+                                                                String tenantName,
+                                                                Long userId,
+                                                                String username,
+                                                                Long roleId) {
+        jdbcTemplate.update("""
+                INSERT INTO tenant (id, tenant_code, tenant_name, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, tenantId, tenantCode, tenantName, "ACTIVE");
+        insertRole(roleId, tenantId, "TENANT_ADMIN", "Tenant Admin");
+        insertUser(
+                userId,
+                tenantId,
+                username,
+                passwordEncoder.encode("123456"),
+                tenantName + " Admin",
+                username + "@" + tenantCode + ".local",
+                "ACTIVE"
+        );
+        insertUserRole(tenantId * 10000 + 1, userId, roleId);
+        insertRolePermission(tenantId * 10000 + 2, roleId, 5L);
     }
 
     private String loginAndGetToken(String tenantCode, String username, String password) throws Exception {

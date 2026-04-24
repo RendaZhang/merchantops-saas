@@ -86,7 +86,7 @@ The Tickets route is available at `/tickets`. It renders the first page of the c
 
 The app stores the JWT access token in `localStorage` under `merchantops.admin.auth.v1` with a client-side expiry timestamp derived from `expiresIn`.
 
-On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or `403` responses. Ticket queue `401` or `403` responses use the same session-ended path.
+On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or one of the current auth-ending `403` responses: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. Ticket queue requests use the same session-ended path only for `401` and those auth-ending `403` cases; a generic permission `403` is not treated as session expiry.
 
 Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context and tickets query caches, and returns to login even if the logout request fails.
 

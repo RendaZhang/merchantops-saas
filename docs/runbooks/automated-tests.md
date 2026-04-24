@@ -116,7 +116,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 
 - auth and permission checks for login, server-side auth-session creation, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
-- real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
+- real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including the fixed eight-key default inventory for tenants without persisted rows, missing-row create-on-update behavior, `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-request-key hardening across disable, import replay proposal, and ticket comment proposal flows
@@ -169,8 +169,8 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
   - user writes emit `audit_event` rows when `X-Request-Id` is present
   - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
 - `FeatureFlagIntegrationTest`
-- real `GET /api/v1/feature-flags` happy path with stable `key ASC` ordering and the current tenant's fixed eight-row contract
-- real `PUT /api/v1/feature-flags/{key}` happy path with persisted state change plus `FEATURE_FLAG_UPDATED` audit snapshot
+- real `GET /api/v1/feature-flags` happy path with stable `key ASC` ordering, the current tenant's fixed eight-key contract, and default-enabled synthesized items for tenants without persisted rows
+- real `PUT /api/v1/feature-flags/{key}` happy path with persisted state change, missing-row create-on-update behavior for a known key, and `FEATURE_FLAG_UPDATED` audit snapshot
 - `403` when `FEATURE_FLAG_MANAGE` is missing and `404` for an unknown key
 - `400` when `enabled` is `null`, including the previously disabled-flag path where idempotent short-circuit no longer hides invalid input
 - concurrent already-applied update behavior returns the final persisted row and emits no duplicate `FEATURE_FLAG_UPDATED` audit row
@@ -179,7 +179,9 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 - `FeatureFlagCommandServiceTest`
   - API service uses the domain-provided `after` snapshot and skips audit when the domain layer reports no mutation after a concurrent already-applied update
 - `FeatureFlagCommandDomainServiceTest`
-  - domain write results preserve explicit `before` / `after` snapshots and distinguish true mutations from no-change outcomes without forcing a redundant save
+  - domain write results preserve explicit `before` / `after` snapshots, including missing-row bootstrap from the default-enabled inventory, and distinguish true mutations from no-change outcomes without forcing a redundant save
+- `FeatureFlagQueryServiceTest`
+  - domain reads keep the fixed key order, synthesize default-enabled items for missing known rows, and ignore unknown stored keys
 - `ImportSelectiveReplayApprovalIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` happy path for a `USER_WRITE` user with approval-row and audit-row assertions
   - `403` when `USER_WRITE` is missing

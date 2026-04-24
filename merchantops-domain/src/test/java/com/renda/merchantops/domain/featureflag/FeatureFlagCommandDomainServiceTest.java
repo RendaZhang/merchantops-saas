@@ -53,6 +53,55 @@ class FeatureFlagCommandDomainServiceTest {
         assertThat(port.savedRequest.createdAt()).isEqualTo(port.current.createdAt());
     }
 
+    @Test
+    void updateFlagShouldCreateMissingKnownFlagFromDefaultEnabledState() {
+        RecordingFeatureFlagCommandPort port = new RecordingFeatureFlagCommandPort();
+        port.saved = new ManagedFeatureFlag(
+                9L,
+                1L,
+                "ai.ticket.summary.enabled",
+                false,
+                105L,
+                LocalDateTime.of(2026, 4, 8, 9, 0),
+                LocalDateTime.of(2026, 4, 8, 9, 0)
+        );
+        FeatureFlagCommandDomainService service = new FeatureFlagCommandDomainService(port);
+
+        FeatureFlagWriteResult result = service.updateFlag(
+                1L,
+                105L,
+                "ai.ticket.summary.enabled",
+                new UpdateFeatureFlagCommand(false)
+        );
+
+        assertThat(result.mutated()).isTrue();
+        assertThat(result.before()).isEqualTo(new FeatureFlagItem(
+                null,
+                1L,
+                "ai.ticket.summary.enabled",
+                true,
+                null,
+                null,
+                null
+        ));
+        assertThat(result.after()).isEqualTo(new FeatureFlagItem(
+                9L,
+                1L,
+                "ai.ticket.summary.enabled",
+                false,
+                105L,
+                LocalDateTime.of(2026, 4, 8, 9, 0),
+                LocalDateTime.of(2026, 4, 8, 9, 0)
+        ));
+        assertThat(port.saveCalls).isEqualTo(1);
+        assertThat(port.savedRequest).isNotNull();
+        assertThat(port.savedRequest.id()).isNull();
+        assertThat(port.savedRequest.enabled()).isFalse();
+        assertThat(port.savedRequest.updatedBy()).isEqualTo(105L);
+        assertThat(port.savedRequest.createdAt()).isNotNull();
+        assertThat(port.savedRequest.updatedAt()).isEqualTo(port.savedRequest.createdAt());
+    }
+
     private static FeatureFlagItem item(boolean enabled, Long updatedBy, LocalDateTime updatedAt) {
         return new FeatureFlagItem(
                 1L,

@@ -4,6 +4,7 @@ import com.renda.merchantops.domain.featureflag.FeatureFlagCommandPort;
 import com.renda.merchantops.domain.featureflag.ManagedFeatureFlag;
 import com.renda.merchantops.infra.persistence.entity.FeatureFlagEntity;
 import com.renda.merchantops.infra.repository.FeatureFlagRepository;
+import com.renda.merchantops.infra.repository.TenantRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Component;
@@ -14,21 +15,28 @@ import java.util.Optional;
 public class JpaFeatureFlagCommandAdapter implements FeatureFlagCommandPort {
 
     private final FeatureFlagRepository featureFlagRepository;
+    private final TenantRepository tenantRepository;
     private final EntityManager entityManager;
 
     public JpaFeatureFlagCommandAdapter(FeatureFlagRepository featureFlagRepository,
+                                        TenantRepository tenantRepository,
                                         EntityManager entityManager) {
         this.featureFlagRepository = featureFlagRepository;
+        this.tenantRepository = tenantRepository;
         this.entityManager = entityManager;
     }
 
     @Override
     public Optional<ManagedFeatureFlag> findByKeyForUpdate(Long tenantId, String key) {
-        return featureFlagRepository.findByTenantIdAndFlagKeyForUpdate(tenantId, key)
-                .map(entity -> {
-                    entityManager.refresh(entity, LockModeType.PESSIMISTIC_WRITE);
-                    return toManagedFeatureFlag(entity);
-                });
+        Optional<ManagedFeatureFlag> lockedFlag = lockFeatureFlag(tenantId, key);
+        if (lockedFlag.isPresent()) {
+            return lockedFlag;
+        }
+
+        tenantRepository.findByIdForUpdate(tenantId)
+                .orElseThrow(() -> new IllegalStateException("tenant not found for feature flag update: " + tenantId));
+
+        return lockFeatureFlag(tenantId, key);
     }
 
     @Override
@@ -42,6 +50,14 @@ public class JpaFeatureFlagCommandAdapter implements FeatureFlagCommandPort {
         entity.setCreatedAt(featureFlag.createdAt());
         entity.setUpdatedAt(featureFlag.updatedAt());
         return toManagedFeatureFlag(featureFlagRepository.save(entity));
+    }
+
+    private Optional<ManagedFeatureFlag> lockFeatureFlag(Long tenantId, String key) {
+        return featureFlagRepository.findByTenantIdAndFlagKeyForUpdate(tenantId, key)
+                .map(entity -> {
+                    entityManager.refresh(entity, LockModeType.PESSIMISTIC_WRITE);
+                    return toManagedFeatureFlag(entity);
+                });
     }
 
     private ManagedFeatureFlag toManagedFeatureFlag(FeatureFlagEntity entity) {

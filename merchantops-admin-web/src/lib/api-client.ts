@@ -13,6 +13,14 @@ import {
 } from './schemas'
 
 const SUCCESS_CODE = 'SUCCESS'
+const STALE_CLAIMS_MESSAGE = 'token claims are stale, please login again'
+const INACTIVE_TENANT_MESSAGE = 'tenant is not active'
+const INACTIVE_USER_MESSAGE = 'user is not active'
+const AUTH_ENDING_FORBIDDEN_MESSAGES = new Set([
+  STALE_CLAIMS_MESSAGE,
+  INACTIVE_TENANT_MESSAGE,
+  INACTIVE_USER_MESSAGE,
+])
 
 const apiEnvelopeSchema = <T extends ZodType>(dataSchema: T) =>
   z.object({
@@ -94,7 +102,7 @@ export async function logoutAll(): Promise<void> {
 export function isAuthenticationError(error: unknown): boolean {
   return (
     error instanceof ApiClientError &&
-    (error.status === 401 || error.status === 403 || error.code === 'AUTH_REQUIRED')
+    (error.status === 401 || error.code === 'AUTH_REQUIRED' || isAuthEndingForbiddenError(error))
   )
 }
 
@@ -129,13 +137,16 @@ async function apiRequest<T>(
   const responseBody = await parseResponseBody(response)
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
+    const errorMessage = extractErrorMessage(responseBody, response.statusText)
+    const errorCode = extractErrorCode(responseBody)
+
+    if (shouldClearAuthSession(response.status, errorCode, errorMessage)) {
       clearAuthSession()
     }
 
-    throw new ApiClientError(extractErrorMessage(responseBody, response.statusText), {
+    throw new ApiClientError(errorMessage, {
       status: response.status,
-      code: extractErrorCode(responseBody),
+      code: errorCode,
     })
   }
 
@@ -156,6 +167,26 @@ async function apiRequest<T>(
   }
 
   return parsedEnvelope.data.data as T
+}
+
+function shouldClearAuthSession(status: number, code: string | undefined, message: string): boolean {
+  return status === 401 || isAuthEndingForbiddenResponse(status, code, message)
+}
+
+function isAuthEndingForbiddenError(error: ApiClientError): boolean {
+  return isAuthEndingForbiddenResponse(error.status, error.code, error.message)
+}
+
+function isAuthEndingForbiddenResponse(
+  status: number | undefined,
+  code: string | undefined,
+  message: string,
+): boolean {
+  return (
+    status === 403 &&
+    code === 'FORBIDDEN' &&
+    AUTH_ENDING_FORBIDDEN_MESSAGES.has(message)
+  )
 }
 
 async function parseResponseBody(response: Response): Promise<unknown> {

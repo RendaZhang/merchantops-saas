@@ -1,6 +1,6 @@
 # Feature Flags
 
-Last updated: 2026-04-06
+Last updated: 2026-04-24
 
 This page describes the current public tenant-scoped feature-flag surface.
 
@@ -17,7 +17,7 @@ Current notes:
 
 - both endpoints are visible in Swagger under the `Feature Flags` tag
 - both endpoints require `FEATURE_FLAG_MANAGE` and operate on the authenticated user's current tenant
-- the list response returns one fixed persisted flag set for the current tenant in stable `key ASC` order
+- the list response returns one fixed eight-key flag inventory for the current tenant in stable `key ASC` order
 - `PUT` accepts `{ "enabled": true|false }`
 - `enabled` must not be `null`
 - `PUT` returns `404` for an unknown key
@@ -55,6 +55,7 @@ Current notes:
 
 - each row exposes `id`, `key`, `enabled`, and `updatedAt`
 - the current list is fixed-key inventory for the authenticated user's current tenant, not user-defined custom flag storage
+- when a known key has no persisted row yet for the current tenant, the API still returns that item with the default enabled state and `id=null`, `updatedAt=null`
 - the current API is tenant-scoped only; it does not expose cross-tenant admin, rollout percentage, environment-specific policy, or rule evaluation
 
 ### `PUT /api/v1/feature-flags/{key}`
@@ -84,9 +85,10 @@ Response:
 
 Current notes:
 
-- updates one fixed persisted key only
+- updates one fixed known key only
 - `enabled` must be a concrete boolean; `null` is rejected with `400 BAD_REQUEST`, message `enabled must not be null`
 - leaves unrelated keys unchanged
+- if the current tenant has no persisted row yet for the requested known key, the update path creates that row from the default inventory baseline before applying the requested boolean
 - writes an audit row only when the stored state actually changes
 - if a concurrent write already applied the requested boolean before the update path completes, the response reflects the final persisted row and emits no duplicate audit row
 - returns the same stable item shape as the list endpoint
@@ -94,7 +96,7 @@ Current notes:
 
 ## Current Fixed Flag Set
 
-The current persisted flag inventory contains exactly eight keys:
+The current fixed flag inventory contains exactly eight known keys:
 
 | Key | Current purpose |
 | --- | --- |
@@ -110,6 +112,7 @@ The current persisted flag inventory contains exactly eight keys:
 Current notes:
 
 - the six AI generation endpoints require both config-level `merchantops.ai.enabled=true` and their matching persisted flag
+- list and read behavior do not require every key to be pre-seeded as a stored row for the current tenant; missing known keys are synthesized from this fixed inventory as enabled-by-default items until first persisted update
 - the three public AI read endpoints are not gated by these persisted AI flags:
   - `GET /api/v1/tickets/{id}/ai-interactions`
   - `GET /api/v1/import-jobs/{id}/ai-interactions`

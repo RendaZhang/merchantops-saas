@@ -82,6 +82,12 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] ops cannot manage feature flags
 - [ ] admin can access all RBAC demo endpoints
 
+## Feature Flags
+
+- [ ] `GET /api/v1/feature-flags` returns the fixed eight-key inventory in stable `key ASC` order for the current tenant
+- [ ] a tenant with no persisted feature-flag rows still receives default-enabled items with no cross-tenant leakage
+- [ ] `PUT /api/v1/feature-flags/{key}` creates a missing known row for the current tenant when first changing that key
+
 ## Tenant Isolation
 
 - [ ] `/api/v1/users` returns only current-tenant users
