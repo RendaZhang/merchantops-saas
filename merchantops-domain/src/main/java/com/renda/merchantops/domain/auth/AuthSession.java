@@ -1,6 +1,6 @@
 package com.renda.merchantops.domain.auth;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AuthSession(
         Long id,
@@ -8,8 +8,8 @@ public record AuthSession(
         Long tenantId,
         Long userId,
         AuthSessionStatus status,
-        LocalDateTime createdAt,
-        LocalDateTime expiresAt,
-        LocalDateTime revokedAt
+        Instant createdAt,
+        Instant expiresAt,
+        Instant revokedAt
 ) {
 }

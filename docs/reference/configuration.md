@@ -84,6 +84,7 @@ Shared application configuration currently includes:
   - `merchantops.auth.session.cleanup.retention-seconds=604800`
   - `merchantops.auth.session.cleanup.fixed-delay-ms=3600000`
   - `merchantops.auth.session.cleanup.batch-size=100`
+  - auth-session times are persisted and evaluated as UTC instants, so changing the host or container timezone should not shift expiry or cleanup eligibility semantics
 
 ## Supported Environment Variable Overrides
 
@@ -197,6 +198,7 @@ Container runtime expectations:
 - the image exposes port `8080`
 - `MYSQL_HOST`, `REDIS_HOST`, and `RABBITMQ_HOST` should point to the compose service names when the container joins `merchantops-infra`
 - `.env` continues to provide credentials, timezone, JWT overrides, and optional AI provider overrides, but those values are injected at runtime instead of being copied into the image
+- `TZ` still affects process locale and log formatting, but auth-session validity windows are written and compared through UTC instants rather than local wall-clock offsets
 
 ## Same-Origin Admin Runtime
 
@@ -226,6 +228,8 @@ Cleanup rules are status-aware:
 
 - `ACTIVE` sessions become cleanup candidates only when `expires_at < now - retention`
 - `REVOKED` sessions become cleanup candidates only when `revoked_at < now - retention`
+
+Auth-session timestamps are now stored through `V18__store_auth_session_times_as_datetime.sql` as UTC-backed `DATETIME` columns. Login writes `created_at` and `expires_at` from UTC instants, JWT `iat` / `exp` use those same instants, and cleanup compares them in UTC so runtime timezone changes do not shift expiry or retention windows.
 
 The cleanup task deletes at most one batch per run. Disabling the task stops scheduled deletion but does not change login, logout, JWT `sid`, or protected-request auth behavior.
 

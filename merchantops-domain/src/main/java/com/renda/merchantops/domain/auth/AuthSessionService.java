@@ -1,6 +1,6 @@
 package com.renda.merchantops.domain.auth;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -15,8 +15,8 @@ public final class AuthSessionService implements AuthSessionUseCase {
     @Override
     public AuthSession createSession(Long tenantId,
                                      Long userId,
-                                     LocalDateTime createdAt,
-                                     LocalDateTime expiresAt) {
+                                     Instant createdAt,
+                                     Instant expiresAt) {
         return authSessionPort.create(
                 UUID.randomUUID().toString(),
                 tenantId,
@@ -30,7 +30,7 @@ public final class AuthSessionService implements AuthSessionUseCase {
     public boolean isSessionActive(String sessionId,
                                    Long tenantId,
                                    Long userId,
-                                   LocalDateTime now) {
+                                   Instant now) {
         return authSessionPort.findBySessionId(sessionId)
                 .filter(session -> Objects.equals(session.tenantId(), tenantId))
                 .filter(session -> Objects.equals(session.userId(), userId))
@@ -44,7 +44,7 @@ public final class AuthSessionService implements AuthSessionUseCase {
     public void revokeSession(String sessionId,
                               Long tenantId,
                               Long userId,
-                              LocalDateTime revokedAt) {
+                              Instant revokedAt) {
         authSessionPort.findBySessionId(sessionId)
                 .filter(session -> Objects.equals(session.tenantId(), tenantId))
                 .filter(session -> Objects.equals(session.userId(), userId))
@@ -56,12 +56,12 @@ public final class AuthSessionService implements AuthSessionUseCase {
     @Override
     public int revokeAllSessions(Long tenantId,
                                  Long userId,
-                                 LocalDateTime revokedAt) {
+                                 Instant revokedAt) {
         return authSessionPort.revokeActiveSessionsForUser(tenantId, userId, revokedAt);
     }
 
     @Override
-    public int cleanupExpiredOrRevokedSessions(LocalDateTime now,
+    public int cleanupExpiredOrRevokedSessions(Instant now,
                                                long retentionSeconds,
                                                int batchSize) {
         return authSessionPort.cleanupExpiredOrRevokedSessions(

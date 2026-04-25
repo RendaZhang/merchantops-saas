@@ -12,7 +12,7 @@ import com.renda.merchantops.domain.auth.AuthenticationUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -31,8 +31,8 @@ public class AuthService {
                 )
         );
 
-        LocalDateTime issuedAt = LocalDateTime.now();
-        LocalDateTime expiresAt = issuedAt.plusSeconds(jwtTokenService.getExpireSeconds());
+        Instant issuedAt = Instant.now();
+        Instant expiresAt = issuedAt.plusSeconds(jwtTokenService.getExpireSeconds());
         AuthSession authSession = authSessionUseCase.createSession(
                 authentication.tenantId(),
                 authentication.userId(),
@@ -60,7 +60,7 @@ public class AuthService {
                 currentUser.getSessionId(),
                 currentUser.getTenantId(),
                 currentUser.getUserId(),
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 
@@ -68,7 +68,7 @@ public class AuthService {
         return authSessionUseCase.revokeAllSessions(
                 currentUser.getTenantId(),
                 currentUser.getUserId(),
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 }

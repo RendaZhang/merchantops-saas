@@ -29,6 +29,7 @@
 - `V15__add_auth_session.sql`: adds `auth_session` for server-side access-token session state, including unique `session_id`, tenant/user linkage, `ACTIVE` / `REVOKED` status, expiry, revocation timestamp, and lookup indexes
 - `V16__enforce_user_role_tenant_integrity.sql`: adds `user_role.tenant_id`, backfills it from `users.tenant_id`, adds `role(id, tenant_id)` uniqueness plus child indexes, and enforces `user_role(user_id, tenant_id) -> users(id, tenant_id)` plus `user_role(role_id, tenant_id) -> role(id, tenant_id)` so role bindings must stay within one tenant
 - `V17__enforce_ticket_actor_tenant_integrity.sql`: adds child indexes and enforces `ticket(assignee_id, tenant_id) -> users(id, tenant_id)` plus `ticket(created_by, tenant_id) -> users(id, tenant_id)` so root ticket assignee and creator references must stay within the ticket tenant; `assignee_id` remains nullable for unassigned tickets
+- `V18__store_auth_session_times_as_datetime.sql`: converts `auth_session.created_at`, `expires_at`, and `revoked_at` from `TIMESTAMP` to `DATETIME` so the application can persist and read UTC auth-session instants without server-timezone drift
 
 ## Demo Accounts
 
@@ -88,6 +89,21 @@ SELECT COUNT(*) AS ai_interaction_record_cnt FROM ai_interaction_record;
 SELECT COUNT(*) AS feature_flag_cnt FROM feature_flag;
 SELECT COUNT(*) AS auth_session_cnt FROM auth_session;
 ```
+
+To verify the `auth_session` time columns after `V18`:
+
+```sql
+SELECT column_name,
+       data_type,
+       is_nullable
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = 'auth_session'
+  AND column_name IN ('created_at', 'expires_at', 'revoked_at')
+ORDER BY column_name;
+```
+
+The expected data type is `datetime`; `created_at` and `expires_at` should remain non-null while `revoked_at` stays nullable.
 
 To verify the `user_role` tenant-integrity invariant after `V16`:
 

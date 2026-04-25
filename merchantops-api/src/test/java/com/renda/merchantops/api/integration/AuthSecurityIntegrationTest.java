@@ -30,6 +30,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
@@ -255,6 +257,8 @@ class AuthSecurityIntegrationTest {
     void loginShouldCreateActiveAuthSession() throws Exception {
         String token = loginAndGetToken("demo-shop", "admin", "123456");
         String sessionId = sessionIdFromToken(token);
+        Instant sessionExpiresAt = sessionExpiresAt(sessionId);
+        Instant tokenExpiresAt = jwtTokenService.parseClaims(token).getExpiration().toInstant();
 
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(1) FROM auth_session", Integer.class))
                 .isEqualTo(1);
@@ -273,11 +277,8 @@ class AuthSecurityIntegrationTest {
                 String.class,
                 sessionId
         )).isEqualTo("ACTIVE");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT expires_at FROM auth_session WHERE session_id = ?",
-                LocalDateTime.class,
-                sessionId
-        )).isAfter(LocalDateTime.now());
+        assertThat(sessionExpiresAt).isAfter(Instant.now());
+        assertThat(sessionExpiresAt.getEpochSecond()).isEqualTo(tokenExpiresAt.getEpochSecond());
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT revoked_at FROM auth_session WHERE session_id = ?",
                 Object.class,
@@ -328,11 +329,7 @@ class AuthSecurityIntegrationTest {
                 String.class,
                 sessionId
         )).isEqualTo("REVOKED");
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT revoked_at FROM auth_session WHERE session_id = ?",
-                LocalDateTime.class,
-                sessionId
-        )).isNotNull();
+        assertThat(sessionRevokedAt(sessionId)).isNotNull();
 
         mockMvc.perform(get("/api/v1/context")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken(token)))
@@ -365,7 +362,8 @@ class AuthSecurityIntegrationTest {
         String sessionId = sessionIdFromToken(token);
 
         jdbcTemplate.update(
-                "UPDATE auth_session SET expires_at = DATEADD('SECOND', -1, CURRENT_TIMESTAMP) WHERE session_id = ?",
+                "UPDATE auth_session SET expires_at = ? WHERE session_id = ?",
+                toUtcLocalDateTime(Instant.now().minus(1, ChronoUnit.SECONDS)),
                 sessionId
         );
 
@@ -483,19 +481,19 @@ class AuthSecurityIntegrationTest {
 
     @Test
     void cleanupShouldDeleteExpiredActiveAndOldRevokedSessionsWhileRespectingBatchSize() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         authSessionCleanupProperties.setBatchSize(2);
 
         insertAuthSession(9001L, "cleanup-expired-active-1", 1L, 101L, "ACTIVE",
-                now.minusDays(9), now.minusDays(8), null);
+                now.minus(9, ChronoUnit.DAYS), now.minus(8, ChronoUnit.DAYS), null);
         insertAuthSession(9002L, "cleanup-expired-active-2", 1L, 102L, "ACTIVE",
-                now.minusDays(10), now.minusDays(9), null);
+                now.minus(10, ChronoUnit.DAYS), now.minus(9, ChronoUnit.DAYS), null);
         insertAuthSession(9003L, "cleanup-revoked-old", 1L, 101L, "REVOKED",
-                now.minusDays(15), now.minusDays(14), now.minusDays(8));
+                now.minus(15, ChronoUnit.DAYS), now.minus(14, ChronoUnit.DAYS), now.minus(8, ChronoUnit.DAYS));
         insertAuthSession(9004L, "keep-active", 1L, 101L, "ACTIVE",
-                now.minusDays(1), now.plusDays(1), null);
+                now.minus(1, ChronoUnit.DAYS), now.plus(1, ChronoUnit.DAYS), null);
         insertAuthSession(9005L, "keep-revoked-recent", 1L, 101L, "REVOKED",
-                now.minusDays(15), now.minusDays(14), now.minusDays(2));
+                now.minus(15, ChronoUnit.DAYS), now.minus(14, ChronoUnit.DAYS), now.minus(2, ChronoUnit.DAYS));
 
         int firstDeletedCount = authSessionCleanupScheduler.cleanupOnce();
 
@@ -520,7 +518,8 @@ class AuthSecurityIntegrationTest {
         String sessionId = sessionIdFromToken(token);
 
         jdbcTemplate.update(
-                "UPDATE auth_session SET expires_at = DATEADD('DAY', -8, CURRENT_TIMESTAMP) WHERE session_id = ?",
+                "UPDATE auth_session SET expires_at = ? WHERE session_id = ?",
+                toUtcLocalDateTime(Instant.now().minus(8, ChronoUnit.DAYS)),
                 sessionId
         );
 
@@ -545,7 +544,9 @@ class AuthSecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
 
         jdbcTemplate.update(
-                "UPDATE auth_session SET expires_at = DATEADD('DAY', -30, CURRENT_TIMESTAMP), revoked_at = DATEADD('DAY', -2, CURRENT_TIMESTAMP) WHERE session_id = ?",
+                "UPDATE auth_session SET expires_at = ?, revoked_at = ? WHERE session_id = ?",
+                toUtcLocalDateTime(Instant.now().minus(30, ChronoUnit.DAYS)),
+                toUtcLocalDateTime(Instant.now().minus(2, ChronoUnit.DAYS)),
                 sessionId
         );
 
@@ -1377,13 +1378,21 @@ class AuthSecurityIntegrationTest {
                                    Long tenantId,
                                    Long userId,
                                    String status,
-                                   LocalDateTime createdAt,
-                                   LocalDateTime expiresAt,
-                                   LocalDateTime revokedAt) {
+                                   Instant createdAt,
+                                   Instant expiresAt,
+                                   Instant revokedAt) {
         jdbcTemplate.update("""
                 INSERT INTO auth_session (id, session_id, tenant_id, user_id, status, created_at, expires_at, revoked_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, id, sessionId, tenantId, userId, status, createdAt, expiresAt, revokedAt);
+                """,
+                id,
+                sessionId,
+                tenantId,
+                userId,
+                status,
+                toUtcLocalDateTime(createdAt),
+                toUtcLocalDateTime(expiresAt),
+                toUtcLocalDateTime(revokedAt));
     }
 
     private int countAuthSessionById(Long id) {
@@ -1410,12 +1419,34 @@ class AuthSecurityIntegrationTest {
         );
     }
 
-    private LocalDateTime sessionRevokedAt(String sessionId) {
-        return jdbcTemplate.queryForObject(
+    private Instant sessionExpiresAt(String sessionId) {
+        return toUtcInstant(jdbcTemplate.queryForObject(
+                "SELECT expires_at FROM auth_session WHERE session_id = ?",
+                LocalDateTime.class,
+                sessionId
+        ));
+    }
+
+    private Instant sessionRevokedAt(String sessionId) {
+        return toUtcInstant(jdbcTemplate.queryForObject(
                 "SELECT revoked_at FROM auth_session WHERE session_id = ?",
                 LocalDateTime.class,
                 sessionId
-        );
+        ));
+    }
+
+    private LocalDateTime toUtcLocalDateTime(Instant value) {
+        if (value == null) {
+            return null;
+        }
+        return LocalDateTime.ofInstant(value, ZoneOffset.UTC);
+    }
+
+    private Instant toUtcInstant(LocalDateTime value) {
+        if (value == null) {
+            return null;
+        }
+        return value.toInstant(ZoneOffset.UTC);
     }
 
     private String loginAndGetToken(String tenantCode, String username, String password) throws Exception {

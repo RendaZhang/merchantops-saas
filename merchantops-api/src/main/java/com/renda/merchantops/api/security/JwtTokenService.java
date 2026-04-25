@@ -10,8 +10,6 @@ import org.springframework.util.StringUtils;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -34,11 +32,8 @@ public class JwtTokenService {
                                 List<String> roles,
                                 List<String> permissions,
                                 String sessionId,
-                                LocalDateTime issuedAt,
-                                LocalDateTime expiresAt) {
-
-        Instant issuedAtInstant = issuedAt.atZone(ZoneId.systemDefault()).toInstant();
-        Instant expiresAtInstant = expiresAt.atZone(ZoneId.systemDefault()).toInstant();
+                                Instant issuedAt,
+                                Instant expiresAt) {
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
@@ -48,8 +43,8 @@ public class JwtTokenService {
                 .claim("username", username)
                 .claim("roles", roles)
                 .claim("permissions", permissions)
-                .issuedAt(Date.from(issuedAtInstant))
-                .expiration(Date.from(expiresAtInstant))
+                .issuedAt(Date.from(issuedAt))
+                .expiration(Date.from(expiresAt))
                 .signWith(secretKey)
                 .compact();
     }

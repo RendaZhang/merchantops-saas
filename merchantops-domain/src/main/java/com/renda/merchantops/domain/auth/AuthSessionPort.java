@@ -1,6 +1,6 @@
 package com.renda.merchantops.domain.auth;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 public interface AuthSessionPort {
@@ -8,14 +8,14 @@ public interface AuthSessionPort {
     AuthSession create(String sessionId,
                        Long tenantId,
                        Long userId,
-                       LocalDateTime createdAt,
-                       LocalDateTime expiresAt);
+                       Instant createdAt,
+                       Instant expiresAt);
 
     Optional<AuthSession> findBySessionId(String sessionId);
 
-    void revoke(String sessionId, LocalDateTime revokedAt);
+    void revoke(String sessionId, Instant revokedAt);
 
-    int revokeActiveSessionsForUser(Long tenantId, Long userId, LocalDateTime revokedAt);
+    int revokeActiveSessionsForUser(Long tenantId, Long userId, Instant revokedAt);
 
-    int cleanupExpiredOrRevokedSessions(LocalDateTime cutoff, int limit);
+    int cleanupExpiredOrRevokedSessions(Instant cutoff, int limit);
 }

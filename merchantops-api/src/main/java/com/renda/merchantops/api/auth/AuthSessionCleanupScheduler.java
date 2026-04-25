@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -26,10 +26,10 @@ public class AuthSessionCleanupScheduler {
     }
 
     public int cleanupOnce() {
-        return cleanupOnce(LocalDateTime.now());
+        return cleanupOnce(Instant.now());
     }
 
-    int cleanupOnce(LocalDateTime now) {
+    int cleanupOnce(Instant now) {
         if (!authSessionCleanupProperties.isEnabled()) {
             return 0;
         }

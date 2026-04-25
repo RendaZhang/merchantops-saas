@@ -15,9 +15,9 @@ public final class TestAuthSessionSchemaSupport {
                     tenant_id BIGINT NOT NULL,
                     user_id BIGINT NOT NULL,
                     status VARCHAR(32) NOT NULL,
-                    created_at TIMESTAMP NOT NULL,
-                    expires_at TIMESTAMP NOT NULL,
-                    revoked_at TIMESTAMP
+                    created_at DATETIME NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    revoked_at DATETIME
                 )
                 """);
         jdbcTemplate.execute("CREATE UNIQUE INDEX uk_auth_session_session_id ON auth_session (session_id)");

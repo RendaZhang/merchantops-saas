@@ -25,7 +25,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -80,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             currentUser.getSessionId(),
                             currentUser.getTenantId(),
                             currentUser.getUserId(),
-                            LocalDateTime.now()
+                            Instant.now()
                     )) {
                         writeUnauthorizedResponse(response);
                         return;

@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-04-23
+Last updated: 2026-04-25
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -40,6 +40,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] Flyway migrations run automatically
 - [ ] core tables exist
 - [ ] seed data exists
+- [ ] if auth-session migration changed, `auth_session.created_at`, `expires_at`, and `revoked_at` are `DATETIME` columns after Flyway
 - [ ] `user_role.tenant_id` is present, populated, and protected by same-tenant composite foreign keys to both `users` and `role`
 - [ ] `ticket.assignee_id` and `ticket.created_by` are protected by same-tenant composite foreign keys to `users(id, tenant_id)` while nullable assignees remain valid
 
@@ -51,6 +52,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] wrong password returns a unified error
 - [ ] wrong tenant returns a unified error
 - [ ] successful login creates one `ACTIVE` `auth_session` row with the expected tenant/user and future `expires_at`
+- [ ] if auth timestamp handling changed, the stored `auth_session.expires_at` still matches the login JWT expiry window instead of drifting with JVM timezone
 - [ ] login with bad credentials does not create an `auth_session` row
 - [ ] `POST /api/v1/auth/logout` revokes only the current session and sets `revoked_at`
 - [ ] `POST /api/v1/auth/logout-all` revokes every `ACTIVE` session for the current tenant/user and sets `revoked_at`
@@ -65,6 +67,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] a valid token returns the current user
 - [ ] an invalid token returns `401`
 - [ ] login JWTs include a non-blank `sid` claim
+- [ ] if auth timestamp handling changed, decoded JWT `iat` / `exp` still match the UTC validity window implied by `auth_session.created_at` / `expires_at`
 - [ ] sidless signed tokens return `401` with `authentication required`
 - [ ] tokens whose `auth_session` row is expired, revoked, missing, or mismatched return `401`
 - [ ] if auth-session cleanup changed, tokens whose already-invalid `auth_session` row was later deleted by cleanup still return `401`

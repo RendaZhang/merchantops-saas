@@ -1,6 +1,6 @@
 # Automated Tests
 
-Last updated: 2026-04-23
+Last updated: 2026-04-25
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
@@ -112,9 +112,9 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, and root ticket actor tenant-integrity hardening. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, and root ticket actor tenant-integrity hardening. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
-- auth and permission checks for login, server-side auth-session creation, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- auth and permission checks for login, server-side auth-session creation, JWT/session expiry alignment from shared UTC instants, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, JVM-timezone-stable JWT claim generation, the `V15 -> V18` auth-session migration path, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
 - real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including the fixed eight-key default inventory for tenants without persisted rows, missing-row create-on-update behavior, `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
@@ -146,7 +146,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
   - JWT claim generation and parsing for tenant, role, permission, and required `sid` data
-  - server-side `auth_session` creation, future expiry, bad-credential no-session behavior, active-session `/api/v1/context`, current-session logout revocation, same-token-after-logout `401`, logout-all same-user token invalidation, logout-all other-user and other-tenant preservation, sidless signed token `401`, manually expired session `401`, retention-window cleanup of expired `ACTIVE` and old `REVOKED` rows, cleanup batch-size enforcement, recently revoked session retention, old-token `401` after cleanup, and independent multi-session behavior
+  - server-side `auth_session` creation, future expiry, DB `expires_at` alignment with JWT expiration, bad-credential no-session behavior, active-session `/api/v1/context`, current-session logout revocation, same-token-after-logout `401`, logout-all same-user token invalidation, logout-all other-user and other-tenant preservation, sidless signed token `401`, manually expired session `401`, retention-window cleanup of expired `ACTIVE` and old `REVOKED` rows, cleanup batch-size enforcement, recently revoked session retention, old-token `401` after cleanup, and independent multi-session behavior
   - database-level rejection when a `user_role` row tries to bind a user from one tenant to a role from another tenant
   - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `GET /api/v1/feature-flags`
   - `401` when Bearer token is missing or invalid
@@ -168,6 +168,10 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
   - successful re-login after role reassignment with new RBAC access including `FEATURE_FLAG_MANAGE`
   - user writes emit `audit_event` rows when `X-Request-Id` is present
   - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
+- `AuthSessionMigrationTest`
+  - Flyway `V15__add_auth_session.sql` plus `V18__store_auth_session_times_as_datetime.sql` keep `auth_session` time columns writable as `DATETIME`
+- `JwtTokenServiceTest`
+  - JWT generation preserves the provided UTC `Instant` values for `iat` and `exp` even when the JVM default timezone is not UTC
 - `FeatureFlagIntegrationTest`
 - real `GET /api/v1/feature-flags` happy path with stable `key ASC` ordering, the current tenant's fixed eight-key contract, and default-enabled synthesized items for tenants without persisted rows
 - real `PUT /api/v1/feature-flags/{key}` happy path with persisted state change, missing-row create-on-update behavior for a known key, and `FEATURE_FLAG_UPDATED` audit snapshot
@@ -470,6 +474,8 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
   - persists action-aware pending-request keys for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`
   - translates duplicate-key violations back into the existing `BAD_REQUEST` duplicate-disable behavior plus the new duplicate proposal `400` responses for import and ticket
   - applies visible-action filtering to approval-page queries and short-circuits empty visible-action sets
+- `JpaAuthSessionAdapterTest`
+  - persists auth-session `created_at` / `expires_at` / `revoked_at` through UTC `Instant` to `DATETIME` mapping and keeps revoke/cleanup cutoffs translated in UTC
 - `JpaImportJobAdapterTest`
   - import AI interaction-history repository delegation with exact tenant/entity filters
   - stable `createdAt DESC, id DESC` sort wiring

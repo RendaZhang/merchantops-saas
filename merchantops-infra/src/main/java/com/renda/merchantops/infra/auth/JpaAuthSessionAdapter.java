@@ -9,7 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,15 +29,15 @@ public class JpaAuthSessionAdapter implements AuthSessionPort {
     public AuthSession create(String sessionId,
                               Long tenantId,
                               Long userId,
-                              LocalDateTime createdAt,
-                              LocalDateTime expiresAt) {
+                              Instant createdAt,
+                              Instant expiresAt) {
         AuthSessionEntity entity = new AuthSessionEntity();
         entity.setSessionId(sessionId);
         entity.setTenantId(tenantId);
         entity.setUserId(userId);
         entity.setStatus(AuthSessionStatus.ACTIVE.name());
-        entity.setCreatedAt(createdAt);
-        entity.setExpiresAt(expiresAt);
+        entity.setCreatedAt(toUtcLocalDateTime(createdAt));
+        entity.setExpiresAt(toUtcLocalDateTime(expiresAt));
 
         return toDomain(authSessionRepository.save(entity));
     }
@@ -47,33 +49,33 @@ public class JpaAuthSessionAdapter implements AuthSessionPort {
 
     @Override
     @Transactional
-    public void revoke(String sessionId, LocalDateTime revokedAt) {
+    public void revoke(String sessionId, Instant revokedAt) {
         authSessionRepository.findBySessionId(sessionId).ifPresent(entity -> {
             entity.setStatus(AuthSessionStatus.REVOKED.name());
-            entity.setRevokedAt(revokedAt);
+            entity.setRevokedAt(toUtcLocalDateTime(revokedAt));
             authSessionRepository.save(entity);
         });
     }
 
     @Override
     @Transactional
-    public int revokeActiveSessionsForUser(Long tenantId, Long userId, LocalDateTime revokedAt) {
+    public int revokeActiveSessionsForUser(Long tenantId, Long userId, Instant revokedAt) {
         return authSessionRepository.revokeActiveSessionsForUser(
                 tenantId,
                 userId,
                 AuthSessionStatus.ACTIVE.name(),
                 AuthSessionStatus.REVOKED.name(),
-                revokedAt
+                toUtcLocalDateTime(revokedAt)
         );
     }
 
     @Override
     @Transactional
-    public int cleanupExpiredOrRevokedSessions(LocalDateTime cutoff, int limit) {
+    public int cleanupExpiredOrRevokedSessions(Instant cutoff, int limit) {
         List<Long> candidateIds = authSessionRepository.findCleanupCandidateIds(
                 AuthSessionStatus.ACTIVE.name(),
                 AuthSessionStatus.REVOKED.name(),
-                cutoff,
+                toUtcLocalDateTime(cutoff),
                 PageRequest.of(0, limit)
         );
         if (candidateIds.isEmpty()) {
@@ -89,9 +91,20 @@ public class JpaAuthSessionAdapter implements AuthSessionPort {
                 entity.getTenantId(),
                 entity.getUserId(),
                 AuthSessionStatus.valueOf(entity.getStatus()),
-                entity.getCreatedAt(),
-                entity.getExpiresAt(),
-                entity.getRevokedAt()
+                toUtcInstant(entity.getCreatedAt()),
+                toUtcInstant(entity.getExpiresAt()),
+                toUtcInstant(entity.getRevokedAt())
         );
+    }
+
+    private LocalDateTime toUtcLocalDateTime(Instant instant) {
+        return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
+    }
+
+    private Instant toUtcInstant(LocalDateTime value) {
+        if (value == null) {
+            return null;
+        }
+        return value.toInstant(ZoneOffset.UTC);
     }
 }
