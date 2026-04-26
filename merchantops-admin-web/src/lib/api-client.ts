@@ -3,10 +3,16 @@ import { type ZodType, z } from 'zod'
 import { clearAuthSession, getAuthorizationHeader } from './auth-token'
 import {
   type ContextResponse,
+  type FeatureFlagItem,
+  type FeatureFlagList,
+  type FeatureFlagUpdateRequest,
   type LoginRequest,
   type LoginResponse,
   type TicketPage,
   contextResponseSchema,
+  featureFlagItemSchema,
+  featureFlagListSchema,
+  featureFlagUpdateRequestSchema,
   loginRequestSchema,
   loginResponseSchema,
   ticketPageSchema,
@@ -83,6 +89,36 @@ export function getTickets({ page = 0, size = 10 }: TicketPageRequest = {}): Pro
   })
 }
 
+export function getFeatureFlags(): Promise<FeatureFlagList> {
+  return apiRequest('/api/v1/feature-flags', featureFlagListSchema, {
+    authenticated: true,
+  })
+}
+
+export async function updateFeatureFlag(
+  key: string,
+  enabled: boolean,
+): Promise<FeatureFlagItem> {
+  const request: FeatureFlagUpdateRequest = { enabled }
+  const parsedRequest = featureFlagUpdateRequestSchema.safeParse(request)
+
+  if (!parsedRequest.success) {
+    throw new ApiClientError(
+      parsedRequest.error.issues[0]?.message ?? 'Check the feature flag update.',
+    )
+  }
+
+  return apiRequest(
+    `/api/v1/feature-flags/${encodeURIComponent(key)}`,
+    featureFlagItemSchema,
+    {
+      method: 'PUT',
+      authenticated: true,
+      body: JSON.stringify(parsedRequest.data),
+    },
+  )
+}
+
 export async function logout(): Promise<void> {
   await apiRequest('/api/v1/auth/logout', z.null(), {
     method: 'POST',
@@ -103,6 +139,15 @@ export function isAuthenticationError(error: unknown): boolean {
   return (
     error instanceof ApiClientError &&
     (error.status === 401 || error.code === 'AUTH_REQUIRED' || isAuthEndingForbiddenError(error))
+  )
+}
+
+export function isPermissionDeniedError(error: unknown): boolean {
+  return (
+    error instanceof ApiClientError &&
+    error.status === 403 &&
+    error.code === 'FORBIDDEN' &&
+    error.message === 'permission denied'
   )
 }
 

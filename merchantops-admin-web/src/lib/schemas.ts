@@ -37,6 +37,21 @@ export const ticketPageSchema = z.object({
   totalPages: z.number(),
 })
 
+export const featureFlagItemSchema = z.object({
+  id: z.number().nullable(),
+  key: z.string(),
+  enabled: z.boolean(),
+  updatedAt: z.string().nullable(),
+})
+
+export const featureFlagListSchema = z.object({
+  items: z.array(featureFlagItemSchema),
+})
+
+export const featureFlagUpdateRequestSchema = z.object({
+  enabled: z.boolean(),
+})
+
 export const jwtDisplayClaimsSchema = z
   .object({
     tenantId: z.union([z.number(), z.string()]).transform(Number),
@@ -52,4 +67,7 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type ContextResponse = z.infer<typeof contextResponseSchema>
 export type TicketListItem = z.infer<typeof ticketListItemSchema>
 export type TicketPage = z.infer<typeof ticketPageSchema>
+export type FeatureFlagItem = z.infer<typeof featureFlagItemSchema>
+export type FeatureFlagList = z.infer<typeof featureFlagListSchema>
+export type FeatureFlagUpdateRequest = z.infer<typeof featureFlagUpdateRequestSchema>
 export type JwtDisplayClaims = z.infer<typeof jwtDisplayClaimsSchema>

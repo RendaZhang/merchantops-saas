@@ -4,13 +4,13 @@ import { NavLink } from 'react-router-dom'
 const readyNavigationItems = [
   { label: 'Dashboard', path: '/' },
   { label: 'Tickets', path: '/tickets' },
+  { label: 'Feature Flags', path: '/feature-flags' },
 ] as const
 
 const placeholderNavigationItems = [
   { label: 'Approvals', state: 'Placeholder' },
   { label: 'Imports', state: 'Placeholder' },
   { label: 'AI Interactions', state: 'Placeholder' },
-  { label: 'Feature Flags', state: 'Placeholder' },
 ] as const
 
 type AppShellProps = {
@@ -97,7 +97,7 @@ export function AppShell({
             <p className="text-sm font-medium text-emerald-700">Productization Baseline</p>
             <p className="max-w-3xl text-sm text-neutral-600">
               Same-origin runtime, current tenant context, sign out, and the
-              read-only ticket queue are connected.
+              read-only ticket queue plus feature flag controls are connected.
             </p>
           </header>
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-23
+Last updated: 2026-04-26
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,25 +29,26 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice H: Next Admin Workflow Screen
+### Next Slice Selection Pending
 
-Goal: add the next narrow admin-console workflow screen over an existing public API now that the auth-session lifecycle baseline includes current-session logout, current-user logout-all, and status-aware cleanup.
+Goal: select the next narrow Productization Baseline implementation slice after Slice H1 delivered the Feature Flags admin control screen.
 
 Expected scope:
 
 - keep the existing same-origin admin/API runtime contract intact
 - use relative `/api/...` calls through the existing admin API client boundary
-- prefer a read-only or low-risk workflow screen over an existing Swagger-visible API
-- avoid new backend endpoints, ticket mutations, refresh-token work, cookie/session rotation, deployment automation, or AI autonomy changes unless the selected screen directly requires them
+- prefer an existing Swagger-visible API and keep backend changes out unless the selected slice directly requires them
+- avoid ticket mutations, refresh-token work, cookie/session rotation, deployment automation, or AI autonomy changes unless the selected slice directly requires them
 
 Stop condition:
 
-- the selected admin workflow screen is implemented, tested, and documented
-- login, context restore, Tickets, current-session sign-out, and sign-out-all remain green
-- docs clearly distinguish implemented admin screens from placeholders and deferred workflow depth
+- the next slice is named with scope, stop condition, validation, and documentation expectations
+- the selected slice is small enough to implement without reopening completed auth/session/runtime work
+- docs continue to distinguish implemented admin screens from placeholders and deferred workflow depth
 
 ## Recently Closed
 
+- Slice H1: Feature Flags Control Screen - the admin console now includes a protected `/feature-flags` route over the existing `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` API, with Zod-validated feature-flag schemas, a live navigation item, per-row enable/disable controls, query refresh after update, in-page `权限不足` handling for generic permission `403`, and frontend workspace validation while leaving cross-tenant admin, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice G-B1: Logout-All Sessions Contract - `POST /api/v1/auth/logout-all` now revokes every `ACTIVE` auth session for the authenticated current user in the current tenant, including the caller's current session, preserves other users and other tenants, adds a minimal admin `Sign out all sessions` action, and records focused auth plus full regression plus frontend workspace validation while leaving refresh tokens, cookies, token rotation, session lists, device metadata, and selective device logout deferred.
 - Slice G-A: Auth Session Cleanup Scheduler - the backend now exposes `merchantops.auth.session.cleanup.*`, runs a bounded scheduled cleanup pass that deletes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions, keeps request-time auth behavior unchanged, and records focused auth regression plus same-origin runtime smoke evidence while leaving refresh tokens, cookies, and rotation deferred.
 - Slice F: Tenant Actor Integrity Follow-Up - `V17__enforce_ticket_actor_tenant_integrity.sql` now adds child indexes and composite same-tenant foreign keys for `ticket.assignee_id` and `ticket.created_by` to `users(id, tenant_id)`, with focused database-level rejection coverage while leaving ticket comments, operation logs, and child-table ticket tenant constraints as later work.
@@ -59,6 +60,7 @@ Stop condition:
 
 ## Candidate Next Slices
 
+- Slice H2: Imports Queue Screen - add a narrow read-oriented admin screen over the existing import job list API before attempting import detail, replay actions, or approval-backed workflow controls.
 - Slice I: Remaining Tenant Actor Integrity Follow-Up - continue the narrow defense-in-depth path for ticket comment authors, operation-log operators, or child-table ticket tenant constraints without reopening the completed root ticket actor invariant.
 - Slice G-C: Authentication Lifecycle Contract Follow-Up - decide whether refresh-token or cookie/session rotation is now justified by the same-origin runtime model, keeping either as a separate auth-contract slice.
 

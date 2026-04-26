@@ -41,6 +41,7 @@ export function LoginPage() {
       saveAuthSession(response)
       queryClient.removeQueries({ queryKey: ['context'] })
       queryClient.removeQueries({ queryKey: ['tickets'] })
+      queryClient.removeQueries({ queryKey: ['feature-flags'] })
       navigate('/', { replace: true })
     },
   })

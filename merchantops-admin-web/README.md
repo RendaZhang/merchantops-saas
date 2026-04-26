@@ -2,7 +2,7 @@
 
 Vite + React admin console for the Productization Baseline.
 
-This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, and the first read-only workflow screen: the current tenant tickets queue. Approvals, Imports, AI Interactions, and Feature Flags remain navigation placeholders.
+This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, the read-only current tenant tickets queue, and the feature-flag control screen. Approvals, Imports, and AI Interactions remain navigation placeholders.
 
 ## Stack
 
@@ -77,20 +77,24 @@ The admin console calls:
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/logout-all`
 - `GET /api/v1/tickets?page=0&size=10`
+- `GET /api/v1/feature-flags`
+- `PUT /api/v1/feature-flags/{key}`
 
 Roles and permissions displayed in the dashboard are decoded from JWT claims for operator visibility only. They are not used as an authorization source.
 
 The Tickets route is available at `/tickets`. It renders the first page of the current tenant ticket queue as a read-only table and does not include ticket detail, pagination controls, filters, assignment, status changes, AI actions, or approval actions.
 
+The Feature Flags route is available at `/feature-flags`. It renders the fixed current-tenant flag inventory and lets authorized users toggle one flag at a time through the existing update API. It does not include cross-tenant administration, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, or backend API changes.
+
 ## Session Boundary
 
 The app stores the JWT access token in `localStorage` under `merchantops.admin.auth.v1` with a client-side expiry timestamp derived from `expiresIn`.
 
-On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or one of the current auth-ending `403` responses: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. Ticket queue requests use the same session-ended path only for `401` and those auth-ending `403` cases; a generic permission `403` is not treated as session expiry.
+On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or one of the current auth-ending `403` responses: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. Ticket queue and feature-flag requests use the same session-ended path only for `401` and those auth-ending `403` cases; a generic permission `403` is not treated as session expiry. The Feature Flags page shows `权限不足` for ordinary permission denial.
 
-Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context and tickets query caches, and returns to login even if the logout request fails.
+Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, and feature-flags query caches, and returns to login even if the logout request fails.
 
-`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token and query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token plus context, tickets, and feature-flags query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
 
 A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, session list, device metadata, or selective device logout in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
@@ -110,12 +114,15 @@ Manual smoke:
 4. Log in with `demo-shop` / `admin` / `123456`.
 5. Confirm the dashboard shows tenant, operator, token roles, and token permissions.
 6. Open `Tickets` from the sidebar and confirm `/tickets` renders the current tenant queue from `/api/v1/tickets?page=0&size=10`.
-7. Refresh `/tickets` and confirm context plus tickets reload while the session is active.
-8. Use `Sign out` and confirm the app returns to login.
-9. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
-10. Reusing a signed-out token against `/api/v1/context` should return `401`.
+7. Open `Feature Flags` and confirm `/feature-flags` renders eight flags from `/api/v1/feature-flags`.
+8. Toggle one flag, confirm the persisted state is reflected, and restore the original value.
+9. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
+10. Refresh `/tickets` and `/feature-flags` and confirm context plus route data reload while the session is active.
+11. Use `Sign out` and confirm the app returns to login.
+12. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
+13. Reusing a signed-out token against `/api/v1/context` should return `401`.
 
-Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the same `/tickets` route through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
+Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the `/tickets` and `/feature-flags` routes through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
 
 ## Image Credit
 
