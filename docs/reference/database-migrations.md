@@ -25,6 +25,11 @@
 - `V11__add_ai_interaction_record.sql`: adds tenant-scoped `ai_interaction_record` for Week 6 AI runtime traceability, including same-tenant linkage between `tenant_id` and `user_id` plus indexed lookup by entity and request id
 - `V12__enforce_pending_disable_uniqueness.sql`: adds nullable `approval_request.pending_request_key`, converts superseded historical duplicate pending `USER_STATUS_DISABLE` rows for the same tenant user to `REJECTED`, backfills only the canonical newest pending row with the derived key, and creates a unique index so future pending disable requests stay unique per tenant user at the database layer
 - `V13__harden_pending_proposal_uniqueness.java`: extends pending-request-key governance across `IMPORT_JOB_SELECTIVE_REPLAY` and `TICKET_COMMENT_CREATE`, backfills canonical pending keys for those actions, clears stale keys from resolved rows, and converts superseded duplicate pending proposal rows to `REJECTED` before the shared unique index continues enforcing one pending executable intent per key
+- `V14__add_feature_flags.sql`: adds tenant-scoped fixed-key `feature_flag` rows for AI generation and workflow-bridge rollout control
+- `V15__add_auth_session.sql`: adds `auth_session` for server-side access-token session state, including unique `session_id`, tenant/user linkage, `ACTIVE` / `REVOKED` status, expiry, revocation timestamp, and lookup indexes
+- `V16__enforce_user_role_tenant_integrity.sql`: adds `user_role.tenant_id`, backfills it from `users.tenant_id`, adds `role(id, tenant_id)` uniqueness plus child indexes, and enforces `user_role(user_id, tenant_id) -> users(id, tenant_id)` plus `user_role(role_id, tenant_id) -> role(id, tenant_id)` so role bindings must stay within one tenant
+- `V17__enforce_ticket_actor_tenant_integrity.sql`: adds child indexes and enforces `ticket(assignee_id, tenant_id) -> users(id, tenant_id)` plus `ticket(created_by, tenant_id) -> users(id, tenant_id)` so root ticket assignee and creator references must stay within the ticket tenant; `assignee_id` remains nullable for unassigned tickets
+- `V18__store_auth_session_times_as_datetime.sql`: converts `auth_session.created_at`, `expires_at`, and `revoked_at` from `TIMESTAMP` to `DATETIME` so the application can persist and read UTC auth-session instants without server-timezone drift
 
 ## Demo Accounts
 
@@ -81,7 +86,59 @@ SELECT COUNT(*) AS approval_request_cnt FROM approval_request;
 SELECT COUNT(*) AS import_job_cnt FROM import_job;
 SELECT COUNT(*) AS import_job_item_error_cnt FROM import_job_item_error;
 SELECT COUNT(*) AS ai_interaction_record_cnt FROM ai_interaction_record;
+SELECT COUNT(*) AS feature_flag_cnt FROM feature_flag;
+SELECT COUNT(*) AS auth_session_cnt FROM auth_session;
 ```
+
+To verify the `auth_session` time columns after `V18`:
+
+```sql
+SELECT column_name,
+       data_type,
+       is_nullable
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = 'auth_session'
+  AND column_name IN ('created_at', 'expires_at', 'revoked_at')
+ORDER BY column_name;
+```
+
+The expected data type is `datetime`; `created_at` and `expires_at` should remain non-null while `revoked_at` stays nullable.
+
+To verify the `user_role` tenant-integrity invariant after `V16`:
+
+```sql
+SELECT ur.id,
+       ur.tenant_id,
+       u.tenant_id AS user_tenant_id,
+       r.tenant_id AS role_tenant_id
+FROM user_role ur
+JOIN users u ON u.id = ur.user_id
+JOIN `role` r ON r.id = ur.role_id
+WHERE ur.tenant_id <> u.tenant_id
+   OR ur.tenant_id <> r.tenant_id;
+```
+
+The query should return no rows. Direct inserts that try to bind a user from one tenant to a role from another tenant should fail at the database layer.
+
+To verify the root ticket actor tenant-integrity invariant after `V17`:
+
+```sql
+SELECT tk.id,
+       tk.tenant_id,
+       tk.assignee_id,
+       assignee.tenant_id AS assignee_tenant_id,
+       tk.created_by,
+       creator.tenant_id AS creator_tenant_id
+FROM ticket tk
+LEFT JOIN users assignee ON assignee.id = tk.assignee_id
+LEFT JOIN users creator ON creator.id = tk.created_by
+WHERE (tk.assignee_id IS NOT NULL AND (assignee.id IS NULL OR assignee.tenant_id <> tk.tenant_id))
+   OR creator.id IS NULL
+   OR creator.tenant_id <> tk.tenant_id;
+```
+
+The query should return no rows. Direct inserts that try to create a ticket with a cross-tenant assignee or creator should fail at the database layer, while `assignee_id = NULL` remains valid for unassigned tickets.
 
 To inspect recent AI interaction rows for ticket summary or ticket triage:
 
@@ -123,7 +180,9 @@ SELECT
   (SELECT COUNT(*) FROM ticket) AS ticket_cnt,
   (SELECT COUNT(*) FROM ticket_comment) AS ticket_comment_cnt,
   (SELECT COUNT(*) FROM ticket_operation_log) AS ticket_operation_log_cnt,
-  (SELECT COUNT(*) FROM ai_interaction_record) AS ai_interaction_record_cnt;
+  (SELECT COUNT(*) FROM ai_interaction_record) AS ai_interaction_record_cnt,
+  (SELECT COUNT(*) FROM feature_flag) AS feature_flag_cnt,
+  (SELECT COUNT(*) FROM auth_session) AS auth_session_cnt;
 ```
 
 ## Related Notes
@@ -133,4 +192,6 @@ SELECT
 - If a local development database already applied the pre-fix `V12`, prefer dropping and recreating that schema so Flyway can replay the corrected migration chain cleanly. If the schema must be kept, confirm the rewritten `V12` is semantically equivalent first, then repair the `flyway_schema_history` checksum with an external Flyway client before the next startup.
 - `created_by` and `updated_by` are intentionally nullable so historical seed rows do not pretend to have a synthetic operator.
 - `ai_interaction_record` is intentionally separate from `audit_event`; see [../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md](../architecture/adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md).
-- Known schema gap: [../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity](../architecture/non-blocking-backlog.md#nb-001-user-role-database-level-tenant-integrity)
+- `user_role` now carries its own `tenant_id` and is protected by same-tenant composite foreign keys.
+- Root ticket assignee and creator references are protected by same-tenant composite foreign keys from `ticket` to `users`.
+- Remaining ticket actor-link schema gaps are tracked separately in [../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer](../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer).

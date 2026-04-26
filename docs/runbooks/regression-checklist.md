@@ -1,6 +1,6 @@
 # Regression Checklist
 
-Last updated: 2026-03-29
+Last updated: 2026-04-25
 
 > Maintenance note: keep this page as a broad sign-off checklist for release, merge, or phase-close verification. Keep items short, checkable, and outcome-oriented. Do not turn this page into a step-by-step execution guide, troubleshooting log, or duplicate copy of [automated-tests.md](automated-tests.md) or [local-smoke-test.md](local-smoke-test.md); put commands and detailed flows there instead.
 
@@ -10,6 +10,8 @@ Use this checklist after foundation-level changes, security changes, environment
 
 - [ ] `.\mvnw.cmd -pl merchantops-api -am test` passes
 - [ ] `AuthSecurityIntegrationTest`, `UserQueryServiceTest`, `UserCommandServiceTest`, and `UserManagementControllerTest` cover the code path you changed
+- [ ] if role-binding schema or RBAC SQL changed, `AuthSecurityIntegrationTest` proves cross-tenant `user_role` inserts fail at the database layer
+- [ ] if root ticket actor schema changed, `TicketWorkflowIntegrationTest` proves cross-tenant ticket assignee/creator inserts fail at the database layer and nullable assignee rows still work
 - [ ] for import-job changes, `ImportJobControllerTest`, `ImportJobCommandServiceTest`, `ImportJobQueryServiceTest`, `ImportJobWorkerTest`, `ImportJobIntegrationTest`, and `ImportJobMigrationTest` cover the staged path
 - [ ] if repository signatures changed, tests were run with `-am` rather than `-pl merchantops-api test` only
 - [ ] if H2 native SQL tests changed, `@AutoConfigureTestDatabase(replace = NONE)` is still preserved and MySQL-mode assertions still verify the runtime mode
@@ -17,6 +19,7 @@ Use this checklist after foundation-level changes, security changes, environment
 ## Infra
 
 - [ ] `docker compose up -d` works
+- [ ] if runtime packaging changed, `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` works
 - [ ] MySQL is reachable
 - [ ] Redis `PING` returns `PONG`
 - [ ] RabbitMQ UI is accessible
@@ -27,6 +30,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] if live smoke was needed after module-signature changes, `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` was run before `spring-boot:run`
 - [ ] `/health` returns `UP`
 - [ ] `/actuator/health` shows `db`, `redis`, and `rabbit` as `UP`
+- [ ] if admin runtime packaging changed, `http://localhost:8081` serves the admin app and same-origin `/api/v1/context` works through the Nginx proxy
 - [ ] Swagger UI is accessible
 - [ ] Swagger UI shows documented business endpoints and actuator health coverage
 - [ ] Swagger UI preserves Bearer authorization across requests after login
@@ -36,6 +40,9 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] Flyway migrations run automatically
 - [ ] core tables exist
 - [ ] seed data exists
+- [ ] if auth-session migration changed, `auth_session.created_at`, `expires_at`, and `revoked_at` are `DATETIME` columns after Flyway
+- [ ] `user_role.tenant_id` is present, populated, and protected by same-tenant composite foreign keys to both `users` and `role`
+- [ ] `ticket.assignee_id` and `ticket.created_by` are protected by same-tenant composite foreign keys to `users(id, tenant_id)` while nullable assignees remain valid
 
 ## Auth
 
@@ -44,12 +51,26 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] viewer login works
 - [ ] wrong password returns a unified error
 - [ ] wrong tenant returns a unified error
+- [ ] successful login creates one `ACTIVE` `auth_session` row with the expected tenant/user and future `expires_at`
+- [ ] if auth timestamp handling changed, the stored `auth_session.expires_at` still matches the login JWT expiry window instead of drifting with JVM timezone
+- [ ] login with bad credentials does not create an `auth_session` row
+- [ ] `POST /api/v1/auth/logout` revokes only the current session and sets `revoked_at`
+- [ ] `POST /api/v1/auth/logout-all` revokes every `ACTIVE` session for the current tenant/user and sets `revoked_at`
+- [ ] logout-all does not revoke sessions for another user in the same tenant or a user in another tenant
+- [ ] if auth-session cleanup changed, retention-aged expired `ACTIVE` rows and retention-aged `REVOKED` rows are deleted in bounded batches while recently revoked rows remain
+- [ ] reusing the same token after logout returns `401` with `authentication required`
+- [ ] two logins for the same user create independent sessions, and logging out one token does not invalidate the other token
 
 ## JWT
 
 - [ ] `/api/v1/user/me` requires a token
 - [ ] a valid token returns the current user
 - [ ] an invalid token returns `401`
+- [ ] login JWTs include a non-blank `sid` claim
+- [ ] if auth timestamp handling changed, decoded JWT `iat` / `exp` still match the UTC validity window implied by `auth_session.created_at` / `expires_at`
+- [ ] sidless signed tokens return `401` with `authentication required`
+- [ ] tokens whose `auth_session` row is expired, revoked, missing, or mismatched return `401`
+- [ ] if auth-session cleanup changed, tokens whose already-invalid `auth_session` row was later deleted by cleanup still return `401`
 
 ## Tenant Context
 
@@ -63,6 +84,12 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] ops can read users
 - [ ] ops cannot manage feature flags
 - [ ] admin can access all RBAC demo endpoints
+
+## Feature Flags
+
+- [ ] `GET /api/v1/feature-flags` returns the fixed eight-key inventory in stable `key ASC` order for the current tenant
+- [ ] a tenant with no persisted feature-flag rows still receives default-enabled items with no cross-tenant leakage
+- [ ] `PUT /api/v1/feature-flags/{key}` creates a missing known row for the current tenant when first changing that key
 
 ## Tenant Isolation
 
@@ -111,8 +138,10 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] import selective replay approval payload stores only safe proposal fields and does not persist raw CSV rows, replacement values, passwords, or emails
 - [ ] a `DISABLED` user is rejected by `POST /api/v1/auth/login`
 - [ ] a token issued before a user was disabled is rejected on protected endpoints with `403` / `user is not active`
+- [ ] current-session logout remains `401` after revocation, while disabled-user and inactive-tenant stale-token paths remain `403`
 - [ ] `PUT /api/v1/users/{id}/roles` replaces the old role set rather than appending to it
 - [ ] `PUT /api/v1/users/{id}/roles` rejects role codes outside the current tenant
+- [ ] new `user_role` rows are written with the current tenant id, and direct cross-tenant user/role bindings are rejected by the database
 - [ ] a token issued before role or permission changes is rejected on protected endpoints with `403` / `token claims are stale, please login again`
 - [ ] after role reassignment, the affected user can log in again and the new token reflects the new RBAC access
 - [ ] password edge cases, especially leading and trailing whitespace, behave consistently between create and login
@@ -196,4 +225,5 @@ Use this checklist after foundation-level changes, security changes, environment
 - Use [../../api-demo.http](../../api-demo.http) for the main request flow
 - Compare the current user-list behavior against [../reference/user-management.md](../reference/user-management.md)
 - Use [local-smoke-test.md](local-smoke-test.md) when you want a shorter step-by-step validation path
+- Use [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md) when Docker runtime env injection, admin image packaging, or same-origin `/api` proxy behavior changed
 - Use [ai-regression-checklist.md](ai-regression-checklist.md) when the staged change touches the current public AI surface, including ticket AI and import AI endpoints

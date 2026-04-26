@@ -54,6 +54,7 @@ class ImportJobAiMappingSuggestionServiceTest {
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties
         );
 
@@ -106,6 +107,7 @@ class ImportJobAiMappingSuggestionServiceTest {
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -128,6 +130,7 @@ class ImportJobAiMappingSuggestionServiceTest {
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -179,6 +182,7 @@ class ImportJobAiMappingSuggestionServiceTest {
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -213,6 +217,7 @@ class ImportJobAiMappingSuggestionServiceTest {
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -246,6 +251,7 @@ class ImportJobAiMappingSuggestionServiceTest {
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -279,6 +285,7 @@ class ImportJobAiMappingSuggestionServiceTest {
                 new ImportJobMappingSuggestionPromptBuilder(),
                 importJobMappingSuggestionAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 

@@ -1,0 +1,226 @@
+[
+  {
+    "id": "no-failure-signals",
+    "detail": {
+      "job": {
+        "id": 9601,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-mapping-no-failures.csv",
+        "storageKey": "1/week9-mapping-no-failures.csv",
+        "sourceJobId": null,
+        "status": "SUCCEEDED",
+        "requestedBy": 101,
+        "requestId": "req-import-failure-9601",
+        "totalCount": 2,
+        "successCount": 2,
+        "failureCount": 0,
+        "errorSummary": null,
+        "createdAt": "2026-04-04T10:00:00",
+        "startedAt": "2026-04-04T10:00:02",
+        "finishedAt": "2026-04-04T10:00:05"
+      },
+      "errorCodeCounts": [],
+      "itemErrors": []
+    },
+    "promptWindowErrors": [],
+    "providerResult": null,
+    "expectInteractionRecord": false,
+    "expectedStatus": "NOT_RECORDED",
+    "expectedErrorCode": "BAD_REQUEST",
+    "expectedMessage": "import job has no failure signals for mapping suggestion"
+  },
+  {
+    "id": "no-sanitized-header-signal",
+    "detail": {
+      "job": {
+        "id": 9602,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-mapping-no-header-signal.csv",
+        "storageKey": "1/week9-mapping-no-header-signal.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-failure-9602",
+        "totalCount": 1,
+        "successCount": 0,
+        "failureCount": 1,
+        "errorSummary": "row-level failures only",
+        "createdAt": "2026-04-04T10:05:00",
+        "startedAt": "2026-04-04T10:05:02",
+        "finishedAt": "2026-04-04T10:05:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "count": 1
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 96021,
+          "tenantId": 1,
+          "importJobId": 9602,
+          "rowNumber": 2,
+          "errorCode": "UNKNOWN_ROLE",
+          "errorMessage": "roleCodes must exist in current tenant",
+          "rawPayload": "headerless-user,Headerless User,headerless@example.com,secret-pass-2,READ_ONLY",
+          "createdAt": "2026-04-04T10:05:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [
+      {
+        "id": 96021,
+        "tenantId": 1,
+        "importJobId": 9602,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "headerless-user,Headerless User,headerless@example.com,secret-pass-2,READ_ONLY",
+        "createdAt": "2026-04-04T10:05:04"
+      }
+    ],
+    "providerResult": null,
+    "expectInteractionRecord": false,
+    "expectedStatus": "NOT_RECORDED",
+    "expectedErrorCode": "BAD_REQUEST",
+    "expectedMessage": "import job has no sanitized header signal for mapping suggestion"
+  },
+  {
+    "id": "ungrounded-observed-column-signal",
+    "detail": {
+      "job": {
+        "id": 9603,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-mapping-ungrounded.csv",
+        "storageKey": "1/week9-mapping-ungrounded.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-failure-9603",
+        "totalCount": 2,
+        "successCount": 0,
+        "failureCount": 2,
+        "errorSummary": "header validation failed before row fixes were possible",
+        "createdAt": "2026-04-04T10:10:00",
+        "startedAt": "2026-04-04T10:10:02",
+        "finishedAt": "2026-04-04T10:10:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "INVALID_HEADER",
+          "count": 1
+        },
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "count": 1
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 96031,
+          "tenantId": 1,
+          "importJobId": 9603,
+          "rowNumber": null,
+          "errorCode": "INVALID_HEADER",
+          "errorMessage": "header columns do not match USER_CSV",
+          "rawPayload": "login,display_name,email_address,passwd,roles",
+          "createdAt": "2026-04-04T10:10:03"
+        },
+        {
+          "id": 96032,
+          "tenantId": 1,
+          "importJobId": 9603,
+          "rowNumber": 2,
+          "errorCode": "UNKNOWN_ROLE",
+          "errorMessage": "roleCodes must exist in current tenant",
+          "rawPayload": "policy-map,Policy Map,policy-map@example.com,secret-pass-2,READ_ONLY",
+          "createdAt": "2026-04-04T10:10:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [
+      {
+        "id": 96032,
+        "tenantId": 1,
+        "importJobId": 9603,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "policy-map,Policy Map,policy-map@example.com,secret-pass-2,READ_ONLY",
+        "createdAt": "2026-04-04T10:10:04"
+      }
+    ],
+    "providerResult": {
+      "summary": "The failed header is still close to the canonical USER_CSV schema and should be reviewed before replay.",
+      "suggestedFieldMappings": [
+        {
+          "canonicalField": "username",
+          "observedColumnSignal": {
+            "headerName": "login",
+            "headerPosition": 1
+          },
+          "reasoning": "login is the closest signal for username.",
+          "reviewRequired": false
+        },
+        {
+          "canonicalField": "displayName",
+          "observedColumnSignal": {
+            "headerName": "display_name",
+            "headerPosition": 2
+          },
+          "reasoning": "display_name is the closest signal for displayName.",
+          "reviewRequired": false
+        },
+        {
+          "canonicalField": "email",
+          "observedColumnSignal": {
+            "headerName": "email_address",
+            "headerPosition": 3
+          },
+          "reasoning": "email_address is the closest signal for email.",
+          "reviewRequired": false
+        },
+        {
+          "canonicalField": "password",
+          "observedColumnSignal": {
+            "headerName": "passwd_shadow",
+            "headerPosition": 4
+          },
+          "reasoning": "password likely maps to the fourth column.",
+          "reviewRequired": true
+        },
+        {
+          "canonicalField": "roleCodes",
+          "observedColumnSignal": {
+            "headerName": "roles",
+            "headerPosition": 5
+          },
+          "reasoning": "roles is the closest available signal for roleCodes.",
+          "reviewRequired": true
+        }
+      ],
+      "confidenceNotes": [
+        "Header validation failed, so each mapping should be reviewed before reuse."
+      ],
+      "recommendedOperatorChecks": [
+        "Confirm the header order before preparing replay input."
+      ],
+      "modelId": "gpt-4.1-mini",
+      "inputTokens": 141,
+      "outputTokens": 71,
+      "totalTokens": 212,
+      "costMicros": null
+    },
+    "expectInteractionRecord": true,
+    "expectedStatus": "INVALID_RESPONSE",
+    "expectedErrorCode": "SERVICE_UNAVAILABLE",
+    "expectedMessage": "import ai mapping suggestion is unavailable"
+  }
+]

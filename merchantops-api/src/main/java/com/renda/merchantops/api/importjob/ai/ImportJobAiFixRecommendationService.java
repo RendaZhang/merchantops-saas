@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.importjob.ai;
 
+import com.renda.merchantops.api.ai.core.AiGenerationWorkflow;
 import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
@@ -11,7 +12,9 @@ import com.renda.merchantops.api.ai.importjob.fixrecommendation.ImportJobFixReco
 import com.renda.merchantops.api.ai.importjob.fixrecommendation.ImportJobFixRecommendationProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiFixRecommendationResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
 import com.renda.merchantops.api.importjob.ImportCsvSupport;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorCount;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
@@ -42,8 +45,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class ImportJobAiFixRecommendationService {
 
-    private static final String ENTITY_TYPE_IMPORT_JOB = "IMPORT_JOB";
-    private static final String INTERACTION_TYPE_FIX_RECOMMENDATION = "FIX_RECOMMENDATION";
+    private static final AiGenerationWorkflow WORKFLOW = AiGenerationWorkflow.IMPORT_FIX_RECOMMENDATION;
     private static final String IMPORT_TYPE_USER_CSV = "USER_CSV";
     private static final int PROMPT_WINDOW_PAGE = 0;
     private static final int PROMPT_WINDOW_SIZE = 20;
@@ -57,6 +59,7 @@ public class ImportJobAiFixRecommendationService {
     private final ImportJobFixRecommendationPromptBuilder importJobFixRecommendationPromptBuilder;
     private final ImportJobFixRecommendationAiProvider importJobFixRecommendationAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public ImportJobAiFixRecommendationResponse generateFixRecommendation(Long tenantId,
@@ -77,10 +80,7 @@ public class ImportJobAiFixRecommendationService {
                 .toList();
         List<GroundedErrorGroup> groundedErrorGroups = extractGroundedErrorGroups(detail, promptWindowErrors);
         Set<String> sensitiveTokens = collectSensitiveTokens(detail.itemErrors(), promptWindowErrors);
-        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(
-                aiProperties.getImportFixRecommendationPromptVersion(),
-                "import-fix-recommendation-v1"
-        );
+        String promptVersion = WORKFLOW.resolvePromptVersion(aiProperties, aiInteractionExecutionSupport);
         String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         ImportJobFixRecommendationPromptContext promptContext = toPromptContext(detail, groundedErrorGroups);
         ImportJobFixRecommendationPrompt prompt = importJobFixRecommendationPromptBuilder.build(promptVersion, promptContext);
@@ -89,12 +89,13 @@ public class ImportJobAiFixRecommendationService {
                 tenantId,
                 userId,
                 normalizedRequestId,
-                ENTITY_TYPE_IMPORT_JOB,
+                WORKFLOW.entityType(),
                 importJobId,
-                INTERACTION_TYPE_FIX_RECOMMENDATION,
+                WORKFLOW.interactionType(),
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_IMPORT_FIX_RECOMMENDATION),
                 "import ai fix recommendation is disabled",
                 "import ai fix recommendation is unavailable"
         );
@@ -133,9 +134,9 @@ public class ImportJobAiFixRecommendationService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_FIX_RECOMMENDATION,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     resolvedModelId,
                     latencyMs,
@@ -161,9 +162,9 @@ public class ImportJobAiFixRecommendationService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_FIX_RECOMMENDATION,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     configuredModelId,
                     ex.getFailureType(),

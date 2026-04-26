@@ -62,6 +62,7 @@ class ImportJobAiErrorSummaryServiceTest {
                 new ImportJobErrorSummaryPromptBuilder(),
                 importJobErrorSummaryAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties
         );
 
@@ -113,6 +114,7 @@ class ImportJobAiErrorSummaryServiceTest {
                 new ImportJobErrorSummaryPromptBuilder(),
                 importJobErrorSummaryAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 

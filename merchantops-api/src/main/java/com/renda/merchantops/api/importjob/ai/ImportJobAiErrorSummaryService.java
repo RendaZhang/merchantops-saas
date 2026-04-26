@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.importjob.ai;
 
+import com.renda.merchantops.api.ai.core.AiGenerationWorkflow;
 import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
@@ -11,6 +12,8 @@ import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummary
 import com.renda.merchantops.api.ai.importjob.errorsummary.ImportJobErrorSummaryProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiErrorSummaryResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
 import com.renda.merchantops.domain.importjob.ImportJobErrorRecord;
@@ -26,8 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ImportJobAiErrorSummaryService {
 
-    private static final String ENTITY_TYPE_IMPORT_JOB = "IMPORT_JOB";
-    private static final String INTERACTION_TYPE_ERROR_SUMMARY = "ERROR_SUMMARY";
+    private static final AiGenerationWorkflow WORKFLOW = AiGenerationWorkflow.IMPORT_ERROR_SUMMARY;
     private static final int PROMPT_WINDOW_PAGE = 0;
     private static final int PROMPT_WINDOW_SIZE = 20;
 
@@ -35,6 +37,7 @@ public class ImportJobAiErrorSummaryService {
     private final ImportJobErrorSummaryPromptBuilder importJobErrorSummaryPromptBuilder;
     private final ImportJobErrorSummaryAiProvider importJobErrorSummaryAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public ImportJobAiErrorSummaryResponse generateErrorSummary(Long tenantId, Long userId, String requestId, Long importJobId) {
@@ -45,10 +48,7 @@ public class ImportJobAiErrorSummaryService {
                 importJobId,
                 new ImportJobErrorPageCriteria(PROMPT_WINDOW_PAGE, PROMPT_WINDOW_SIZE, null)
         ).items();
-        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(
-                aiProperties.getImportErrorSummaryPromptVersion(),
-                "import-error-summary-v1"
-        );
+        String promptVersion = WORKFLOW.resolvePromptVersion(aiProperties, aiInteractionExecutionSupport);
         String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         ImportJobErrorSummaryPromptContext promptContext = toPromptContext(detail, promptWindowErrors);
         ImportJobErrorSummaryPrompt prompt = importJobErrorSummaryPromptBuilder.build(promptVersion, promptContext);
@@ -57,12 +57,13 @@ public class ImportJobAiErrorSummaryService {
                 tenantId,
                 userId,
                 normalizedRequestId,
-                ENTITY_TYPE_IMPORT_JOB,
+                WORKFLOW.entityType(),
                 importJobId,
-                INTERACTION_TYPE_ERROR_SUMMARY,
+                WORKFLOW.interactionType(),
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_IMPORT_ERROR_SUMMARY),
                 "import ai error summary is disabled",
                 "import ai error summary is unavailable"
         );
@@ -88,9 +89,9 @@ public class ImportJobAiErrorSummaryService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_ERROR_SUMMARY,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     resolvedModelId,
                     latencyMs,
@@ -115,9 +116,9 @@ public class ImportJobAiErrorSummaryService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_ERROR_SUMMARY,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     configuredModelId,
                     ex.getFailureType(),
