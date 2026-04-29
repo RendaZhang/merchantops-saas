@@ -4,10 +4,6 @@ const workflowPlaceholders = [
     description: 'Human-reviewed user, import, and ticket proposal decisions.',
   },
   {
-    title: 'Imports',
-    description: 'USER_CSV imports, error pages, and replay paths.',
-  },
-  {
     title: 'AI Interactions',
     description: 'Suggestion history and tenant usage summary entry points.',
   },
@@ -24,6 +20,11 @@ const liveWorkflows = [
     description:
       'Tenant-scoped rollout controls for AI and workflow bridges through the existing feature-flag API.',
   },
+  {
+    title: 'Imports',
+    description:
+      'Read-only queue for current-tenant import jobs through the existing import list API.',
+  },
 ] as const
 
 export function DashboardPage() {
@@ -37,8 +38,8 @@ export function DashboardPage() {
           </h2>
         </div>
         <p className="max-w-xl text-sm text-neutral-600">
-          Tickets and Feature Flags now open live workflow screens. Remaining
-          pages stay behind later slices.
+          Tickets, Feature Flags, and Imports now open live workflow screens.
+          Remaining pages stay behind later slices.
         </p>
       </div>
 

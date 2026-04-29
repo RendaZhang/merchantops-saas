@@ -5,6 +5,7 @@ import { ProtectedRoute } from '../components/ProtectedRoute'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { FeatureFlagsPage } from '../features/feature-flags/FeatureFlagsPage'
+import { ImportsPage } from '../features/imports/ImportsPage'
 import { TicketsPage } from '../features/tickets/TicketsPage'
 
 export const router = createBrowserRouter([
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
           {
             path: 'feature-flags',
             element: <FeatureFlagsPage />,
+          },
+          {
+            path: 'imports',
+            element: <ImportsPage />,
           },
         ],
       },

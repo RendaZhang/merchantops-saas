@@ -6,6 +6,7 @@ import {
   type FeatureFlagItem,
   type FeatureFlagList,
   type FeatureFlagUpdateRequest,
+  type ImportJobPage,
   type LoginRequest,
   type LoginResponse,
   type TicketPage,
@@ -13,6 +14,7 @@ import {
   featureFlagItemSchema,
   featureFlagListSchema,
   featureFlagUpdateRequestSchema,
+  importJobPageSchema,
   loginRequestSchema,
   loginResponseSchema,
   ticketPageSchema,
@@ -41,6 +43,11 @@ type ApiRequestOptions = RequestInit & {
 }
 
 type TicketPageRequest = {
+  page?: number
+  size?: number
+}
+
+type ImportJobPageRequest = {
   page?: number
   size?: number
 }
@@ -85,6 +92,20 @@ export function getTickets({ page = 0, size = 10 }: TicketPageRequest = {}): Pro
   })
 
   return apiRequest(`/api/v1/tickets?${searchParams.toString()}`, ticketPageSchema, {
+    authenticated: true,
+  })
+}
+
+export function getImportJobs({
+  page = 0,
+  size = 10,
+}: ImportJobPageRequest = {}): Promise<ImportJobPage> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  })
+
+  return apiRequest(`/api/v1/import-jobs?${searchParams.toString()}`, importJobPageSchema, {
     authenticated: true,
   })
 }

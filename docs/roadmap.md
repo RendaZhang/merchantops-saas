@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-04-26
+Last updated: 2026-04-29
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -31,7 +31,7 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ### Next Slice Selection Pending
 
-Goal: select the next narrow Productization Baseline implementation slice after Slice H1 delivered the Feature Flags admin control screen.
+Goal: select the next narrow Productization Baseline implementation slice after Slice H2 delivered the Imports Queue screen.
 
 Expected scope:
 
@@ -48,6 +48,7 @@ Stop condition:
 
 ## Recently Closed
 
+- Slice H2: Imports Queue Screen - the admin console now includes a protected `/imports` route over the existing `GET /api/v1/import-jobs?page=0&size=10` API, with Zod-validated import-job list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving upload, detail, `/errors`, filters, pagination controls, replay, selective or edited replay, import AI actions, import AI interaction history, approval workflow UI, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H1: Feature Flags Control Screen - the admin console now includes a protected `/feature-flags` route over the existing `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` API, with Zod-validated feature-flag schemas, a live navigation item, per-row enable/disable controls, query refresh after update, in-page `权限不足` handling for generic permission `403`, and frontend workspace validation while leaving cross-tenant admin, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice G-B1: Logout-All Sessions Contract - `POST /api/v1/auth/logout-all` now revokes every `ACTIVE` auth session for the authenticated current user in the current tenant, including the caller's current session, preserves other users and other tenants, adds a minimal admin `Sign out all sessions` action, and records focused auth plus full regression plus frontend workspace validation while leaving refresh tokens, cookies, token rotation, session lists, device metadata, and selective device logout deferred.
 - Slice G-A: Auth Session Cleanup Scheduler - the backend now exposes `merchantops.auth.session.cleanup.*`, runs a bounded scheduled cleanup pass that deletes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions, keeps request-time auth behavior unchanged, and records focused auth regression plus same-origin runtime smoke evidence while leaving refresh tokens, cookies, and rotation deferred.
@@ -60,7 +61,6 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Slice H2: Imports Queue Screen - add a narrow read-oriented admin screen over the existing import job list API before attempting import detail, replay actions, or approval-backed workflow controls.
 - Slice I: Remaining Tenant Actor Integrity Follow-Up - continue the narrow defense-in-depth path for ticket comment authors, operation-log operators, or child-table ticket tenant constraints without reopening the completed root ticket actor invariant.
 - Slice G-C: Authentication Lifecycle Contract Follow-Up - decide whether refresh-token or cookie/session rotation is now justified by the same-origin runtime model, keeping either as a separate auth-contract slice.
 

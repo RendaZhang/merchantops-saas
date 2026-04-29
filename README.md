@@ -10,7 +10,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 - Current tagged milestone: `v0.7.0-beta`
 - Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
-- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, Slice G-A auth-session cleanup scheduler, Slice G-B1 logout-all sessions contract, and Slice H1 Feature Flags control screen are complete; the next implementation slice is not selected yet
+- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, Slice G-A auth-session cleanup scheduler, Slice G-B1 logout-all sessions contract, Slice H1 Feature Flags control screen, and Slice H2 Imports queue screen are complete; the next implementation slice is not selected yet
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
 - Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 
@@ -23,7 +23,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 - AI-assisted ticket and import workflows where public AI endpoints remain read-only or suggestion-only.
 - AI governance reads for narrowed interaction history and tenant-scoped aggregate usage/cost metadata, including prompt-version breakdowns.
 - Fixed tenant-scoped feature flags for six AI generation endpoints and two approval-backed workflow bridges.
-- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, a read-only Tickets queue, a Feature Flags control screen, workflow navigation placeholders, and same-origin Nginx runtime packaging.
+- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, read-only Tickets and Imports queues, a Feature Flags control screen, workflow navigation placeholders, and same-origin Nginx runtime packaging.
 - Local Maven startup, Dockerized API startup, production-like admin + API runtime compose, OpenAPI/Swagger docs, and a minimal no-secret GitHub Actions quality gate.
 
 ## Quick Start
@@ -136,7 +136,7 @@ The CI gate is intentionally minimal. It does not deploy, publish Docker images,
 
 ## Current Limitations
 
-- The admin console currently includes login/context/sign-out, sign-out-all, a read-only Tickets queue, and a Feature Flags control screen; ticket detail, ticket mutations, filters, pagination controls, Approvals, Imports, and AI Interactions remain placeholders or later workflow screens.
+- The admin console currently includes login/context/sign-out, sign-out-all, read-only Tickets and Imports queues, and a Feature Flags control screen; ticket detail, ticket mutations, filters, pagination controls, Approvals, AI Interactions, and deeper import workflow actions remain placeholders or later workflow screens.
 - The public import workflow currently supports one business import type: `USER_CSV`.
 - Feature flags are fixed-key and tenant-scoped only; there is no cross-tenant admin surface, percentage rollout, or generic flag platform.
 - Public AI endpoints are read-only or suggestion-only. AI-generated ticket comments and import selective replay still go through separate human-reviewed approval bridges before execution.

@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-04-26
+Last updated: 2026-04-29
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -68,6 +68,7 @@ Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/actuator/health"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/tickets"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/feature-flags"
+Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/imports"
 ```
 
 Expected result:
@@ -77,6 +78,7 @@ Expected result:
 - `http://localhost:8081/` returns the admin HTML shell.
 - `http://localhost:8081/tickets` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/feature-flags` returns the same admin HTML shell through SPA history fallback.
+- `http://localhost:8081/imports` returns the same admin HTML shell through SPA history fallback.
 
 ## 5. Same-Origin Auth Smoke
 
@@ -104,6 +106,11 @@ $context = Invoke-RestMethod `
 $tickets = Invoke-RestMethod `
   -Method Get `
   -Uri "$adminBaseUrl/api/v1/tickets?page=0&size=10" `
+  -Headers $headers
+
+$imports = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$adminBaseUrl/api/v1/import-jobs?page=0&size=10" `
   -Headers $headers
 
 $featureFlags = Invoke-RestMethod `
@@ -172,6 +179,7 @@ Expected result:
 - login returns an access token
 - context returns `tenantCode=demo-shop` and `username=admin`
 - tickets returns `page=0`, `size=10`, an `items` array, and the current tenant's first ticket page
+- imports returns `page=0`, `size=10`, an `items` array, and the current tenant's first import-job page or an empty list
 - feature flags returns the fixed eight-key inventory for the current tenant
 - feature flag update returns the requested toggled state and restore returns the original state
 - logout returns `SUCCESS` with `data=null`
@@ -198,11 +206,12 @@ Open `http://localhost:8081`.
 2. Confirm the dashboard renders tenant and operator context.
 3. Open `Tickets` and confirm `/tickets` renders the read-only current tenant ticket queue.
 4. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
-5. Toggle one feature flag and restore the original value.
-6. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
-7. Refresh `/tickets` and `/feature-flags` and confirm context plus route data restore while the session is active.
-8. Select `Sign out` and confirm the login screen returns.
-9. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
+5. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
+6. Toggle one feature flag and restore the original value.
+7. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
+8. Refresh `/tickets`, `/feature-flags`, and `/imports` and confirm context plus route data restore while the session is active.
+9. Select `Sign out` and confirm the login screen returns.
+10. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
 
 Do not use `http://localhost:5173` for this runbook; that is the Vite dev-server path.
 

@@ -17,9 +17,10 @@ The current Productization Baseline frontend is intentionally narrow:
 - sign out all current-user sessions through the backend bulk revocation endpoint
 - render the first read-only workflow screen at `/tickets` using the current tenant ticket queue
 - render the Feature Flags control screen at `/feature-flags` using the current tenant feature-flag API
-- expose navigation placeholders for Approvals, Imports, and AI Interactions
+- render the Imports queue screen at `/imports` using the current tenant import-job list API
+- expose navigation placeholders for Approvals and AI Interactions
 
-It does not add ticket detail, mutations, filters, pagination controls, AI actions, approval actions, cross-tenant feature-flag administration, percentage rollout, batch flag editing, audit detail, AI provider configuration, or backend API changes.
+It does not add ticket detail, mutations, filters, pagination controls, AI actions, approval actions, import upload, import detail, import `/errors`, import replay, import AI actions, cross-tenant feature-flag administration, percentage rollout, batch flag editing, audit detail, AI provider configuration, or backend API changes.
 
 ## Prerequisites
 
@@ -53,7 +54,7 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-The frontend calls `/api/v1/auth/login`, `/api/v1/context`, `/api/v1/auth/logout`, `/api/v1/auth/logout-all`, `/api/v1/tickets?page=0&size=10`, `/api/v1/feature-flags`, and `/api/v1/feature-flags/{key}` with relative `/api/...` paths. During local development, Vite proxies those calls to `http://localhost:8080`.
+The frontend calls `/api/v1/auth/login`, `/api/v1/context`, `/api/v1/auth/logout`, `/api/v1/auth/logout-all`, `/api/v1/tickets?page=0&size=10`, `/api/v1/import-jobs?page=0&size=10`, `/api/v1/feature-flags`, and `/api/v1/feature-flags/{key}` with relative `/api/...` paths. During local development, Vite proxies those calls to `http://localhost:8080`.
 
 ## Start The Production-Like Admin Runtime
 
@@ -77,15 +78,16 @@ The API container uses `SPRING_PROFILES_ACTIVE=runtime`. Required secrets and cr
 3. Confirm the dashboard shows tenant code, tenant ID, operator, operator ID, token roles, and token permissions.
 4. Select `Tickets` and confirm `/tickets` renders the current tenant queue from `/api/v1/tickets?page=0&size=10`.
 5. Select `Feature Flags` and confirm `/feature-flags` renders eight current-tenant flags from `/api/v1/feature-flags`.
-6. Toggle one flag, confirm the row reflects the persisted state returned by `PUT /api/v1/feature-flags/{key}`, and restore the original value before ending the smoke.
-7. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm the page shows `权限不足` without returning to login.
-8. Confirm Approvals, Imports, and AI Interactions remain disabled placeholders.
-9. Refresh `/tickets` and `/feature-flags` and confirm context plus route data reload without returning to login while the session is active.
-10. Select `Sign out` and confirm the app returns to the login screen.
-11. Log in again, select `Sign out all sessions`, and confirm the app returns to the login screen.
-12. Reusing a signed-out token against `/api/v1/context` should return `401`.
+6. Select `Imports` and confirm `/imports` renders the current tenant import-job list or empty state from `/api/v1/import-jobs?page=0&size=10`.
+7. Toggle one flag, confirm the row reflects the persisted state returned by `PUT /api/v1/feature-flags/{key}`, and restore the original value before ending the smoke.
+8. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm the page shows `权限不足` without returning to login.
+9. Confirm Approvals and AI Interactions remain disabled placeholders.
+10. Refresh `/tickets`, `/feature-flags`, and `/imports` and confirm context plus route data reload without returning to login while the session is active.
+11. Select `Sign out` and confirm the app returns to the login screen.
+12. Log in again, select `Sign out all sessions`, and confirm the app returns to the login screen.
+13. Reusing a signed-out token against `/api/v1/context` should return `401`.
 
-The seeded `admin`, `ops`, and `viewer` users all have `TICKET_READ` and can load the read-only queue.
+The seeded `admin`, `ops`, and `viewer` users all have `TICKET_READ` and can load the read-only ticket queue. The seeded `admin` user has `USER_READ` and can load the read-only imports queue.
 
 ## Production-Like Runtime Smoke Test
 
@@ -98,19 +100,20 @@ Minimum acceptance:
 3. Confirm dashboard context is loaded through same-origin `/api/v1/context`.
 4. Open `Tickets` and confirm the queue loads through same-origin `/api/v1/tickets?page=0&size=10`.
 5. Open `Feature Flags` and confirm the eight-key inventory loads through same-origin `/api/v1/feature-flags`.
-6. Toggle one flag through the UI and restore the original value.
-7. Refresh `/tickets` and `/feature-flags` and confirm context restores while the server-side session is active.
-8. Select `Sign out` and confirm the app returns to login.
-9. Log in again, select `Sign out all sessions`, and confirm the app returns to login.
-10. Reusing a signed-out token against `http://localhost:8081/api/v1/context` should return `401`.
+6. Open `Imports` and confirm the queue loads or shows the empty state through same-origin `/api/v1/import-jobs?page=0&size=10`.
+7. Toggle one flag through the UI and restore the original value.
+8. Refresh `/tickets`, `/feature-flags`, and `/imports` and confirm context restores while the server-side session is active.
+9. Select `Sign out` and confirm the app returns to login.
+10. Log in again, select `Sign out all sessions`, and confirm the app returns to login.
+11. Reusing a signed-out token against `http://localhost:8081/api/v1/context` should return `401`.
 
 ## Current Session Limits
 
-The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context`, `/api/v1/tickets`, or `/api/v1/feature-flags` returns `401` or one of the current auth-ending `403` messages: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. A generic permission `403` does not clear the local session; `/feature-flags` shows an in-page `权限不足` state for ordinary permission denial.
+The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context`, `/api/v1/tickets`, `/api/v1/import-jobs`, or `/api/v1/feature-flags` returns `401` or one of the current auth-ending `403` messages: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. A generic permission `403` does not clear the local session; `/feature-flags` shows an in-page `权限不足` state for ordinary permission denial.
 
-Login creates a server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, and feature-flags query caches, and returns to login even if the logout request fails or the token is already invalid.
+Login creates a server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, import-jobs, and feature-flags query caches, and returns to login even if the logout request fails or the token is already invalid.
 
-`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, then the frontend clears the same local token plus context, tickets, and feature-flags query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, then the frontend clears the same local token plus context, tickets, import-jobs, and feature-flags query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
 
 A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, session list, device metadata, or selective device logout in this slice. When the access token expires or the server-side session is invalid, the user must log in again.
 

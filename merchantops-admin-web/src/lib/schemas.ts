@@ -37,6 +37,31 @@ export const ticketPageSchema = z.object({
   totalPages: z.number(),
 })
 
+export const importJobListItemSchema = z.object({
+  id: z.number(),
+  importType: z.string(),
+  sourceType: z.string(),
+  sourceFilename: z.string(),
+  status: z.string(),
+  requestedBy: z.number(),
+  hasFailures: z.boolean(),
+  totalCount: z.number(),
+  successCount: z.number(),
+  failureCount: z.number(),
+  errorSummary: z.string().nullable(),
+  createdAt: z.string(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+})
+
+export const importJobPageSchema = z.object({
+  items: z.array(importJobListItemSchema),
+  page: z.number(),
+  size: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+})
+
 export const featureFlagItemSchema = z.object({
   id: z.number().nullable(),
   key: z.string(),
@@ -67,6 +92,8 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type ContextResponse = z.infer<typeof contextResponseSchema>
 export type TicketListItem = z.infer<typeof ticketListItemSchema>
 export type TicketPage = z.infer<typeof ticketPageSchema>
+export type ImportJobListItem = z.infer<typeof importJobListItemSchema>
+export type ImportJobPage = z.infer<typeof importJobPageSchema>
 export type FeatureFlagItem = z.infer<typeof featureFlagItemSchema>
 export type FeatureFlagList = z.infer<typeof featureFlagListSchema>
 export type FeatureFlagUpdateRequest = z.infer<typeof featureFlagUpdateRequestSchema>
