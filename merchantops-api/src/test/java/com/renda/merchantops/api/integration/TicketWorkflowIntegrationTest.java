@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.filter.RequestIdFilter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -121,7 +122,8 @@ class TicketWorkflowIntegrationTest {
                     role_code VARCHAR(64) NOT NULL,
                     role_name VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_role_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
 
@@ -138,8 +140,11 @@ class TicketWorkflowIntegrationTest {
         jdbcTemplate.execute("""
                 CREATE TABLE user_role (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
                     user_id BIGINT NOT NULL,
-                    role_id BIGINT NOT NULL
+                    role_id BIGINT NOT NULL,
+                    CONSTRAINT fk_user_role_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_user_role_role_tenant FOREIGN KEY (role_id, tenant_id) REFERENCES `role`(id, tenant_id)
                 )
                 """);
 
@@ -191,6 +196,18 @@ class TicketWorkflowIntegrationTest {
                 )
                 """);
         jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
+        jdbcTemplate.execute("""
+                CREATE TABLE feature_flag (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    flag_key VARCHAR(128) NOT NULL,
+                    enabled BOOLEAN NOT NULL,
+                    updated_by BIGINT,
+                    created_at TIMESTAMP NOT NULL,
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_feature_flag_tenant_key UNIQUE (tenant_id, flag_key)
+                )
+                """);
 
 
         jdbcTemplate.execute("""
@@ -204,9 +221,13 @@ class TicketWorkflowIntegrationTest {
                     created_by BIGINT NOT NULL,
                     request_id VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT fk_ticket_assignee_tenant FOREIGN KEY (assignee_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_ticket_created_by_tenant FOREIGN KEY (created_by, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_assignee_tenant ON ticket (assignee_id, tenant_id)");
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_created_by_tenant ON ticket (created_by, tenant_id)");
 
         jdbcTemplate.execute("""
                 CREATE TABLE ai_interaction_record (
@@ -257,12 +278,15 @@ class TicketWorkflowIntegrationTest {
                 )
                 """);
 
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
+
         seedTenants();
         seedPermissions();
         seedRoles();
         seedUsers();
         seedUserRoles();
         seedRolePermissions();
+        seedFeatureFlags();
         seedTickets();
         seedAiInteractions();
     }
@@ -374,6 +398,50 @@ class TicketWorkflowIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("ticket not found"));
+    }
+
+    @Test
+    void ticketTableShouldRejectCrossTenantRootActors() {
+        assertThatThrownBy(() -> insertTicket(
+                501L,
+                1L,
+                "Cross tenant assignee",
+                "desc",
+                "OPEN",
+                201L,
+                101L,
+                "ticket-actor-integrity-assignee"
+        )).isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> insertTicket(
+                502L,
+                1L,
+                "Cross tenant creator",
+                "desc",
+                "OPEN",
+                null,
+                201L,
+                "ticket-actor-integrity-created-by"
+        )).isInstanceOf(DataIntegrityViolationException.class);
+
+        insertTicket(
+                503L,
+                1L,
+                "Unassigned same tenant creator",
+                "desc",
+                "OPEN",
+                null,
+                101L,
+                "ticket-actor-integrity-null-assignee"
+        );
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket WHERE id = ? AND tenant_id = ? AND assignee_id IS NULL AND created_by = ?",
+                Integer.class,
+                503L,
+                1L,
+                101L
+        )).isEqualTo(1);
     }
 
     @Test
@@ -649,6 +717,27 @@ class TicketWorkflowIntegrationTest {
     }
 
     @Test
+    void createCommentProposalShouldReturnServiceUnavailableWhenBridgeFlagDisabled() throws Exception {
+        setFeatureFlag("workflow.ticket.comment-proposal.enabled", false);
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        mockMvc.perform(post("/api/v1/tickets/301/comments/proposals/ai-reply-draft")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-flag-disabled")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentProposalRequest("Reply draft content", 9002L)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("ticket comment proposal is disabled"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_request WHERE action_type = 'TICKET_COMMENT_CREATE'",
+                Integer.class
+        )).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isZero();
+    }
+
+    @Test
     void createCommentProposalShouldRejectBlankOverlongAndInvalidSourceInteraction() throws Exception {
         String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
 
@@ -842,6 +931,48 @@ class TicketWorkflowIntegrationTest {
                 Integer.class,
                 approvalRequestId
         )).isEqualTo(1);
+    }
+
+    @Test
+    void approveCommentProposalShouldRecheckBridgeFlagBeforeWritingComment() throws Exception {
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+
+        Long approvalRequestId = createCommentProposalAndGetId(
+                opsToken,
+                "ticket-comment-proposal-flag-recheck-create",
+                "Reply drafted before flag shutdown",
+                9002L
+        );
+        setFeatureFlag("workflow.ticket.comment-proposal.enabled", false);
+
+        mockMvc.perform(post("/api/v1/approval-requests/{id}/approve", approvalRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header(RequestIdFilter.REQUEST_ID_HEADER, "ticket-comment-proposal-flag-recheck-approve"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("ticket comment proposal is disabled"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM approval_request WHERE id = ?",
+                String.class,
+                approvalRequestId
+        )).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT reviewed_by FROM approval_request WHERE id = ?",
+                Long.class,
+                approvalRequestId
+        )).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE request_id = ?",
+                Integer.class,
+                "ticket-comment-proposal-flag-recheck-approve"
+        )).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_event WHERE tenant_id = 1 AND entity_type = 'APPROVAL_REQUEST' AND entity_id = ? AND action_type = 'APPROVAL_ACTION_EXECUTED'",
+                Integer.class,
+                approvalRequestId
+        )).isZero();
     }
 
     @Test
@@ -1234,6 +1365,17 @@ class TicketWorkflowIntegrationTest {
                 """, 2L, "other-shop", "Other Shop", "ACTIVE");
     }
 
+    private void seedFeatureFlags() {
+        insertFeatureFlag(1L, "ai.ticket.summary.enabled", true);
+        insertFeatureFlag(2L, "ai.ticket.triage.enabled", true);
+        insertFeatureFlag(3L, "ai.ticket.reply-draft.enabled", true);
+        insertFeatureFlag(4L, "ai.import.error-summary.enabled", true);
+        insertFeatureFlag(5L, "ai.import.mapping-suggestion.enabled", true);
+        insertFeatureFlag(6L, "ai.import.fix-recommendation.enabled", true);
+        insertFeatureFlag(7L, "workflow.import.selective-replay-proposal.enabled", true);
+        insertFeatureFlag(8L, "workflow.ticket.comment-proposal.enabled", true);
+    }
+
     private void seedPermissions() {
         insertPermission(1L, "USER_READ", "Read user");
         insertPermission(2L, "USER_WRITE", "Write user");
@@ -1361,6 +1503,33 @@ class TicketWorkflowIntegrationTest {
                 """, id, permissionCode, permissionName);
     }
 
+    private void insertFeatureFlag(Long id, String key, boolean enabled) {
+        insertFeatureFlag(1L, id, key, enabled);
+    }
+
+    private void insertFeatureFlag(Long tenantId, Long id, String key, boolean enabled) {
+        jdbcTemplate.update(
+                "INSERT INTO feature_flag (id, tenant_id, flag_key, enabled, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id,
+                tenantId,
+                key,
+                enabled,
+                tenantId == 1L ? 101L : 201L
+        );
+    }
+
+    private void setFeatureFlag(String key, boolean enabled) {
+        setFeatureFlag(1L, key, enabled);
+    }
+
+    private void setFeatureFlag(Long tenantId, String key, boolean enabled) {
+        jdbcTemplate.update("""
+                UPDATE feature_flag
+                SET enabled = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE tenant_id = ? AND flag_key = ?
+                """, enabled, tenantId == 1L ? 101L : 201L, tenantId, key);
+    }
+
     private void insertRole(Long id, Long tenantId, String roleCode, String roleName) {
         jdbcTemplate.update("""
                 INSERT INTO `role` (id, tenant_id, role_code, role_name, created_at, updated_at)
@@ -1382,10 +1551,11 @@ class TicketWorkflowIntegrationTest {
     }
 
     private void insertUserRole(Long id, Long userId, Long roleId) {
+        Long tenantId = jdbcTemplate.queryForObject("SELECT tenant_id FROM users WHERE id = ?", Long.class, userId);
         jdbcTemplate.update("""
-                INSERT INTO user_role (id, user_id, role_id)
-                VALUES (?, ?, ?)
-                """, id, userId, roleId);
+                INSERT INTO user_role (id, tenant_id, user_id, role_id)
+                VALUES (?, ?, ?, ?)
+                """, id, tenantId, userId, roleId);
     }
 
     private void insertRolePermission(Long id, Long roleId, Long permissionId) {

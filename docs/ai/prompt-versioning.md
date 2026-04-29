@@ -1,6 +1,6 @@
 # Prompt Versioning
 
-Last updated: 2026-03-28
+Last updated: 2026-04-06
 
 ## Goal
 
@@ -14,9 +14,28 @@ As of today:
 
 - eight public AI endpoints exist: two history read endpoints plus six generation endpoints across ticket and import workflows
 - the current generation prompt versions are `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, `import-mapping-suggestion-v1`, and `import-fix-recommendation-v1`
-- public generation responses return `promptVersion`, and the history endpoints reuse the stored prompt version from previous AI invocations
+- public generation responses return `promptVersion`, the history endpoints reuse the stored prompt version from previous AI invocations, and the tenant usage-summary endpoint now exposes aggregate `byPromptVersion` visibility without returning per-request cross-entity detail
 - `ai_interaction_record` persists the prompt version for each AI invocation
+- the active six-workflow prompt inventory is now executable in main code through `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java`
+- the test-side governance baseline lives alongside that runtime inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`, but it is maintained independently so prompt-version bumps fail the eval baseline until the governance inventory is intentionally updated
 - prompt text still lives in code-side prompt builders rather than a separate prompt registry
+
+## Active Workflow Inventory
+
+The current live prompt inventory is explicit and executable rather than only described in prose:
+
+| Workflow | Interaction Type | Active Prompt Version | Golden Samples | Failure Samples | Policy Samples |
+| --- | --- | --- | --- | --- | --- |
+| `ticket-summary` | `SUMMARY` | `ticket-summary-v1` | `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json` | `merchantops-api/src/test/resources/ai/ticket-summary/failure-samples.json` | `merchantops-api/src/test/resources/ai/ticket-summary/policy-samples.json` |
+| `ticket-triage` | `TRIAGE` | `ticket-triage-v1` | `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json` | `merchantops-api/src/test/resources/ai/ticket-triage/failure-samples.json` | `merchantops-api/src/test/resources/ai/ticket-triage/policy-samples.json` |
+| `ticket-reply-draft` | `REPLY_DRAFT` | `ticket-reply-draft-v1` | `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json` | `merchantops-api/src/test/resources/ai/ticket-reply-draft/failure-samples.json` | `merchantops-api/src/test/resources/ai/ticket-reply-draft/policy-samples.json` |
+| `import-job-error-summary` | `ERROR_SUMMARY` | `import-error-summary-v1` | `merchantops-api/src/test/resources/ai/import-job-error-summary/golden-samples.json` | `merchantops-api/src/test/resources/ai/import-job-error-summary/failure-samples.json` | `merchantops-api/src/test/resources/ai/import-job-error-summary/policy-samples.json` |
+| `import-job-mapping-suggestion` | `MAPPING_SUGGESTION` | `import-mapping-suggestion-v1` | `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/golden-samples.json` | `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/failure-samples.json` | `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/policy-samples.json` |
+| `import-job-fix-recommendation` | `FIX_RECOMMENDATION` | `import-fix-recommendation-v1` | `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/golden-samples.json` | `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/failure-samples.json` | `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/policy-samples.json` |
+
+The default regression now checks that inventory through `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java`.
+
+When a workflow prompt version advances, update both `AiGenerationWorkflow` and `AiWorkflowEvalInventory` intentionally in the same change. The runtime catalog defines what the application serves; the eval inventory defines the reviewed governance baseline that must still pass.
 
 ## What Counts As A Versioned AI Artifact
 
@@ -58,6 +77,7 @@ Today the live prompt version is carried by configuration and code together:
 - `merchantops.ai.import-mapping-suggestion-prompt-version` stores the public and persisted import mapping-suggestion version identifier
 - `merchantops.ai.import-fix-recommendation-prompt-version` stores the public and persisted import fix-recommendation version identifier
 - the current prompt text lives in `TicketSummaryPromptBuilder`, `TicketTriagePromptBuilder`, `TicketReplyDraftPromptBuilder`, `ImportJobErrorSummaryPromptBuilder`, `ImportJobMappingSuggestionPromptBuilder`, and `ImportJobFixRecommendationPromptBuilder`
+- the default version fallback, stable workflow key, entity type, and interaction type now live together in `AiGenerationWorkflow`
 
 That is acceptable for the current baseline because the public contract and stored audit record already expose an explicit version id.
 
@@ -93,7 +113,7 @@ Every prompt change should answer:
 
 - what behavior is intended to improve
 - what risk could regress
-- which golden or failure samples were checked
+- which golden, failure, or policy samples were checked
 - whether the public output shape changed
 - whether downstream approval or tool logic changed
 

@@ -50,18 +50,19 @@ Recommended follow-up:
 
 ### NB-001: User-Role Database-Level Tenant Integrity
 
-- State: Open
+- State: Resolved in Productization Baseline Slice D
 - Category: Schema Integrity
 - Discovered in: Week 1
-- Not blocking: Week 1 completion, Week 2 user-management delivery, or the current Week 4 work
+- Not blocking: Productization Baseline
 - Priority: Medium
-- Recommended window: Week 4 or early Week 5
+- Recommended window: completed by `V16__enforce_user_role_tenant_integrity.sql`
 - Related docs: [../reference/database-migrations.md](../reference/database-migrations.md), [../project-status.md](../project-status.md)
 
 Current state:
 
-- `user_role` still does not enforce `users.tenant_id == role.tenant_id` at the database layer
-- application logic and tenant-aware repository patterns reduce the practical risk, but the database still permits invalid cross-tenant combinations if bad data is inserted directly
+- `user_role` now carries `tenant_id`
+- `V16__enforce_user_role_tenant_integrity.sql` backfills `tenant_id` from `users`, adds child indexes, and adds composite foreign keys to both `users(id, tenant_id)` and `role(id, tenant_id)`
+- application logic still validates tenant-local role codes before writes; the database invariant is defense-in-depth
 
 Why it matters:
 
@@ -71,49 +72,48 @@ Why it matters:
 
 Why it is non-blocking now:
 
-- the current public user-management and ticket flows already validate tenant scope at the application layer
-- Week 2 and Week 3 acceptance did not require DB-level tenant enforcement on `user_role`
+- the gap has been resolved for `user_role`
+- remaining actor-link schema integrity work is tracked separately under NB-002
 
 Recommended follow-up:
 
-1. add `tenant_id` to `user_role` through a narrow Flyway migration
-2. backfill valid rows from existing same-tenant associations
-3. add composite same-tenant foreign-key enforcement for `users` and `role`
-4. add a uniqueness constraint such as `(tenant_id, user_id, role_id)` if the final schema still needs it
-5. add integration coverage proving cross-tenant bindings fail at the DB layer
+- Keep the `user_role` invariant covered when role-management fixtures or migrations change.
+- Continue ticket actor database-level tenant integrity as NB-002 rather than reopening `user_role` scope.
 
 ### NB-002: Ticket Actor Tenant Integrity At The Database Layer
 
-- State: Open
+- State: Partially resolved in Productization Baseline Slice F
 - Category: Schema Integrity
 - Discovered in: Week 3
-- Not blocking: Week 3 completion or the current Week 4 work
+- Not blocking: Productization Baseline
 - Priority: Medium
-- Recommended window: Week 4 or early Week 5
+- Recommended window: root ticket actors completed by `V17__enforce_ticket_actor_tenant_integrity.sql`; remaining comment/log actor constraints in a later narrow slice
 - Related docs: [../reference/ticket-workflow.md](../reference/ticket-workflow.md), [../project-status.md](../project-status.md)
 
 Current state:
 
-- `ticket.assignee_id`, `ticket.created_by`, `ticket_comment.created_by`, and `ticket_operation_log.operator_id` currently reference `users.id`
+- `ticket.assignee_id` and `ticket.created_by` are now protected by same-tenant composite foreign keys from `ticket(assignee_id, tenant_id)` and `ticket(created_by, tenant_id)` to `users(id, tenant_id)`
+- `ticket_comment.created_by` and `ticket_operation_log.operator_id` still reference `users.id` without a same-tenant composite foreign key
 - service logic already enforces same-tenant actor checks for current ticket workflows
-- the database does not yet enforce `child.tenant_id == users.tenant_id` for those relationships
+- the database does not yet enforce `child.tenant_id == users.tenant_id` for ticket comments or operation-log operators
 
 Why it matters:
 
-- invalid cross-tenant actor links are still possible through direct data manipulation
+- invalid cross-tenant actor links on comments or operation logs are still possible through direct data manipulation
 - later audit, approval, and AI features will depend on trustworthy actor lineage
 
 Why it is non-blocking now:
 
-- the current public ticket workflow validates assignee and operator tenant scope in service logic
+- the root ticket assignee and creator gap has been resolved below the service layer
+- the current public ticket workflow validates remaining operator tenant scope in service logic
 - automated coverage already exercises current-tenant assignment, write, reopen, and query behavior
 
 Recommended follow-up:
 
-1. add composite indexed keys such as `(id, tenant_id)` on `users`
-2. add composite foreign keys that bind ticket-related user references to the same tenant
+1. add composite foreign keys that bind `ticket_comment.created_by` and `ticket_operation_log.operator_id` to the same tenant
+2. consider child-table `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints as a separate narrow slice
 3. backfill and validate existing rows before enabling strict constraints
-4. add integration tests that prove cross-tenant actor linkage fails below the service layer
+4. add integration tests that prove cross-tenant comment/log actor linkage fails below the service layer
 
 ### NB-003: RBAC Demo Endpoint Productionization Gap
 

@@ -11,6 +11,8 @@
 
 - Security scheme: `bearerAuth` (HTTP Bearer JWT)
 - Login endpoint: `POST /api/v1/auth/login`
+- Logout endpoint: `POST /api/v1/auth/logout`
+- Logout-all endpoint: `POST /api/v1/auth/logout-all`
 - Demo tenant and users:
   - tenant: `demo-shop`
   - `admin / 123456`
@@ -26,8 +28,8 @@ Swagger UI usability settings enabled in code:
 
 ## Annotation Organization
 
-- OpenAPI annotations are centralized in `merchantops-api/src/main/java/com/renda/merchantops/api/contract`
-- Controllers under `.../api/controller` keep business logic and permission checks only
+- OpenAPI annotations live on capability-owned `*Api` interfaces, with shared health/dev/context contracts under `merchantops-api/src/main/java/com/renda/merchantops/api/contract`
+- Controllers stay thin and delegate into services or use cases; they should not duplicate the Swagger contract text
 - Reusable JSON examples are centralized in `merchantops-api/src/main/java/com/renda/merchantops/api/doc/OpenApiExamples.java`
 
 ## Endpoint Coverage Matrix
@@ -39,6 +41,8 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/health` | No | Lightweight service health |
 | `GET` | `/actuator/health` | No | Spring Boot actuator health |
 | `POST` | `/api/v1/auth/login` | No | Login and get JWT token |
+| `POST` | `/api/v1/auth/logout` | Yes | Revoke the current auth session |
+| `POST` | `/api/v1/auth/logout-all` | Yes | Revoke all active auth sessions for the current tenant/user |
 | `GET` | `/api/v1/dev/ping` | No | Dev ping test |
 | `POST` | `/api/v1/dev/echo` | No | Dev echo test |
 | `GET` | `/api/v1/dev/biz-error` | No | Dev error-shape test |
@@ -52,12 +56,15 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `PATCH` | `/api/v1/users/{id}/status` | Yes + `USER_WRITE` | Enable or disable a user |
 | `PUT` | `/api/v1/users/{id}/roles` | Yes + `USER_WRITE` | Replace all tenant-local roles for a user |
 | `POST` | `/api/v1/users/{id}/disable-requests` | Yes + `USER_WRITE` | Create a pending approval request for disabling a user |
+| `GET` | `/api/v1/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | List current-tenant feature flags in stable key order |
+| `PUT` | `/api/v1/feature-flags/{key}` | Yes + `FEATURE_FLAG_MANAGE` | Update one current-tenant feature flag by fixed key |
 | `GET` | `/api/v1/tickets` | Yes + `TICKET_READ` | Page tickets in current tenant |
 | `GET` | `/api/v1/tickets/{id}` | Yes + `TICKET_READ` | Get one tenant-scoped ticket detail with comments and workflow logs |
 | `GET` | `/api/v1/tickets/{id}/ai-interactions` | Yes + `TICKET_READ` | Page narrowed stored AI interaction history for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | Yes + `TICKET_READ` | Generate a suggestion-only AI summary for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | Yes + `TICKET_READ` | Generate a suggestion-only AI triage result for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | Yes + `TICKET_READ` | Generate a suggestion-only AI internal reply draft for one current-tenant ticket |
+| `GET` | `/api/v1/ai-interactions/usage-summary` | Yes + `USER_READ` | Return tenant-scoped aggregate AI usage, cost, and prompt-version summary from stored interaction metadata |
 | `POST` | `/api/v1/tickets` | Yes + `TICKET_WRITE` | Create a new `OPEN` ticket |
 | `PATCH` | `/api/v1/tickets/{id}/assignee` | Yes + `TICKET_WRITE` | Assign the ticket to an active user in current tenant |
 | `PATCH` | `/api/v1/tickets/{id}/status` | Yes + `TICKET_WRITE` | Transition the ticket status |
@@ -83,7 +90,6 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `POST` | `/api/v1/import-jobs/{id}/ai-fix-recommendation` | Yes + `USER_READ` | Generate a suggestion-only AI fix recommendation for one current-tenant import job |
 | `GET` | `/api/v1/rbac/users` | Yes + `USER_READ` | RBAC demo read action |
 | `GET` | `/api/v1/rbac/users/manage` | Yes + `USER_WRITE` | RBAC demo manage users |
-| `GET` | `/api/v1/rbac/feature-flags` | Yes + `FEATURE_FLAG_MANAGE` | RBAC demo feature flags |
 
 Notes about security whitelist routes:
 
@@ -111,12 +117,36 @@ Ticket Workflow tag note:
 - `GET /api/v1/tickets/{id}/ai-interactions` supports `page`, `size`, `interactionType`, and `status`, with stable ordering `createdAt DESC, id DESC`.
 - `GET /api/v1/tickets/{id}/ai-interactions` exposes narrowed runtime metadata including `usagePromptTokens`, `usageCompletionTokens`, `usageTotalTokens`, and `usageCostMicros`, while still not exposing raw prompt text or raw provider payload and while remaining outside billing or ledger semantics.
 - `POST /api/v1/tickets/{id}/ai-reply-draft` exposes no request body and returns a structured internal comment draft plus assembled `draftText`.
+- `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft` each require both `merchantops.ai.enabled=true` and their matching persisted feature flag.
 - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` accepts required `commentContent` plus optional `sourceInteractionId`, creates a pending `TICKET_COMMENT_CREATE` approval request only, stores a narrow payload without raw prompt or provider fields, and suppresses duplicate pending proposals on trimmed `commentContent` only.
+- `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` also requires persisted feature flag `workflow.ticket.comment-proposal.enabled=true`; when disabled, the endpoint returns controlled `503` and creates no approval or audit row.
 - `POST /api/v1/tickets` always creates an `OPEN` ticket.
 - `PATCH /api/v1/tickets/{id}/assignee` only accepts an active assignee from the current tenant.
 - `PATCH /api/v1/tickets/{id}/status` documents the current transition rules for `OPEN`, `IN_PROGRESS`, and `CLOSED`, including reopen (`CLOSED -> OPEN`).
 - `POST /api/v1/tickets/{id}/comments` exposes comment content only; operator and request tracing are derived server-side.
 - See [ticket-workflow.md](ticket-workflow.md) for the current public contract and workflow notes.
+
+AI Governance tag note:
+
+- Swagger currently exposes `GET /api/v1/ai-interactions/usage-summary`.
+- the endpoint requires `USER_READ`.
+- query params are `from`, `to`, `entityType`, `interactionType`, and `status`.
+- the current read shape returns aggregate totals plus `byInteractionType`, `byStatus`, and `byPromptVersion`.
+- `byPromptVersion` ordering is `count DESC, promptVersion ASC`.
+- raw prompt text, raw provider payload, and request-level fields such as `requestId`, `outputSummary`, and `modelId` remain excluded; `promptVersion` is exposed only as aggregate breakdown data.
+- the endpoint remains outside billing or ledger semantics.
+- See [ai-integration.md](ai-integration.md) for the current AI governance contract.
+
+Feature Flags tag note:
+
+- Swagger currently exposes `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`.
+- both endpoints require `FEATURE_FLAG_MANAGE`.
+- the list response returns the current tenant's fixed eight-key flag inventory in stable `key ASC` order.
+- each item exposes `id`, `key`, `enabled`, and `updatedAt`; missing known rows are synthesized as default-enabled items with `id=null` and `updatedAt=null`.
+- the current fixed flag set covers six AI generation endpoints plus the two Week 8 workflow proposal bridges.
+- `PUT /api/v1/feature-flags/{key}` accepts `{ "enabled": true|false }`, rejects `enabled=null` with `400`, returns `404` for an unknown key, creates a missing known row for the current tenant from the default inventory baseline when needed, and is idempotent when the requested state is unchanged.
+- the feature-flag API does not manage config-level `merchantops.ai.enabled`; that remains a separate deployment setting.
+- See [feature-flags.md](feature-flags.md) for the current fixed-key inventory and rollout-control boundary.
 
 Audit Events tag note:
 
@@ -125,7 +155,7 @@ Audit Events tag note:
 - query params are `entityType` and `entityId`.
 - `entityType` is case-insensitive in the current implementation and is normalized internally before lookup.
 - the current read shape is minimal: entity-scoped lookup only, ordered by insert id ascending, with no pagination or approval queue semantics yet.
-- current public write flows emit audit rows for `USER`, `TICKET`, and `APPROVAL_REQUEST` entities.
+- current public write flows emit audit rows for `USER`, `TICKET`, `APPROVAL_REQUEST`, `IMPORT_JOB`, and `FEATURE_FLAG` entities.
 - See [audit-approval.md](audit-approval.md) for the current governance baseline and non-goals.
 
 Approval Requests tag note:
@@ -161,11 +191,13 @@ Import Jobs tag note:
 - `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` is currently limited to `USER_CSV` jobs that already have failure signal plus parseable sanitized header/global signal; it does not rescan the source file or forward raw row values.
 - `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` exposes no request body and returns suggestion-only fields `importJobId`, `summary`, `recommendedFixes`, `confidenceNotes`, `recommendedOperatorChecks`, `promptVersion`, `modelId`, `generatedAt`, `latencyMs`, and `requestId`.
 - `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` is currently limited to `USER_CSV` jobs that already have failure signal plus grounded sanitized row-level error groups; it does not rescan the source file, return direct replacement values, or forward raw row values.
+- the three import AI generation endpoints each require both `merchantops.ai.enabled=true` and their matching persisted feature flag.
 - `POST /api/v1/import-jobs/{id}/replay-failures` creates a new derived `QUEUED` job from replayable failed rows only; it does not reset the old job.
 - `POST /api/v1/import-jobs/{id}/replay-file` copies the stored source file into a new derived `QUEUED` job for current-tenant `FAILED` `USER_CSV` source jobs that have no successful rows, and records `replayMode=WHOLE_FILE` in source/replay audit snapshots.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective` creates a new derived `QUEUED` job from replayable failed rows whose `errorCode` exactly matches one of the requested values.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` returns the shared approval-request response shape and stores only safe proposal payload fields (`sourceJobId`, canonical sorted `errorCodes`, optional `sourceInteractionId`, optional `proposalReason`) for later human review.
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` suppresses duplicate pending proposals on source job plus canonical `errorCodes`; `sourceInteractionId` and `proposalReason` do not affect uniqueness.
+- `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` also requires persisted feature flag `workflow.import.selective-replay-proposal.enabled=true`; when disabled, the endpoint returns controlled `503` and creates no approval or audit row.
 - `POST /api/v1/import-jobs/{id}/replay-failures/edited` creates a new derived `QUEUED` job from caller-provided full replacement rows keyed by replayable failed-row `errorId`.
 - `GET /api/v1/import-jobs/{id}/errors` now exposes `page`, `size`, and `errorCode`.
 - list ordering is currently `createdAt DESC, id DESC`.
@@ -202,7 +234,37 @@ Response:
 }
 ```
 
-### 2. Current User (`GET /api/v1/user/me`)
+Login creates a server-side auth session. The JWT carries a required `sid` claim; sidless beta tokens are rejected with `401`.
+
+### 2. Logout (`POST /api/v1/auth/logout`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": null
+}
+```
+
+Logout revokes only the current session. Reusing the same token on protected endpoints returns `401`.
+
+### 2a. Logout All (`POST /api/v1/auth/logout-all`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": null
+}
+```
+
+Logout-all revokes every active session for the current authenticated user in the current tenant, including the caller's current session. It does not revoke sessions for other users or other tenants. Reusing any token from the revoked current user sessions on protected endpoints returns `401`.
+
+### 3. Current User (`GET /api/v1/user/me`)
 
 Response:
 
@@ -221,7 +283,7 @@ Response:
 }
 ```
 
-### 3. Tenant User List (`GET /api/v1/users`)
+### 4. Tenant User List (`GET /api/v1/users`)
 
 Response:
 
@@ -254,7 +316,7 @@ Current notes:
 - the same request is available in [../../api-demo.http](../../api-demo.http)
 - automated checks for the controller/query mapping live in [../runbooks/automated-tests.md](../runbooks/automated-tests.md)
 
-### 4. Tenant User Detail (`GET /api/v1/users/{id}`)
+### 5. Tenant User Detail (`GET /api/v1/users/{id}`)
 
 Response:
 
@@ -280,9 +342,9 @@ Current notes:
 
 - requires `USER_READ`
 - returns `404` when the target user is outside the current tenant
-- useful as the current read-side detail endpoint before any admin UI exists
+- useful as the current read-side detail endpoint for admin-console and API smoke flows
 
-### 5. Create User (`POST /api/v1/users`)
+### 6. Create User (`POST /api/v1/users`)
 
 Request:
 
@@ -316,7 +378,7 @@ Response:
 }
 ```
 
-### 6. Update User (`PUT /api/v1/users/{id}`)
+### 7. Update User (`PUT /api/v1/users/{id}`)
 
 Request:
 
@@ -345,7 +407,7 @@ Response:
 }
 ```
 
-### 7. Disable User (`PATCH /api/v1/users/{id}/status`)
+### 8. Disable User (`PATCH /api/v1/users/{id}/status`)
 
 Request:
 
@@ -373,7 +435,7 @@ Response:
 }
 ```
 
-### 8. Role List (`GET /api/v1/roles`)
+### 9. Role List (`GET /api/v1/roles`)
 
 Response:
 
@@ -398,7 +460,7 @@ Response:
 }
 ```
 
-### 9. Replace User Roles (`PUT /api/v1/users/{id}/roles`)
+### 10. Replace User Roles (`PUT /api/v1/users/{id}/roles`)
 
 Request:
 
@@ -429,7 +491,7 @@ Current note:
 
 - old JWT claims are rejected after this change; the user must login again to get a new token with the new roles and permissions
 
-### 10. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
+### 11. RBAC Denied Example (`GET /api/v1/rbac/users/manage` with viewer token)
 
 Response:
 
@@ -441,7 +503,7 @@ Response:
 }
 ```
 
-### 11. Health (`GET /health`)
+### 12. Health (`GET /health`)
 
 Response:
 
@@ -452,7 +514,7 @@ Response:
 }
 ```
 
-### 12. Ticket List (`GET /api/v1/tickets`)
+### 13. Ticket List (`GET /api/v1/tickets`)
 
 Response:
 
@@ -487,7 +549,7 @@ Current notes:
 - current filter set is `page`, `size`, `status`, `assigneeId`, `keyword`, and `unassignedOnly`
 - see [ticket-workflow.md](ticket-workflow.md) for the closeable-loop behavior
 
-### 13. Create Ticket (`POST /api/v1/tickets`)
+### 14. Create Ticket (`POST /api/v1/tickets`)
 
 Request:
 
@@ -518,7 +580,7 @@ Response:
 }
 ```
 
-### 14. Ticket Detail (`GET /api/v1/tickets/{id}`)
+### 15. Ticket Detail (`GET /api/v1/tickets/{id}`)
 
 Response:
 
@@ -562,7 +624,7 @@ Response:
 }
 ```
 
-### 15. Audit Event Query (`GET /api/v1/audit-events`)
+### 16. Audit Event Query (`GET /api/v1/audit-events`)
 
 Response:
 
@@ -596,7 +658,7 @@ Current notes:
 - current public entity types are `USER`, `TICKET`, and `APPROVAL_REQUEST`
 - `approvalStatus` is currently always `NOT_REQUIRED` in Week 4 Slice A
 
-### 16. Create User Disable Request (`POST /api/v1/users/{id}/disable-requests`)
+### 17. Create User Disable Request (`POST /api/v1/users/{id}/disable-requests`)
 
 Response:
 
@@ -628,7 +690,7 @@ Current notes:
 - creates a request only; it does not disable the target user immediately
 - duplicate pending requests for the same tenant user are rejected
 
-### 17. Approval Request Review (`GET /api/v1/approval-requests/{id}` / `POST /approve`)
+### 18. Approval Request Review (`GET /api/v1/approval-requests/{id}` / `POST /approve`)
 
 Response after approval:
 
@@ -661,7 +723,7 @@ Current notes:
 - requester cannot self-approve or self-reject
 - approve path executes the disable action immediately in the same transaction boundary
 
-### 18. Approval Request Queue (`GET /api/v1/approval-requests`)
+### 19. Approval Request Queue (`GET /api/v1/approval-requests`)
 
 Response:
 
@@ -699,7 +761,7 @@ Current notes:
 - current ordering is stable: `createdAt DESC, id DESC`
 - the same request variants are available in [../../api-demo.http](../../api-demo.http)
 
-### 19. Import Job List (`GET /api/v1/import-jobs`)
+### 20. Import Job List (`GET /api/v1/import-jobs`)
 
 Response:
 
@@ -742,7 +804,7 @@ Current notes:
 - `hasFailuresOnly=true` returns both partial-success jobs (`SUCCEEDED` with `failureCount > 0`) and terminal `FAILED` jobs
 - detail response also exposes `errorCodeCounts` plus `itemErrors` for both parse/header failures and business-row execution failures in the current `USER_CSV` path
 
-### 20. Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures`)
+### 21. Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures`)
 
 Response:
 
@@ -767,7 +829,7 @@ Current notes:
 - replay creates a new derived job instead of mutating the source job in place
 - the new job's detail now exposes `sourceJobId`
 
-### 21. Whole-File Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-file`)
+### 22. Whole-File Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-file`)
 
 Response:
 
@@ -793,7 +855,7 @@ Current notes:
 - whole-file replay copies the stored source file bytes through the current storage abstraction
 - source and replay audit snapshots add `replayMode=WHOLE_FILE`
 
-### 22. Selective Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/selective`)
+### 23. Selective Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/selective`)
 
 Request:
 
@@ -811,7 +873,7 @@ Current notes:
 - source and replay audit snapshots record `selectedErrorCodes` in this slice instead of adding a new import-job column
 - response shape stays the same as the standard replay response above because the selective criteria only live in audit snapshots for this slice
 
-### 23. Edited Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
+### 24. Edited Import Job Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
 
 Request:
 
@@ -838,7 +900,7 @@ Current notes:
 - duplicate `errorId`, cross-job / cross-tenant `errorId`, and header/global error targets are rejected
 - source and replay audit snapshots record `editedErrorIds`, `editedRowCount`, and `editedFields` only; replacement values are intentionally excluded
 
-### 24. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
+### 25. Import Job Errors (`GET /api/v1/import-jobs/{id}/errors`)
 
 Response:
 
@@ -872,7 +934,7 @@ Current notes:
 - failure rows are ordered stably: null `rowNumber` first, then `rowNumber ASC, id ASC`
 - this is the preferred read surface for larger jobs; detail remains the overview surface
 
-### 25. Import AI Error Summary (`POST /api/v1/import-jobs/{id}/ai-error-summary`)
+### 26. Import AI Error Summary (`POST /api/v1/import-jobs/{id}/ai-error-summary`)
 
 Response:
 
@@ -908,7 +970,7 @@ Current notes:
 - the endpoint is read-only and suggestion-only; it does not mutate import jobs, item errors, or replay state
 - raw `itemErrors.rawPayload` stays out of the AI prompt; the service only sends row metadata plus a structural-only summary
 
-### 26. Import AI Mapping Suggestion (`POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`)
+### 27. Import AI Mapping Suggestion (`POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`)
 
 Response:
 
@@ -953,7 +1015,7 @@ Current notes:
 - eligibility is intentionally narrow: the job must already have failure signal plus parseable sanitized header/global signal from existing `rowNumber=null` errors, otherwise it returns `400`
 - the service sends normalized header tokens and bounded structural row summaries only; it does not rescan the source file or forward raw row values
 
-### 27. Import AI Fix Recommendation (`POST /api/v1/import-jobs/{id}/ai-fix-recommendation`)
+### 28. Import AI Fix Recommendation (`POST /api/v1/import-jobs/{id}/ai-fix-recommendation`)
 
 Response:
 

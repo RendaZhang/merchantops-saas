@@ -1,15 +1,55 @@
 # Automated Tests
 
-Last updated: 2026-04-04
+Last updated: 2026-04-29
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-04:
+Latest local default regression result on 2026-04-23:
 
 - `BUILD SUCCESS`
-- `Tests run: 362, Failures: 0, Errors: 0, Skipped: 1`
+- `merchantops-api` module summary: `Tests run: 427, Failures: 0, Errors: 0, Skipped: 1`
+
+Latest focused Productization Baseline Slice F ticket workflow result on 2026-04-19:
+
+- `.\mvnw.cmd -pl merchantops-api -am -Dtest=TicketWorkflowIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
+- `Tests run: 31, Failures: 0, Errors: 0, Skipped: 0`
+
+Latest focused Productization Baseline Slice G-B1 auth/RBAC result on 2026-04-23:
+
+- `.\mvnw.cmd -pl merchantops-api -am -Dtest=AuthSecurityIntegrationTest "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
+- `Tests run: 43, Failures: 0, Errors: 0, Skipped: 0`
+
+Latest local Docker image build and runtime migration result on 2026-04-22:
+
+- `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` rebuilt `merchantops-api:local` and `merchantops-admin-web:local` successfully
+- Flyway validated 17 migrations with no new schema change required
+- `http://localhost:8080/health` and `http://localhost:8080/actuator/health` returned `UP`
+- admin runtime `http://localhost:8081/` returned `200`
+- same-origin login, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, `POST /api/v1/auth/logout`, and old-token `401` checks succeeded through `http://localhost:8081/api/...`
+
+Latest Productization Baseline frontend workspace result on 2026-04-29:
+
+- `npm run typecheck` from `merchantops-admin-web` completed successfully
+- `npm run lint` from `merchantops-admin-web` completed successfully
+- `npm run build` from `merchantops-admin-web` completed successfully
+
+Latest Productization Baseline Vite dev-proxy smoke result on 2026-04-18:
+
+- `http://localhost:5173/` and `http://localhost:5173/tickets` returned `200`
+- Vite proxied `POST /api/v1/auth/login`, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, and `POST /api/v1/auth/logout` to the API successfully
+- seeded `admin`, `ops`, and `viewer` users all loaded the current tenant ticket queue
+- reusing the signed-out admin token against `http://localhost:5173/api/v1/context` returned controlled `401`
+
+Latest Productization Baseline same-origin runtime smoke result on 2026-04-18:
+
+- `docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build` completed successfully
+- `http://localhost:8080/health` and `http://localhost:8080/actuator/health` returned `UP`
+- `http://localhost:8081/` and `http://localhost:8081/tickets` returned `200`
+- same-origin `POST /api/v1/auth/login`, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, and `POST /api/v1/auth/logout` through `http://localhost:8081/api/...` succeeded
+- seeded `admin`, `ops`, and `viewer` users all loaded the current tenant ticket queue
+- reusing the signed-out token against `http://localhost:8081/api/v1/context` returned controlled `401` with `{"code":"UNAUTHORIZED","message":"authentication required","data":null}`
 
 ## Recommended Commands
 
@@ -25,32 +65,76 @@ Why this is the default:
 - `-am` (`--also-make`) ensures dependent modules are rebuilt in the same reactor
 - this avoids false failures caused by `merchantops-api` compiling against stale jars in the local Maven cache
 
+GitHub Actions runs the Linux equivalent of the same default regression:
+
+```bash
+./mvnw -pl merchantops-api -am test
+```
+
+The CI quality gate also verifies runtime image construction:
+
+```bash
+docker build -t merchantops-api:ci .
+docker build -t merchantops-admin-web:ci ./merchantops-admin-web
+```
+
+That CI Docker check only proves image construction. It does not start the API or admin containers, run compose-managed infrastructure, run Dockerized runtime live smoke, call OpenAI or DeepSeek, run live AI smoke, or enable the opt-in real MySQL migration suite.
+
+GitHub Actions also runs the admin frontend workspace checks. Run the same checks locally when a change touches the admin console:
+
+```powershell
+cd merchantops-admin-web
+npm run typecheck
+npm run lint
+npm run build
+```
+
+The current GitHub Actions quality gate runs these frontend checks but still does not run browser or runtime-container smoke.
+
 Use the full reactor only when you want the broader baseline:
 
 ```powershell
 .\mvnw.cmd test
 ```
 
+For the production-like admin + API runtime baseline, add this manual container verification after the Maven and frontend suites:
+
+```powershell
+docker build -t merchantops-api:local .
+docker build -t merchantops-admin-web:local .\merchantops-admin-web
+Copy-Item .env.example .env -ErrorAction SilentlyContinue
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Then follow [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md) for health, admin page load, login, context, Tickets, Feature Flags, Imports, sign-out, and old-token `401` checks.
+
+If the same change also touches AI provider wiring or live vendor compatibility, keep that same Dockerized API path running and add the summary-first pass from [ai-live-smoke-test.md](ai-live-smoke-test.md). For containerized AI smoke, provide `MERCHANTOPS_AI_*` through the local `.env` or explicit `-e` flags; the container does not auto-load the repository-root `.env`.
+
 ## Coverage Baseline
 
-Current automated coverage is centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, and the current two Week 8 human-reviewed execution bridges. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, root ticket actor tenant-integrity hardening, and frontend compile/lint/build coverage for the Dashboard, Tickets, Feature Flags, and Imports admin routes. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
-- auth and permission checks for the current public user-management, ticket, AI interaction-history, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
-- controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, AI summary, AI triage, and AI reply-draft endpoints
-- tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, approvals, and import jobs
+- auth and permission checks for login, server-side auth-session creation, JWT/session expiry alignment from shared UTC instants, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, JVM-timezone-stable JWT claim generation, the `V15 -> V18` auth-session migration path, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
+- real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including the fixed eight-key default inventory for tenants without persisted rows, missing-row create-on-update behavior, `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
+- tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
 - repository-backed user list SQL behavior in `merchantops-infra`
 - import authz enforcement for create and replay endpoints, after-commit queue publication, scheduled queued-job recovery, scheduled stale-processing recovery, fresh `PROCESSING` duplicate-delivery acknowledgement, stale-processing restart-or-fail handling, late-chunk quiet-stop when a job is no longer active, sequential chunked worker execution, processing-progress counters, handled-row progress persistence before terminal runtime failure, `MAX_ROWS_EXCEEDED` guardrails, failed-row replay, whole-file replay for full-failure jobs, selective failed-row replay by exact `errorCode`, edited failed-row replay by exact `errorId`, derived-job lineage, filtered queue reads, paged error reporting, row-level failure isolation, error-code summary reporting, import-specific migration protection, and approval-request migration protection for pending-request-key hardening across disable, import replay proposal, and ticket comment proposal flows
 - Week 8 import selective replay proposal coverage for `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, including `USER_WRITE` enforcement, cross-tenant/missing source-job handling, invalid `errorCodes`, invalid `sourceInteractionId`, safe approval payload persistence, duplicate suppression on canonical `errorCodes`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time selective replay execution, reject-without-execution behavior, and no-regression on the existing `USER_STATUS_DISABLE` approval path
 - Week 8 ticket comment proposal coverage for `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, including `TICKET_WRITE` enforcement, cross-tenant/missing ticket handling, blank and overlong comment rejection, invalid same-ticket `sourceInteractionId` rejection, safe approval payload persistence, duplicate suppression on trimmed `commentContent`, reproposal after `REJECTED` or `APPROVED`, near-concurrent duplicate create collapse to one `PENDING` row, self-approval guard, repeated review rejection once resolved, synchronous approve-time single-comment execution, reject-without-execution behavior, and no-regression on the mixed-action approval queue
 - AI summary, AI triage, AI reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation prompt-version, AI-context-window, and golden-sample regression coverage through checked-in provider-response fixtures plus the real provider/service parsing path
-- provider-normalized structured-output coverage for OpenAI Responses and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
+- a shared Week 9 governance comparator pass across all six generation workflows, with executable inventory plus golden, failure, and policy datasets in the default regression suite
+- provider-normalized structured-output coverage for OpenAI Responses `RAW_HTTP`, OpenAI Spring AI chat-completions `SPRING_AI`, and DeepSeek Chat Completions, including request-contract assertions, multi-part `output_text` parsing where applicable, `408` or `504` timeout classification, unsupported content, refusal, invalid JSON, and endpoint-specific required-field validation
 - `.env` bootstrap and AI provider-resolution coverage for search order, quote trimming, provider-neutral overrides, legacy OpenAI fallback, DeepSeek alias fallback, and not-configured detection
 - shared AI interaction execution support coverage for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import entity types
+- persisted feature-flag gate coverage across all six AI generation endpoints plus both Week 8 workflow proposal bridges, including no cross-flag leakage between unrelated endpoints
+- domain and adapter coverage for tenant AI usage-summary normalization, exact-match trimmed filter semantics, `from <= to` validation, aggregate query delegation, and nullable metering aggregation with zero-filled totals
 - symmetrical degraded-mode persistence coverage for AI summary, AI triage, AI reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation across feature-disabled, provider-not-configured, provider-unavailable, provider-timeout, and invalid-response paths
 - explicit no-business-side-effect assertions for AI summary, AI triage, and AI reply-draft against ticket fields, comments, workflow logs, approvals, and business audit rows
 - explicit no-business-side-effect assertions for import AI interaction history, error summary, mapping suggestion, and fix recommendation against `import_job`, `import_job_item_error`, replay lineage, approvals, and business audit rows plus prompt non-leakage assertions against raw `USER_CSV` values and sensitive-output rejection for fix recommendation
 - ticket AI interaction-history coverage for tenant-scoped ticket existence, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, and non-leakage of raw prompt and raw provider payload fields
 - explicit read-only assertions for `GET /api/v1/tickets/{id}/ai-interactions` against ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
+- tenant AI usage-summary coverage for `USER_READ` enforcement, tenant isolation, inclusive `from/to` filtering, exact-match trimmed `entityType` / `interactionType` / `status` filters, totals math, stable breakdown ordering, null metering rows, non-leakage of request-level fields and raw provider data, and read-only assertions
 - import AI interaction-history coverage for import-scoped existence checks through the existing read path, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, non-leakage of raw prompt and raw provider payload fields, and read-after-write visibility after real import AI generation calls
 - explicit read-only assertions for `GET /api/v1/import-jobs/{id}/ai-interactions` against import job fields, import error rows, replay lineage, approvals, business audit rows, and `ai_interaction_record` row counts
 - stale-token rejection after tenant status, user status, role, or permission changes
@@ -61,8 +145,10 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 - `AuthSecurityIntegrationTest`
   - real `POST /api/v1/auth/login` success and wrong-password failure paths
-  - JWT claim generation and parsing for tenant, role, and permission data
-  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, and `PUT /api/v1/users/{id}/roles`
+  - JWT claim generation and parsing for tenant, role, permission, and required `sid` data
+  - server-side `auth_session` creation, future expiry, DB `expires_at` alignment with JWT expiration, bad-credential no-session behavior, active-session `/api/v1/context`, current-session logout revocation, same-token-after-logout `401`, logout-all same-user token invalidation, logout-all other-user and other-tenant preservation, sidless signed token `401`, manually expired session `401`, retention-window cleanup of expired `ACTIVE` and old `REVOKED` rows, cleanup batch-size enforcement, recently revoked session retention, old-token `401` after cleanup, and independent multi-session behavior
+  - database-level rejection when a `user_role` row tries to bind a user from one tenant to a role from another tenant
+  - real `SecurityConfig` + `JwtAuthenticationFilter` + `RequirePermissionInterceptor` behavior for `GET /api/v1/roles`, `GET /api/v1/users`, `GET /api/v1/users/{id}`, `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/roles`, and `GET /api/v1/feature-flags`
   - `401` when Bearer token is missing or invalid
   - `403` when login succeeds but `USER_READ` is absent
   - `403` when login succeeds but `USER_WRITE` is absent
@@ -79,13 +165,32 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - rejection of a pre-disable token on protected endpoints after the user becomes `DISABLED`
   - successful role-reassignment flow for `PUT /api/v1/users/{id}/roles` with refreshed `updated_by`
   - rejection of a pre-change token after role or permission claims become stale
-  - successful re-login after role reassignment with new RBAC access
+  - successful re-login after role reassignment with new RBAC access including `FEATURE_FLAG_MANAGE`
   - user writes emit `audit_event` rows when `X-Request-Id` is present
   - permission seed alignment for new `TICKET_READ` / `TICKET_WRITE` claims
+- `AuthSessionMigrationTest`
+  - Flyway `V15__add_auth_session.sql` plus `V18__store_auth_session_times_as_datetime.sql` keep `auth_session` time columns writable as `DATETIME`
+- `JwtTokenServiceTest`
+  - JWT generation preserves the provided UTC `Instant` values for `iat` and `exp` even when the JVM default timezone is not UTC
+- `FeatureFlagIntegrationTest`
+- real `GET /api/v1/feature-flags` happy path with stable `key ASC` ordering, the current tenant's fixed eight-key contract, and default-enabled synthesized items for tenants without persisted rows
+- real `PUT /api/v1/feature-flags/{key}` happy path with persisted state change, missing-row create-on-update behavior for a known key, and `FEATURE_FLAG_UPDATED` audit snapshot
+- `403` when `FEATURE_FLAG_MANAGE` is missing and `404` for an unknown key
+- `400` when `enabled` is `null`, including the previously disabled-flag path where idempotent short-circuit no longer hides invalid input
+- concurrent already-applied update behavior returns the final persisted row and emits no duplicate `FEATURE_FLAG_UPDATED` audit row
+- tenant-scoped feature-flag isolation so one tenant's update does not alter another tenant's stored flag rows or runtime AI gate behavior
+  - idempotent no-op update behavior with unchanged `updatedAt` and no extra audit row
+- `FeatureFlagCommandServiceTest`
+  - API service uses the domain-provided `after` snapshot and skips audit when the domain layer reports no mutation after a concurrent already-applied update
+- `FeatureFlagCommandDomainServiceTest`
+  - domain write results preserve explicit `before` / `after` snapshots, including missing-row bootstrap from the default-enabled inventory, and distinguish true mutations from no-change outcomes without forcing a redundant save
+- `FeatureFlagQueryServiceTest`
+  - domain reads keep the fixed key order, synthesize default-enabled items for missing known rows, and ignore unknown stored keys
 - `ImportSelectiveReplayApprovalIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` happy path for a `USER_WRITE` user with approval-row and audit-row assertions
   - `403` when `USER_WRITE` is missing
   - `404` for cross-tenant or missing import jobs
+  - `503` when persisted feature flag `workflow.import.selective-replay-proposal.enabled` is disabled, with no approval-row or audit-row side effects
   - `400` for non-replayable `errorCodes`
   - `400` for invalid `sourceInteractionId`
   - `400` for duplicate pending proposals with the same canonical `errorCodes` even when caller order differs
@@ -103,11 +208,12 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `400` for `assigneeId` + `unassignedOnly=true` invalid query combination
   - `403` when `viewer` attempts ticket write operations
   - `400` when assignment tries to use an assignee outside the current tenant
+  - database-level rejection when a ticket row tries to reference a cross-tenant assignee or creator, while nullable `assignee_id` remains valid for unassigned tickets
   - `400` when ticket status transition rules are violated (including no-op transitions)
   - `200` for `CLOSED -> OPEN` reopen with status/detail verification, `updated_at` refresh, and appended `STATUS_CHANGED` log
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
   - real `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft` happy path with safe payload and approval-audit assertions
-  - `403` for missing `TICKET_WRITE`, `404` for missing or cross-tenant tickets, and `400` for blank, overlong, or invalid-provenance proposal input
+  - `403` for missing `TICKET_WRITE`, `404` for missing or cross-tenant tickets, `503` for disabled persisted workflow flag, and `400` for blank, overlong, or invalid-provenance proposal input
   - `400` for duplicate pending proposals with the same trimmed `commentContent`
   - approve path for `TICKET_COMMENT_CREATE` creates exactly one comment and reject path creates none
   - reproposal allowed after `REJECTED` and after `APPROVED`
@@ -144,6 +250,14 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - stable `createdAt DESC, id DESC` ordering, including same-timestamp tie breaks
   - widened response shape with correct usage/cost visibility, nullability for failed rows, and no leakage of raw prompt or raw provider payload
   - read-only assertions for ticket fields, workflow logs, approvals, business audit rows, and `ai_interaction_record` row counts
+- `AiInteractionUsageSummaryIntegrationTest`
+  - real `GET /api/v1/ai-interactions/usage-summary` happy path for a `USER_READ` user with seeded cross-entity `ai_interaction_record` rows
+  - `403` when `USER_READ` is missing
+  - tenant isolation over aggregate totals and breakdowns
+  - inclusive `from` and `to` filtering plus exact-match trimmed `entityType`, `interactionType`, and `status` filters
+  - aggregate totals math, stable `byInteractionType`, `byStatus`, and `byPromptVersion` ordering, and zero-filled sums for null token or cost rows
+  - non-leakage of raw prompt or raw provider payload plus request-level fields such as `requestId`, `outputSummary`, and `modelId`, while still allowing aggregate `byPromptVersion[*].promptVersion`
+  - read-only assertions for `ai_interaction_record` row counts, business audit rows, ticket state, import state, and approval state
 - `UserQueryServiceTest`
   - page defaulting and max-size normalization
   - filter trimming for `username`, `status`, and `roleCode`
@@ -156,11 +270,11 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - duplicate username rejection
   - duplicate username rejection with `excludeUserId`
   - role-code rejection when requested roles are not available in the current tenant
-  - create-user persistence with `ACTIVE` default status, BCrypt hashing, `user_role` writes, and operator attribution
+  - create-user persistence with `ACTIVE` default status, BCrypt hashing, tenant-id-bearing `user_role` writes, and operator attribution
   - profile update persistence for mutable fields only plus operator attribution
   - status update persistence for `ACTIVE` and `DISABLED` plus operator attribution
   - invalid status rejection
-  - role reassignment with clear-then-write `user_role` semantics plus operator attribution
+  - role reassignment with tenant-scoped clear-then-write `user_role` semantics plus operator attribution
   - role reassignment rejection when requested role codes are not available in the current tenant
   - tenant-scoped missing-user rejection
   - current password-update placeholder returning unified `BIZ_ERROR` rather than an uncaught runtime exception
@@ -183,6 +297,13 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - HTTP request binding for `POST /api/v1/tickets/{id}/comments`
   - AI interaction-history query binding for `page`, `size`, `interactionType`, and `status`
   - request-scoped forwarding of `tenantId`, `operatorId`, and `requestId`
+- `AiInteractionUsageSummaryControllerTest`
+  - HTTP request binding for `GET /api/v1/ai-interactions/usage-summary`
+  - `401` when authentication is missing and `403` when `USER_READ` is missing
+  - request-scoped tenant resolution plus forwarding of `from`, `to`, `entityType`, `interactionType`, and `status`
+- `AiInteractionUsageSummaryQueryServiceTest`
+  - mapping from HTTP query DTO to domain usage-summary criteria with exact-value forwarding
+  - response mapping for totals plus `byInteractionType`, `byStatus`, and `byPromptVersion`
 - `TicketAiSummaryControllerTest`
   - HTTP request binding for `POST /api/v1/tickets/{id}/ai-summary`
   - `401` when authentication is missing and `403` when `TICKET_READ` is missing
@@ -196,19 +317,23 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `401` when authentication is missing and `403` when `TICKET_READ` is missing
   - request-scoped forwarding of `tenantId`, `userId`, and `requestId` to `TicketAiReplyDraftService`
 - `TicketSummaryGoldenSampleTest`
-  - checked-in ticket-summary samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiSummaryService`
+  - thin wrapper over the shared eval runner for the checked-in ticket-summary golden dataset and real provider/service parsing path
 - `TicketTriageGoldenSampleTest`
-  - checked-in ticket-triage samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiTriageService`
+  - thin wrapper over the shared eval runner for the checked-in ticket-triage golden dataset and real provider/service parsing path
 - `TicketReplyDraftGoldenSampleTest`
-  - checked-in ticket reply-draft samples plus checked-in provider-response fixtures through the real provider parser and `TicketAiReplyDraftService`, including assembled `draftText`
+  - thin wrapper over the shared eval runner for the checked-in ticket reply-draft golden dataset and real provider/service parsing path, including assembled `draftText`
 - `AiInteractionExecutionSupportTest`
   - shared AI interaction execution support behavior for feature-disabled, provider-not-configured, failure mapping, and persisted ticket/import entity metadata
+- `AiWorkflowEvalComparatorTest`
+  - shared Week 9 governance pass across the six generation workflows with executable inventory, prompt-version assertions, golden datasets, failure datasets, policy datasets, and comparator summary reporting
 - `AiPropertiesTest`
   - provider-neutral AI config resolution, legacy OpenAI fallback, DeepSeek alias fallback, defaults, and not-configured detection
 - `DotenvBootstrapTest`
   - repository-root detection, dev-profile gating, comment handling, quote trimming, and non-overwrite behavior for already-set properties
 - `OpenAiResponsesStructuredOutputAiClientTest`
-  - `POST /v1/responses` request contract, strict `json_schema` wiring, OpenAI output parsing, and timeout classification
+  - `POST /v1/responses` request contract, strict `json_schema` wiring, OpenAI output parsing, timeout classification, and rollback-path coverage for `merchantops.ai.openai-runtime=RAW_HTTP`
+- `SpringAiOpenAiStructuredOutputAiClientTest`
+  - `POST /v1/chat/completions` request contract, `response_format=json_schema` wiring, `X-Client-Request-Id` forwarding, OpenAI usage and model metadata extraction, blank-content invalid-response handling, and timeout/unavailable classification for `merchantops.ai.openai-runtime=SPRING_AI`
 - `DeepSeekChatCompletionsStructuredOutputAiClientTest`
   - `POST /chat/completions` request contract, `response_format=json_object`, JSON-only instruction and example wiring, DeepSeek message-content parsing, and timeout classification
 - `OpenAiTicketSummaryProviderTest`
@@ -242,6 +367,8 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - request-scoped forwarding of `tenantId`, `userId`, and `requestId` to `ImportJobAiErrorSummaryService`, `ImportJobAiMappingSuggestionService`, and `ImportJobAiFixRecommendationService`
 - `ImportJobAuthzIntegrationTest`
   - real authz enforcement for import create plus all current replay write endpoints, including tenant-scoped persistence for authorized writes and `403` rejection for read-only callers
+- `ApprovalRequestDomainServiceTest`
+  - domain-level pending-request-key precheck rejects sequential duplicate ticket comment proposals before save, keeping the duplicate-pending `400` path controlled without relying on database uniqueness translation for normal repeats
 - `ApprovalRequestServiceTest`
   - disable-request creation locks the target user before writing a pending request
   - import selective replay proposal creation delegates the normalized approval command and records approval audit
@@ -282,7 +409,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
   - prompt-context non-leakage assertions for `rawPayload`, username, email, and password plus no-side-effect assertions for import job state, error rows, replay lineage, approvals, and business audit rows
 - `ImportJobErrorSummaryGoldenSampleTest`
-  - checked-in import error-summary samples plus checked-in provider-response fixtures through the real provider parser and `ImportJobAiErrorSummaryService`
+  - thin wrapper over the shared eval runner for the checked-in import error-summary golden dataset and real provider/service parsing path
 - `ImportJobAiMappingSuggestionIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion` happy path for a `USER_READ` user with database assertions on `ai_interaction_record`
   - `403` when `USER_READ` is missing
@@ -291,7 +418,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
   - prompt-context non-leakage assertions for raw header lines, raw row values, username, email, and password plus no-side-effect assertions for import job state, error rows, replay lineage, approvals, and business audit rows
 - `ImportJobMappingSuggestionGoldenSampleTest`
-  - checked-in import mapping-suggestion samples plus checked-in provider-response fixtures through the real provider parser and `ImportJobAiMappingSuggestionService`
+  - thin wrapper over the shared eval runner for the checked-in import mapping-suggestion golden dataset and real provider/service parsing path
 - `ImportJobAiFixRecommendationIntegrationTest`
   - real `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` happy path for a `USER_READ` user with database assertions on `ai_interaction_record`
   - `403` when `USER_READ` is missing
@@ -300,7 +427,7 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
   - `503` when AI is disabled, not configured, unavailable, times out, or returns an invalid response, with controlled persisted status values
   - prompt-context non-leakage assertions for raw row values, username, email, password, and role codes plus no-side-effect assertions for import job state, error rows, replay lineage, approvals, and business audit rows
 - `ImportJobFixRecommendationGoldenSampleTest`
-  - checked-in import fix-recommendation samples plus checked-in provider-response fixtures through the real provider parser and `ImportJobAiFixRecommendationService`
+  - thin wrapper over the shared eval runner for the checked-in import fix-recommendation golden dataset and real provider/service parsing path
 - `OpenAiImportJobFixRecommendationProviderTest`
   - import fix-recommendation schema, example JSON, provider-response parsing, empty-array handling, blank-field rejection, and invalid `reviewRequired` handling for the import adapter
 - `ImportJobExecutionServiceTest`
@@ -334,13 +461,21 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 - `UserRepositoryTest`
   - tenant-scoped native page query
-  - `username`, `status`, and `roleCode` filtering
+  - `username`, `status`, and `roleCode` filtering with role joins through `user_role.tenant_id`
   - `DISTINCT` deduplication across joined role rows
   - pagination ordering and count stability
+- `JpaUserCommandAdapterTest`
+  - role replacement deletes by `tenantId + userId`
+  - saved `user_role` bindings include `tenantId`, `userId`, and `roleId`
+- `JpaAiInteractionUsageSummaryAdapterTest`
+  - aggregate repository delegation for tenant-scoped totals plus `byInteractionType` and `byStatus`
+  - zero-filled mapping for nullable token or cost sums
 - `JpaApprovalRequestAdapterTest`
   - persists action-aware pending-request keys for `USER_STATUS_DISABLE`, `IMPORT_JOB_SELECTIVE_REPLAY`, and `TICKET_COMMENT_CREATE`
   - translates duplicate-key violations back into the existing `BAD_REQUEST` duplicate-disable behavior plus the new duplicate proposal `400` responses for import and ticket
   - applies visible-action filtering to approval-page queries and short-circuits empty visible-action sets
+- `JpaAuthSessionAdapterTest`
+  - persists auth-session `created_at` / `expires_at` / `revoked_at` through UTC `Instant` to `DATETIME` mapping and keeps revoke/cleanup cutoffs translated in UTC
 - `JpaImportJobAdapterTest`
   - import AI interaction-history repository delegation with exact tenant/entity filters
   - stable `createdAt DESC, id DESC` sort wiring
@@ -350,24 +485,27 @@ Current automated coverage is centered on the completed Week 2-6 public workflow
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + `/api/v1/roles` + `/api/v1/users` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, `/api/v1/context`, the RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/auth/logout-all` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
+- Dockerized same-origin admin + API runtime smoke; CI verifies image builds only
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 
-Use [local-smoke-test.md](local-smoke-test.md), [ai-live-smoke-test.md](ai-live-smoke-test.md), and [regression-checklist.md](regression-checklist.md) for those checks.
+Use [local-smoke-test.md](local-smoke-test.md), [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md), [ai-live-smoke-test.md](ai-live-smoke-test.md), and [regression-checklist.md](regression-checklist.md) for those checks.
 
 ## Recommended Workflow
 
-1. Run `.\mvnw.cmd -pl merchantops-api -am test`
+1. Run `.\mvnw.cmd -pl merchantops-api -am test`, which matches the CI Maven gate through the Linux equivalent `./mvnw -pl merchantops-api -am test`
 2. If that passes and the change touches public API flow, security wiring, SQL, or migrations, run the relevant path from [local-smoke-test.md](local-smoke-test.md)
-3. If the change touches AI provider wiring, `.env` loading, or live vendor compatibility, add the summary-first path from [ai-live-smoke-test.md](ai-live-smoke-test.md)
-4. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
+3. If the change touches Docker delivery, runtime env injection, or admin packaging, run [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md)
+4. If the change touches AI provider wiring, `.env` loading, or live vendor compatibility, add the summary-first path from [ai-live-smoke-test.md](ai-live-smoke-test.md)
+5. If the change also affects docs, environment setup, seeded data assumptions, or broader workflow contracts, run [regression-checklist.md](regression-checklist.md)
 
 ## Known Pitfalls
 
 - Keep `.\mvnw.cmd -pl merchantops-api -am test` as the default regression entry. Running only `-pl merchantops-api test` can hide sibling-module signature changes behind stale local Maven artifacts.
-- For live smoke tests after changing JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first, then start the app from the `merchantops-api` module with `..\mvnw.cmd spring-boot:run`. The `spring-boot:run` classpath resolves sibling modules from the local Maven repository, not from uninstalled reactor outputs.
-- Do not treat `merchantops-api/target/merchantops-api-0.0.1-SNAPSHOT.jar` as the default local smoke-test entry point. The current packaging does not produce a fat jar that is ready for `java -jar`.
+- Treat a successful CI Docker build as image-construction evidence only. It does not prove runtime configuration, compose-managed infrastructure connectivity, same-origin admin proxying, or authenticated API behavior inside a running container.
+- For live smoke tests after changing JPA entities, repositories, or API-module dependencies, run `.\mvnw.cmd -pl merchantops-api -am install -DskipTests` first. Use `..\mvnw.cmd spring-boot:run` when the goal is the default local dev path; use the documented Dockerized API command when the verification also needs to prove container delivery or explicit env injection.
+- The packaged Spring Boot jar is now valid for Docker delivery and other explicit `java -jar` entrypoints. Local smoke still defaults to `spring-boot:run`, but the runtime compose path is the correct target when the test must prove API image startup, admin image startup, explicit env injection, and same-origin `/api` proxying.
 - For H2-based native SQL tests that rely on `MODE=MySQL`, keep `@AutoConfigureTestDatabase(replace = NONE)` and verify the mode through `INFORMATION_SCHEMA.SETTINGS`. `DatabaseMetaData#getURL()` does not reliably echo the `MODE=...` parameter.
 - If a change adds or edits a Flyway migration, do at least one real MySQL verification pass after `spring-boot:run`. The current H2 and manually-created integration-test schemas do not prove that Flyway applied the new migration exactly as intended.
 - If Flyway reports a checksum mismatch in a real local run, do not rewrite a tagged or shared migration just to make the error disappear. The current in-place `V12` repair is a narrow untagged pre-release exception; for already-shared baselines, create a new `Vx__...sql` migration instead.

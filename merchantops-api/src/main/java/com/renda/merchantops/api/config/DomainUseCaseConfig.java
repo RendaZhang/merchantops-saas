@@ -2,6 +2,8 @@ package com.renda.merchantops.api.config;
 
 import com.renda.merchantops.domain.ai.AiInteractionRecordPort;
 import com.renda.merchantops.domain.ai.AiInteractionRecordUseCase;
+import com.renda.merchantops.domain.ai.AiInteractionUsageSummaryQueryPort;
+import com.renda.merchantops.domain.ai.AiInteractionUsageSummaryUseCase;
 import com.renda.merchantops.domain.approval.ApprovalActionPort;
 import com.renda.merchantops.domain.approval.ApprovalImportSelectiveReplayPort;
 import com.renda.merchantops.domain.approval.ApprovalRequestPort;
@@ -12,7 +14,13 @@ import com.renda.merchantops.domain.audit.AuditEventPort;
 import com.renda.merchantops.domain.audit.AuditEventUseCase;
 import com.renda.merchantops.domain.auth.AccessValidationUseCase;
 import com.renda.merchantops.domain.auth.AuthAccessPort;
+import com.renda.merchantops.domain.auth.AuthSessionPort;
+import com.renda.merchantops.domain.auth.AuthSessionUseCase;
 import com.renda.merchantops.domain.auth.AuthenticationUseCase;
+import com.renda.merchantops.domain.featureflag.FeatureFlagCommandPort;
+import com.renda.merchantops.domain.featureflag.FeatureFlagCommandUseCase;
+import com.renda.merchantops.domain.featureflag.FeatureFlagQueryPort;
+import com.renda.merchantops.domain.featureflag.FeatureFlagQueryUseCase;
 import com.renda.merchantops.domain.importjob.ImportJobCommandPort;
 import com.renda.merchantops.domain.importjob.ImportJobCommandUseCase;
 import com.renda.merchantops.domain.importjob.ImportJobQueryPort;
@@ -47,6 +55,14 @@ public class DomainUseCaseConfig {
     }
 
     @Bean
+    public AiInteractionUsageSummaryUseCase aiInteractionUsageSummaryUseCase(
+            AiInteractionUsageSummaryQueryPort aiInteractionUsageSummaryQueryPort) {
+        return new com.renda.merchantops.domain.ai.AiInteractionUsageSummaryDomainService(
+                aiInteractionUsageSummaryQueryPort
+        );
+    }
+
+    @Bean
     public ApprovalRequestUseCase approvalRequestUseCase(ApprovalRequestPort approvalRequestPort,
                                                          ApprovalTargetUserPort approvalTargetUserPort,
                                                          ApprovalActionPort approvalActionPort,
@@ -69,6 +85,21 @@ public class DomainUseCaseConfig {
     @Bean
     public AccessValidationUseCase accessValidationUseCase(AuthAccessPort authAccessPort) {
         return new com.renda.merchantops.domain.auth.AccessValidationService(authAccessPort);
+    }
+
+    @Bean
+    public AuthSessionUseCase authSessionUseCase(AuthSessionPort authSessionPort) {
+        return new com.renda.merchantops.domain.auth.AuthSessionService(authSessionPort);
+    }
+
+    @Bean
+    public FeatureFlagQueryUseCase featureFlagQueryUseCase(FeatureFlagQueryPort featureFlagQueryPort) {
+        return new com.renda.merchantops.domain.featureflag.FeatureFlagQueryService(featureFlagQueryPort);
+    }
+
+    @Bean
+    public FeatureFlagCommandUseCase featureFlagCommandUseCase(FeatureFlagCommandPort featureFlagCommandPort) {
+        return new com.renda.merchantops.domain.featureflag.FeatureFlagCommandDomainService(featureFlagCommandPort);
     }
 
     @Bean

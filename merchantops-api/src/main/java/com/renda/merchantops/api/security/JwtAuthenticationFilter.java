@@ -5,6 +5,7 @@ import com.renda.merchantops.api.context.CurrentUserContext;
 import com.renda.merchantops.api.context.TenantContext;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.api.platform.response.ApiResponse;
+import com.renda.merchantops.domain.auth.AuthSessionUseCase;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,6 +25,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -33,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenService jwtTokenService;
+    private final AuthSessionUseCase authSessionUseCase;
     private final CurrentUserAccessValidator currentUserAccessValidator;
     private final ObjectMapper objectMapper;
     private final RequestMatcher publicEndpointMatcher = new OrRequestMatcher(
@@ -46,9 +49,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     );
 
     public JwtAuthenticationFilter(JwtTokenService jwtTokenService,
+                                   AuthSessionUseCase authSessionUseCase,
                                    CurrentUserAccessValidator currentUserAccessValidator,
                                    ObjectMapper objectMapper) {
         this.jwtTokenService = jwtTokenService;
+        this.authSessionUseCase = authSessionUseCase;
         this.currentUserAccessValidator = currentUserAccessValidator;
         this.objectMapper = objectMapper;
     }
@@ -71,6 +76,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 try {
                     CurrentUser currentUser = jwtTokenService.parseCurrentUser(token);
+                    if (!authSessionUseCase.isSessionActive(
+                            currentUser.getSessionId(),
+                            currentUser.getTenantId(),
+                            currentUser.getUserId(),
+                            Instant.now()
+                    )) {
+                        writeUnauthorizedResponse(response);
+                        return;
+                    }
+
                     CurrentUserAccessValidator.ValidationResult validationResult = currentUserAccessValidator.validate(currentUser);
                     if (validationResult.status() == CurrentUserAccessValidator.Status.TENANT_INACTIVE) {
                         writeForbiddenResponse(response, "tenant is not active");
@@ -105,7 +120,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     CurrentUserContext.set(validatedCurrentUser);
                     TenantContext.setTenant(validatedCurrentUser.getTenantId(), validatedCurrentUser.getTenantCode());
                 } catch (JwtException | IllegalArgumentException ex) {
-                    SecurityContextHolder.clearContext();
+                    writeUnauthorizedResponse(response);
+                    return;
                 }
             }
 
@@ -114,6 +130,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             CurrentUserContext.clear();
             TenantContext.clear();
         }
+    }
+
+    private void writeUnauthorizedResponse(HttpServletResponse response) throws IOException {
+        SecurityContextHolder.clearContext();
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ApiResponse<Void> body = ApiResponse.failure(ErrorCode.UNAUTHORIZED, "authentication required");
+        response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 
     private void writeForbiddenResponse(HttpServletResponse response, String message) throws IOException {

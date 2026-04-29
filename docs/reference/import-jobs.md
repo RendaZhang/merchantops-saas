@@ -1,6 +1,6 @@
 # Import Jobs
 
-Last updated: 2026-04-04
+Last updated: 2026-04-06
 
 ## Public API Surface
 
@@ -18,9 +18,24 @@ The current public import surface exposes thirteen endpoints:
 | `POST` | `/api/v1/import-jobs/{id}/replay-failures/edited` | Bearer JWT | `USER_WRITE` | Creates a new derived `QUEUED` job from caller-provided full replacement rows that target replayable failed-row `errorId` values only |
 | `GET` | `/api/v1/import-jobs/{id}/errors` | Bearer JWT | `USER_READ` | Pages current-tenant failure items for one job with optional `errorCode` filter |
 | `GET` | `/api/v1/import-jobs/{id}/ai-interactions` | Bearer JWT | `USER_READ` | Pages narrowed stored AI interaction history for one current-tenant import job |
-| `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only AI summary from current import detail, `errorCodeCounts`, and the first sanitized failed-row window |
-| `POST` | `/api/v1/import-jobs/{id}/ai-mapping-suggestion` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only canonical-field mapping proposal from sanitized header/global signal plus bounded structural failure context |
-| `POST` | `/api/v1/import-jobs/{id}/ai-fix-recommendation` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only fix recommendation from locally grounded row-level `errorCode` groups without returning replacement values |
+| `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only AI summary from current import detail, `errorCodeCounts`, and the first sanitized failed-row window; also requires config-level AI enable plus persisted flag `ai.import.error-summary.enabled` |
+| `POST` | `/api/v1/import-jobs/{id}/ai-mapping-suggestion` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only canonical-field mapping proposal from sanitized header/global signal plus bounded structural failure context; also requires config-level AI enable plus persisted flag `ai.import.mapping-suggestion.enabled` |
+| `POST` | `/api/v1/import-jobs/{id}/ai-fix-recommendation` | Bearer JWT | `USER_READ` | Generates a read-only suggestion-only fix recommendation from locally grounded row-level `errorCode` groups without returning replacement values; also requires config-level AI enable plus persisted flag `ai.import.fix-recommendation.enabled` |
+
+## Current Feature-Flag Controls
+
+Current persisted tenant-scoped controls for the public import surface are:
+
+- `ai.import.error-summary.enabled`
+- `ai.import.mapping-suggestion.enabled`
+- `ai.import.fix-recommendation.enabled`
+- `workflow.import.selective-replay-proposal.enabled`
+
+Current control behavior:
+
+- the three import AI generation endpoints require both `merchantops.ai.enabled=true` and their matching persisted feature flag
+- `GET /api/v1/import-jobs/{id}/ai-interactions` is read-only and is not gated by the persisted flag set
+- `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` uses only `workflow.import.selective-replay-proposal.enabled`; it does not read `merchantops.ai.enabled`
 
 ## Current Week 5 Contract (`USER_CSV` + Reporting + Replay Surface)
 
@@ -107,6 +122,7 @@ This history slice stays intentionally narrow:
 - tenant scope and not-found behavior match the existing import read path, so cross-tenant or missing jobs still return `404`
 - the endpoint is read-only; it does not trigger generation, replay, approval, or any import-job mutation
 - the endpoint reuses the existing `ai_interaction_record` rows already written by import AI generation endpoints
+- the endpoint is not gated by the persisted AI feature flags, so history remains visible when generation is disabled
 
 Current query surface is minimal:
 
@@ -169,6 +185,7 @@ This error-summary slice stays intentionally narrow:
 - permission is `USER_READ`
 - tenant scope and not-found behavior match the existing import read path
 - the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, or replay state
+- the endpoint requires both `merchantops.ai.enabled=true` and persisted flag `ai.import.error-summary.enabled=true`
 
 Current prompt context is assembled from:
 
@@ -201,7 +218,7 @@ Current failure behavior:
 
 - `403` when `USER_READ` is missing
 - `404` for cross-tenant or missing import jobs
-- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled, not configured, unavailable, times out, or returns an invalid structured payload
+- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled by `merchantops.ai.enabled=false`, disabled by persisted feature flag `ai.import.error-summary.enabled=false`, not configured, unavailable, times out, or returns an invalid structured payload
 
 ## Read-Only Import AI Mapping Suggestion (`POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`)
 
@@ -212,6 +229,7 @@ Current Week 7 Slice B stays intentionally narrow:
 - tenant scope and not-found behavior match the existing import read path
 - the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, source files, replay state, approvals, or business audit rows
 - the endpoint currently supports `USER_CSV` jobs only
+- the endpoint requires both `merchantops.ai.enabled=true` and persisted flag `ai.import.mapping-suggestion.enabled=true`
 
 Current eligibility rules are explicit:
 
@@ -261,7 +279,7 @@ Current failure behavior:
 - `400` when the job has no sanitized header signal
 - `403` when `USER_READ` is missing
 - `404` for cross-tenant or missing import jobs
-- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled, not configured, unavailable, times out, or returns an invalid structured payload
+- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled by `merchantops.ai.enabled=false`, disabled by persisted feature flag `ai.import.mapping-suggestion.enabled=false`, not configured, unavailable, times out, or returns an invalid structured payload
 
 ## Read-Only Import AI Fix Recommendation (`POST /api/v1/import-jobs/{id}/ai-fix-recommendation`)
 
@@ -272,6 +290,7 @@ Current Week 7 Slice C also stays intentionally narrow:
 - tenant scope and not-found behavior match the existing import read path
 - the endpoint is read-only and suggestion-only; it does not mutate `import_job`, `import_job_item_error`, source files, replay state, approvals, or business audit rows
 - the endpoint currently supports `USER_CSV` jobs only
+- the endpoint requires both `merchantops.ai.enabled=true` and persisted flag `ai.import.fix-recommendation.enabled=true`
 
 Current eligibility rules are explicit:
 
@@ -326,7 +345,7 @@ Current failure behavior:
 - `400` when the job has no sanitized row-level signal
 - `403` when `USER_READ` is missing
 - `404` for cross-tenant or missing import jobs
-- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled, not configured, unavailable, times out, or returns an invalid structured payload
+- controlled `503 SERVICE_UNAVAILABLE` when AI is disabled by `merchantops.ai.enabled=false`, disabled by persisted feature flag `ai.import.fix-recommendation.enabled=false`, not configured, unavailable, times out, or returns an invalid structured payload
 
 ## Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures`)
 
@@ -423,6 +442,7 @@ The approval-backed selective replay proposal bridge stays intentionally narrow:
 - `sourceInteractionId` is optional provenance only; it does not drive execution
 - `proposalReason` is optional operator context and is trimmed before persistence
 - the endpoint is tenant-scoped and requires `USER_WRITE`
+- the endpoint loads the source job through the existing tenant-scoped import read path before applying persisted feature flag `workflow.import.selective-replay-proposal.enabled`
 - the endpoint does not create a replay job, mutate the source job, or execute any import work directly
 - the response shape is the existing approval-request contract, not an import-job detail contract
 
@@ -448,6 +468,7 @@ Current eligibility and rejection rules:
 - source job is not in a terminal status (`SUCCEEDED` or `FAILED`)
 - source job has `failureCount = 0`
 - source job is not `USER_CSV`
+- persisted feature flag `workflow.import.selective-replay-proposal.enabled` is disabled, returning `503`, message `import selective replay proposal is disabled`
 - none of the requested `errorCodes` resolve to replayable row-level failures in the source job
 - `sourceInteractionId`, when present, does not reference a same-job `FIX_RECOMMENDATION` interaction in `SUCCEEDED` status
 - a same-tenant pending proposal already exists for the same source job plus canonical `errorCodes`, returning `400`, message `pending selective replay proposal already exists for source job and selected errorCodes`
@@ -459,6 +480,7 @@ Current approval behavior:
 - requester self-approval is still blocked by the shared approval guard
 - duplicate pending proposal creation is suppressed on executable payload semantics, not provenance fields
 - once a proposal leaves `PENDING`, its pending key is cleared, so the same canonical payload can be proposed again later if replay eligibility still passes
+- when the workflow flag is disabled, the endpoint creates no `approval_request` row and no business `audit_event` row
 
 ## Edited Failed-Row Replay (`POST /api/v1/import-jobs/{id}/replay-failures/edited`)
 

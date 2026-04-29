@@ -40,8 +40,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query(value = """
             SELECT DISTINCT u.*
             FROM users u
-            LEFT JOIN user_role ur ON ur.user_id = u.id
-            LEFT JOIN `role` r ON r.id = ur.role_id AND r.tenant_id = u.tenant_id
+            LEFT JOIN user_role ur ON ur.user_id = u.id AND ur.tenant_id = u.tenant_id
+            LEFT JOIN `role` r ON r.id = ur.role_id AND r.tenant_id = ur.tenant_id
             WHERE u.tenant_id = :tenantId
               AND (:username IS NULL OR u.username LIKE CONCAT('%', :username, '%'))
               AND (:status IS NULL OR u.status = :status)
@@ -51,8 +51,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             countQuery = """
                     SELECT COUNT(DISTINCT u.id)
                     FROM users u
-                    LEFT JOIN user_role ur ON ur.user_id = u.id
-                    LEFT JOIN `role` r ON r.id = ur.role_id AND r.tenant_id = u.tenant_id
+                    LEFT JOIN user_role ur ON ur.user_id = u.id AND ur.tenant_id = u.tenant_id
+                    LEFT JOIN `role` r ON r.id = ur.role_id AND r.tenant_id = ur.tenant_id
                     WHERE u.tenant_id = :tenantId
                       AND (:username IS NULL OR u.username LIKE CONCAT('%', :username, '%'))
                       AND (:status IS NULL OR u.status = :status)

@@ -1,0 +1,154 @@
+[
+  {
+    "id": "no-sanitized-row-signal",
+    "detail": {
+      "job": {
+        "id": 9701,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-fix-no-rows.csv",
+        "storageKey": "1/week9-fix-no-rows.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-failure-9701",
+        "totalCount": 1,
+        "successCount": 0,
+        "failureCount": 1,
+        "errorSummary": "only global validation signals are available",
+        "createdAt": "2026-04-04T11:00:00",
+        "startedAt": "2026-04-04T11:00:02",
+        "finishedAt": "2026-04-04T11:00:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "INVALID_HEADER",
+          "count": 1
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 97011,
+          "tenantId": 1,
+          "importJobId": 9701,
+          "rowNumber": null,
+          "errorCode": "INVALID_HEADER",
+          "errorMessage": "header columns do not match USER_CSV",
+          "rawPayload": "login,display_name,email_address,passwd,roles",
+          "createdAt": "2026-04-04T11:00:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [],
+    "providerResult": null,
+    "expectInteractionRecord": false,
+    "expectedStatus": "NOT_RECORDED",
+    "expectedErrorCode": "BAD_REQUEST",
+    "expectedMessage": "import job has no sanitized row signal for fix recommendation"
+  },
+  {
+    "id": "sensitive-output-echo",
+    "detail": {
+      "job": {
+        "id": 9702,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-fix-sensitive-echo.csv",
+        "storageKey": "1/week9-fix-sensitive-echo.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-failure-9702",
+        "totalCount": 9,
+        "successCount": 0,
+        "failureCount": 9,
+        "errorSummary": "role validation and duplicate usernames blocked the import",
+        "createdAt": "2026-04-04T11:05:00",
+        "startedAt": "2026-04-04T11:05:02",
+        "finishedAt": "2026-04-04T11:05:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "count": 7
+        },
+        {
+          "errorCode": "DUPLICATE_USERNAME",
+          "count": 2
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 97021,
+          "tenantId": 1,
+          "importJobId": 9702,
+          "rowNumber": 2,
+          "errorCode": "UNKNOWN_ROLE",
+          "errorMessage": "roleCodes must exist in current tenant",
+          "rawPayload": "policy-fix,Policy Fix,policy-fix@example.com,secret-pass-3,READ_ONLY",
+          "createdAt": "2026-04-04T11:05:03"
+        },
+        {
+          "id": 97022,
+          "tenantId": 1,
+          "importJobId": 9702,
+          "rowNumber": 3,
+          "errorCode": "DUPLICATE_USERNAME",
+          "errorMessage": "username already exists in current tenant",
+          "rawPayload": "existing-user,Existing User,existing@example.com,password-2,READ_ONLY",
+          "createdAt": "2026-04-04T11:05:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [
+      {
+        "id": 97021,
+        "tenantId": 1,
+        "importJobId": 9702,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "policy-fix,Policy Fix,policy-fix@example.com,secret-pass-3,READ_ONLY",
+        "createdAt": "2026-04-04T11:05:03"
+      },
+      {
+        "id": 97022,
+        "tenantId": 1,
+        "importJobId": 9702,
+        "rowNumber": 3,
+        "errorCode": "DUPLICATE_USERNAME",
+        "errorMessage": "username already exists in current tenant",
+        "rawPayload": "existing-user,Existing User,existing@example.com,password-2,READ_ONLY",
+        "createdAt": "2026-04-04T11:05:04"
+      }
+    ],
+    "providerResult": {
+      "summary": "The failures are concentrated in role validation and duplicate usernames.",
+      "recommendedFixes": [
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "recommendedAction": "Set role to READ_ONLY before replay.",
+          "reasoning": "The role field needs review before replay.",
+          "reviewRequired": true
+        }
+      ],
+      "confidenceNotes": [
+        "Operators should still confirm tenant-specific business rules."
+      ],
+      "recommendedOperatorChecks": [
+        "Review the grouped failures before editing replay input."
+      ],
+      "modelId": "gpt-4.1-mini",
+      "inputTokens": 146,
+      "outputTokens": 74,
+      "totalTokens": 220,
+      "costMicros": null
+    },
+    "expectInteractionRecord": true,
+    "expectedStatus": "INVALID_RESPONSE",
+    "expectedErrorCode": "SERVICE_UNAVAILABLE",
+    "expectedMessage": "import ai fix recommendation is unavailable"
+  }
+]

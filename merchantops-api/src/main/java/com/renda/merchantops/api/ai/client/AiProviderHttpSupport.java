@@ -21,13 +21,17 @@ final class AiProviderHttpSupport {
     }
 
     static RestClient buildClient(RestClient.Builder restClientBuilder, String baseUrl, int timeoutMs) {
+        return buildClientBuilder(restClientBuilder, baseUrl, timeoutMs).build();
+    }
+
+    static RestClient.Builder buildClientBuilder(RestClient.Builder restClientBuilder, String baseUrl, int timeoutMs) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
         return restClientBuilder
+                .clone()
                 .baseUrl(normalizeBaseUrl(baseUrl))
-                .requestFactory(requestFactory)
-                .build();
+                .requestFactory(requestFactory);
     }
 
     static AiProviderFailureType classifyHttpFailure(RestClientResponseException ex) {
@@ -54,6 +58,17 @@ final class AiProviderHttpSupport {
             current = current.getCause();
         }
         return false;
+    }
+
+    static <T extends Throwable> T findCause(Throwable throwable, Class<T> causeType) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (causeType.isInstance(current)) {
+                return causeType.cast(current);
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     static String normalizeBaseUrl(String value) {

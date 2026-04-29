@@ -6,6 +6,65 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+### Added
+
+- Added the Productization Baseline Slice A admin-console entry through `merchantops-admin-web/`, a standalone Vite + React + TypeScript app for login, current tenant context, local JWT restoration, and workflow navigation placeholders over the existing backend.
+- Added the Productization Baseline Slice B auth-session foundation: login now creates a server-side `auth_session`, JWTs carry a required `sid` claim, `POST /api/v1/auth/logout` revokes the current session, and the admin console signs out through the backend.
+- Added the Productization Baseline Slice C same-origin admin + API runtime contract through `docker-compose.runtime.yml`, a `runtime` Spring profile, an Nginx-served admin web image, and a dedicated deployment runtime smoke runbook.
+- Added Productization Baseline Slice D tenant-integrity hardening for `user_role`, including `tenant_id` backfill, same-tenant composite foreign keys to `users` and `role`, tenant-aware role-binding writes, and focused database-level rejection coverage.
+- Added Productization Baseline Slice E as the first read-only admin workflow screen: a protected `/tickets` route backed by the existing `GET /api/v1/tickets?page=0&size=10` API, with shared authenticated layout, ticket schema validation, and loading/empty/error states.
+- Added Productization Baseline Slice F tenant-integrity hardening for root ticket actors, including composite same-tenant foreign keys for `ticket.assignee_id` and `ticket.created_by` plus focused database-level rejection coverage.
+- Added Productization Baseline Slice G-A auth-session lifecycle cleanup, including configurable `merchantops.auth.session.cleanup.*` defaults, a bounded background scheduler for retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions, and focused auth regression coverage for post-cleanup `401` behavior.
+- Added Productization Baseline Slice G-B1 logout-all sessions contract: `POST /api/v1/auth/logout-all` revokes every active auth session for the current tenant/user, the admin console exposes `Sign out all sessions`, and focused auth coverage verifies same-user token invalidation plus other-user and other-tenant preservation.
+
+### Changed
+
+- README, getting-started docs, architecture docs, roadmap/status pages, and automated-test guidance now document the admin-console run path, frontend architecture boundary, and separate frontend workspace verification commands.
+- Protected requests now reject sidless, revoked, expired, missing, mismatched, or cleanup-deleted auth sessions with controlled `401` responses before tenant/user/role revalidation, while refresh tokens, cookie/session rotation, session lists, device metadata, and selective device logout remain deferred.
+- GitHub Actions now runs admin frontend checks and verifies both API and admin image construction, while runtime-container smoke, image publishing, real secret-manager integration, TLS/domain management, and deployment automation remain manual or deferred.
+- Access-control, user-management, migration, status, roadmap, and regression docs now distinguish the resolved `user_role` database invariant plus resolved root ticket assignee/creator invariant from the remaining ticket comment-author, operation-log operator, and child-table tenant-integrity follow-ups.
+- Admin console docs, smoke runbooks, roadmap/status pages, and the project showcase now describe the read-only Tickets queue as the first productized workflow screen while keeping ticket detail, mutations, filters, pagination controls, AI actions, approval actions, and backend API changes deferred.
+
+## [v0.7.0-beta] - 2026-04-12
+
+Tagged as `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`.
+
+### Added
+
+- Added the first Week 10 delivery-hardening slice through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, a real public tenant-scoped persisted feature-flag surface for six AI generation endpoints plus two approval-backed workflow bridges.
+- Added the second Week 10 delivery-hardening slice through a repository-root multi-stage `Dockerfile`, runnable `merchantops-api` boot-jar packaging, and an official `docker build` plus `docker run --env-file .env --network merchantops-infra ...` local delivery path over the existing MySQL, Redis, and RabbitMQ stack.
+- Added the third Week 10 delivery-hardening slice through a no-secret GitHub Actions CI quality gate on pull requests and `main` pushes, running the default Maven regression plus a root Docker image build.
+- Added the fourth Week 10 portfolio-packaging slice through a concise root README plus `docs/getting-started/project-showcase.md`, giving reviewers and new contributors a 5-10 minute demo, architecture, governance-boundary, verification, and handoff path.
+
+### Changed
+
+- The six suggestion-only AI generation endpoints now require both config-level `merchantops.ai.enabled=true` and their matching persisted feature flag for the current tenant, while the three public AI read endpoints remain available when generation is gated off.
+- The Week 8 workflow proposal bridges now each require their own persisted workflow flag for the current tenant and degrade with controlled `503` responses without creating approval or audit side effects when disabled.
+- `PUT /api/v1/feature-flags/{key}` now rejects `enabled=null` with controlled `400 BAD_REQUEST` instead of letting an unchanged disabled row short-circuit as an idempotent no-op.
+- Feature-flag updates now return the final persisted row and suppress duplicate `FEATURE_FLAG_UPDATED` audit rows when a concurrent write already applied the requested boolean before the update path completes.
+- The shared AI runtime now supports an internal OpenAI transport selector under `merchantops.ai.openai-runtime`, keeping `RAW_HTTP` as the rollback-safe default `/v1/responses` path while adding a `SPRING_AI` OpenAI chat-completions transport pilot under the same `merchantops.ai.*` ownership model.
+- AI reference docs, auth/RBAC docs, configuration docs, API examples, automated test notes, smoke guidance, and Week 10 phase/roadmap docs now reflect the persisted feature-flag rollout-control baseline.
+- Getting-started docs, shared configuration docs, smoke/test guidance, and Week 10 phase docs now also reflect the Dockerized API delivery baseline, the pinned `merchantops-infra` bridge network, and the explicit container env-injection path.
+- README, automated-test guidance, and phase/roadmap docs now describe the CI boundary explicitly: CI proves Maven regression and image construction, while deployment, image publishing, live AI provider checks, Dockerized API live smoke, and opt-in real MySQL migration verification remain outside the workflow.
+- README and docs navigation now frame the repository as a workflow-first, AI-enhanced backend reference implementation with an explicit project-showcase path, while phase and roadmap docs now point toward Week 10 close-out and release-readiness instead of additional delivery automation.
+- Release docs now record `v0.7.0-beta` as the Week 10 delivery hardening and portfolio packaging beta baseline.
+
+## [v0.6.0-beta] - 2026-04-06
+
+Tagged as `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`.
+
+### Added
+
+- Added the first Week 9 governance slice as an executable six-workflow AI prompt inventory plus shared eval-comparator baseline, centered on `AiGenerationWorkflow`, `AiWorkflowEvalInventory`, and a default-suite comparator pass that checks golden, failure, and policy datasets across the current ticket and import generation workflows.
+- Added the second Week 9 governance slice through `GET /api/v1/ai-interactions/usage-summary`, a tenant-scoped aggregate read endpoint over stored `ai_interaction_record` metadata with optional inclusive `from` / `to` plus exact-match `entityType` / `interactionType` / `status` filters.
+- Added the third Week 9 governance slice by widening `GET /api/v1/ai-interactions/usage-summary` with aggregate `byPromptVersion` buckets, exposing prompt-version-level counts, success or failure totals, and token or cost totals without widening the endpoint into per-request cross-entity detail.
+
+### Changed
+
+- Golden-sample AI regression coverage now reuses shared evaluator infrastructure instead of six separate assertion paths, and the checked-in AI datasets now include explicit failure and policy baselines alongside the existing golden samples.
+- The Week 9 governance baseline now combines the executable prompt inventory plus comparator pass with one narrow tenant usage-summary read surface that exposes aggregate interaction counts, token totals, cost totals, and prompt-version breakdowns without exposing raw prompt text, raw provider payload, request-level cross-entity detail, or billing / ledger semantics.
+- AI governance docs, AI regression guidance, automated test notes, API examples, and phase status/roadmap pages now reflect the Week 9 Slice A plus Slice B plus Slice C baseline without widening the existing ticket or import generation endpoints.
+
 ## [v0.5.0-beta] - 2026-04-04
 
 Tagged as `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`.

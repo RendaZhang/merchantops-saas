@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auth Surface Sync"
+  short_description: "Sync public auth docs, examples, and runbooks"
+  default_prompt: "Use $auth-surface-sync to align the current public authentication docs, admin auth wording, runbooks, examples, and phase text with the current public auth surface."

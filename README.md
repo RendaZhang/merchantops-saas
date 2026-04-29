@@ -1,77 +1,150 @@
 # MerchantOps SaaS
 
-`v0.5.0-beta` | workflow-first, AI-enhanced vertical SaaS backend
+`v0.7.0-beta` | workflow-first, AI-enhanced SaaS reference implementation
 
-MerchantOps SaaS is an open-source, multi-tenant backend reference implementation for merchant operations workflows. It combines tenant isolation, JWT and RBAC security, ticket workflow execution, audit and approval patterns, and async import/data-operations flows in a modular Spring Boot codebase.
+MerchantOps SaaS is an open-source, multi-tenant SaaS reference implementation for merchant operations workflows. It shows how tenant isolation, JWT/RBAC security, ticket execution, async import operations, audit/approval patterns, AI suggestions, feature flags, Docker delivery, minimal admin-console UX, and CI can fit together around a modular Spring Boot backend.
 
-## Status
+This repository is built for portfolio review, open-source handoff, and implementation study. It is a beta reference implementation, not a production-ready SaaS platform.
 
-- Current tagged milestone: `v0.5.0-beta`
-- Milestone meaning: `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
-- Current active phase: Week 9 AI Governance, Eval, Cost, and Usage
-- Release maturity: beta preview, not production-ready
-- Prior baseline: `v0.4.0-beta` for the completed Week 7 AI Copilot for Import and Data Quality beta baseline
+## Current Milestone
 
-## Current Capabilities
+- Current tagged milestone: `v0.7.0-beta`
+- Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
+- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, Slice G-A auth-session cleanup scheduler, Slice G-B1 logout-all sessions contract, Slice H1 Feature Flags control screen, and Slice H2 Imports queue screen are complete; the next implementation slice is not selected yet
+- Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
+- Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 
-- Tenant-scoped user management with list, detail, create, update, status, role lookup, and role assignment flows
-- Tenant-scoped ticket workflow with list, detail, create, assignee change, status change, comment flow, queue filters, narrowed AI interaction-history reads with runtime usage/cost metadata, suggestion-only AI summary/triage/internal reply-draft generation, and approval-backed ticket comment proposals from AI reply-draft output
-- Audit-event query backbone plus approval-backed governance flow for `USER_STATUS_DISABLE`, import selective replay proposals, and ticket comment proposals, with action-aware queue visibility and duplicate-pending suppression on executable payload semantics
-- Async import jobs with create, list, detail, paged error reporting, narrowed AI interaction-history reads with runtime usage/cost metadata when present, suggestion-only AI error summary, mapping suggestion, and fix recommendation from sanitized failed-row context, failed-row replay, whole-file replay, selective replay, approval-backed selective replay proposals, edited replay, queued-job recovery, and stale-processing safeguards
-- JWT authentication, request tracing, Flyway migrations, health checks, and OpenAPI/Swagger support
+## Core Capabilities
 
-## Known Limits
-
-- The public import surface currently supports one business import type only: `USER_CSV`
-- There is no frontend or tenant admin UI in this repository
-- The current public AI surface is still read-only or suggestion-only: one narrowed ticket AI interaction-history endpoint with runtime usage/cost metadata, three suggestion-only ticket generation endpoints, one narrowed import AI interaction-history endpoint, and three suggestion-only import AI endpoints for error summary, mapping suggestion, and fix recommendation. The current workflow also includes two separate human-reviewed workflow bridges through approval requests: import selective replay proposals and ticket comment proposals from AI reply-draft output. Broader direct AI write-back remains pending
-- This release line is intended for evaluation and contribution, not production deployment
+- Tenant-scoped authentication, context propagation, user management, role assignment, and stale-token revalidation.
+- Ticket workflow with list/detail/create, assignment, status transitions, comments, workflow logs, and tenant-scoped audit events.
+- Async `USER_CSV` import jobs with queued execution, paged errors, replay variants, derived-job lineage, and stale-processing recovery.
+- Human-reviewed approval flows for user disable, import selective replay proposals, and ticket comment proposals.
+- AI-assisted ticket and import workflows where public AI endpoints remain read-only or suggestion-only.
+- AI governance reads for narrowed interaction history and tenant-scoped aggregate usage/cost metadata, including prompt-version breakdowns.
+- Fixed tenant-scoped feature flags for six AI generation endpoints and two approval-backed workflow bridges.
+- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, read-only Tickets and Imports queues, a Feature Flags control screen, workflow navigation placeholders, and same-origin Nginx runtime packaging.
+- Local Maven startup, Dockerized API startup, production-like admin + API runtime compose, OpenAPI/Swagger docs, and a minimal no-secret GitHub Actions quality gate.
 
 ## Quick Start
 
 Requirements:
 
 - JDK 21
-- Maven Wrapper or Maven 3.9.x
-- Docker Compose
+- Docker Desktop or another Docker Engine runtime with `docker compose`
+- Node.js and npm for the admin console
 - Access to Maven Central
 
-Start the local environment:
+Prepare local infrastructure:
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up -d
+```
+
+Choose one API startup path.
+
+Local Maven:
+
+```powershell
 .\mvnw.cmd -pl merchantops-api -am -DskipTests install
 .\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
 ```
 
-The API also auto-loads the repository-root local `.env` during dev-profile `spring-boot:run`, so local AI provider keys should stay there instead of in tracked files.
+Dockerized API:
+
+```powershell
+docker build -t merchantops-api:local .
+docker run --rm --name merchantops-api-local `
+  --env-file .env `
+  --network merchantops-infra `
+  -p 8080:8080 `
+  -e MYSQL_HOST=mysql `
+  -e REDIS_HOST=redis `
+  -e RABBITMQ_HOST=rabbitmq `
+  merchantops-api:local
+```
 
 After startup:
 
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 - Health: `http://localhost:8080/health`
+- Actuator health: `http://localhost:8080/actuator/health`
 
-For the full setup flow, see [docs/getting-started/README.md](docs/getting-started/README.md).
+Run the minimal admin console in a second terminal:
 
-## Documentation
+```powershell
+cd merchantops-admin-web
+npm install
+npm run dev
+```
 
-- [docs/README.md](docs/README.md): documentation index
-- [docs/project-status.md](docs/project-status.md): current implementation reality, tagged baseline, and known gaps
-- [docs/roadmap.md](docs/roadmap.md): active phase and near-term next steps
-- [docs/project-plan.md](docs/project-plan.md): 10-week workflow-first, AI-enhanced project plan
-- [docs/reference/README.md](docs/reference/README.md): technical reference index
-- [docs/runbooks/README.md](docs/runbooks/README.md): verification runbooks and regression guidance
-- [docs/architecture/README.md](docs/architecture/README.md): ADRs and architecture notes
-- [api-demo.http](api-demo.http): IDE-friendly API request examples
+Open `http://localhost:5173` and log in with tenant `demo-shop`, username `admin`, and password `123456`.
 
-## Project Direction
+Production-like admin + API runtime:
 
-- Portfolio-quality system first
-- Open-source reference implementation second
-- Commercial exploration only after the workflow and AI layers become credible
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
 
-## Contributing, Security, and License
+Open `http://localhost:8081` for the Nginx-served admin console with same-origin `/api` proxying.
+
+For the full setup flow, use [Getting Started](docs/getting-started/README.md). For the frontend path, use [Admin Console](docs/getting-started/admin-console.md). For a 5-10 minute review path, use the [Project Showcase](docs/getting-started/project-showcase.md).
+
+## CI And Verification
+
+Default local regression:
+
+```powershell
+.\mvnw.cmd -pl merchantops-api -am test
+```
+
+Frontend workspace checks:
+
+```powershell
+cd merchantops-admin-web
+npm run typecheck
+npm run lint
+npm run build
+```
+
+GitHub Actions runs the Linux equivalent on pull requests and `main` pushes, runs the admin web typecheck/lint/build, then verifies that both runtime images build with:
+
+```bash
+docker build -t merchantops-api:ci .
+docker build -t merchantops-admin-web:ci ./merchantops-admin-web
+```
+
+The CI gate is intentionally minimal. It does not deploy, publish Docker images, start the Dockerized runtime stack for live smoke, run live AI provider checks, or run the opt-in real MySQL migration suite. Current CI evidence and exact verification boundaries are tracked in [Project Status](docs/project-status.md) and [Automated Tests](docs/runbooks/automated-tests.md).
+
+## Docs Map
+
+- [Documentation index](docs/README.md): reading order and high-value jump targets
+- [Getting Started](docs/getting-started/README.md): local environment, quick start, admin console, and project showcase
+- [Admin Console](docs/getting-started/admin-console.md): minimal frontend run path and smoke test
+- [Project Showcase](docs/getting-started/project-showcase.md): short demo and handoff path
+- [Project Status](docs/project-status.md): current implemented reality, CI evidence, and known gaps
+- [Roadmap](docs/roadmap.md): active release-line milestone, active slice, candidate next slices, and stop condition
+- [Product Strategy](docs/product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline
+- [Project Plan](docs/project-plan.md): planning entry point and link to the archived foundation plan
+- [Completed 10-Week Foundation Plan](docs/archive/completed-10-week-foundation-plan.md): historical Week 1-10 build plan
+- [Reference](docs/reference/README.md): public contracts and technical reference pages
+- [Runbooks](docs/runbooks/README.md): smoke tests, regression sign-off, and verification guidance
+- [Architecture](docs/architecture/README.md): ADRs, diagrams, admin-console architecture, and structural notes
+- [api-demo.http](api-demo.http): IDE-friendly request examples
+
+## Current Limitations
+
+- The admin console currently includes login/context/sign-out, sign-out-all, read-only Tickets and Imports queues, and a Feature Flags control screen; ticket detail, ticket mutations, filters, pagination controls, Approvals, AI Interactions, and deeper import workflow actions remain placeholders or later workflow screens.
+- The public import workflow currently supports one business import type: `USER_CSV`.
+- Feature flags are fixed-key and tenant-scoped only; there is no cross-tenant admin surface, percentage rollout, or generic flag platform.
+- Public AI endpoints are read-only or suggestion-only. AI-generated ticket comments and import selective replay still go through separate human-reviewed approval bridges before execution.
+- AI usage/cost metadata is a governance read surface over stored runtime metadata, not billing, ledger, invoice, or commercial metering infrastructure.
+- CI does not require AI provider secrets and does not prove live vendor behavior.
+- K8s, Helm, real secret-manager integration, performance artifacts, refresh tokens, cookie/session rotation, device-aware session management, and a broader reporting system remain outside the current baseline.
+
+## Contributing, Security, And License
 
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [SECURITY.md](SECURITY.md)

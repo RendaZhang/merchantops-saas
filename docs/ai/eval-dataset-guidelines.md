@@ -1,6 +1,6 @@
 # Eval Dataset Guidelines
 
-Last updated: 2026-03-28
+Last updated: 2026-04-05
 
 ## Goal
 
@@ -13,15 +13,23 @@ This document defines a lightweight eval dataset approach appropriate for the cu
 As of today:
 
 - the public AI surface now includes two history read endpoints plus six generation endpoints across ticket and import workflows
-- the repository now includes golden-sample fixtures at:
-  - `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`
-  - `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`
-  - `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`
-  - `merchantops-api/src/test/resources/ai/import-job-error-summary/golden-samples.json`
-  - `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/golden-samples.json`
-  - `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/golden-samples.json`
+- the repository now includes per-workflow `golden-samples.json`, `failure-samples.json`, and `policy-samples.json` baselines under `merchantops-api/src/test/resources/ai/<workflow>/`
+- the executable test inventory lives in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`
+- the unified comparator pass lives in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java`
 - the current public eval baseline is still small and intentionally reviewable by humans
 - the history endpoints depend on stored interaction records and query behavior; prompt-quality eval sets are primarily needed for the generation paths
+
+## Current Executable Baseline
+
+The current Week 9 governance baseline is now executable inside the default test suite:
+
+- six workflow inventory entries, one for each generation workflow
+- six golden samples
+- nine failure samples
+- six policy or safety samples
+- one shared comparator report that prints checked workflows, prompt versions, sample counts, and assertion failures
+
+This is intentionally still small. The goal is a stable regression baseline, not a benchmark lab.
 
 ## Dataset Principles
 
@@ -124,12 +132,13 @@ This is enough to support meaningful review without creating heavy maintenance b
 
 Current live storage:
 
-- ticket summary golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-summary/`
-- ticket triage golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-triage/`
-- ticket reply-draft golden samples are stored under `merchantops-api/src/test/resources/ai/ticket-reply-draft/`
-- import error-summary golden samples are stored under `merchantops-api/src/test/resources/ai/import-job-error-summary/`
-- import mapping-suggestion golden samples are stored under `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/`
-- import fix-recommendation golden samples are stored under `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/`
+- ticket summary samples are stored under `merchantops-api/src/test/resources/ai/ticket-summary/`
+- ticket triage samples are stored under `merchantops-api/src/test/resources/ai/ticket-triage/`
+- ticket reply-draft samples are stored under `merchantops-api/src/test/resources/ai/ticket-reply-draft/`
+- import error-summary samples are stored under `merchantops-api/src/test/resources/ai/import-job-error-summary/`
+- import mapping-suggestion samples are stored under `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/`
+- import fix-recommendation samples are stored under `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/`
+- the active inventory and runner wiring are stored under `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/`
 
 If broader AI automation appears later, these can expand into a structure like:
 
@@ -162,6 +171,7 @@ Before promoting a public AI workflow change:
 - no obvious regressions should appear in the golden set
 - known failure samples should not get worse without explicit acceptance
 - safety-boundary samples should still respect tenant, permission, and approval constraints
+- the shared comparator pass should stay green in the default `.\mvnw.cmd -pl merchantops-api -am test` suite
 
 ## Related Documents
 

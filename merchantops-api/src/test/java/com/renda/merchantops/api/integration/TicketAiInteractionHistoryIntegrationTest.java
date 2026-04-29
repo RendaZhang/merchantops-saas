@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +79,8 @@ class TicketAiInteractionHistoryIntegrationTest {
 
         jdbcTemplate.execute("DROP ALL OBJECTS");
         createSchema();
+
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
 
         seedTenants();
         seedPermissions();
@@ -224,9 +227,9 @@ class TicketAiInteractionHistoryIntegrationTest {
     private void createSchema() {
         jdbcTemplate.execute("CREATE TABLE tenant (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_code VARCHAR(64) NOT NULL, tenant_name VARCHAR(128) NOT NULL, status VARCHAR(32) NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)");
         jdbcTemplate.execute("CREATE TABLE users (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, username VARCHAR(64) NOT NULL, password_hash VARCHAR(255) NOT NULL, display_name VARCHAR(128) NOT NULL, email VARCHAR(128), status VARCHAR(32) NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL, created_by BIGINT, updated_by BIGINT, CONSTRAINT uk_users_id_tenant UNIQUE (id, tenant_id))");
-        jdbcTemplate.execute("CREATE TABLE `role` (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, role_code VARCHAR(64) NOT NULL, role_name VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)");
+        jdbcTemplate.execute("CREATE TABLE `role` (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, role_code VARCHAR(64) NOT NULL, role_name VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL, CONSTRAINT uk_role_id_tenant UNIQUE (id, tenant_id))");
         jdbcTemplate.execute("CREATE TABLE permission (id BIGINT AUTO_INCREMENT PRIMARY KEY, permission_code VARCHAR(64) NOT NULL, permission_name VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)");
-        jdbcTemplate.execute("CREATE TABLE user_role (id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT NOT NULL, role_id BIGINT NOT NULL)");
+        jdbcTemplate.execute("CREATE TABLE user_role (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, user_id BIGINT NOT NULL, role_id BIGINT NOT NULL, CONSTRAINT fk_user_role_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id), CONSTRAINT fk_user_role_role_tenant FOREIGN KEY (role_id, tenant_id) REFERENCES `role`(id, tenant_id))");
         jdbcTemplate.execute("CREATE TABLE role_permission (id BIGINT AUTO_INCREMENT PRIMARY KEY, role_id BIGINT NOT NULL, permission_id BIGINT NOT NULL)");
         jdbcTemplate.execute("CREATE TABLE ticket (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, title VARCHAR(128) NOT NULL, description VARCHAR(2000), status VARCHAR(32) NOT NULL, assignee_id BIGINT, created_by BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)");
         jdbcTemplate.execute("CREATE TABLE ticket_comment (id BIGINT AUTO_INCREMENT PRIMARY KEY, tenant_id BIGINT NOT NULL, ticket_id BIGINT NOT NULL, content VARCHAR(2000) NOT NULL, created_by BIGINT NOT NULL, request_id VARCHAR(128) NOT NULL, created_at TIMESTAMP NOT NULL)");
@@ -415,10 +418,11 @@ class TicketAiInteractionHistoryIntegrationTest {
     }
 
     private void insertUserRole(Long id, Long userId, Long roleId) {
+        Long tenantId = jdbcTemplate.queryForObject("SELECT tenant_id FROM users WHERE id = ?", Long.class, userId);
         jdbcTemplate.update("""
-                INSERT INTO user_role (id, user_id, role_id)
-                VALUES (?, ?, ?)
-                """, id, userId, roleId);
+                INSERT INTO user_role (id, tenant_id, user_id, role_id)
+                VALUES (?, ?, ?, ?)
+                """, id, tenantId, userId, roleId);
     }
 
     private void insertRolePermission(Long id, Long roleId, Long permissionId) {
