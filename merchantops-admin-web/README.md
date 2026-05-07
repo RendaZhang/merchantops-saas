@@ -95,7 +95,9 @@ The app stores the JWT access token in `localStorage` under `merchantops.admin.a
 
 On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or one of the current auth-ending `403` responses: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. Ticket queue, import queue, and feature-flag requests use the same session-ended path only for `401` and those auth-ending `403` cases; a generic permission `403` is not treated as session expiry. The Feature Flags page shows `权限不足` for ordinary permission denial.
 
-Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, import-jobs, and feature-flags query caches, and returns to login even if the logout request fails.
+Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. After a successful login, the frontend stores the new token and clears the context, tickets, import-jobs, and feature-flags query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
+
+`Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, import-jobs, and feature-flags query caches, and returns to login even if the logout request fails.
 
 `Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token plus context, tickets, import-jobs, and feature-flags query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
 

@@ -111,7 +111,9 @@ Minimum acceptance:
 
 The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context`, `/api/v1/tickets`, `/api/v1/import-jobs`, or `/api/v1/feature-flags` returns `401` or one of the current auth-ending `403` messages: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. A generic permission `403` does not clear the local session; `/feature-flags` shows an in-page `权限不足` state for ordinary permission denial.
 
-Login creates a server-side auth session and the JWT carries a required `sid` claim. `Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, import-jobs, and feature-flags query caches, and returns to login even if the logout request fails or the token is already invalid.
+Login creates a server-side auth session and the JWT carries a required `sid` claim. After a successful login, the frontend stores the new token and clears the context, tickets, import-jobs, and feature-flags query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
+
+`Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, import-jobs, and feature-flags query caches, and returns to login even if the logout request fails or the token is already invalid.
 
 `Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, then the frontend clears the same local token plus context, tickets, import-jobs, and feature-flags query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
 
