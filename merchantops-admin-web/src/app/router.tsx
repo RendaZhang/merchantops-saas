@@ -2,6 +2,7 @@ import { Navigate, createBrowserRouter } from 'react-router-dom'
 
 import { AuthenticatedLayout } from '../components/AuthenticatedLayout'
 import { ProtectedRoute } from '../components/ProtectedRoute'
+import { ApprovalsPage } from '../features/approvals/ApprovalsPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { FeatureFlagsPage } from '../features/feature-flags/FeatureFlagsPage'
@@ -35,6 +36,10 @@ export const router = createBrowserRouter([
           {
             path: 'imports',
             element: <ImportsPage />,
+          },
+          {
+            path: 'approvals',
+            element: <ApprovalsPage />,
           },
         ],
       },

@@ -2,7 +2,7 @@
 
 Vite + React admin console for the Productization Baseline.
 
-This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, the read-only current tenant tickets queue, the read-only current tenant imports queue, and the feature-flag control screen. Approvals and AI Interactions remain navigation placeholders.
+This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, the read-only current tenant tickets queue, the read-only current tenant imports queue, the read-only current tenant approvals queue, and the feature-flag control screen. AI Interactions remains a navigation placeholder.
 
 ## Stack
 
@@ -78,6 +78,7 @@ The admin console calls:
 - `POST /api/v1/auth/logout-all`
 - `GET /api/v1/tickets?page=0&size=10`
 - `GET /api/v1/import-jobs?page=0&size=10`
+- `GET /api/v1/approval-requests?page=0&size=10`
 - `GET /api/v1/feature-flags`
 - `PUT /api/v1/feature-flags/{key}`
 
@@ -87,19 +88,21 @@ The Tickets route is available at `/tickets`. It renders the first page of the c
 
 The Imports route is available at `/imports`. It renders the first page of the current tenant import-job queue as a read-only table and does not include upload, detail, `/errors`, pagination controls, filters, replay, selective replay, edited replay, import AI actions, import AI interaction history, approval workflow UI, or backend API changes.
 
+The Approvals route is available at `/approvals`. It renders the first page of the current tenant approval-request queue as a read-only table and does not include detail, filters, pagination controls, approve/reject actions, or backend API changes.
+
 The Feature Flags route is available at `/feature-flags`. It renders the fixed current-tenant flag inventory and lets authorized users toggle one flag at a time through the existing update API. It does not include cross-tenant administration, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, or backend API changes.
 
 ## Session Boundary
 
 The app stores the JWT access token in `localStorage` under `merchantops.admin.auth.v1` with a client-side expiry timestamp derived from `expiresIn`.
 
-On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or one of the current auth-ending `403` responses: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. Ticket queue, import queue, and feature-flag requests use the same session-ended path only for `401` and those auth-ending `403` cases; a generic permission `403` is not treated as session expiry. The Feature Flags page shows `权限不足` for ordinary permission denial.
+On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or one of the current auth-ending `403` responses: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. Ticket queue, import queue, approval queue, and feature-flag requests use the same session-ended path only for `401` and those auth-ending `403` cases; a generic permission `403` is not treated as session expiry. The Feature Flags page shows `权限不足` for ordinary permission denial.
 
-Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. After a successful login, the frontend stores the new token and clears the context, tickets, import-jobs, and feature-flags query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
+Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. After a successful login, the frontend stores the new token and clears the context, tickets, import-jobs, approval-requests, and feature-flags query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
 
-`Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, import-jobs, and feature-flags query caches, and returns to login even if the logout request fails.
+`Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, tickets, import-jobs, approval-requests, and feature-flags query caches, and returns to login even if the logout request fails.
 
-`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token plus context, tickets, import-jobs, and feature-flags query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token plus context, tickets, import-jobs, approval-requests, and feature-flags query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
 
 A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. There is still no refresh-token flow, cookie/session rotation, session list, device metadata, or selective device logout in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
@@ -121,14 +124,15 @@ Manual smoke:
 6. Open `Tickets` from the sidebar and confirm `/tickets` renders the current tenant queue from `/api/v1/tickets?page=0&size=10`.
 7. Open `Feature Flags` and confirm `/feature-flags` renders eight flags from `/api/v1/feature-flags`.
 8. Open `Imports` and confirm `/imports` renders the current tenant import queue or empty state from `/api/v1/import-jobs?page=0&size=10`.
-9. Toggle one flag, confirm the persisted state is reflected, and restore the original value.
-10. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
-11. Refresh `/tickets`, `/feature-flags`, and `/imports` and confirm context plus route data reload while the session is active.
-12. Use `Sign out` and confirm the app returns to login.
-13. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
-14. Reusing a signed-out token against `/api/v1/context` should return `401`.
+9. Open `Approvals` and confirm `/approvals` renders the current tenant approval queue or empty state from `/api/v1/approval-requests?page=0&size=10`.
+10. Toggle one flag, confirm the persisted state is reflected, and restore the original value.
+11. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
+12. Refresh `/tickets`, `/feature-flags`, `/imports`, and `/approvals` and confirm context plus route data reload while the session is active.
+13. Use `Sign out` and confirm the app returns to login.
+14. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
+15. Reusing a signed-out token against `/api/v1/context` should return `401`.
 
-Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the `/tickets`, `/feature-flags`, and `/imports` routes through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
+Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the `/tickets`, `/feature-flags`, `/imports`, and `/approvals` routes through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
 
 ## Image Credit
 

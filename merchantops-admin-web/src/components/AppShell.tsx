@@ -6,10 +6,10 @@ const readyNavigationItems = [
   { label: 'Tickets', path: '/tickets' },
   { label: 'Feature Flags', path: '/feature-flags' },
   { label: 'Imports', path: '/imports' },
+  { label: 'Approvals', path: '/approvals' },
 ] as const
 
 const placeholderNavigationItems = [
-  { label: 'Approvals', state: 'Placeholder' },
   { label: 'AI Interactions', state: 'Placeholder' },
 ] as const
 
@@ -97,8 +97,8 @@ export function AppShell({
             <p className="text-sm font-medium text-emerald-700">Productization Baseline</p>
             <p className="max-w-3xl text-sm text-neutral-600">
               Same-origin runtime, current tenant context, sign out, and the
-              read-only ticket and import queues plus feature flag controls are
-              connected.
+              read-only ticket, import, and approval queues plus feature flag
+              controls are connected.
             </p>
           </header>
 

@@ -1,9 +1,5 @@
 const workflowPlaceholders = [
   {
-    title: 'Approvals',
-    description: 'Human-reviewed user, import, and ticket proposal decisions.',
-  },
-  {
     title: 'AI Interactions',
     description: 'Suggestion history and tenant usage summary entry points.',
   },
@@ -25,6 +21,11 @@ const liveWorkflows = [
     description:
       'Read-only queue for current-tenant import jobs through the existing import list API.',
   },
+  {
+    title: 'Approvals',
+    description:
+      'Read-only queue for human-reviewed user, import, and ticket proposal requests.',
+  },
 ] as const
 
 export function DashboardPage() {
@@ -38,8 +39,8 @@ export function DashboardPage() {
           </h2>
         </div>
         <p className="max-w-xl text-sm text-neutral-600">
-          Tickets, Feature Flags, and Imports now open live workflow screens.
-          Remaining pages stay behind later slices.
+          Tickets, Feature Flags, Imports, and Approvals now open live workflow
+          screens. Remaining pages stay behind later slices.
         </p>
       </div>
 

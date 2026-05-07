@@ -62,6 +62,27 @@ export const importJobPageSchema = z.object({
   totalPages: z.number(),
 })
 
+export const approvalRequestListItemSchema = z.object({
+  id: z.number(),
+  actionType: z.string(),
+  entityType: z.string(),
+  entityId: z.number(),
+  requestedBy: z.number(),
+  reviewedBy: z.number().nullable(),
+  status: z.string(),
+  createdAt: z.string(),
+  reviewedAt: z.string().nullable(),
+  executedAt: z.string().nullable(),
+})
+
+export const approvalRequestPageSchema = z.object({
+  items: z.array(approvalRequestListItemSchema),
+  page: z.number(),
+  size: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+})
+
 export const featureFlagItemSchema = z.object({
   id: z.number().nullable(),
   key: z.string(),
@@ -94,6 +115,8 @@ export type TicketListItem = z.infer<typeof ticketListItemSchema>
 export type TicketPage = z.infer<typeof ticketPageSchema>
 export type ImportJobListItem = z.infer<typeof importJobListItemSchema>
 export type ImportJobPage = z.infer<typeof importJobPageSchema>
+export type ApprovalRequestListItem = z.infer<typeof approvalRequestListItemSchema>
+export type ApprovalRequestPage = z.infer<typeof approvalRequestPageSchema>
 export type FeatureFlagItem = z.infer<typeof featureFlagItemSchema>
 export type FeatureFlagList = z.infer<typeof featureFlagListSchema>
 export type FeatureFlagUpdateRequest = z.infer<typeof featureFlagUpdateRequestSchema>

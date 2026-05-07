@@ -2,6 +2,7 @@ import { type ZodType, z } from 'zod'
 
 import { clearAuthSession, getAuthorizationHeader } from './auth-token'
 import {
+  type ApprovalRequestPage,
   type ContextResponse,
   type FeatureFlagItem,
   type FeatureFlagList,
@@ -10,6 +11,7 @@ import {
   type LoginRequest,
   type LoginResponse,
   type TicketPage,
+  approvalRequestPageSchema,
   contextResponseSchema,
   featureFlagItemSchema,
   featureFlagListSchema,
@@ -48,6 +50,11 @@ type TicketPageRequest = {
 }
 
 type ImportJobPageRequest = {
+  page?: number
+  size?: number
+}
+
+type ApprovalRequestPageRequest = {
   page?: number
   size?: number
 }
@@ -108,6 +115,24 @@ export function getImportJobs({
   return apiRequest(`/api/v1/import-jobs?${searchParams.toString()}`, importJobPageSchema, {
     authenticated: true,
   })
+}
+
+export function getApprovalRequests({
+  page = 0,
+  size = 10,
+}: ApprovalRequestPageRequest = {}): Promise<ApprovalRequestPage> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  })
+
+  return apiRequest(
+    `/api/v1/approval-requests?${searchParams.toString()}`,
+    approvalRequestPageSchema,
+    {
+      authenticated: true,
+    },
+  )
 }
 
 export function getFeatureFlags(): Promise<FeatureFlagList> {

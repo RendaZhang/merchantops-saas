@@ -43,6 +43,7 @@ export function LoginPage() {
       queryClient.removeQueries({ queryKey: ['tickets'] })
       queryClient.removeQueries({ queryKey: ['feature-flags'] })
       queryClient.removeQueries({ queryKey: ['import-jobs'] })
+      queryClient.removeQueries({ queryKey: ['approval-requests'] })
       navigate('/', { replace: true })
     },
   })

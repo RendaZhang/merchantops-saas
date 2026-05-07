@@ -23,6 +23,7 @@ export function AuthenticatedLayout() {
     queryClient.removeQueries({ queryKey: ['tickets'] })
     queryClient.removeQueries({ queryKey: ['feature-flags'] })
     queryClient.removeQueries({ queryKey: ['import-jobs'] })
+    queryClient.removeQueries({ queryKey: ['approval-requests'] })
   }, [queryClient])
   const signOutMutation = useMutation({
     mutationFn: logout,
