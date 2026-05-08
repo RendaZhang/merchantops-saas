@@ -2,6 +2,7 @@ import { type ZodType, z } from 'zod'
 
 import { clearAuthSession, getAuthorizationHeader } from './auth-token'
 import {
+  type AiInteractionUsageSummary,
   type ApprovalRequestPage,
   type ContextResponse,
   type FeatureFlagItem,
@@ -11,6 +12,7 @@ import {
   type LoginRequest,
   type LoginResponse,
   type TicketPage,
+  aiInteractionUsageSummarySchema,
   approvalRequestPageSchema,
   contextResponseSchema,
   featureFlagItemSchema,
@@ -139,6 +141,16 @@ export function getFeatureFlags(): Promise<FeatureFlagList> {
   return apiRequest('/api/v1/feature-flags', featureFlagListSchema, {
     authenticated: true,
   })
+}
+
+export function getAiInteractionUsageSummary(): Promise<AiInteractionUsageSummary> {
+  return apiRequest(
+    '/api/v1/ai-interactions/usage-summary',
+    aiInteractionUsageSummarySchema,
+    {
+      authenticated: true,
+    },
+  )
 }
 
 export async function updateFeatureFlag(

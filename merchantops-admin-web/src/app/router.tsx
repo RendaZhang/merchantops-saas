@@ -2,6 +2,7 @@ import { Navigate, createBrowserRouter } from 'react-router-dom'
 
 import { AuthenticatedLayout } from '../components/AuthenticatedLayout'
 import { ProtectedRoute } from '../components/ProtectedRoute'
+import { AiInteractionsPage } from '../features/ai-interactions/AiInteractionsPage'
 import { ApprovalsPage } from '../features/approvals/ApprovalsPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LoginPage } from '../features/auth/LoginPage'
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
           {
             path: 'approvals',
             element: <ApprovalsPage />,
+          },
+          {
+            path: 'ai-interactions',
+            element: <AiInteractionsPage />,
           },
         ],
       },

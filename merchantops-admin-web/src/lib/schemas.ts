@@ -98,6 +98,46 @@ export const featureFlagUpdateRequestSchema = z.object({
   enabled: z.boolean(),
 })
 
+export const aiInteractionUsageSummaryByInteractionTypeSchema = z.object({
+  interactionType: z.string(),
+  count: z.number(),
+  succeededCount: z.number(),
+  failedCount: z.number(),
+  totalTokens: z.number(),
+  totalCostMicros: z.number(),
+})
+
+export const aiInteractionUsageSummaryByStatusSchema = z.object({
+  status: z.string(),
+  count: z.number(),
+  totalTokens: z.number(),
+  totalCostMicros: z.number(),
+})
+
+export const aiInteractionUsageSummaryByPromptVersionSchema = z.object({
+  promptVersion: z.string(),
+  count: z.number(),
+  succeededCount: z.number(),
+  failedCount: z.number(),
+  totalTokens: z.number(),
+  totalCostMicros: z.number(),
+})
+
+export const aiInteractionUsageSummarySchema = z.object({
+  from: z.string().nullable(),
+  to: z.string().nullable(),
+  totalInteractions: z.number(),
+  succeededCount: z.number(),
+  failedCount: z.number(),
+  totalPromptTokens: z.number(),
+  totalCompletionTokens: z.number(),
+  totalTokens: z.number(),
+  totalCostMicros: z.number(),
+  byInteractionType: z.array(aiInteractionUsageSummaryByInteractionTypeSchema),
+  byStatus: z.array(aiInteractionUsageSummaryByStatusSchema),
+  byPromptVersion: z.array(aiInteractionUsageSummaryByPromptVersionSchema),
+})
+
 export const jwtDisplayClaimsSchema = z
   .object({
     tenantId: z.union([z.number(), z.string()]).transform(Number),
@@ -120,4 +160,14 @@ export type ApprovalRequestPage = z.infer<typeof approvalRequestPageSchema>
 export type FeatureFlagItem = z.infer<typeof featureFlagItemSchema>
 export type FeatureFlagList = z.infer<typeof featureFlagListSchema>
 export type FeatureFlagUpdateRequest = z.infer<typeof featureFlagUpdateRequestSchema>
+export type AiInteractionUsageSummary = z.infer<typeof aiInteractionUsageSummarySchema>
+export type AiInteractionUsageSummaryByInteractionType = z.infer<
+  typeof aiInteractionUsageSummaryByInteractionTypeSchema
+>
+export type AiInteractionUsageSummaryByStatus = z.infer<
+  typeof aiInteractionUsageSummaryByStatusSchema
+>
+export type AiInteractionUsageSummaryByPromptVersion = z.infer<
+  typeof aiInteractionUsageSummaryByPromptVersionSchema
+>
 export type JwtDisplayClaims = z.infer<typeof jwtDisplayClaimsSchema>

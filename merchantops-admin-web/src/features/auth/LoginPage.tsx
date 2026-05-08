@@ -44,6 +44,7 @@ export function LoginPage() {
       queryClient.removeQueries({ queryKey: ['feature-flags'] })
       queryClient.removeQueries({ queryKey: ['import-jobs'] })
       queryClient.removeQueries({ queryKey: ['approval-requests'] })
+      queryClient.removeQueries({ queryKey: ['ai-interaction-usage-summary'] })
       navigate('/', { replace: true })
     },
   })

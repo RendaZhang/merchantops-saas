@@ -7,10 +7,7 @@ const readyNavigationItems = [
   { label: 'Feature Flags', path: '/feature-flags' },
   { label: 'Imports', path: '/imports' },
   { label: 'Approvals', path: '/approvals' },
-] as const
-
-const placeholderNavigationItems = [
-  { label: 'AI Interactions', state: 'Placeholder' },
+  { label: 'AI Interactions', path: '/ai-interactions' },
 ] as const
 
 type AppShellProps = {
@@ -76,19 +73,6 @@ export function AppShell({
               </NavLink>
             ))}
 
-            {placeholderNavigationItems.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                disabled
-                className="flex min-w-36 items-center justify-between gap-3 rounded-md border border-neutral-200 bg-white px-3 py-3 text-left text-sm text-neutral-500 transition lg:min-w-0"
-              >
-                <span>{item.label}</span>
-                <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs text-neutral-500">
-                  Soon
-                </span>
-              </button>
-            ))}
           </nav>
         </aside>
 
@@ -98,7 +82,7 @@ export function AppShell({
             <p className="max-w-3xl text-sm text-neutral-600">
               Same-origin runtime, current tenant context, sign out, and the
               read-only ticket, import, and approval queues plus feature flag
-              controls are connected.
+              controls and AI usage summary are connected.
             </p>
           </header>
 

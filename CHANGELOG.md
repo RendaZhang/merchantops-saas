@@ -16,6 +16,10 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added Productization Baseline Slice F tenant-integrity hardening for root ticket actors, including composite same-tenant foreign keys for `ticket.assignee_id` and `ticket.created_by` plus focused database-level rejection coverage.
 - Added Productization Baseline Slice G-A auth-session lifecycle cleanup, including configurable `merchantops.auth.session.cleanup.*` defaults, a bounded background scheduler for retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions, and focused auth regression coverage for post-cleanup `401` behavior.
 - Added Productization Baseline Slice G-B1 logout-all sessions contract: `POST /api/v1/auth/logout-all` revokes every active auth session for the current tenant/user, the admin console exposes `Sign out all sessions`, and focused auth coverage verifies same-user token invalidation plus other-user and other-tenant preservation.
+- Added Productization Baseline Slice H1 as a Feature Flags control screen over `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`.
+- Added Productization Baseline Slice H2 as a read-only Imports queue screen over `GET /api/v1/import-jobs?page=0&size=10`.
+- Added Productization Baseline Slice H3 as a read-only Approvals queue screen over `GET /api/v1/approval-requests?page=0&size=10`.
+- Added Productization Baseline Slice H4 as an AI Interactions usage-summary screen over `GET /api/v1/ai-interactions/usage-summary`, showing aggregate cards plus interaction-type, status, and prompt-version breakdowns without adding backend API scope.
 
 ### Changed
 
@@ -23,7 +27,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Protected requests now reject sidless, revoked, expired, missing, mismatched, or cleanup-deleted auth sessions with controlled `401` responses before tenant/user/role revalidation, while refresh tokens, cookie/session rotation, session lists, device metadata, and selective device logout remain deferred.
 - GitHub Actions now runs admin frontend checks and verifies both API and admin image construction, while runtime-container smoke, image publishing, real secret-manager integration, TLS/domain management, and deployment automation remain manual or deferred.
 - Access-control, user-management, migration, status, roadmap, and regression docs now distinguish the resolved `user_role` database invariant plus resolved root ticket assignee/creator invariant from the remaining ticket comment-author, operation-log operator, and child-table tenant-integrity follow-ups.
-- Admin console docs, smoke runbooks, roadmap/status pages, and the project showcase now describe the read-only Tickets queue as the first productized workflow screen while keeping ticket detail, mutations, filters, pagination controls, AI actions, approval actions, and backend API changes deferred.
+- Admin console docs, smoke runbooks, roadmap/status pages, and the project showcase now describe the live Tickets, Feature Flags, Imports, Approvals, and AI Interactions admin screens while keeping ticket detail, mutations, filters, pagination controls, deeper import/approval actions, AI interaction detail, and backend API changes deferred.
 
 ## [v0.7.0-beta] - 2026-04-12
 
