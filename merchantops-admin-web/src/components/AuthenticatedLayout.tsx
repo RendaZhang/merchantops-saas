@@ -23,6 +23,8 @@ export function AuthenticatedLayout() {
     queryClient.removeQueries({ queryKey: ['tickets'] })
     queryClient.removeQueries({ queryKey: ['feature-flags'] })
     queryClient.removeQueries({ queryKey: ['import-jobs'] })
+    queryClient.removeQueries({ queryKey: ['import-job'] })
+    queryClient.removeQueries({ queryKey: ['import-job-errors'] })
     queryClient.removeQueries({ queryKey: ['approval-requests'] })
     queryClient.removeQueries({ queryKey: ['ai-interaction-usage-summary'] })
   }, [queryClient])

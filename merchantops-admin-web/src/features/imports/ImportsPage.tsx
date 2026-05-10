@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useAuthenticatedRoute } from '../../components/authenticated-route-context'
 import { StatusPanel } from '../../components/StatusPanel'
@@ -95,9 +96,12 @@ function ImportJobRow({ job }: { job: ImportJobListItem }) {
     <tr>
       <td className="px-5 py-4 align-top">
         <div className="min-w-0">
-          <p className="truncate font-medium text-neutral-950">
+          <Link
+            to={`/imports/${job.id}`}
+            className="block truncate font-medium text-neutral-950 underline-offset-4 hover:text-emerald-700 hover:underline"
+          >
             {job.sourceFilename}
-          </p>
+          </Link>
           <p className="mt-1 text-xs text-neutral-500">#{job.id}</p>
         </div>
       </td>

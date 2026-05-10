@@ -9,7 +9,7 @@ MerchantOps SaaS is a workflow-first SaaS reference implementation for merchant 
 The short story:
 
 - it is not a CRUD-only demo
-- the first product-facing admin console now proves login, tenant context, token restoration, sign-out, read-only Tickets, Imports, and Approvals workflow screens, a Feature Flags control screen, and an AI Interactions usage-summary screen
+- the first product-facing admin console now proves login, tenant context, token restoration, sign-out, read-only Tickets, Imports queue/detail diagnostics, and Approvals workflow screens, a Feature Flags control screen, and an AI Interactions usage-summary screen
 - AI is embedded into ticket and import workflows instead of being a standalone chat surface
 - AI outputs stay read-only or suggestion-only unless a separate human-reviewed workflow bridge executes them
 - governance metadata is visible enough for operational review without becoming billing or ledger infrastructure
@@ -21,7 +21,7 @@ Start with the path that proves the project is runnable and workflow-centered:
 
 1. Open the admin console at `http://localhost:8081` for the production-like runtime, or `http://localhost:5173` for local Vite development.
 2. Login as the seeded demo admin for tenant `demo-shop`.
-3. Show the dashboard tenant/operator context, then open the read-only Tickets queue, Imports queue, Approvals queue, Feature Flags control screen, and AI Interactions usage-summary screen.
+3. Show the dashboard tenant/operator context, then open the read-only Tickets queue, Imports queue/detail diagnostics when a job is present, Approvals queue, Feature Flags control screen, and AI Interactions usage-summary screen.
 4. Open Swagger UI at `http://localhost:8080/swagger-ui/index.html` for the deeper API workflow demo.
 5. Use Swagger or `api-demo.http` for deeper ticket workflow operations before showing AI.
 6. Show AI suggestion endpoints and then the separate approval-backed execution bridge.
@@ -122,7 +122,7 @@ Use [quick-start.md](quick-start.md) for API startup commands, [admin-console.md
 
 ## Intentionally Out Of Scope
 
-- Full workflow data screens beyond the current Tickets, Imports, Approvals, Feature Flags, and AI Interactions admin screens
+- Full workflow data screens beyond the current Tickets, Imports queue/detail diagnostics, Approvals, Feature Flags, and AI Interactions admin screens
 - Production deployment automation
 - Docker image publishing
 - K8s or Helm manifests

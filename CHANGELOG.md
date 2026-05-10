@@ -20,6 +20,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added Productization Baseline Slice H2 as a read-only Imports queue screen over `GET /api/v1/import-jobs?page=0&size=10`.
 - Added Productization Baseline Slice H3 as a read-only Approvals queue screen over `GET /api/v1/approval-requests?page=0&size=10`.
 - Added Productization Baseline Slice H4 as an AI Interactions usage-summary screen over `GET /api/v1/ai-interactions/usage-summary`, showing aggregate cards plus interaction-type, status, and prompt-version breakdowns without adding backend API scope.
+- Added Productization Baseline Slice H5 as a read-only Import Job detail/errors screen over the existing `GET /api/v1/import-jobs/{id}` and `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` APIs, linking from the Imports queue and showing overview, counts, timing, error-code diagnostics, and the first failed-row page without adding backend API scope.
 
 ### Changed
 
@@ -27,7 +28,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Protected requests now reject sidless, revoked, expired, missing, mismatched, or cleanup-deleted auth sessions with controlled `401` responses before tenant/user/role revalidation, while refresh tokens, cookie/session rotation, session lists, device metadata, and selective device logout remain deferred.
 - GitHub Actions now runs admin frontend checks and verifies both API and admin image construction, while runtime-container smoke, image publishing, real secret-manager integration, TLS/domain management, and deployment automation remain manual or deferred.
 - Access-control, user-management, migration, status, roadmap, and regression docs now distinguish the resolved `user_role` database invariant plus resolved root ticket assignee/creator invariant from the remaining ticket comment-author, operation-log operator, and child-table tenant-integrity follow-ups.
-- Admin console docs, smoke runbooks, roadmap/status pages, and the project showcase now describe the live Tickets, Feature Flags, Imports, Approvals, and AI Interactions admin screens while keeping ticket detail, mutations, filters, pagination controls, deeper import/approval actions, AI interaction detail, and backend API changes deferred.
+- Admin console docs, smoke runbooks, roadmap/status pages, and the project showcase now describe the live Tickets, Feature Flags, Imports queue/detail diagnostics, Approvals, and AI Interactions admin screens while keeping ticket detail, mutations, filters, pagination controls, deeper import/approval actions, AI interaction detail, and backend API changes deferred.
 
 ## [v0.7.0-beta] - 2026-04-12
 

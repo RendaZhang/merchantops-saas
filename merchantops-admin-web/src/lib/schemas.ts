@@ -62,6 +62,50 @@ export const importJobPageSchema = z.object({
   totalPages: z.number(),
 })
 
+export const importJobErrorCodeCountSchema = z.object({
+  errorCode: z.string(),
+  count: z.number(),
+})
+
+export const importJobErrorItemSchema = z.object({
+  id: z.number(),
+  rowNumber: z.number().nullable(),
+  errorCode: z.string(),
+  errorMessage: z.string(),
+  rawPayload: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export const importJobDetailSchema = z.object({
+  id: z.number(),
+  tenantId: z.number(),
+  importType: z.string(),
+  sourceType: z.string(),
+  sourceFilename: z.string(),
+  storageKey: z.string(),
+  sourceJobId: z.number().nullable(),
+  status: z.string(),
+  requestedBy: z.number(),
+  requestId: z.string(),
+  totalCount: z.number(),
+  successCount: z.number(),
+  failureCount: z.number(),
+  errorSummary: z.string().nullable(),
+  createdAt: z.string(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+  errorCodeCounts: z.array(importJobErrorCodeCountSchema),
+  itemErrors: z.array(importJobErrorItemSchema),
+})
+
+export const importJobErrorPageSchema = z.object({
+  items: z.array(importJobErrorItemSchema),
+  page: z.number(),
+  size: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+})
+
 export const approvalRequestListItemSchema = z.object({
   id: z.number(),
   actionType: z.string(),
@@ -155,6 +199,10 @@ export type TicketListItem = z.infer<typeof ticketListItemSchema>
 export type TicketPage = z.infer<typeof ticketPageSchema>
 export type ImportJobListItem = z.infer<typeof importJobListItemSchema>
 export type ImportJobPage = z.infer<typeof importJobPageSchema>
+export type ImportJobErrorCodeCount = z.infer<typeof importJobErrorCodeCountSchema>
+export type ImportJobErrorItem = z.infer<typeof importJobErrorItemSchema>
+export type ImportJobDetail = z.infer<typeof importJobDetailSchema>
+export type ImportJobErrorPage = z.infer<typeof importJobErrorPageSchema>
 export type ApprovalRequestListItem = z.infer<typeof approvalRequestListItemSchema>
 export type ApprovalRequestPage = z.infer<typeof approvalRequestPageSchema>
 export type FeatureFlagItem = z.infer<typeof featureFlagItemSchema>

@@ -7,6 +7,7 @@ import { ApprovalsPage } from '../features/approvals/ApprovalsPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LoginPage } from '../features/auth/LoginPage'
 import { FeatureFlagsPage } from '../features/feature-flags/FeatureFlagsPage'
+import { ImportJobDetailPage } from '../features/imports/ImportJobDetailPage'
 import { ImportsPage } from '../features/imports/ImportsPage'
 import { TicketsPage } from '../features/tickets/TicketsPage'
 
@@ -37,6 +38,10 @@ export const router = createBrowserRouter([
           {
             path: 'imports',
             element: <ImportsPage />,
+          },
+          {
+            path: 'imports/:id',
+            element: <ImportJobDetailPage />,
           },
           {
             path: 'approvals',

@@ -8,6 +8,8 @@ import {
   type FeatureFlagItem,
   type FeatureFlagList,
   type FeatureFlagUpdateRequest,
+  type ImportJobDetail,
+  type ImportJobErrorPage,
   type ImportJobPage,
   type LoginRequest,
   type LoginResponse,
@@ -18,6 +20,8 @@ import {
   featureFlagItemSchema,
   featureFlagListSchema,
   featureFlagUpdateRequestSchema,
+  importJobDetailSchema,
+  importJobErrorPageSchema,
   importJobPageSchema,
   loginRequestSchema,
   loginResponseSchema,
@@ -52,6 +56,11 @@ type TicketPageRequest = {
 }
 
 type ImportJobPageRequest = {
+  page?: number
+  size?: number
+}
+
+type ImportJobErrorPageRequest = {
   page?: number
   size?: number
 }
@@ -117,6 +126,30 @@ export function getImportJobs({
   return apiRequest(`/api/v1/import-jobs?${searchParams.toString()}`, importJobPageSchema, {
     authenticated: true,
   })
+}
+
+export function getImportJob(id: number): Promise<ImportJobDetail> {
+  return apiRequest(`/api/v1/import-jobs/${id}`, importJobDetailSchema, {
+    authenticated: true,
+  })
+}
+
+export function getImportJobErrors(
+  id: number,
+  { page = 0, size = 10 }: ImportJobErrorPageRequest = {},
+): Promise<ImportJobErrorPage> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  })
+
+  return apiRequest(
+    `/api/v1/import-jobs/${id}/errors?${searchParams.toString()}`,
+    importJobErrorPageSchema,
+    {
+      authenticated: true,
+    },
+  )
 }
 
 export function getApprovalRequests({

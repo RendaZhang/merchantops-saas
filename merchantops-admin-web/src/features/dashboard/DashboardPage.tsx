@@ -12,7 +12,7 @@ const liveWorkflows = [
   {
     title: 'Imports',
     description:
-      'Read-only queue for current-tenant import jobs through the existing import list API.',
+      'Read-only queue and diagnostic detail for current-tenant import jobs.',
   },
   {
     title: 'Approvals',
@@ -38,7 +38,7 @@ export function DashboardPage() {
         </div>
         <p className="max-w-xl text-sm text-neutral-600">
           Tickets, Feature Flags, Imports, Approvals, and AI Interactions now
-          open live workflow screens. Deeper workflow pages stay behind later
+          open live workflow screens. Deeper write workflows stay behind later
           slices.
         </p>
       </div>
