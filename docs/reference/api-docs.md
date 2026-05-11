@@ -690,7 +690,7 @@ Current notes:
 - creates a request only; it does not disable the target user immediately
 - duplicate pending requests for the same tenant user are rejected
 
-### 18. Approval Request Review (`GET /api/v1/approval-requests/{id}` / `POST /approve`)
+### 18. Approval Request Detail And Review (`GET /api/v1/approval-requests/{id}` / `POST /approve` / `POST /reject`)
 
 Response after approval:
 
@@ -718,10 +718,10 @@ Response after approval:
 
 Current notes:
 
-- `GET /api/v1/approval-requests/{id}` requires `USER_READ`
-- approve/reject requires `USER_WRITE`
+- `GET /api/v1/approval-requests/{id}` requires action-specific approval read
+- approve/reject requires action-specific approval review
 - requester cannot self-approve or self-reject
-- approve path executes the disable action immediately in the same transaction boundary
+- approve path executes the underlying action immediately in the same transaction boundary
 
 ### 19. Approval Request Queue (`GET /api/v1/approval-requests`)
 

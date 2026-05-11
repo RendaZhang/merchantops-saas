@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useAuthenticatedRoute } from '../../components/authenticated-route-context'
 import { StatusPanel } from '../../components/StatusPanel'
@@ -106,7 +107,12 @@ function ApprovalRequestRow({
   return (
     <tr>
       <td className="px-5 py-4 align-top">
-        <p className="font-medium text-neutral-950">#{approvalRequest.id}</p>
+        <Link
+          to={`/approvals/${approvalRequest.id}`}
+          className="font-medium text-neutral-950 underline-offset-4 hover:text-emerald-700 hover:underline"
+        >
+          #{approvalRequest.id}
+        </Link>
       </td>
       <td className="px-5 py-4 align-top">
         <code className="break-all rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">

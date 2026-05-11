@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-05-10
+Last updated: 2026-05-11
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -71,6 +71,7 @@ Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/feature-flags"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/imports"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/imports/1"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/approvals"
+Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/approvals/1"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/ai-interactions"
 ```
 
@@ -84,6 +85,7 @@ Expected result:
 - `http://localhost:8081/imports` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/imports/1` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/approvals` returns the same admin HTML shell through SPA history fallback.
+- `http://localhost:8081/approvals/1` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/ai-interactions` returns the same admin HTML shell through SPA history fallback.
 
 ## 5. Same-Origin Auth Smoke
@@ -136,6 +138,14 @@ $approvals = Invoke-RestMethod `
   -Method Get `
   -Uri "$adminBaseUrl/api/v1/approval-requests?page=0&size=10" `
   -Headers $headers
+
+if (@($approvals.data.items).Count -gt 0) {
+  $firstApprovalRequestId = @($approvals.data.items)[0].id
+  $approvalRequest = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$adminBaseUrl/api/v1/approval-requests/$firstApprovalRequestId" `
+    -Headers $headers
+}
 
 $featureFlags = Invoke-RestMethod `
   -Method Get `
@@ -211,6 +221,7 @@ Expected result:
 - imports returns `page=0`, `size=10`, an `items` array, and the current tenant's first import-job page or an empty list
 - when the import list is not empty, import detail returns the selected job and import errors returns the selected job's first error page
 - approvals returns `page=0`, `size=10`, an `items` array, and the current tenant's visible approval-request page or an empty list
+- when the approval list is not empty, approval detail returns the selected request
 - feature flags returns the fixed eight-key inventory for the current tenant
 - AI interaction usage summary returns aggregate totals plus `byInteractionType`, `byStatus`, and `byPromptVersion` arrays
 - feature flag update returns the requested toggled state and restore returns the original state
@@ -241,12 +252,13 @@ Open `http://localhost:8081`.
 5. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
 6. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.
 7. Open `Approvals` and confirm `/approvals` renders the read-only current tenant approval-request queue or empty state.
-8. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.
-9. Toggle one feature flag and restore the original value.
-10. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
-11. Refresh `/tickets`, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, and `/ai-interactions` and confirm context plus route data restore while the session is active.
-12. Select `Sign out` and confirm the login screen returns.
-13. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
+8. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
+9. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.
+10. Toggle one feature flag and restore the original value.
+11. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
+12. Refresh `/tickets`, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data restore while the session is active.
+13. Select `Sign out` and confirm the login screen returns.
+14. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
 
 Do not use `http://localhost:5173` for this runbook; that is the Vite dev-server path.
 

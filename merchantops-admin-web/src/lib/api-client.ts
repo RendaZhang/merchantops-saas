@@ -3,6 +3,7 @@ import { type ZodType, z } from 'zod'
 import { clearAuthSession, getAuthorizationHeader } from './auth-token'
 import {
   type AiInteractionUsageSummary,
+  type ApprovalRequest,
   type ApprovalRequestPage,
   type ContextResponse,
   type FeatureFlagItem,
@@ -15,6 +16,7 @@ import {
   type LoginResponse,
   type TicketPage,
   aiInteractionUsageSummarySchema,
+  approvalRequestSchema,
   approvalRequestPageSchema,
   contextResponseSchema,
   featureFlagItemSchema,
@@ -168,6 +170,26 @@ export function getApprovalRequests({
       authenticated: true,
     },
   )
+}
+
+export function getApprovalRequest(id: number): Promise<ApprovalRequest> {
+  return apiRequest(`/api/v1/approval-requests/${id}`, approvalRequestSchema, {
+    authenticated: true,
+  })
+}
+
+export function approveApprovalRequest(id: number): Promise<ApprovalRequest> {
+  return apiRequest(`/api/v1/approval-requests/${id}/approve`, approvalRequestSchema, {
+    method: 'POST',
+    authenticated: true,
+  })
+}
+
+export function rejectApprovalRequest(id: number): Promise<ApprovalRequest> {
+  return apiRequest(`/api/v1/approval-requests/${id}/reject`, approvalRequestSchema, {
+    method: 'POST',
+    authenticated: true,
+  })
 }
 
 export function getFeatureFlags(): Promise<FeatureFlagList> {

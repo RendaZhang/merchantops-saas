@@ -1,6 +1,6 @@
 # Admin Console Architecture
 
-The admin console is a standalone frontend module at `merchantops-admin-web/`. It is not served from Spring Boot static resources. The current Productization Baseline surface uses the existing login/context APIs, current-session logout, current-user logout-all, the existing read-only ticket queue API, the existing read-only import-job list/detail/error APIs, the existing read-only approval-request list API, the existing feature-flag list/update API, and the existing AI interaction usage-summary API.
+The admin console is a standalone frontend module at `merchantops-admin-web/`. It is not served from Spring Boot static resources. The current Productization Baseline surface uses the existing login/context APIs, current-session logout, current-user logout-all, the existing read-only ticket queue API, the existing read-only import-job list/detail/error APIs, the existing approval-request list/detail/review APIs, the existing feature-flag list/update API, and the existing AI interaction usage-summary API.
 
 Productization Baseline Slice C defines the production-like runtime boundary: the built admin app is served by an Nginx container, and that container proxies same-origin `/api/...` requests to the API container.
 
@@ -14,12 +14,12 @@ Productization Baseline Slice C defines the production-like runtime boundary: th
 
 ## Frontend Runtime Shape
 
-- React Router owns the login route plus the protected Dashboard, Tickets, Feature Flags, Imports, Import Detail, Approvals, and AI Interactions routes.
+- React Router owns the login route plus the protected Dashboard, Tickets, Feature Flags, Imports, Import Detail, Approvals, Approval Detail, and AI Interactions routes.
 - The shared authenticated layout owns the app shell, current context query, sign-out mutations, and auth-expired redirect behavior for protected child routes.
-- TanStack Query owns the authenticated `/api/v1/context`, `/api/v1/tickets`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` fetch and refresh behavior.
+- TanStack Query owns the authenticated `/api/v1/context`, `/api/v1/tickets`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` fetch, mutation, and refresh behavior.
 - `src/lib/api-client.ts` is the only fetch boundary for backend calls.
 - `src/lib/auth-token.ts` is the only local token persistence boundary.
-- Zod validates login, context, ticket page, ticket list item, import-job page, import-job list item, import-job detail, import-job error page, approval-request page, approval-request list item, feature-flag list/update, AI interaction usage-summary, and JWT display-claim shapes before the UI consumes them.
+- Zod validates login, context, ticket page, ticket list item, import-job page, import-job list item, import-job detail, import-job error page, approval-request page, approval-request list item, approval-request detail/review, feature-flag list/update, AI interaction usage-summary, and JWT display-claim shapes before the UI consumes them.
 
 ## Runtime Host Model
 
@@ -45,6 +45,9 @@ The current frontend calls only:
 - `GET /api/v1/import-jobs/{id}`
 - `GET /api/v1/import-jobs/{id}/errors?page=0&size=10`
 - `GET /api/v1/approval-requests?page=0&size=10`
+- `GET /api/v1/approval-requests/{id}`
+- `POST /api/v1/approval-requests/{id}/approve`
+- `POST /api/v1/approval-requests/{id}/reject`
 - `GET /api/v1/feature-flags`
 - `PUT /api/v1/feature-flags/{key}`
 - `GET /api/v1/ai-interactions/usage-summary`
@@ -59,7 +62,9 @@ The `/imports` route renders the first page of the current tenant import-job que
 
 The `/imports/:id` route renders read-only import-job overview, counts, timing, error-code diagnostics, and the first failed-row page through the existing import detail and `/errors` APIs. It does not add upload, replay, selective replay, edited replay, import AI actions, filters, pagination controls, approval workflow UI, or new backend APIs.
 
-The `/approvals` route renders the first page of the current tenant approval-request queue as read-only data. It does not add detail, filters, pagination controls, approve/reject actions, or new backend APIs.
+The `/approvals` route renders the first page of the current tenant approval-request queue as read-only data and links each request id to `/approvals/:id`.
+
+The `/approvals/:id` route renders approval request detail, read-only formatted `payloadJson`, and safe inline confirmation controls for pending approve/reject actions through the existing approval detail and review APIs. `Approve` synchronously executes the underlying action, while `Reject` resolves the request without execution. It does not add bulk review, filters, pagination controls, payload editing, rejection reasons, proposal creation, or new backend APIs.
 
 The `/feature-flags` route renders the current tenant's fixed feature-flag inventory and lets authorized users toggle one flag at a time through the existing update endpoint. It does not add cross-tenant administration, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, or new backend APIs. Generic permission `403` responses render an in-page `权限不足` state instead of clearing the local session.
 
@@ -71,18 +76,18 @@ The `/ai-interactions` route renders current-tenant aggregate cards for `totalIn
 
 The frontend stores the access token in `localStorage` under `merchantops.admin.auth.v1`, together with a client-side expiry timestamp derived from the login response `expiresIn`.
 
-Refresh restores the token and refetches `/api/v1/context`. Protected route data requests such as `/api/v1/context`, `/api/v1/tickets`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` clear the local token and send the user back to login on expired local sessions, invalid stored sessions, `401`, or the current auth-ending `403` responses `tenant is not active`, `user is not active`, and `token claims are stale, please login again`. A generic permission `403` is not treated as session expiry.
+Refresh restores the token and refetches `/api/v1/context`. Protected route data requests and mutations such as `/api/v1/context`, `/api/v1/tickets`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` clear the local token and send the user back to login on expired local sessions, invalid stored sessions, `401`, or the current auth-ending `403` responses `tenant is not active`, `user is not active`, and `token claims are stale, please login again`. A generic permission `403` is not treated as session expiry.
 
-Login creates a backend `auth_session` row. The JWT carries a required `sid` claim, and protected backend requests validate that the session exists, belongs to the same tenant/user, is `ACTIVE`, is not revoked, and has not expired before current tenant/user/role revalidation runs. After a successful login, the frontend stores the new token and clears the context, tickets, import-jobs, import-job detail, import-job errors, approval-requests, feature-flags, and AI interaction usage-summary query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
+Login creates a backend `auth_session` row. The JWT carries a required `sid` claim, and protected backend requests validate that the session exists, belongs to the same tenant/user, is `ACTIVE`, is not revoked, and has not expired before current tenant/user/role revalidation runs. After a successful login, the frontend stores the new token and clears the context, tickets, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
 
 A background server-side cleanup scheduler now prunes only retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions. This does not change the frontend contract: restore still depends on the stored access token plus a successful `/api/v1/context` refetch, and old tokens whose session rows were later deleted still fail through the same controlled `401` path.
 
-`Sign out` calls `POST /api/v1/auth/logout`, then clears the local token plus context, tickets, import-jobs, import-job detail, import-job errors, approval-requests, feature-flags, and AI interaction usage-summary caches regardless of logout success, network failure, or `401` / `403`. Logout revokes only the current session; separate logins remain active.
+`Sign out` calls `POST /api/v1/auth/logout`, then clears the local token plus context, tickets, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary caches regardless of logout success, network failure, or `401` / `403`. Logout revokes only the current session; separate logins remain active.
 
-`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, including the caller's current session, while preserving other users and other tenants; the frontend then clears the same local token plus context, tickets, import-jobs, import-job detail, import-job errors, approval-requests, feature-flags, and AI interaction usage-summary query caches. If the request fails, the frontend still clears the local token and returns to login with a warning that other sessions may still be active.
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, including the caller's current session, while preserving other users and other tenants; the frontend then clears the same local token plus context, tickets, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches. If the request fails, the frontend still clears the local token and returns to login with a warning that other sessions may still be active.
 
 Backend refresh tokens, cookies, token rotation, session lists, device metadata, selective device logout, and cross-origin CORS policy remain deferred to later productization slices.
 
 ## Deferred Screens
 
-The current shell no longer includes disabled navigation placeholders. Ticket detail, ticket mutations, ticket filters, pagination controls, approval detail/actions, import upload/replay/AI actions, AI interaction filters or per-request detail, and deeper feature-flag platform scope remain later slices.
+The current shell no longer includes disabled navigation placeholders. Ticket detail, ticket mutations, ticket filters, pagination controls, approval filters/pagination/bulk review/payload editing/rejection reasons, import upload/replay/AI actions, AI interaction filters or per-request detail, and deeper feature-flag platform scope remain later slices.

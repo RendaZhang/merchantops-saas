@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-05-10
+Last updated: 2026-05-11
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -31,7 +31,7 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ### Next Slice Selection Pending
 
-Goal: select the next narrow Productization Baseline implementation slice after Slice H5 delivered the Import Job Detail + Errors screen.
+Goal: select the next narrow Productization Baseline implementation slice after Slice H6 delivered the Approval Request Detail + Safe Review Controls screen.
 
 Expected scope:
 
@@ -48,9 +48,10 @@ Stop condition:
 
 ## Recently Closed
 
+- Slice H6: Approval Request Detail + Safe Review Controls - the admin console now links from `/approvals` to protected `/approvals/:id`, uses the existing `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject` APIs, validates detail and review response shapes with Zod, renders read-only approval metadata plus formatted `payloadJson`, and gates pending approve/reject through inline confirmation while leaving bulk review, filters, pagination controls, payload editing, rejection reasons, proposal creation, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H5: Import Job Detail + Errors Screen - the admin console now links from `/imports` to protected `/imports/:id`, uses the existing `GET /api/v1/import-jobs/{id}` and `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` APIs, validates detail and failed-row page shapes with Zod, renders read-only overview/count/timing/error-code diagnostics plus the first failed-row page, and records frontend workspace validation plus mocked browser layout verification while leaving upload, replay, selective or edited replay, import AI actions, filters, pagination controls, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H4: AI Interactions Usage Summary Screen - the admin console now includes a protected `/ai-interactions` route over the existing `GET /api/v1/ai-interactions/usage-summary` API, with Zod-validated usage-summary schemas, a live navigation item, aggregate metric cards, read-only `byInteractionType` / `byStatus` / `byPromptVersion` breakdown tables, and frontend workspace validation while leaving filters, per-request detail, ticket/import entity history drilldown, raw prompt/provider payloads, billing/ledger semantics, write actions, backend API changes, refresh tokens, cookies, and token rotation deferred.
-- Slice H3: Approvals Queue Screen - the admin console now includes a protected `/approvals` route over the existing `GET /api/v1/approval-requests?page=0&size=10` API, with Zod-validated approval-request list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving detail, filters, pagination controls, approve/reject actions, backend API changes, refresh tokens, cookies, and token rotation deferred.
+- Slice H3: Approvals Queue Screen - the admin console now includes a protected `/approvals` route over the existing `GET /api/v1/approval-requests?page=0&size=10` API, with Zod-validated approval-request list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving approval filters, pagination controls, bulk review, payload editing, rejection reasons, proposal creation, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H2: Imports Queue Screen - the admin console now includes a protected `/imports` route over the existing `GET /api/v1/import-jobs?page=0&size=10` API, with Zod-validated import-job list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving upload, detail, `/errors`, filters, pagination controls, replay, selective or edited replay, import AI actions, import AI interaction history, approval workflow UI, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H1: Feature Flags Control Screen - the admin console now includes a protected `/feature-flags` route over the existing `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` API, with Zod-validated feature-flag schemas, a live navigation item, per-row enable/disable controls, query refresh after update, in-page `权限不足` handling for generic permission `403`, and frontend workspace validation while leaving cross-tenant admin, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice G-B1: Logout-All Sessions Contract - `POST /api/v1/auth/logout-all` now revokes every `ACTIVE` auth session for the authenticated current user in the current tenant, including the caller's current session, preserves other users and other tenants, adds a minimal admin `Sign out all sessions` action, and records focused auth plus full regression plus frontend workspace validation while leaving refresh tokens, cookies, token rotation, session lists, device metadata, and selective device logout deferred.
