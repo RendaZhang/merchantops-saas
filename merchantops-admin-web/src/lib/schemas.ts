@@ -29,6 +29,40 @@ export const ticketListItemSchema = z.object({
   updatedAt: z.string(),
 })
 
+export const ticketCommentSchema = z.object({
+  id: z.number(),
+  ticketId: z.number(),
+  content: z.string(),
+  createdBy: z.number(),
+  createdByUsername: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export const ticketOperationLogSchema = z.object({
+  id: z.number(),
+  operationType: z.string(),
+  detail: z.string(),
+  operatorId: z.number(),
+  operatorUsername: z.string().nullable(),
+  createdAt: z.string(),
+})
+
+export const ticketDetailSchema = z.object({
+  id: z.number(),
+  tenantId: z.number(),
+  title: z.string(),
+  description: z.string().nullable(),
+  status: z.string(),
+  assigneeId: z.number().nullable(),
+  assigneeUsername: z.string().nullable(),
+  createdBy: z.number(),
+  createdByUsername: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  comments: z.array(ticketCommentSchema),
+  operationLogs: z.array(ticketOperationLogSchema),
+})
+
 export const ticketPageSchema = z.object({
   items: z.array(ticketListItemSchema),
   page: z.number(),
@@ -212,6 +246,9 @@ export type LoginRequest = z.infer<typeof loginRequestSchema>
 export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type ContextResponse = z.infer<typeof contextResponseSchema>
 export type TicketListItem = z.infer<typeof ticketListItemSchema>
+export type TicketComment = z.infer<typeof ticketCommentSchema>
+export type TicketOperationLog = z.infer<typeof ticketOperationLogSchema>
+export type TicketDetail = z.infer<typeof ticketDetailSchema>
 export type TicketPage = z.infer<typeof ticketPageSchema>
 export type ImportJobListItem = z.infer<typeof importJobListItemSchema>
 export type ImportJobPage = z.infer<typeof importJobPageSchema>

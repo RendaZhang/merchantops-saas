@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-05-11
+Last updated: 2026-05-14
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -67,6 +67,7 @@ Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/health"
 Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/actuator/health"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/tickets"
+Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/tickets/1"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/feature-flags"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/imports"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/imports/1"
@@ -81,6 +82,7 @@ Expected result:
 - `/actuator/health` returns `UP`.
 - `http://localhost:8081/` returns the admin HTML shell.
 - `http://localhost:8081/tickets` returns the same admin HTML shell through SPA history fallback.
+- `http://localhost:8081/tickets/1` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/feature-flags` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/imports` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/imports/1` returns the same admin HTML shell through SPA history fallback.
@@ -115,6 +117,14 @@ $tickets = Invoke-RestMethod `
   -Method Get `
   -Uri "$adminBaseUrl/api/v1/tickets?page=0&size=10" `
   -Headers $headers
+
+if (@($tickets.data.items).Count -gt 0) {
+  $firstTicketId = @($tickets.data.items)[0].id
+  $ticket = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$adminBaseUrl/api/v1/tickets/$firstTicketId" `
+    -Headers $headers
+}
 
 $imports = Invoke-RestMethod `
   -Method Get `
@@ -218,6 +228,7 @@ Expected result:
 - login returns an access token
 - context returns `tenantCode=demo-shop` and `username=admin`
 - tickets returns `page=0`, `size=10`, an `items` array, and the current tenant's first ticket page
+- when the ticket list is not empty, ticket detail returns the selected ticket with `comments` and `operationLogs` arrays
 - imports returns `page=0`, `size=10`, an `items` array, and the current tenant's first import-job page or an empty list
 - when the import list is not empty, import detail returns the selected job and import errors returns the selected job's first error page
 - approvals returns `page=0`, `size=10`, an `items` array, and the current tenant's visible approval-request page or an empty list
@@ -248,17 +259,18 @@ Open `http://localhost:8081`.
 1. Log in with `demo-shop` / `admin` / `123456`.
 2. Confirm the dashboard renders tenant and operator context.
 3. Open `Tickets` and confirm `/tickets` renders the read-only current tenant ticket queue.
-4. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
-5. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
-6. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.
-7. Open `Approvals` and confirm `/approvals` renders the read-only current tenant approval-request queue or empty state.
-8. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
-9. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.
-10. Toggle one feature flag and restore the original value.
-11. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
-12. Refresh `/tickets`, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data restore while the session is active.
-13. Select `Sign out` and confirm the login screen returns.
-14. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
+4. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow operation logs.
+5. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
+6. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
+7. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.
+8. Open `Approvals` and confirm `/approvals` renders the read-only current tenant approval-request queue or empty state.
+9. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
+10. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.
+11. Toggle one feature flag and restore the original value.
+12. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
+13. Refresh `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data restore while the session is active.
+14. Select `Sign out` and confirm the login screen returns.
+15. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
 
 Do not use `http://localhost:5173` for this runbook; that is the Vite dev-server path.
 

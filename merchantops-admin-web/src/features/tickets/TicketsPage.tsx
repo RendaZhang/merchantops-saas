@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useAuthenticatedRoute } from '../../components/authenticated-route-context'
 import { StatusPanel } from '../../components/StatusPanel'
@@ -89,8 +90,18 @@ function TicketRow({ ticket }: { ticket: TicketListItem }) {
     <tr>
       <td className="px-5 py-4 align-top">
         <div className="min-w-0">
-          <p className="truncate font-medium text-neutral-950">{ticket.title}</p>
-          <p className="mt-1 text-xs text-neutral-500">#{ticket.id}</p>
+          <Link
+            to={`/tickets/${ticket.id}`}
+            className="block truncate font-medium text-neutral-950 underline-offset-4 hover:text-emerald-700 hover:underline"
+          >
+            {ticket.title}
+          </Link>
+          <Link
+            to={`/tickets/${ticket.id}`}
+            className="mt-1 inline-flex text-xs text-neutral-500 underline-offset-4 hover:text-emerald-700 hover:underline"
+          >
+            #{ticket.id}
+          </Link>
         </div>
       </td>
       <td className="px-5 py-4 align-top">

@@ -14,6 +14,7 @@ import {
   type ImportJobPage,
   type LoginRequest,
   type LoginResponse,
+  type TicketDetail,
   type TicketPage,
   aiInteractionUsageSummarySchema,
   approvalRequestSchema,
@@ -27,6 +28,7 @@ import {
   importJobPageSchema,
   loginRequestSchema,
   loginResponseSchema,
+  ticketDetailSchema,
   ticketPageSchema,
 } from './schemas'
 
@@ -112,6 +114,12 @@ export function getTickets({ page = 0, size = 10 }: TicketPageRequest = {}): Pro
   })
 
   return apiRequest(`/api/v1/tickets?${searchParams.toString()}`, ticketPageSchema, {
+    authenticated: true,
+  })
+}
+
+export function getTicket(id: number): Promise<TicketDetail> {
+  return apiRequest(`/api/v1/tickets/${id}`, ticketDetailSchema, {
     authenticated: true,
   })
 }
