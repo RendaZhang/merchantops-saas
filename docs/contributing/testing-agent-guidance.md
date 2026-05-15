@@ -1,6 +1,6 @@
 # Testing Agent Guidance
 
-Last updated: 2026-04-24
+Last updated: 2026-05-15
 
 ## Purpose
 
@@ -77,10 +77,11 @@ Today it covers:
 - stale-token rejection after user status, role, or permission changes, plus refreshed-login success when newly granted access now includes `FEATURE_FLAG_MANAGE`
 - GitHub Actions CI parity for the default Maven regression command, admin frontend typecheck/lint/build, and Docker image construction for both API and admin web images
 - focused admin-console smoke coverage for Vite dev-proxy and same-origin runtime paths, including login, context, `/tickets`, sign-out, and old-token rejection
+- OpenAPI JSON generation for `GET /v3/api-docs`, including the configured API title and one known public auth path
 
 It does not replace manual checks for:
 
-- Swagger/OpenAPI rendering
+- Swagger UI visual rendering and interactive authorization behavior
 - real infra health such as `MySQL`, `Redis`, and `RabbitMQ`
 - Dockerized API/admin container startup, shared-network connectivity, same-origin `/api` proxying, and authenticated runtime smoke on the documented shared-network path
 - authenticated endpoints outside the covered login/session/logout + user-management + ticket + audit + approval + import path

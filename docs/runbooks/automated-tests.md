@@ -6,10 +6,10 @@ Last updated: 2026-05-15
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-04-23:
+Latest local default regression result on 2026-05-15:
 
 - `BUILD SUCCESS`
-- `merchantops-api` module summary: `Tests run: 427, Failures: 0, Errors: 0, Skipped: 1`
+- `merchantops-api` module summary: `Tests run: 434, Failures: 0, Errors: 0, Skipped: 1`
 
 Latest focused Productization Baseline Slice F ticket workflow result on 2026-04-19:
 
@@ -138,6 +138,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 - tenant AI usage-summary coverage for `USER_READ` enforcement, tenant isolation, inclusive `from/to` filtering, exact-match trimmed `entityType` / `interactionType` / `status` filters, totals math, stable breakdown ordering, null metering rows, non-leakage of request-level fields and raw provider data, and read-only assertions
 - import AI interaction-history coverage for import-scoped existence checks through the existing read path, `interactionType` and `status` exact-match filters, pagination, stable `createdAt DESC, id DESC` ordering, widened response mapping for usage/cost metadata, non-leakage of raw prompt and raw provider payload fields, and read-after-write visibility after real import AI generation calls
 - explicit read-only assertions for `GET /api/v1/import-jobs/{id}/ai-interactions` against import job fields, import error rows, replay lineage, approvals, business audit rows, and `ai_interaction_record` row counts
+- OpenAPI JSON generation coverage for `GET /v3/api-docs`, including the configured API title and at least one public auth path
 - stale-token rejection after tenant status, user status, role, or permission changes
 
 ## Suite Map
@@ -487,7 +488,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 These areas still need manual verification even when the automated suite passes:
 
 - authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/auth/logout-all` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}` + `/api/v1/tickets/{id}/comments` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
-- Swagger/OpenAPI documentation rendering
+- Swagger UI visual rendering; `GET /v3/api-docs` JSON generation is covered by the automated suite
 - Dockerized same-origin admin + API runtime smoke; CI verifies image builds only
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)
 

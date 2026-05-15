@@ -1,6 +1,6 @@
 # Development Agent Guidance
 
-Last updated: 2026-03-28
+Last updated: 2026-05-15
 
 ## Purpose
 
@@ -27,7 +27,7 @@ For module-local ownership questions, also read the module notes in [../../merch
 - Read [testing-agent-guidance.md](testing-agent-guidance.md) for the current verification baseline and preferred regression commands.
 - Start with [../runbooks/automated-tests.md](../runbooks/automated-tests.md) for the current automated regression entry point.
 - Public API changes require test updates and doc/runbook updates in the same change.
-- Swagger rendering, live infra health, and uncovered authenticated paths still require manual follow-up through the linked testing guidance and runbooks.
+- Swagger UI visual rendering, live infra health, and uncovered authenticated paths still require manual follow-up through the linked testing guidance and runbooks.
 
 ## Development Concerns
 
