@@ -38,6 +38,14 @@ export const ticketCommentSchema = z.object({
   createdAt: z.string(),
 })
 
+export const ticketCommentCreateRequestSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(1, 'Comment content is required')
+    .max(2000, 'Comment content must be 2000 characters or fewer'),
+})
+
 export const ticketOperationLogSchema = z.object({
   id: z.number(),
   operationType: z.string(),
@@ -247,6 +255,9 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type ContextResponse = z.infer<typeof contextResponseSchema>
 export type TicketListItem = z.infer<typeof ticketListItemSchema>
 export type TicketComment = z.infer<typeof ticketCommentSchema>
+export type TicketCommentCreateRequest = z.infer<
+  typeof ticketCommentCreateRequestSchema
+>
 export type TicketOperationLog = z.infer<typeof ticketOperationLogSchema>
 export type TicketDetail = z.infer<typeof ticketDetailSchema>
 export type TicketPage = z.infer<typeof ticketPageSchema>

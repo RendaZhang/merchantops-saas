@@ -1,18 +1,28 @@
-import { useQuery } from '@tanstack/react-query'
-import { type ReactNode, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { useAuthenticatedRoute } from '../../components/authenticated-route-context'
 import { StatusPanel } from '../../components/StatusPanel'
-import { getTicket, isAuthenticationError } from '../../lib/api-client'
+import {
+  addTicketComment,
+  getTicket,
+  isAuthenticationError,
+  isPermissionDeniedError,
+} from '../../lib/api-client'
 import type {
   TicketComment,
   TicketOperationLog,
 } from '../../lib/schemas'
 
+const COMMENT_CONTENT_MAX_LENGTH = 2000
+
 export function TicketDetailPage() {
   const { id } = useParams()
   const { handleAuthenticationError } = useAuthenticatedRoute()
+  const queryClient = useQueryClient()
+  const [commentContent, setCommentContent] = useState('')
+  const [commentValidationError, setCommentValidationError] = useState<string | null>(null)
   const ticketId = parseTicketId(id)
   const hasValidTicketId = ticketId !== null
   const ticketQuery = useQuery({
@@ -20,10 +30,65 @@ export function TicketDetailPage() {
     queryFn: () => getTicket(requireTicketId(ticketId)),
     enabled: hasValidTicketId,
   })
+  const commentMutation = useMutation({
+    mutationFn: (content: string) =>
+      addTicketComment(requireTicketId(ticketId), { content }),
+    onSuccess: (comment) => {
+      setCommentContent('')
+      setCommentValidationError(null)
+      void queryClient.invalidateQueries({
+        queryKey: ['tickets', 'detail', comment.ticketId],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    },
+  })
 
   useEffect(() => {
     handleAuthenticationError(ticketQuery.error)
   }, [handleAuthenticationError, ticketQuery.error])
+
+  useEffect(() => {
+    handleAuthenticationError(commentMutation.error)
+  }, [commentMutation.error, handleAuthenticationError])
+
+  function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (commentMutation.isPending) {
+      return
+    }
+
+    commentMutation.reset()
+
+    const trimmedContent = commentContent.trim()
+
+    if (!trimmedContent) {
+      setCommentValidationError('Comment content is required.')
+      return
+    }
+
+    if (trimmedContent.length > COMMENT_CONTENT_MAX_LENGTH) {
+      setCommentValidationError(
+        `Comment content must be ${COMMENT_CONTENT_MAX_LENGTH} characters or fewer.`,
+      )
+      return
+    }
+
+    setCommentValidationError(null)
+    commentMutation.mutate(trimmedContent)
+  }
+
+  function handleCommentContentChange(value: string) {
+    setCommentContent(value)
+
+    if (commentValidationError) {
+      setCommentValidationError(null)
+    }
+
+    if (commentMutation.error) {
+      commentMutation.reset()
+    }
+  }
 
   if (!hasValidTicketId) {
     return (
@@ -62,6 +127,8 @@ export function TicketDetailPage() {
   }
 
   const ticket = ticketQuery.data
+  const commentErrorMessage =
+    commentValidationError ?? getCommentMutationErrorMessage(commentMutation.error)
 
   return (
     <div className="grid min-w-0 gap-5">
@@ -116,16 +183,94 @@ export function TicketDetailPage() {
       </section>
 
       <section className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <CommentsSection comments={ticket.comments} />
+        <CommentsSection
+          comments={ticket.comments}
+          content={commentContent}
+          errorMessage={commentErrorMessage}
+          isSubmitting={commentMutation.isPending}
+          onContentChange={handleCommentContentChange}
+          onSubmit={handleCommentSubmit}
+        />
         <OperationLogsSection operationLogs={ticket.operationLogs} />
       </section>
     </div>
   )
 }
 
-function CommentsSection({ comments }: { comments: TicketComment[] }) {
+function CommentsSection({
+  comments,
+  content,
+  errorMessage,
+  isSubmitting,
+  onContentChange,
+  onSubmit,
+}: {
+  comments: TicketComment[]
+  content: string
+  errorMessage: string | null
+  isSubmitting: boolean
+  onContentChange: (value: string) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+}) {
+  const contentLength = content.trim().length
+  const isOverLimit = contentLength > COMMENT_CONTENT_MAX_LENGTH
+
   return (
     <DetailPanel title="Comments" count={comments.length}>
+      <form
+        className="grid gap-3 border-b border-neutral-200 p-5"
+        onSubmit={onSubmit}
+      >
+        <label
+          className="text-sm font-semibold text-neutral-950"
+          htmlFor="ticket-comment-content"
+        >
+          Internal comment
+        </label>
+        <textarea
+          id="ticket-comment-content"
+          value={content}
+          rows={4}
+          disabled={isSubmitting}
+          aria-invalid={Boolean(errorMessage)}
+          aria-describedby="ticket-comment-count ticket-comment-error"
+          onChange={(event) => onContentChange(event.target.value)}
+          placeholder="Add an internal ticket update."
+          className={[
+            'min-h-28 w-full resize-y rounded-md border bg-white px-3 py-2 text-sm leading-6 text-neutral-900 outline-none transition disabled:bg-neutral-50 disabled:text-neutral-500',
+            isOverLimit || errorMessage
+              ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+              : 'border-neutral-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100',
+          ].join(' ')}
+        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p
+            id="ticket-comment-count"
+            className={[
+              'text-xs',
+              isOverLimit ? 'font-medium text-rose-700' : 'text-neutral-500',
+            ].join(' ')}
+          >
+            {contentLength}/{COMMENT_CONTENT_MAX_LENGTH}
+          </p>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex w-fit rounded-md border border-emerald-700 bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:border-emerald-800 hover:bg-emerald-800 disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400"
+          >
+            {isSubmitting ? 'Posting...' : 'Post internal comment'}
+          </button>
+        </div>
+        {errorMessage ? (
+          <p
+            id="ticket-comment-error"
+            role="alert"
+            className="text-sm font-medium text-rose-700"
+          >
+            {errorMessage}
+          </p>
+        ) : null}
+      </form>
       {comments.length === 0 ? (
         <p className="p-5 text-sm text-neutral-600">
           No comments were returned for this ticket.
@@ -258,6 +403,18 @@ function requireTicketId(value: number | null): number {
   }
 
   return value
+}
+
+function getCommentMutationErrorMessage(error: unknown): string | null {
+  if (!error || isAuthenticationError(error)) {
+    return null
+  }
+
+  if (isPermissionDeniedError(error)) {
+    return 'Current account does not have TICKET_WRITE permission.'
+  }
+
+  return error instanceof Error ? error.message : 'Comment could not be posted.'
 }
 
 function formatUserLabel(

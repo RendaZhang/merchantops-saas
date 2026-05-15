@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -124,6 +124,20 @@ if (@($tickets.data.items).Count -gt 0) {
     -Method Get `
     -Uri "$adminBaseUrl/api/v1/tickets/$firstTicketId" `
     -Headers $headers
+
+  $ticketComment = Invoke-RestMethod `
+    -Method Post `
+    -Uri "$adminBaseUrl/api/v1/tickets/$firstTicketId/comments" `
+    -Headers $headers `
+    -ContentType "application/json" `
+    -Body (@{
+      content = "Runtime smoke comment $(Get-Date -Format o)"
+    } | ConvertTo-Json -Compress)
+
+  $ticketAfterComment = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$adminBaseUrl/api/v1/tickets/$firstTicketId" `
+    -Headers $headers
 }
 
 $imports = Invoke-RestMethod `
@@ -228,7 +242,7 @@ Expected result:
 - login returns an access token
 - context returns `tenantCode=demo-shop` and `username=admin`
 - tickets returns `page=0`, `size=10`, an `items` array, and the current tenant's first ticket page
-- when the ticket list is not empty, ticket detail returns the selected ticket with `comments` and `operationLogs` arrays
+- when the ticket list is not empty, ticket detail returns the selected ticket with `comments` and `operationLogs` arrays; creating a disposable internal comment returns the selected ticket id, and the refreshed detail includes the server-returned comment and `COMMENTED` workflow log
 - imports returns `page=0`, `size=10`, an `items` array, and the current tenant's first import-job page or an empty list
 - when the import list is not empty, import detail returns the selected job and import errors returns the selected job's first error page
 - approvals returns `page=0`, `size=10`, an `items` array, and the current tenant's visible approval-request page or an empty list
@@ -259,7 +273,7 @@ Open `http://localhost:8081`.
 1. Log in with `demo-shop` / `admin` / `123456`.
 2. Confirm the dashboard renders tenant and operator context.
 3. Open `Tickets` and confirm `/tickets` renders the read-only current tenant ticket queue.
-4. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow operation logs.
+4. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow operation logs; submit a disposable internal comment and confirm the input clears while comments and logs refresh.
 5. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
 6. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
 7. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.

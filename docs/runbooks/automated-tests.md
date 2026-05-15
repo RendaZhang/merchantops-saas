@@ -1,6 +1,6 @@
 # Automated Tests
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
@@ -29,12 +29,12 @@ Latest local Docker image build and runtime migration result on 2026-04-22:
 - admin runtime `http://localhost:8081/` returned `200`
 - same-origin login, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, `POST /api/v1/auth/logout`, and old-token `401` checks succeeded through `http://localhost:8081/api/...`
 
-Latest Productization Baseline frontend workspace result on 2026-05-14:
+Latest Productization Baseline frontend workspace result on 2026-05-15:
 
 - `npm run typecheck` from `merchantops-admin-web` completed successfully
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
-- mocked Playwright browser smoke against the Vite dev server verified `/tickets` to `/tickets/:id`, comments and operation logs, empty comments/logs states, invalid id, generic `403`, `404`, auth-ending `401` redirect, long text wrapping, and desktop/mobile body-width containment. Browser plugin setup timed out during this run, so regular Playwright was used as the fallback browser path.
+- mocked Playwright browser smoke against the Vite dev server verified admin and ops comment submission with input clearing and ticket detail/list refresh, whitespace-only and overlong validation without API calls, generic `403` inline permission handling without session clearing, `401` and auth-ending stale-claims `403` redirects, desktop rendering, and mobile body-width containment at `390` / `390`. Browser plugin setup timed out during this run, so regular Playwright with an installed Edge runtime was used as the fallback browser path.
 
 Latest Productization Baseline Vite dev-proxy smoke result on 2026-04-18:
 
@@ -113,7 +113,7 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, root ticket actor tenant-integrity hardening, and frontend compile/lint/build coverage for the Dashboard, Tickets, Ticket Detail, Feature Flags, Imports, Import Detail, Approvals, Approval Detail, and AI Interactions admin routes. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, root ticket actor tenant-integrity hardening, and frontend compile/lint/build coverage for the Dashboard, Tickets, Ticket Detail/comment composer, Feature Flags, Imports, Import Detail, Approvals, Approval Detail, and AI Interactions admin routes. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
 - auth and permission checks for login, server-side auth-session creation, JWT/session expiry alignment from shared UTC instants, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, JVM-timezone-stable JWT claim generation, the `V15 -> V18` auth-session migration path, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
@@ -486,7 +486,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 
 These areas still need manual verification even when the automated suite passes:
 
-- authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/auth/logout-all` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
+- authenticated behavior of endpoints outside the covered login + server-side auth-session + `/api/v1/context` + `/api/v1/auth/logout` + `/api/v1/auth/logout-all` + `/api/v1/roles` + `/api/v1/users` + `/api/v1/feature-flags` + `/api/v1/tickets` + `/api/v1/tickets/{id}` + `/api/v1/tickets/{id}/comments` + `/api/v1/tickets/{id}/ai-interactions` + `/api/v1/tickets/{id}/ai-summary` + `/api/v1/tickets/{id}/ai-triage` + `/api/v1/tickets/{id}/ai-reply-draft` + `/api/v1/tickets/{id}/comments/proposals/ai-reply-draft` + `/api/v1/import-jobs` + `/api/v1/import-jobs/{id}/ai-interactions` + `/api/v1/import-jobs/{id}/ai-error-summary` + `/api/v1/import-jobs/{id}/ai-mapping-suggestion` + `/api/v1/import-jobs/{id}/ai-fix-recommendation` + `/api/v1/ai-interactions/usage-summary` + `/api/v1/audit-events` + approval path, such as `/api/v1/user/me`, the remaining RBAC demo endpoints, and real provider wiring through [ai-live-smoke-test.md](ai-live-smoke-test.md)
 - Swagger/OpenAPI documentation rendering
 - Dockerized same-origin admin + API runtime smoke; CI verifies image builds only
 - real infra health (`MySQL`, `Redis`, `RabbitMQ`)

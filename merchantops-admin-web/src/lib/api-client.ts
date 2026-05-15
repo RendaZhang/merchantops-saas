@@ -14,6 +14,8 @@ import {
   type ImportJobPage,
   type LoginRequest,
   type LoginResponse,
+  type TicketComment,
+  type TicketCommentCreateRequest,
   type TicketDetail,
   type TicketPage,
   aiInteractionUsageSummarySchema,
@@ -28,6 +30,8 @@ import {
   importJobPageSchema,
   loginRequestSchema,
   loginResponseSchema,
+  ticketCommentCreateRequestSchema,
+  ticketCommentSchema,
   ticketDetailSchema,
   ticketPageSchema,
 } from './schemas'
@@ -121,6 +125,25 @@ export function getTickets({ page = 0, size = 10 }: TicketPageRequest = {}): Pro
 export function getTicket(id: number): Promise<TicketDetail> {
   return apiRequest(`/api/v1/tickets/${id}`, ticketDetailSchema, {
     authenticated: true,
+  })
+}
+
+export async function addTicketComment(
+  id: number,
+  request: TicketCommentCreateRequest,
+): Promise<TicketComment> {
+  const parsedRequest = ticketCommentCreateRequestSchema.safeParse(request)
+
+  if (!parsedRequest.success) {
+    throw new ApiClientError(
+      parsedRequest.error.issues[0]?.message ?? 'Check the ticket comment.',
+    )
+  }
+
+  return apiRequest(`/api/v1/tickets/${id}/comments`, ticketCommentSchema, {
+    method: 'POST',
+    authenticated: true,
+    body: JSON.stringify(parsedRequest.data),
   })
 }
 
