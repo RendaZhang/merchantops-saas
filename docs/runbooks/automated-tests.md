@@ -1,15 +1,21 @@
 # Automated Tests
 
-Last updated: 2026-05-15
+Last updated: 2026-05-17
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-05-15:
+Latest local default regression result on 2026-05-17:
 
 - `BUILD SUCCESS`
-- `merchantops-api` module summary: `Tests run: 434, Failures: 0, Errors: 0, Skipped: 1`
+- `merchantops-api` module summary: `Tests run: 436, Failures: 0, Errors: 0, Skipped: 1`
+
+Latest focused Productization Baseline Slice I1 ticket actor-integrity result on 2026-05-17:
+
+- `.\mvnw.cmd -pl merchantops-api -am "-Dtest=TicketWorkflowIntegrationTest,TicketActorIntegrityMigrationTest" "-Dsurefire.failIfNoSpecifiedTests=false" test` completed successfully
+- `Tests run: 33, Failures: 0, Errors: 0, Skipped: 0`
+- A MySQL-backed Flyway/runtime smoke was not run for this slice; the focused migration proof is H2 `MODE=MySQL` plus the default backend regression.
 
 Latest focused Productization Baseline Slice F ticket workflow result on 2026-04-19:
 
@@ -113,9 +119,9 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, root ticket actor tenant-integrity hardening, and frontend compile/lint/build coverage for the Dashboard, Tickets, Ticket Detail/comment composer, Feature Flags, Imports, Import Detail, Approvals, Approval Detail, and AI Interactions admin routes. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, root and child ticket actor tenant-integrity hardening, and frontend compile/lint/build coverage for the Dashboard, Tickets, Ticket Detail/comment composer, Feature Flags, Imports, Import Detail, Approvals, Approval Detail, and AI Interactions admin routes. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
-- auth and permission checks for login, server-side auth-session creation, JWT/session expiry alignment from shared UTC instants, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, JVM-timezone-stable JWT claim generation, the `V15 -> V18` auth-session migration path, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
+- auth and permission checks for login, server-side auth-session creation, JWT/session expiry alignment from shared UTC instants, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, JVM-timezone-stable JWT claim generation, the `V15 -> V18` auth-session migration path, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings and ticket comment/log child actor bindings, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
 - real feature-flag list/update contract coverage for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`, including the fixed eight-key default inventory for tenants without persisted rows, missing-row create-on-update behavior, `FEATURE_FLAG_MANAGE` happy path, `403`, `404`, `enabled=null` validation, audit snapshots, idempotent no-op updates, and concurrent already-applied updates that return the final persisted row without duplicate audit
 - tenant-scoped query and command service behavior for users, tickets, ticket AI interaction history, tenant AI usage-summary, approvals, and import jobs
@@ -211,6 +217,7 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
   - `403` when `viewer` attempts ticket write operations
   - `400` when assignment tries to use an assignee outside the current tenant
   - database-level rejection when a ticket row tries to reference a cross-tenant assignee or creator, while nullable `assignee_id` remains valid for unassigned tickets
+  - database-level rejection when a ticket comment or operation-log row tries to reference a cross-tenant actor
   - `400` when ticket status transition rules are violated (including no-op transitions)
   - `200` for `CLOSED -> OPEN` reopen with status/detail verification, `updated_at` refresh, and appended `STATUS_CHANGED` log
   - real create -> assign -> status -> comment -> close loop with database assertions on `ticket_operation_log`
@@ -450,6 +457,8 @@ Current automated coverage remains centered on the completed Week 2-6 public wor
 - `ImportJobMigrationTest`
   - `V9__add_import_job_backbone.sql` rejects `import_job_item_error` rows whose `tenant_id` does not match the parent import job
   - `V10__add_import_job_replay_lineage.sql` rejects cross-tenant `source_job_id` lineage on replay-derived jobs
+- `TicketActorIntegrityMigrationTest`
+  - `V19__enforce_ticket_child_actor_tenant_integrity.sql` applies to a pre-V19 schema, preserves valid same-tenant comment/log actor rows, and rejects cross-tenant comment creators and operation-log operators
 - `ApprovalRequestMigrationTest`
   - `V12__enforce_pending_disable_uniqueness.sql` converts superseded historical duplicate pending disable rows to `REJECTED`, stamps `reviewed_at` from legacy row time when backfilling that resolution, keeps only the canonical newest pending row keyed per tenant user, preserves same-timestamp tie-breaking by highest `id`, and keeps the unique index usable for a later fresh pending disable request after the canonical row is resolved
   - `V13__harden_pending_proposal_uniqueness.java` backfills canonical pending keys for import replay proposals and ticket comment proposals, clears stale keys from resolved rows, preserves pending-disable uniqueness, stamps migrated duplicate proposal rejections with a deterministic `reviewed_at`, and collapses superseded historical duplicate pending proposal rows to one surviving `PENDING` row per executable key

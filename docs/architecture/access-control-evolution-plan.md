@@ -11,6 +11,7 @@ This page defines the long-term access-control and authorization strategy from t
 - Feature-flag management is tenant-scoped and requires `FEATURE_FLAG_MANAGE`.
 - `user_role` now has a database-level same-tenant invariant: every binding must match both `users.tenant_id` and `role.tenant_id`.
 - Root ticket actors now have database-level same-tenant invariants: `ticket.assignee_id` and `ticket.created_by` must match `ticket.tenant_id` when they reference `users`.
+- Ticket child actors now have database-level same-tenant invariants: `ticket_comment.created_by` and `ticket_operation_log.operator_id` must match the child row `tenant_id` when they reference `users`.
 
 Reference sources:
 
@@ -26,7 +27,8 @@ Reference sources:
 
 - Keep the resolved `user_role` same-tenant invariant covered by migrations, fixtures, and regression tests before widening role-management capabilities.
 - Keep the resolved root ticket assignee/creator same-tenant invariant covered by migrations, fixtures, and regression tests before widening ticket actor surfaces.
-- Add remaining database-level same-tenant constraints for ticket comment authors, operation-log operators, or child-table ticket relationships where service logic already enforces the boundary.
+- Keep the resolved ticket comment/log actor same-tenant invariant covered by migrations, fixtures, and regression tests before widening ticket activity surfaces.
+- Consider child-table ticket relationship constraints where service logic already enforces the boundary.
 - Keep migrations narrow, backfilled, and covered by integration tests before making tenant-admin surfaces broader.
 
 ### RBAC Surface Productization

@@ -82,38 +82,37 @@ Recommended follow-up:
 
 ### NB-002: Ticket Actor Tenant Integrity At The Database Layer
 
-- State: Partially resolved in Productization Baseline Slice F
+- State: Partially resolved in Productization Baseline Slices F and I1
 - Category: Schema Integrity
 - Discovered in: Week 3
 - Not blocking: Productization Baseline
 - Priority: Medium
-- Recommended window: root ticket actors completed by `V17__enforce_ticket_actor_tenant_integrity.sql`; remaining comment/log actor constraints in a later narrow slice
+- Recommended window: root ticket actors completed by `V17__enforce_ticket_actor_tenant_integrity.sql`; comment/log actor constraints completed by `V19__enforce_ticket_child_actor_tenant_integrity.sql`; child-table ticket linkage remains a later narrow slice
 - Related docs: [../reference/ticket-workflow.md](../reference/ticket-workflow.md), [../project-status.md](../project-status.md)
 
 Current state:
 
 - `ticket.assignee_id` and `ticket.created_by` are now protected by same-tenant composite foreign keys from `ticket(assignee_id, tenant_id)` and `ticket(created_by, tenant_id)` to `users(id, tenant_id)`
-- `ticket_comment.created_by` and `ticket_operation_log.operator_id` still reference `users.id` without a same-tenant composite foreign key
+- `ticket_comment.created_by` and `ticket_operation_log.operator_id` are now protected by same-tenant composite foreign keys from `ticket_comment(created_by, tenant_id)` and `ticket_operation_log(operator_id, tenant_id)` to `users(id, tenant_id)`
 - service logic already enforces same-tenant actor checks for current ticket workflows
-- the database does not yet enforce `child.tenant_id == users.tenant_id` for ticket comments or operation-log operators
+- the database does not yet enforce `ticket_comment(ticket_id, tenant_id)` or `ticket_operation_log(ticket_id, tenant_id)` back to `ticket(id, tenant_id)`
 
 Why it matters:
 
-- invalid cross-tenant actor links on comments or operation logs are still possible through direct data manipulation
+- invalid child rows that point at a ticket from a different tenant are still possible through direct data manipulation
 - later audit, approval, and AI features will depend on trustworthy actor lineage
 
 Why it is non-blocking now:
 
-- the root ticket assignee and creator gap has been resolved below the service layer
-- the current public ticket workflow validates remaining operator tenant scope in service logic
+- the root ticket assignee/creator and child comment/log actor gaps have been resolved below the service layer
+- the current public ticket workflow writes child rows through service paths that already use the current tenant ticket
 - automated coverage already exercises current-tenant assignment, write, reopen, and query behavior
 
 Recommended follow-up:
 
-1. add composite foreign keys that bind `ticket_comment.created_by` and `ticket_operation_log.operator_id` to the same tenant
-2. consider child-table `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints as a separate narrow slice
-3. backfill and validate existing rows before enabling strict constraints
-4. add integration tests that prove cross-tenant comment/log actor linkage fails below the service layer
+1. consider child-table `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints as a separate narrow slice
+2. backfill and validate existing child rows before enabling strict child-to-ticket constraints
+3. add integration tests that prove cross-tenant child-to-ticket linkage fails below the service layer
 
 ### NB-003: RBAC Demo Endpoint Productionization Gap
 

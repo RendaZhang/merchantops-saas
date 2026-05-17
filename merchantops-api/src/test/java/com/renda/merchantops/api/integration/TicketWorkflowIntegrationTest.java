@@ -261,9 +261,11 @@ class TicketWorkflowIntegrationTest {
                     content VARCHAR(2000) NOT NULL,
                     created_by BIGINT NOT NULL,
                     request_id VARCHAR(128) NOT NULL,
-                    created_at TIMESTAMP NOT NULL
+                    created_at TIMESTAMP NOT NULL,
+                    CONSTRAINT fk_ticket_comment_created_by_tenant FOREIGN KEY (created_by, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_comment_created_by_tenant ON ticket_comment (created_by, tenant_id)");
 
         jdbcTemplate.execute("""
                 CREATE TABLE ticket_operation_log (
@@ -274,9 +276,11 @@ class TicketWorkflowIntegrationTest {
                     detail VARCHAR(512) NOT NULL,
                     operator_id BIGINT NOT NULL,
                     request_id VARCHAR(128) NOT NULL,
-                    created_at TIMESTAMP NOT NULL
+                    created_at TIMESTAMP NOT NULL,
+                    CONSTRAINT fk_ticket_operation_log_operator_tenant FOREIGN KEY (operator_id, tenant_id) REFERENCES users(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_operation_log_operator_tenant ON ticket_operation_log (operator_id, tenant_id)");
 
         TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
 
@@ -441,6 +445,46 @@ class TicketWorkflowIntegrationTest {
                 503L,
                 1L,
                 101L
+        )).isEqualTo(1);
+    }
+
+    @Test
+    void ticketChildTablesShouldRejectCrossTenantActors() {
+        jdbcTemplate.update("""
+                INSERT INTO ticket_comment (id, tenant_id, ticket_id, content, created_by, request_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, 5101L, 1L, 301L, "same tenant comment", 102L, "ticket-child-actor-comment-valid");
+
+        jdbcTemplate.update("""
+                INSERT INTO ticket_operation_log (id, tenant_id, ticket_id, operation_type, detail, operator_id, request_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, 5201L, 1L, 301L, "COMMENTED", "comment added", 102L, "ticket-child-actor-log-valid");
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ticket_comment (id, tenant_id, ticket_id, content, created_by, request_id, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        """, 5102L, 1L, 301L, "cross tenant comment", 201L, "ticket-child-actor-comment-cross-tenant"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ticket_operation_log (id, tenant_id, ticket_id, operation_type, detail, operator_id, request_id, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        """, 5202L, 1L, 301L, "COMMENTED", "comment added", 201L, "ticket-child-actor-log-cross-tenant"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE id = ? AND tenant_id = ? AND created_by = ?",
+                Integer.class,
+                5101L,
+                1L,
+                102L
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_operation_log WHERE id = ? AND tenant_id = ? AND operator_id = ?",
+                Integer.class,
+                5201L,
+                1L,
+                102L
         )).isEqualTo(1);
     }
 

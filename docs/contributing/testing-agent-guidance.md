@@ -51,7 +51,7 @@ When handling `TT last`:
 
 ## Current Coverage Baseline
 
-The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout/logout-all, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, first read-only admin Tickets screen, and root ticket actor tenant-integrity hardening, plus the no-secret CI quality gate.
+The current automated baseline is centered on the completed Week 2-8 public workflow surface, the completed Week 9 AI governance, eval, cost, and usage baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, the Productization Baseline server-side auth-session/logout/logout-all, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, first read-only admin Tickets screen, and root plus child ticket actor tenant-integrity hardening, plus the no-secret CI quality gate.
 
 Today it covers:
 
@@ -59,6 +59,7 @@ Today it covers:
 - server-side auth-session creation, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, sidless/revoked/expired-session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, post-cleanup old-token `401` behavior, and independent multi-session behavior
 - database-level rejection of cross-tenant `user_role` bindings
 - database-level rejection of cross-tenant root ticket assignee/creator bindings while nullable ticket assignees remain valid
+- database-level rejection of cross-tenant ticket comment creators and operation-log operators
 - real JWT parsing and permission claims
 - current public feature-flag management behavior for `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}`
 - current public authz behavior for user management, ticket workflow, audit query, approval flow, import jobs, ticket AI interaction-history plus summary/triage/reply-draft, tenant AI usage-summary, import AI interaction-history plus error summary/mapping suggestion/fix recommendation, and `GET /api/v1/roles`
