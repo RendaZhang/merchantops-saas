@@ -16,6 +16,7 @@ This section stores architecture notes, technical decisions, and recorded struct
 - [adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md](adr/0010-prefer-modular-monolith-and-workload-based-extraction-before-microservices.md): keep the primary architecture as a workflow-first modular monolith and defer service extraction until workload boundaries are proven
 - [adr/0011-keep-workflow-logs-separate-from-generic-audit-events.md](adr/0011-keep-workflow-logs-separate-from-generic-audit-events.md): preserve module-facing workflow history while adding a separate generic audit layer for governance and approvals
 - [adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md](adr/0012-keep-ai-interaction-records-separate-from-generic-audit-events.md): keep AI runtime traceability in a dedicated record instead of overloading generic business audit rows
+- [adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md](adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md): keep the admin auth contract on bearer access tokens plus server-side auth sessions before any refresh-token or cookie-rotation migration
 
 ## Other Pages
 

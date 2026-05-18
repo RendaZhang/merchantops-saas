@@ -5,6 +5,7 @@ This page defines the long-term access-control and authorization strategy from t
 ## Current Baseline
 
 - Authentication is JWT-based and tenant-scoped.
+- Admin auth currently stays on bearer access tokens plus server-side `auth_session` validation; [ADR-0013](adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) sequences current-user session inventory before refresh-token or cookie/session-rotation work.
 - Endpoint permissions are enforced through explicit permission requirements.
 - Protected requests re-check current tenant status, user status, roles, and permissions so stale claims are rejected until re-login.
 - Approval queue, detail, approve, and reject behavior is action-aware rather than controller-wide.
@@ -37,6 +38,12 @@ Reference sources:
 - Retire or de-emphasize `/api/v1/rbac/**` demo endpoints from the public story.
 - Prefer business-oriented authorization examples through user, ticket, import, approval, and feature-flag workflows.
 - Keep Swagger-visible permission examples aligned with real product workflows rather than verification-only helpers.
+
+### Authentication Lifecycle
+
+- Keep the current bearer-token plus server-side `auth_session` contract stable until a dedicated auth-lifecycle slice changes it.
+- Implement current-user session inventory before token transport, refresh-token, cookie/session-rotation, CSRF, device metadata, or selective-logout work.
+- Treat refresh-token or cookie migration as a separate architecture decision, not as a default extension of logout-all.
 
 ### Permission Taxonomy
 

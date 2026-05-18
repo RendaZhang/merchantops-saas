@@ -31,23 +31,26 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ### Next Slice Selection Pending
 
-Goal: select the next narrow Productization Baseline implementation slice after Slice I2 delivered ticket child table tenant-linkage hardening.
+Goal: select the next narrow Productization Baseline implementation slice after Slice G-C0 recorded the authentication lifecycle contract decision.
 
 Expected scope:
 
 - keep the existing same-origin admin/API runtime contract intact
 - prefer narrow backend hardening or existing Swagger-visible admin workflows unless the selected slice directly requires broader scope
-- keep completed root actor, child actor, and child-table ticket tenant-linkage invariants stable if continuing tenant-integrity work
-- avoid broader ticket creation, assignment, status-transition work, refresh-token work, cookie/session rotation, deployment automation, or AI autonomy changes unless the selected slice directly requires them
+- keep completed root actor, child actor, and child-table ticket tenant-linkage invariants stable if later tenant-integrity work appears
+- keep the current bearer-token plus server-side `auth_session` contract stable unless a dedicated auth-lifecycle slice explicitly changes it
+- prefer current-user session inventory before refresh-token, cookie/session rotation, CSRF, device metadata, selective logout, or logout-all-except-current work
+- avoid broader ticket creation, assignment, status-transition work, deployment automation, or AI autonomy changes unless the selected slice directly requires them
 
 Stop condition:
 
 - the next slice is named with scope, stop condition, validation, and documentation expectations
-- the selected slice is small enough to implement without reopening completed auth/session/runtime or admin-screen work
-- docs continue to distinguish implemented schema hardening and admin screens from deferred workflow depth
+- the selected slice is small enough to implement without reopening completed auth/session/runtime or admin-screen work unnecessarily
+- docs continue to distinguish implemented schema hardening, admin screens, and auth decisions from deferred workflow depth
 
 ## Recently Closed
 
+- Slice G-C0: Authentication Lifecycle Contract Decision - [ADR-0013](architecture/adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth boundary on bearer access tokens plus server-side `auth_session` validation, keeps `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, and `POST /api/v1/auth/logout-all` as the current public auth surface, defers refresh tokens, HttpOnly cookies, access-token rotation, CSRF handling, device metadata, selective device logout, and logout-all-except-current, and sequences current-user session inventory before any token transport or rotation change.
 - Slice I2: Ticket Child Table Tenant Linkage - `V20__enforce_ticket_child_table_tenant_linkage.sql` now adds `ticket(id, tenant_id)` uniqueness plus composite same-tenant foreign keys from `ticket_comment(ticket_id, tenant_id)` and `ticket_operation_log(ticket_id, tenant_id)` to `ticket(id, tenant_id)`, with focused migration plus ticket workflow rejection coverage and default backend regression while leaving public APIs, Swagger, DTOs, services, and admin-console behavior unchanged.
 - Slice I1: Ticket Child Actor Tenant Integrity - `V19__enforce_ticket_child_actor_tenant_integrity.sql` now adds child indexes and composite same-tenant foreign keys from `ticket_comment(created_by, tenant_id)` and `ticket_operation_log(operator_id, tenant_id)` to `users(id, tenant_id)`, with focused migration plus ticket workflow rejection coverage and default backend regression while leaving public APIs, Swagger, DTOs, services, and admin-console behavior unchanged. Slice I2 later covered child-table `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints.
 - Slice H8: Ticket Comment Composer - the admin console now adds a plain internal comment composer to protected `/tickets/:id`, uses the existing `POST /api/v1/tickets/{id}/comments` API, validates comment create requests with Zod, clears input after successful submit, refreshes ticket detail plus the ticket list cache so the new comment and `COMMENTED` workflow log return from the server, and records frontend workspace validation plus mocked browser smoke while leaving ticket creation, assignment, status transitions, ticket AI actions, AI interaction-history drilldown, filters, pagination controls, backend API changes, refresh tokens, cookies, and token rotation deferred.
@@ -69,7 +72,9 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Slice G-C: Authentication Lifecycle Contract Follow-Up - decide whether refresh-token or cookie/session rotation is now justified by the same-origin runtime model, keeping either as a separate auth-contract slice.
+- Slice G-C1: Current-User Session Inventory - add a narrow current-user session read model over existing `auth_session` rows with a current-session marker, coarse timestamps, and no refresh-token, cookie/session rotation, device metadata, or selective logout scope unless explicitly added.
+- Slice G-C2: Selective Session Revocation Follow-Up - only after G-C1, decide whether logout-all-except-current or per-session revocation is justified by the inventory UX, keeping cookie/session rotation separate.
+- Slice G-C3: Cookie Or Refresh-Token Transport Decision - only after session visibility is useful, decide through a separate ADR whether HttpOnly cookies, refresh tokens, CSRF handling, and token rotation are worth the added complexity.
 
 ## Default Deferrals
 

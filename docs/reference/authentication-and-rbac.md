@@ -170,6 +170,7 @@ Deferred lifecycle scope:
 - there is no refresh token in this slice
 - there is no cookie/session rotation in this slice
 - there is no session list, device metadata, selective device logout, or logout-all-except-current flow in this slice
+- [ADR-0013](../architecture/adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) records the current lifecycle decision: keep bearer access tokens plus server-side `auth_session` validation for now, add current-user session inventory before any refresh-token or cookie/session-rotation migration, and treat token-transport changes as separate future decisions
 - a background auth-session cleanup scheduler now deletes only retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions
 - `auth_session.created_at`, `expires_at`, and `revoked_at` are now persisted as UTC-backed `DATETIME` columns after `V18__store_auth_session_times_as_datetime.sql`
 - after the access token expires, the user must log in again

@@ -90,7 +90,7 @@ A background server-side cleanup scheduler now prunes only retention-aged expire
 
 `Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, including the caller's current session, while preserving other users and other tenants; the frontend then clears the same local token plus context, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches. If the request fails, the frontend still clears the local token and returns to login with a warning that other sessions may still be active.
 
-Backend refresh tokens, cookies, token rotation, session lists, device metadata, selective device logout, and cross-origin CORS policy remain deferred to later productization slices.
+Backend refresh tokens, cookies, token rotation, session lists, device metadata, selective device logout, and cross-origin CORS policy remain deferred to later productization slices. [ADR-0013](adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth contract on bearer access tokens plus server-side `auth_session` validation and sequences current-user session inventory before any refresh-token or cookie/session-rotation migration.
 
 ## Deferred Screens
 

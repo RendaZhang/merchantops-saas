@@ -26,6 +26,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added Productization Baseline Slice H8 as a plain internal Ticket Comment Composer on `/tickets/:id` over the existing `POST /api/v1/tickets/{id}/comments` API, with client-side blank/length validation, input clearing after success, ticket detail/list refresh, and inline `TICKET_WRITE` permission handling without adding backend API scope.
 - Added Productization Baseline Slice I1 tenant-integrity hardening for ticket child actors, including composite same-tenant foreign keys for `ticket_comment.created_by` and `ticket_operation_log.operator_id` plus focused migration and workflow-level database rejection coverage.
 - Added Productization Baseline Slice I2 tenant-integrity hardening for ticket child table linkage, including `ticket(id, tenant_id)` uniqueness plus composite same-tenant foreign keys for `ticket_comment(ticket_id, tenant_id)` and `ticket_operation_log(ticket_id, tenant_id)` back to `ticket(id, tenant_id)`.
+- Added Productization Baseline Slice G-C0 as an auth lifecycle contract decision, keeping the current admin auth boundary on bearer access tokens plus server-side `auth_session` validation and sequencing current-user session inventory before refresh-token or cookie/session rotation work.
 
 ### Changed
 
