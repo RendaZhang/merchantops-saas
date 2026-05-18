@@ -12,6 +12,7 @@ This page defines the long-term access-control and authorization strategy from t
 - `user_role` now has a database-level same-tenant invariant: every binding must match both `users.tenant_id` and `role.tenant_id`.
 - Root ticket actors now have database-level same-tenant invariants: `ticket.assignee_id` and `ticket.created_by` must match `ticket.tenant_id` when they reference `users`.
 - Ticket child actors now have database-level same-tenant invariants: `ticket_comment.created_by` and `ticket_operation_log.operator_id` must match the child row `tenant_id` when they reference `users`.
+- Ticket child rows now have database-level same-tenant parent linkage: `ticket_comment.ticket_id` and `ticket_operation_log.ticket_id` must point to a `ticket` row with the same `tenant_id`.
 
 Reference sources:
 
@@ -28,7 +29,7 @@ Reference sources:
 - Keep the resolved `user_role` same-tenant invariant covered by migrations, fixtures, and regression tests before widening role-management capabilities.
 - Keep the resolved root ticket assignee/creator same-tenant invariant covered by migrations, fixtures, and regression tests before widening ticket actor surfaces.
 - Keep the resolved ticket comment/log actor same-tenant invariant covered by migrations, fixtures, and regression tests before widening ticket activity surfaces.
-- Consider child-table ticket relationship constraints where service logic already enforces the boundary.
+- Keep the resolved ticket child-to-parent tenant-linkage invariant covered by migrations, fixtures, and regression tests before widening ticket activity surfaces.
 - Keep migrations narrow, backfilled, and covered by integration tests before making tenant-admin surfaces broader.
 
 ### RBAC Surface Productization

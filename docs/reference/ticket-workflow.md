@@ -1,6 +1,6 @@
 # Ticket Workflow
 
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## Public API Surface
 
@@ -49,7 +49,7 @@ Current public ticket workflow keeps the business state model narrow:
 - AI reply-draft comment proposal behavior: a separate `TICKET_WRITE` workflow endpoint creates a pending approval request only; approve-time execution later reuses the existing comment write chain
 - AI interaction history behavior: read-only operator visibility over stored `ai_interaction_record` rows only
 - ticket actor tenant-integrity behavior: `ticket.created_by`, non-null `ticket.assignee_id`, `ticket_comment.created_by`, and `ticket_operation_log.operator_id` are protected by database-level same-tenant foreign keys to `users(id, tenant_id)` in addition to the service-level current-tenant checks
-- remaining ticket child-table hardening: `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints for comments and operation logs are still later schema follow-up items; current public writes continue to load the current-tenant ticket before writing child rows
+- ticket child table tenant-linkage behavior: `ticket_comment(ticket_id, tenant_id)` and `ticket_operation_log(ticket_id, tenant_id)` are protected by database-level same-tenant foreign keys to `ticket(id, tenant_id)` in addition to current public writes loading the current-tenant ticket before writing child rows
 
 Current transition rules:
 

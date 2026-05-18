@@ -223,7 +223,8 @@ class TicketWorkflowIntegrationTest {
                     created_at TIMESTAMP NOT NULL,
                     updated_at TIMESTAMP NOT NULL,
                     CONSTRAINT fk_ticket_assignee_tenant FOREIGN KEY (assignee_id, tenant_id) REFERENCES users(id, tenant_id),
-                    CONSTRAINT fk_ticket_created_by_tenant FOREIGN KEY (created_by, tenant_id) REFERENCES users(id, tenant_id)
+                    CONSTRAINT fk_ticket_created_by_tenant FOREIGN KEY (created_by, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT uk_ticket_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("CREATE INDEX idx_ticket_assignee_tenant ON ticket (assignee_id, tenant_id)");
@@ -262,9 +263,12 @@ class TicketWorkflowIntegrationTest {
                     created_by BIGINT NOT NULL,
                     request_id VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    CONSTRAINT fk_ticket_comment_created_by_tenant FOREIGN KEY (created_by, tenant_id) REFERENCES users(id, tenant_id)
+                    CONSTRAINT fk_ticket_comment_ticket FOREIGN KEY (ticket_id) REFERENCES ticket(id),
+                    CONSTRAINT fk_ticket_comment_created_by_tenant FOREIGN KEY (created_by, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_ticket_comment_ticket_tenant FOREIGN KEY (ticket_id, tenant_id) REFERENCES ticket(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_comment_ticket ON ticket_comment (ticket_id, tenant_id, id)");
         jdbcTemplate.execute("CREATE INDEX idx_ticket_comment_created_by_tenant ON ticket_comment (created_by, tenant_id)");
 
         jdbcTemplate.execute("""
@@ -277,9 +281,12 @@ class TicketWorkflowIntegrationTest {
                     operator_id BIGINT NOT NULL,
                     request_id VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    CONSTRAINT fk_ticket_operation_log_operator_tenant FOREIGN KEY (operator_id, tenant_id) REFERENCES users(id, tenant_id)
+                    CONSTRAINT fk_ticket_operation_log_ticket FOREIGN KEY (ticket_id) REFERENCES ticket(id),
+                    CONSTRAINT fk_ticket_operation_log_operator_tenant FOREIGN KEY (operator_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_ticket_operation_log_ticket_tenant FOREIGN KEY (ticket_id, tenant_id) REFERENCES ticket(id, tenant_id)
                 )
                 """);
+        jdbcTemplate.execute("CREATE INDEX idx_ticket_operation_log_ticket ON ticket_operation_log (ticket_id, tenant_id, id)");
         jdbcTemplate.execute("CREATE INDEX idx_ticket_operation_log_operator_tenant ON ticket_operation_log (operator_id, tenant_id)");
 
         TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
@@ -485,6 +492,46 @@ class TicketWorkflowIntegrationTest {
                 5201L,
                 1L,
                 102L
+        )).isEqualTo(1);
+    }
+
+    @Test
+    void ticketChildTablesShouldRejectMismatchedParentTicketTenants() {
+        jdbcTemplate.update("""
+                INSERT INTO ticket_comment (id, tenant_id, ticket_id, content, created_by, request_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, 5301L, 2L, 401L, "same tenant comment", 201L, "ticket-child-link-comment-valid");
+
+        jdbcTemplate.update("""
+                INSERT INTO ticket_operation_log (id, tenant_id, ticket_id, operation_type, detail, operator_id, request_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, 5401L, 2L, 401L, "COMMENTED", "comment added", 201L, "ticket-child-link-log-valid");
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ticket_comment (id, tenant_id, ticket_id, content, created_by, request_id, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        """, 5302L, 2L, 301L, "mismatched parent comment", 201L, "ticket-child-link-comment-cross-tenant"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ticket_operation_log (id, tenant_id, ticket_id, operation_type, detail, operator_id, request_id, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        """, 5402L, 2L, 301L, "COMMENTED", "comment added", 201L, "ticket-child-link-log-cross-tenant"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_comment WHERE id = ? AND tenant_id = ? AND ticket_id = ?",
+                Integer.class,
+                5301L,
+                2L,
+                401L
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ticket_operation_log WHERE id = ? AND tenant_id = ? AND ticket_id = ?",
+                Integer.class,
+                5401L,
+                2L,
+                401L
         )).isEqualTo(1);
     }
 

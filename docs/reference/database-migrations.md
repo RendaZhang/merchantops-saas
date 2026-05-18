@@ -31,6 +31,7 @@
 - `V17__enforce_ticket_actor_tenant_integrity.sql`: adds child indexes and enforces `ticket(assignee_id, tenant_id) -> users(id, tenant_id)` plus `ticket(created_by, tenant_id) -> users(id, tenant_id)` so root ticket assignee and creator references must stay within the ticket tenant; `assignee_id` remains nullable for unassigned tickets
 - `V18__store_auth_session_times_as_datetime.sql`: converts `auth_session.created_at`, `expires_at`, and `revoked_at` from `TIMESTAMP` to `DATETIME` so the application can persist and read UTC auth-session instants without server-timezone drift
 - `V19__enforce_ticket_child_actor_tenant_integrity.sql`: adds child indexes and enforces `ticket_comment(created_by, tenant_id) -> users(id, tenant_id)` plus `ticket_operation_log(operator_id, tenant_id) -> users(id, tenant_id)` so ticket comments and operation logs must keep actor references within the child row tenant
+- `V20__enforce_ticket_child_table_tenant_linkage.sql`: adds `ticket(id, tenant_id)` uniqueness and enforces `ticket_comment(ticket_id, tenant_id) -> ticket(id, tenant_id)` plus `ticket_operation_log(ticket_id, tenant_id) -> ticket(id, tenant_id)` so ticket child rows must stay linked to parent tickets in the same tenant
 
 ## Demo Accounts
 
@@ -165,6 +166,30 @@ WHERE u.id IS NULL
 
 Both queries should return no rows. Direct inserts that try to create a ticket comment or operation-log row with a cross-tenant actor should fail at the database layer.
 
+To verify the ticket child table tenant-linkage invariant after `V20`:
+
+```sql
+SELECT tc.id,
+       tc.tenant_id,
+       tc.ticket_id,
+       tk.tenant_id AS ticket_tenant_id
+FROM ticket_comment tc
+LEFT JOIN ticket tk ON tk.id = tc.ticket_id
+WHERE tk.id IS NULL
+   OR tk.tenant_id <> tc.tenant_id;
+
+SELECT tol.id,
+       tol.tenant_id,
+       tol.ticket_id,
+       tk.tenant_id AS ticket_tenant_id
+FROM ticket_operation_log tol
+LEFT JOIN ticket tk ON tk.id = tol.ticket_id
+WHERE tk.id IS NULL
+   OR tk.tenant_id <> tol.tenant_id;
+```
+
+Both queries should return no rows. Direct inserts that try to create a ticket comment or operation-log row whose `tenant_id` differs from the parent ticket should fail at the database layer.
+
 To inspect recent AI interaction rows for ticket summary or ticket triage:
 
 ```sql
@@ -220,4 +245,5 @@ SELECT
 - `user_role` now carries its own `tenant_id` and is protected by same-tenant composite foreign keys.
 - Root ticket assignee and creator references are protected by same-tenant composite foreign keys from `ticket` to `users`.
 - Ticket comment creators and operation-log operators are protected by same-tenant composite foreign keys from `ticket_comment` and `ticket_operation_log` to `users`.
-- Remaining ticket child-table tenant-linkage gaps are tracked separately in [../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer](../architecture/non-blocking-backlog.md#nb-002-ticket-actor-tenant-integrity-at-the-database-layer).
+- Ticket comment and operation-log parent-ticket references are protected by same-tenant composite foreign keys from `ticket_comment` and `ticket_operation_log` to `ticket`.
+- The former ticket actor and child-link tenant-integrity backlog is resolved in [../architecture/non-blocking-backlog.md#nb-002-ticket-actor-and-child-link-tenant-integrity-at-the-database-layer](../architecture/non-blocking-backlog.md#nb-002-ticket-actor-and-child-link-tenant-integrity-at-the-database-layer).
