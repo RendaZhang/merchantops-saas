@@ -1,0 +1,161 @@
+# MerchantOps Admin Web
+
+Vite + React admin console for the Productization Baseline.
+
+This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, the current tenant tickets queue plus ticket detail/activity screen with a plain internal comment composer, the read-only current tenant imports queue plus import detail diagnostics, the current tenant approvals queue plus approval detail/review controls, the feature-flag control screen, and the AI Interactions usage-summary screen.
+
+## Stack
+
+- Vite
+- React
+- TypeScript
+- React Router
+- TanStack Query
+- Tailwind CSS
+- Zod
+
+## Local Run
+
+Install dependencies:
+
+```powershell
+cd merchantops-admin-web
+npm install
+```
+
+Run the dev server:
+
+```powershell
+npm run dev
+```
+
+The Vite app runs at `http://localhost:5173` by default. API calls use relative `/api/...` paths and the Vite dev proxy forwards them to `http://localhost:8080`.
+
+## Production-Like Runtime
+
+Build the admin image from the repository root:
+
+```powershell
+docker build -t merchantops-admin-web:local .\merchantops-admin-web
+```
+
+Run the full same-origin runtime stack:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Open `http://localhost:8081`.
+
+The image builds the Vite app with Node, serves `dist/` through Nginx, and proxies `/api/...` to `http://merchantops-api:8080` inside the compose network. The browser uses one origin and does not need CORS for this slice.
+
+## Backend Prerequisite
+
+Start the backend from the repository root before logging in:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d
+.\mvnw.cmd -pl merchantops-api -am -DskipTests install
+.\mvnw.cmd -f merchantops-api/pom.xml spring-boot:run
+```
+
+The Dockerized API path documented in `../docs/getting-started/quick-start.md` also works. For the same-origin admin + API runtime path, use `../docs/runbooks/deployment-runtime-smoke-test.md`.
+
+## Demo Login
+
+Use the seeded admin account:
+
+- Tenant: `demo-shop`
+- Username: `admin`
+- Password: `123456`
+
+The admin console calls:
+
+- `POST /api/v1/auth/login`
+- `GET /api/v1/context`
+- `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/logout-all`
+- `GET /api/v1/tickets?page=0&size=10`
+- `GET /api/v1/tickets/{id}`
+- `POST /api/v1/tickets/{id}/comments`
+- `GET /api/v1/import-jobs?page=0&size=10`
+- `GET /api/v1/import-jobs/{id}`
+- `GET /api/v1/import-jobs/{id}/errors?page=0&size=10`
+- `GET /api/v1/approval-requests?page=0&size=10`
+- `GET /api/v1/approval-requests/{id}`
+- `POST /api/v1/approval-requests/{id}/approve`
+- `POST /api/v1/approval-requests/{id}/reject`
+- `GET /api/v1/feature-flags`
+- `PUT /api/v1/feature-flags/{key}`
+- `GET /api/v1/ai-interactions/usage-summary`
+
+Roles and permissions displayed in the dashboard are decoded from JWT claims for operator visibility only. They are not used as an authorization source.
+
+The Tickets route is available at `/tickets`. It renders the first page of the current tenant ticket queue as a read-only table and links each ticket title/id to `/tickets/:id`.
+
+The Ticket Detail route is available at `/tickets/:id`. It renders ticket title, description, status, assignee, creator, timestamps, comments, and workflow operation logs from the existing ticket detail API, and includes a plain internal comment composer backed by the existing ticket comment API. Successful comment submission clears the input and refetches ticket detail plus the ticket list cache. It does not include ticket creation, assignment, status changes, ticket AI actions, AI interaction-history drilldown, filters, pagination controls, approval actions, or backend API changes.
+
+The Imports route is available at `/imports`. It renders the first page of the current tenant import-job queue as a read-only table and links each source filename to `/imports/:id`.
+
+The Import Detail route is available at `/imports/:id`. It renders job overview, counts, timing, `errorCodeCounts`, and the first failed-row page from the existing import detail and `/errors` APIs. It does not include upload, replay, selective replay, edited replay, import AI actions, filters, pagination controls, approval workflow UI, or backend API changes.
+
+The Approvals route is available at `/approvals`. It renders the first page of the current tenant approval-request queue as a read-only table and links each request id to `/approvals/:id`.
+
+The Approval Detail route is available at `/approvals/:id`. It renders detail fields, read-only formatted `payloadJson`, and inline confirmation controls for pending approve/reject actions through the existing approval detail and review APIs. It does not include bulk review, filters, pagination controls, payload editing, rejection reasons, proposal creation, or backend API changes.
+
+The Feature Flags route is available at `/feature-flags`. It renders the fixed current-tenant flag inventory and lets authorized users toggle one flag at a time through the existing update API. It does not include cross-tenant administration, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, or backend API changes.
+
+The AI Interactions route is available at `/ai-interactions`. It renders current-tenant aggregate cards for `totalInteractions`, `succeededCount`, `failedCount`, `totalTokens`, and raw `totalCostMicros`, plus read-only `byInteractionType`, `byStatus`, and `byPromptVersion` breakdowns from the existing usage-summary API. It does not include filters, per-request detail, ticket or import entity history drilldown, raw prompt or provider payloads, billing or ledger semantics, write actions, or backend API changes.
+
+## Session Boundary
+
+The app stores the JWT access token in `localStorage` under `merchantops.admin.auth.v1` with a client-side expiry timestamp derived from `expiresIn`.
+
+On page refresh, the app restores the token, refetches `/api/v1/context`, and clears the session on expired, invalid, `401`, or one of the current auth-ending `403` responses: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. Ticket queue/detail/comment-submit, import queue/detail/errors, approval queue/detail/review, feature-flag, and AI usage-summary requests use the same session-ended path only for `401` and those auth-ending `403` cases; a generic permission `403` is not treated as session expiry. The Feature Flags page shows `权限不足` and the ticket comment composer shows an inline `TICKET_WRITE` permission error for ordinary permission denial.
+
+Login creates a revocable server-side auth session and the JWT carries a required `sid` claim. After a successful login, the frontend stores the new token and clears the context, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
+
+`Sign out` calls `POST /api/v1/auth/logout`, revokes only the current session, clears the local token, clears the context, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches, and returns to login even if the logout request fails.
+
+`Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token plus context, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
+
+A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. The backend now exposes a narrow `GET /api/v1/auth/sessions` current-user inventory, but this frontend still has no session-management screen, refresh-token flow, cookie/session rotation, device metadata, or selective device logout in this slice. When the access token expires or the server-side session is invalid, sign in again.
+
+## Verification
+
+```powershell
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Manual smoke:
+
+1. Start the backend.
+2. Start this frontend with `npm run dev`.
+3. Open `http://localhost:5173`.
+4. Log in with `demo-shop` / `admin` / `123456`.
+5. Confirm the dashboard shows tenant, operator, token roles, and token permissions.
+6. Open `Tickets` from the sidebar and confirm `/tickets` renders the current tenant queue from `/api/v1/tickets?page=0&size=10`.
+7. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow logs from `/api/v1/tickets/{id}`. As `admin` or `ops`, submit a disposable internal comment and confirm the input clears and the refreshed detail shows the new comment plus a `COMMENTED` workflow log from `/api/v1/tickets/{id}/comments`.
+8. Open `Feature Flags` and confirm `/feature-flags` renders eight flags from `/api/v1/feature-flags`.
+9. Open `Imports` and confirm `/imports` renders the current tenant import queue or empty state from `/api/v1/import-jobs?page=0&size=10`.
+10. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page from `/api/v1/import-jobs/{id}` and `/api/v1/import-jobs/{id}/errors?page=0&size=10`.
+11. Open `Approvals` and confirm `/approvals` renders the current tenant approval queue or empty state from `/api/v1/approval-requests?page=0&size=10`.
+12. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload from `/api/v1/approval-requests/{id}`. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
+13. Open `AI Interactions` and confirm `/ai-interactions` renders usage cards plus the three aggregate breakdowns from `/api/v1/ai-interactions/usage-summary`.
+14. Toggle one flag, confirm the persisted state is reflected, and restore the original value.
+15. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login. As `viewer`, open `/tickets/:id` when a ticket id is available, attempt to submit a disposable comment, and confirm the inline `TICKET_WRITE` permission error appears without returning to login.
+16. Refresh `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data reload while the session is active.
+17. Use `Sign out` and confirm the app returns to login.
+18. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
+19. Reusing a signed-out token against `/api/v1/context` should return `401`.
+
+Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` routes through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
+
+## Image Credit
+
+The login-page operations image is loaded from Wikimedia Commons:
+
+- [Warehouse distribution-center-1136510.jpg](https://commons.wikimedia.org/wiki/File:Warehouse_distribution-center-1136510.jpg), by Rsherwin, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.en)

@@ -2,6 +2,7 @@ package com.renda.merchantops.api.ticket.ai;
 
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
+import com.renda.merchantops.api.ai.core.AiGenerationWorkflow;
 import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftAiProvider;
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftPrompt;
@@ -10,6 +11,8 @@ import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftProviderRe
 import com.renda.merchantops.api.ai.ticket.replydraft.TicketReplyDraftProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.ticket.query.TicketAiReplyDraftResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.ticket.TicketPromptContext;
 import com.renda.merchantops.domain.ticket.TicketQueryUseCase;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +25,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TicketAiReplyDraftService {
 
-    private static final String ENTITY_TYPE_TICKET = "TICKET";
-    private static final String INTERACTION_TYPE_REPLY_DRAFT = "REPLY_DRAFT";
+    private static final AiGenerationWorkflow WORKFLOW = AiGenerationWorkflow.TICKET_REPLY_DRAFT;
     private static final String NEXT_STEP_LABEL = "Next step: ";
     private static final int MAX_COMMENT_LENGTH = 2000;
 
@@ -31,12 +33,13 @@ public class TicketAiReplyDraftService {
     private final TicketReplyDraftPromptBuilder ticketReplyDraftPromptBuilder;
     private final TicketReplyDraftAiProvider ticketReplyDraftAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public TicketAiReplyDraftResponse generateReplyDraft(Long tenantId, Long userId, String requestId, Long ticketId) {
         String normalizedRequestId = aiInteractionExecutionSupport.normalizeRequestId(requestId);
         TicketPromptContext ticket = ticketQueryUseCase.getTicketPromptContext(tenantId, ticketId);
-        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(aiProperties.getReplyDraftPromptVersion(), "ticket-reply-draft-v1");
+        String promptVersion = WORKFLOW.resolvePromptVersion(aiProperties, aiInteractionExecutionSupport);
         String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         TicketReplyDraftPrompt prompt = ticketReplyDraftPromptBuilder.build(promptVersion, ticket);
 
@@ -44,12 +47,13 @@ public class TicketAiReplyDraftService {
                 tenantId,
                 userId,
                 normalizedRequestId,
-                ENTITY_TYPE_TICKET,
+                WORKFLOW.entityType(),
                 ticketId,
-                INTERACTION_TYPE_REPLY_DRAFT,
+                WORKFLOW.interactionType(),
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_TICKET_REPLY_DRAFT),
                 "ticket ai reply draft is disabled",
                 "ticket ai reply draft is unavailable"
         );
@@ -77,9 +81,9 @@ public class TicketAiReplyDraftService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_TICKET,
+                    WORKFLOW.entityType(),
                     ticketId,
-                    INTERACTION_TYPE_REPLY_DRAFT,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     resolvedModelId,
                     latencyMs,
@@ -106,9 +110,9 @@ public class TicketAiReplyDraftService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_TICKET,
+                    WORKFLOW.entityType(),
                     ticketId,
-                    INTERACTION_TYPE_REPLY_DRAFT,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     configuredModelId,
                     ex.getFailureType(),

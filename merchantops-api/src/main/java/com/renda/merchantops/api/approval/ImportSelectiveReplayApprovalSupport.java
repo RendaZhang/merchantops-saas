@@ -2,11 +2,13 @@ package com.renda.merchantops.api.approval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
 import com.renda.merchantops.api.importjob.ImportSelectiveReplayNormalizer;
 import com.renda.merchantops.api.importjob.replay.ImportReplaySourceLoader;
 import com.renda.merchantops.domain.approval.ApprovalImportSelectiveReplayPort;
 import com.renda.merchantops.domain.approval.ApprovalPendingRequestKeyPolicy;
 import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.approval.PreparedImportSelectiveReplayApproval;
 import com.renda.merchantops.domain.importjob.ImportJobAiInteractionItem;
 import com.renda.merchantops.domain.importjob.ImportJobQueryUseCase;
@@ -28,15 +30,18 @@ public class ImportSelectiveReplayApprovalSupport implements ApprovalImportSelec
     private final ImportReplaySourceLoader importReplaySourceLoader;
     private final ImportSelectiveReplayNormalizer importSelectiveReplayNormalizer;
     private final ImportJobQueryUseCase importJobQueryUseCase;
+    private final FeatureFlagGateService featureFlagGateService;
     private final ObjectMapper objectMapper;
 
     public ImportSelectiveReplayApprovalSupport(ImportReplaySourceLoader importReplaySourceLoader,
                                                 ImportSelectiveReplayNormalizer importSelectiveReplayNormalizer,
                                                 ImportJobQueryUseCase importJobQueryUseCase,
+                                                FeatureFlagGateService featureFlagGateService,
                                                 ObjectMapper objectMapper) {
         this.importReplaySourceLoader = importReplaySourceLoader;
         this.importSelectiveReplayNormalizer = importSelectiveReplayNormalizer;
         this.importJobQueryUseCase = importJobQueryUseCase;
+        this.featureFlagGateService = featureFlagGateService;
         this.objectMapper = objectMapper;
     }
 
@@ -45,6 +50,12 @@ public class ImportSelectiveReplayApprovalSupport implements ApprovalImportSelec
         if (command == null || command.sourceJobId() == null) {
             throw new BizException(ErrorCode.BAD_REQUEST, "sourceJobId missing");
         }
+        importJobQueryUseCase.getJobDetail(tenantId, command.sourceJobId());
+        featureFlagGateService.requireEnabled(
+                tenantId,
+                FeatureFlagKey.WORKFLOW_IMPORT_SELECTIVE_REPLAY_PROPOSAL,
+                "import selective replay proposal is disabled"
+        );
         List<String> errorCodes = canonicalizeErrorCodes(command.errorCodes());
         importReplaySourceLoader.loadSelectiveFailedRowReplay(tenantId, command.sourceJobId(), errorCodes);
         Long sourceInteractionId = command.sourceInteractionId();

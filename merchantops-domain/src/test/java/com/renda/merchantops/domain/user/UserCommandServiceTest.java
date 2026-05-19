@@ -78,7 +78,7 @@ class UserCommandServiceTest {
         ArgumentCaptor<NewUserDraft> draftCaptor = ArgumentCaptor.forClass(NewUserDraft.class);
         verify(userCommandPort).createUser(draftCaptor.capture());
         assertThat(draftCaptor.getValue().passwordHash()).isEqualTo("bcrypt-hash");
-        verify(userCommandPort).replaceUserRoles(205L, List.of(13L, 12L));
+        verify(userCommandPort).replaceUserRoles(1L, 205L, List.of(13L, 12L));
         verify(userAuditPort).recordEvent(eq(1L), eq("USER"), eq(205L), eq("USER_CREATED"), eq(101L), eq("req-1"),
                 eq(null), org.mockito.ArgumentMatchers.any());
     }

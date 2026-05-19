@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DelegatingStructuredOutputAiClient implements StructuredOutputAiClient {
 
-    private final OpenAiResponsesStructuredOutputAiClient openAiClient;
+    private final OpenAiResponsesStructuredOutputAiClient openAiRawHttpClient;
+    private final SpringAiOpenAiStructuredOutputAiClient openAiSpringAiClient;
     private final DeepSeekChatCompletionsStructuredOutputAiClient deepSeekClient;
     private final AiProperties aiProperties;
 
@@ -19,7 +20,10 @@ public class DelegatingStructuredOutputAiClient implements StructuredOutputAiCli
     public StructuredOutputAiResponse generate(StructuredOutputAiRequest request) {
         AiProviderType provider = aiProperties.resolveProvider();
         return switch (provider) {
-            case OPENAI -> openAiClient.generate(request);
+            case OPENAI -> switch (aiProperties.resolveOpenAiRuntime()) {
+                case RAW_HTTP -> openAiRawHttpClient.generate(request);
+                case SPRING_AI -> openAiSpringAiClient.generate(request);
+            };
             case DEEPSEEK -> deepSeekClient.generate(request);
         };
     }

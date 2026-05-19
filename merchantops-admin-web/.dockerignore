@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+.git
+.idea
+.vscode
+*.log
+*.local
+*.tmp
+*.temp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

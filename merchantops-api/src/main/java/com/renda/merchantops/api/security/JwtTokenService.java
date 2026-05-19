@@ -30,20 +30,21 @@ public class JwtTokenService {
                                 String tenantCode,
                                 String username,
                                 List<String> roles,
-                                List<String> permissions) {
-
-        Instant now = Instant.now();
-        Instant expireAt = now.plusSeconds(jwtProperties.getExpireSeconds());
+                                List<String> permissions,
+                                String sessionId,
+                                Instant issuedAt,
+                                Instant expiresAt) {
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
+                .claim("sid", sessionId)
                 .claim("tenantId", tenantId)
                 .claim("tenantCode", tenantCode)
                 .claim("username", username)
                 .claim("roles", roles)
                 .claim("permissions", permissions)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expireAt))
+                .issuedAt(Date.from(issuedAt))
+                .expiration(Date.from(expiresAt))
                 .signWith(secretKey)
                 .compact();
     }
@@ -61,8 +62,12 @@ public class JwtTokenService {
 
         Long userId = parseRequiredLong(claims.getSubject(), "sub");
         Long tenantId = parseRequiredLong(claims.get("tenantId"), "tenantId");
+        String sessionId = claims.get("sid", String.class);
         String tenantCode = claims.get("tenantCode", String.class);
         String username = claims.get("username", String.class);
+        if (!StringUtils.hasText(sessionId)) {
+            throw new IllegalArgumentException("missing claim: sid");
+        }
         if (!StringUtils.hasText(tenantCode)) {
             throw new IllegalArgumentException("missing claim: tenantCode");
         }
@@ -79,7 +84,8 @@ public class JwtTokenService {
                 tenantCode,
                 username,
                 roles,
-                permissions
+                permissions,
+                sessionId
         );
     }
 

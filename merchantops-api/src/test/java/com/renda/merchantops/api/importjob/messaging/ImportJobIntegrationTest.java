@@ -119,7 +119,8 @@ class ImportJobIntegrationTest {
                     updated_at TIMESTAMP,
                     created_by BIGINT,
                     updated_by BIGINT,
-                    UNIQUE KEY uk_users_tenant_username (tenant_id, username)
+                    UNIQUE KEY uk_users_tenant_username (tenant_id, username),
+                    CONSTRAINT uk_users_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
@@ -129,14 +130,18 @@ class ImportJobIntegrationTest {
                     role_code VARCHAR(64) NOT NULL,
                     role_name VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_role_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
                 CREATE TABLE user_role (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
                     user_id BIGINT NOT NULL,
-                    role_id BIGINT NOT NULL
+                    role_id BIGINT NOT NULL,
+                    CONSTRAINT fk_user_role_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_user_role_role_tenant FOREIGN KEY (role_id, tenant_id) REFERENCES `role`(id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""

@@ -1,0 +1,151 @@
+[
+  {
+    "id": "sanitized-mapping-baseline",
+    "detail": {
+      "job": {
+        "id": 9604,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-mapping-policy.csv",
+        "storageKey": "1/week9-mapping-policy.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-policy-9604",
+        "totalCount": 2,
+        "successCount": 0,
+        "failureCount": 2,
+        "errorSummary": "header validation failed before row fixes were possible",
+        "createdAt": "2026-04-04T10:15:00",
+        "startedAt": "2026-04-04T10:15:02",
+        "finishedAt": "2026-04-04T10:15:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "INVALID_HEADER",
+          "count": 1
+        },
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "count": 1
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 96041,
+          "tenantId": 1,
+          "importJobId": 9604,
+          "rowNumber": null,
+          "errorCode": "INVALID_HEADER",
+          "errorMessage": "header columns do not match USER_CSV",
+          "rawPayload": "login,display_name,email_address,passwd,roles",
+          "createdAt": "2026-04-04T10:15:03"
+        },
+        {
+          "id": 96042,
+          "tenantId": 1,
+          "importJobId": 9604,
+          "rowNumber": 2,
+          "errorCode": "UNKNOWN_ROLE",
+          "errorMessage": "roleCodes must exist in current tenant",
+          "rawPayload": "policy-map,Policy Map,policy-map@example.com,secret-pass-2,READ_ONLY",
+          "createdAt": "2026-04-04T10:15:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [
+      {
+        "id": 96042,
+        "tenantId": 1,
+        "importJobId": 9604,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "policy-map,Policy Map,policy-map@example.com,secret-pass-2,READ_ONLY",
+        "createdAt": "2026-04-04T10:15:04"
+      }
+    ],
+    "providerResult": {
+      "summary": "The failed header still looks close to the canonical USER_CSV schema, so operators should review the proposed mappings before any replay preparation.",
+      "suggestedFieldMappings": [
+        {
+          "canonicalField": "username",
+          "observedColumnSignal": {
+            "headerName": "login",
+            "headerPosition": 1
+          },
+          "reasoning": "login is the closest observed header for username.",
+          "reviewRequired": false
+        },
+        {
+          "canonicalField": "displayName",
+          "observedColumnSignal": {
+            "headerName": "display_name",
+            "headerPosition": 2
+          },
+          "reasoning": "display_name is the closest observed header for displayName.",
+          "reviewRequired": false
+        },
+        {
+          "canonicalField": "email",
+          "observedColumnSignal": {
+            "headerName": "email_address",
+            "headerPosition": 3
+          },
+          "reasoning": "email_address is the closest observed header for email.",
+          "reviewRequired": false
+        },
+        {
+          "canonicalField": "password",
+          "observedColumnSignal": {
+            "headerName": "passwd",
+            "headerPosition": 4
+          },
+          "reasoning": "passwd should be manually confirmed before reuse.",
+          "reviewRequired": true
+        },
+        {
+          "canonicalField": "roleCodes",
+          "observedColumnSignal": {
+            "headerName": "roles",
+            "headerPosition": 5
+          },
+          "reasoning": "roles is the closest observed header for roleCodes.",
+          "reviewRequired": true
+        }
+      ],
+      "confidenceNotes": [
+        "Header validation failed, so every mapping should be reviewed before reuse."
+      ],
+      "recommendedOperatorChecks": [
+        "Confirm the header order before editing replay input.",
+        "Verify that the observed roles column really contains tenant role codes."
+      ],
+      "modelId": "gpt-4.1-mini",
+      "inputTokens": 143,
+      "outputTokens": 72,
+      "totalTokens": 215,
+      "costMicros": null
+    },
+    "promptMustContain": [
+      "Canonical USER_CSV target schema",
+      "headerPosition: 1; headerName: login",
+      "passwordPresent=true"
+    ],
+    "promptMustNotContain": [
+      "login,display_name,email_address,passwd,roles",
+      "policy-map@example.com",
+      "secret-pass-2"
+    ],
+    "outputMustNotContain": [
+      "policy-map@example.com",
+      "secret-pass-2",
+      "auto-apply"
+    ],
+    "reviewRequiredCanonicalFields": [
+      "password",
+      "roleCodes"
+    ]
+  }
+]

@@ -8,8 +8,11 @@ import com.renda.merchantops.api.importjob.ImportJobReplayService;
 import com.renda.merchantops.api.ticket.TicketCommandService;
 import com.renda.merchantops.domain.approval.ApprovalActionPort;
 import com.renda.merchantops.domain.approval.ApprovalImportSelectiveReplayPort;
+import com.renda.merchantops.domain.approval.ApprovalTicketCommentProposalPort;
 import com.renda.merchantops.domain.approval.ImportSelectiveReplayApprovalCommand;
 import com.renda.merchantops.domain.approval.PreparedImportSelectiveReplayApproval;
+import com.renda.merchantops.domain.approval.PreparedTicketCommentApproval;
+import com.renda.merchantops.domain.approval.TicketCommentApprovalCommand;
 import com.renda.merchantops.domain.shared.error.BizException;
 import com.renda.merchantops.domain.shared.error.ErrorCode;
 import com.renda.merchantops.domain.user.UpdateUserStatusCommand;
@@ -26,17 +29,20 @@ public class ApprovalActionAdapter implements ApprovalActionPort {
     private final ImportJobReplayService importJobReplayService;
     private final TicketCommandService ticketCommandService;
     private final ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort;
+    private final ApprovalTicketCommentProposalPort approvalTicketCommentProposalPort;
     private final ObjectMapper objectMapper;
 
     public ApprovalActionAdapter(UserCommandUseCase userCommandUseCase,
                                  ImportJobReplayService importJobReplayService,
                                  TicketCommandService ticketCommandService,
                                  ApprovalImportSelectiveReplayPort approvalImportSelectiveReplayPort,
+                                 ApprovalTicketCommentProposalPort approvalTicketCommentProposalPort,
                                  ObjectMapper objectMapper) {
         this.userCommandUseCase = userCommandUseCase;
         this.importJobReplayService = importJobReplayService;
         this.ticketCommandService = ticketCommandService;
         this.approvalImportSelectiveReplayPort = approvalImportSelectiveReplayPort;
+        this.approvalTicketCommentProposalPort = approvalTicketCommentProposalPort;
         this.objectMapper = objectMapper;
     }
 
@@ -78,15 +84,23 @@ public class ApprovalActionAdapter implements ApprovalActionPort {
     @Override
     public void createTicketComment(Long tenantId, Long reviewerId, String requestId, Long ticketId, String payloadJson) {
         TicketCommentApprovalPayload payload = parsePayload(payloadJson, TicketCommentApprovalPayload.class);
-        if (!StringUtils.hasText(payload.commentContent())) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "approval payload is invalid");
+        PreparedTicketCommentApproval prepared = approvalTicketCommentProposalPort.prepareProposal(
+                tenantId,
+                new TicketCommentApprovalCommand(
+                        ticketId,
+                        payload.commentContent(),
+                        payload.sourceInteractionId()
+                )
+        );
+        if (!Objects.equals(ticketId, prepared.ticketId())) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "approval payload ticketId does not match approval entity");
         }
         ticketCommandService.addComment(
                 tenantId,
                 reviewerId,
                 requestId,
                 ticketId,
-                new TicketCommentCreateCommand(payload.commentContent().trim())
+                new TicketCommentCreateCommand(prepared.commentContent())
         );
     }
 

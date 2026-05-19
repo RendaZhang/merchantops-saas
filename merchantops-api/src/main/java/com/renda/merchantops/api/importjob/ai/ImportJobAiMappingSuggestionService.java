@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.importjob.ai;
 
+import com.renda.merchantops.api.ai.core.AiGenerationWorkflow;
 import com.renda.merchantops.api.ai.core.AiInteractionExecutionSupport;
 import com.renda.merchantops.api.ai.core.AiProviderException;
 import com.renda.merchantops.api.ai.core.AiProviderFailureType;
@@ -11,7 +12,9 @@ import com.renda.merchantops.api.ai.importjob.mappingsuggestion.ImportJobMapping
 import com.renda.merchantops.api.ai.importjob.mappingsuggestion.ImportJobMappingSuggestionProviderResult;
 import com.renda.merchantops.api.config.AiProperties;
 import com.renda.merchantops.api.dto.importjob.query.ImportJobAiMappingSuggestionResponse;
+import com.renda.merchantops.api.featureflag.FeatureFlagGateService;
 import com.renda.merchantops.api.importjob.ImportCsvSupport;
+import com.renda.merchantops.domain.featureflag.FeatureFlagKey;
 import com.renda.merchantops.domain.importjob.ImportJobDetail;
 import com.renda.merchantops.domain.importjob.ImportJobErrorCount;
 import com.renda.merchantops.domain.importjob.ImportJobErrorPageCriteria;
@@ -32,8 +35,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ImportJobAiMappingSuggestionService {
 
-    private static final String ENTITY_TYPE_IMPORT_JOB = "IMPORT_JOB";
-    private static final String INTERACTION_TYPE_MAPPING_SUGGESTION = "MAPPING_SUGGESTION";
+    private static final AiGenerationWorkflow WORKFLOW = AiGenerationWorkflow.IMPORT_MAPPING_SUGGESTION;
     private static final String IMPORT_TYPE_USER_CSV = "USER_CSV";
     private static final int PROMPT_WINDOW_PAGE = 0;
     private static final int PROMPT_WINDOW_SIZE = 20;
@@ -42,6 +44,7 @@ public class ImportJobAiMappingSuggestionService {
     private final ImportJobMappingSuggestionPromptBuilder importJobMappingSuggestionPromptBuilder;
     private final ImportJobMappingSuggestionAiProvider importJobMappingSuggestionAiProvider;
     private final AiInteractionExecutionSupport aiInteractionExecutionSupport;
+    private final FeatureFlagGateService featureFlagGateService;
     private final AiProperties aiProperties;
 
     public ImportJobAiMappingSuggestionResponse generateMappingSuggestion(Long tenantId, Long userId, String requestId, Long importJobId) {
@@ -59,10 +62,7 @@ public class ImportJobAiMappingSuggestionService {
                 .filter(error -> error.rowNumber() != null)
                 .toList();
 
-        String promptVersion = aiInteractionExecutionSupport.normalizePromptVersion(
-                aiProperties.getImportMappingSuggestionPromptVersion(),
-                "import-mapping-suggestion-v1"
-        );
+        String promptVersion = WORKFLOW.resolvePromptVersion(aiProperties, aiInteractionExecutionSupport);
         String configuredModelId = aiInteractionExecutionSupport.normalizeNullable(aiProperties.resolveModelId());
         ImportJobMappingSuggestionPromptContext promptContext = toPromptContext(detail, headerSignalCandidate, promptWindowErrors);
         ImportJobMappingSuggestionPrompt prompt = importJobMappingSuggestionPromptBuilder.build(promptVersion, promptContext);
@@ -71,12 +71,13 @@ public class ImportJobAiMappingSuggestionService {
                 tenantId,
                 userId,
                 normalizedRequestId,
-                ENTITY_TYPE_IMPORT_JOB,
+                WORKFLOW.entityType(),
                 importJobId,
-                INTERACTION_TYPE_MAPPING_SUGGESTION,
+                WORKFLOW.interactionType(),
                 promptVersion,
                 configuredModelId,
                 aiProperties,
+                featureFlagGateService.isEnabled(tenantId, FeatureFlagKey.AI_IMPORT_MAPPING_SUGGESTION),
                 "import ai mapping suggestion is disabled",
                 "import ai mapping suggestion is unavailable"
         );
@@ -104,9 +105,9 @@ public class ImportJobAiMappingSuggestionService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_MAPPING_SUGGESTION,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     resolvedModelId,
                     latencyMs,
@@ -132,9 +133,9 @@ public class ImportJobAiMappingSuggestionService {
                     tenantId,
                     userId,
                     normalizedRequestId,
-                    ENTITY_TYPE_IMPORT_JOB,
+                    WORKFLOW.entityType(),
                     importJobId,
-                    INTERACTION_TYPE_MAPPING_SUGGESTION,
+                    WORKFLOW.interactionType(),
                     promptVersion,
                     configuredModelId,
                     ex.getFailureType(),

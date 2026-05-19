@@ -3,6 +3,7 @@ package com.renda.merchantops.api.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.renda.merchantops.api.MerchantOpsApplication;
+import com.renda.merchantops.api.support.TestAuthSessionSchemaSupport;
 import com.renda.merchantops.api.importjob.messaging.ImportJobPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,7 +110,8 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                     role_code VARCHAR(64) NOT NULL,
                     role_name VARCHAR(128) NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    updated_at TIMESTAMP NOT NULL
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_role_id_tenant UNIQUE (id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
@@ -124,8 +126,11 @@ class ImportSelectiveReplayApprovalIntegrationTest {
         jdbcTemplate.execute("""
                 CREATE TABLE user_role (
                     id BIGINT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
                     user_id BIGINT NOT NULL,
-                    role_id BIGINT NOT NULL
+                    role_id BIGINT NOT NULL,
+                    CONSTRAINT fk_user_role_user_tenant FOREIGN KEY (user_id, tenant_id) REFERENCES users(id, tenant_id),
+                    CONSTRAINT fk_user_role_role_tenant FOREIGN KEY (role_id, tenant_id) REFERENCES `role`(id, tenant_id)
                 )
                 """);
         jdbcTemplate.execute("""
@@ -171,6 +176,18 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                 )
                 """);
         jdbcTemplate.execute("CREATE UNIQUE INDEX uk_approval_request_pending_request_key ON approval_request (pending_request_key)");
+        jdbcTemplate.execute("""
+                CREATE TABLE feature_flag (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    tenant_id BIGINT NOT NULL,
+                    flag_key VARCHAR(128) NOT NULL,
+                    enabled BOOLEAN NOT NULL,
+                    updated_by BIGINT,
+                    created_at TIMESTAMP NOT NULL,
+                    updated_at TIMESTAMP NOT NULL,
+                    CONSTRAINT uk_feature_flag_tenant_key UNIQUE (tenant_id, flag_key)
+                )
+                """);
         jdbcTemplate.execute("""
                 CREATE TABLE import_job (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -227,9 +244,12 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                 )
                 """);
 
+        TestAuthSessionSchemaSupport.createAuthSessionTable(jdbcTemplate);
+
         seedCoreData();
         seedImportReplayableSource();
         seedAiInteractions();
+        seedFeatureFlags();
 
         if (Files.exists(STORAGE_ROOT)) {
             try (var walk = Files.walk(STORAGE_ROOT)) {
@@ -288,6 +308,26 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                                 """))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("import job not found"));
+    }
+
+    @Test
+    void proposalCreateShouldReturnServiceUnavailableWhenBridgeFlagDisabled() throws Exception {
+        setFeatureFlag("workflow.import.selective-replay-proposal.enabled", false);
+        String adminToken = loginAndGetToken("demo-shop", "admin", "123456");
+
+        mockMvc.perform(post("/api/v1/import-jobs/7001/replay-failures/selective/proposals")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(adminToken))
+                        .header("X-Request-Id", "req-proposal-flag-disabled")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"errorCodes":["UNKNOWN_ROLE"],"sourceInteractionId":9103}
+                                """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("import selective replay proposal is disabled"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM approval_request", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit_event", Integer.class)).isZero();
     }
 
     @Test
@@ -688,10 +728,10 @@ class ImportSelectiveReplayApprovalIntegrationTest {
         insertPermission(1L, "USER_READ", "Read users");
         insertPermission(2L, "USER_WRITE", "Write users");
 
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1001, 101, 11)");
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1003, 103, 13)");
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (1005, 105, 11)");
-        jdbcTemplate.update("INSERT INTO user_role (id, user_id, role_id) VALUES (2001, 201, 21)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1001, 1, 101, 11)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1003, 1, 103, 13)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (1005, 1, 105, 11)");
+        jdbcTemplate.update("INSERT INTO user_role (id, tenant_id, user_id, role_id) VALUES (2001, 2, 201, 21)");
 
         insertRolePermission(3001L, 11L, 1L);
         insertRolePermission(3002L, 11L, 2L);
@@ -753,6 +793,17 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                 """);
     }
 
+    private void seedFeatureFlags() {
+        insertFeatureFlag(1L, "ai.ticket.summary.enabled", true);
+        insertFeatureFlag(2L, "ai.ticket.triage.enabled", true);
+        insertFeatureFlag(3L, "ai.ticket.reply-draft.enabled", true);
+        insertFeatureFlag(4L, "ai.import.error-summary.enabled", true);
+        insertFeatureFlag(5L, "ai.import.mapping-suggestion.enabled", true);
+        insertFeatureFlag(6L, "ai.import.fix-recommendation.enabled", true);
+        insertFeatureFlag(7L, "workflow.import.selective-replay-proposal.enabled", true);
+        insertFeatureFlag(8L, "workflow.ticket.comment-proposal.enabled", true);
+    }
+
     private void insertUser(Long id,
                             Long tenantId,
                             String username,
@@ -777,6 +828,33 @@ class ImportSelectiveReplayApprovalIntegrationTest {
                 INSERT INTO permission (id, permission_code, permission_name, created_at, updated_at)
                 VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """, id, permissionCode, permissionName);
+    }
+
+    private void insertFeatureFlag(Long id, String key, boolean enabled) {
+        insertFeatureFlag(1L, id, key, enabled);
+    }
+
+    private void insertFeatureFlag(Long tenantId, Long id, String key, boolean enabled) {
+        jdbcTemplate.update(
+                "INSERT INTO feature_flag (id, tenant_id, flag_key, enabled, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id,
+                tenantId,
+                key,
+                enabled,
+                tenantId == 1L ? 101L : 201L
+        );
+    }
+
+    private void setFeatureFlag(String key, boolean enabled) {
+        setFeatureFlag(1L, key, enabled);
+    }
+
+    private void setFeatureFlag(Long tenantId, String key, boolean enabled) {
+        jdbcTemplate.update("""
+                UPDATE feature_flag
+                SET enabled = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE tenant_id = ? AND flag_key = ?
+                """, enabled, tenantId == 1L ? 101L : 201L, tenantId, key);
     }
 
     private void insertRolePermission(Long id, Long roleId, Long permissionId) {

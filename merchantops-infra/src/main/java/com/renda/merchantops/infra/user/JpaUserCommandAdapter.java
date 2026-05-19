@@ -46,12 +46,13 @@ public class JpaUserCommandAdapter implements UserCommandPort {
     }
 
     @Override
-    public void replaceUserRoles(Long userId, List<Long> roleIds) {
-        userRoleRepository.deleteByUserId(userId);
+    public void replaceUserRoles(Long tenantId, Long userId, List<Long> roleIds) {
+        userRoleRepository.deleteByTenantIdAndUserId(tenantId, userId);
         userRoleRepository.saveAll(roleIds.stream()
                 .map(roleId -> {
                     UserRoleEntity userRole = new UserRoleEntity();
                     userRole.setUserId(userId);
+                    userRole.setTenantId(tenantId);
                     userRole.setRoleId(roleId);
                     return userRole;
                 })

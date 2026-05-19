@@ -1,6 +1,6 @@
 # AI Provider Configuration
 
-Last updated: 2026-04-04
+Last updated: 2026-04-09
 
 ## Purpose
 
@@ -21,10 +21,24 @@ Definition:
 - one MerchantOps deployment owns one provider configuration for its public AI features
 - the configuration is managed by the operator of that deployment, not by ordinary tenant users
 - the current provider-driven AI generation surface is `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, `POST /api/v1/tickets/{id}/ai-reply-draft`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
+- those six generation endpoints are now gated by both config-level `merchantops.ai.enabled` and one persisted tenant-scoped feature flag per endpoint
 - the ticket AI interaction history endpoint `GET /api/v1/tickets/{id}/ai-interactions` reuses stored records and does not trigger a provider call
 - the import AI interaction history endpoint `GET /api/v1/import-jobs/{id}/ai-interactions` also reuses stored records and does not trigger a provider call
 
 This means the current public AI slices do not support tenant-specific model keys or tenant-managed provider setup.
+
+## Current Persisted Rollout Flags
+
+Current persisted tenant-scoped flags for AI generation are:
+
+- `ai.ticket.summary.enabled`
+- `ai.ticket.triage.enabled`
+- `ai.ticket.reply-draft.enabled`
+- `ai.import.error-summary.enabled`
+- `ai.import.mapping-suggestion.enabled`
+- `ai.import.fix-recommendation.enabled`
+
+These flags are managed through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` for the authenticated user's current tenant. They are additive rollout controls only and do not replace `merchantops.ai.enabled`.
 
 ## Active Config Keys
 
@@ -42,6 +56,7 @@ Current Spring configuration keys:
 - `merchantops.ai.api-key`
 - `merchantops.ai.model-id`
 - `merchantops.ai.timeout-ms`
+- `merchantops.ai.openai-runtime`
 - `merchantops.ai.openai.base-url`
 - `merchantops.ai.openai.api-key`
 
@@ -59,6 +74,7 @@ Current environment-variable overrides:
 - `MERCHANTOPS_AI_API_KEY`
 - `MERCHANTOPS_AI_MODEL_ID`
 - `MERCHANTOPS_AI_TIMEOUT_MS`
+- `MERCHANTOPS_AI_OPENAI_RUNTIME`
 - `MERCHANTOPS_AI_OPENAI_BASE_URL`
 - `MERCHANTOPS_AI_OPENAI_API_KEY`
 - `DEEPSEEK_API_KEY`
@@ -76,6 +92,7 @@ Current defaults in `application.yml` keep AI optional:
 - `import-fix-recommendation-prompt-version=import-fix-recommendation-v1`
 - `provider=OPENAI`
 - `timeout-ms=15000`
+- `openai-runtime=RAW_HTTP`
 - provider-neutral `base-url`, `api-key`, and `model-id` blank until the deployment operator supplies them
 - the legacy OpenAI compatibility keys remain blank until needed
 
@@ -100,6 +117,14 @@ Current compatibility rules are:
 - `DEEPSEEK` falls back to `DEEPSEEK_BASE_URL`, `DEEPSEEK_API_KEY`, and `DEEPSEEK_MODEL`
 - the DeepSeek aliases are considered only when `merchantops.ai.provider=DEEPSEEK` and the provider-neutral key is blank
 
+OpenAI also has an internal transport selector:
+
+- `merchantops.ai.openai-runtime=RAW_HTTP` keeps the existing direct HTTP `POST /v1/responses` path
+- `merchantops.ai.openai-runtime=SPRING_AI` switches only the OpenAI transport layer to Spring AI's OpenAI chat-completions client
+- the selector is ignored when `merchantops.ai.provider=DEEPSEEK`
+- the default remains `RAW_HTTP` so the migration stays rollback-safe
+- the application still reads only `merchantops.ai.*`; this pilot does not move runtime ownership to `spring.ai.*`
+
 ## Minimum Current Setup
 
 To enable the public ticket summary, ticket triage, ticket reply-draft, and import AI error-summary plus mapping-suggestion plus fix-recommendation slices, the deployment must provide all of:
@@ -109,6 +134,7 @@ To enable the public ticket summary, ticket triage, ticket reply-draft, and impo
 - a non-blank effective model id
 - a non-blank effective API key
 - a reachable effective base URL
+- the matching persisted feature flag enabled for the endpoint being called
 
 Typical minimal OpenAI setup:
 
@@ -124,7 +150,7 @@ Typical minimal DeepSeek setup:
 - `merchantops.ai.api-key=<deepseek-key>` or local `DEEPSEEK_API_KEY=<deepseek-key>`
 - optional `merchantops.ai.model-id=<deepseek-model>` or local `DEEPSEEK_MODEL=<deepseek-model>`
 
-If any required provider setting is missing, the rest of the application still works and only the public AI generation endpoints degrade with controlled `503 SERVICE_UNAVAILABLE` responses.
+If any required provider setting is missing, the rest of the application still works and only the public AI generation endpoints degrade with controlled `503 SERVICE_UNAVAILABLE` responses. If `merchantops.ai.enabled=false` or the matching persisted feature flag is disabled, those same generation endpoints also degrade with controlled `503` responses while the read-only interaction-history and usage-summary endpoints remain available.
 
 ## Current Runtime Behavior
 
@@ -138,13 +164,15 @@ The current AI runtime expectation is:
 
 Current protocol paths are:
 
-- `OPENAI`: `POST /v1/responses` with strict `json_schema`
+- `OPENAI + RAW_HTTP`: direct `POST /v1/responses` with strict `json_schema`
+- `OPENAI + SPRING_AI`: Spring AI OpenAI chat-completions transport to `POST /v1/chat/completions` with `response_format=json_schema`
 - `DEEPSEEK`: `POST /chat/completions` with `response_format={type=json_object}` plus provider-aware JSON-only instructions and a minimal example JSON payload
 
 Both paths still normalize:
 
 - `X-Client-Request-Id` forwarding
 - timeout versus unavailable classification
+- `INVALID_RESPONSE` semantics after local output-policy validation
 - resolved `modelId`
 - usage token fields when the provider returns them
 - raw JSON text extraction before endpoint-specific validation

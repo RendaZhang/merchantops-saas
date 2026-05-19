@@ -1,4 +1,4 @@
 interface:
   display_name: "AI Ticket Surface Sync"
   short_description: "Sync public ticket AI docs and runbooks"
-  default_prompt: "Use $ai-ticket-surface-sync to align the current public ticket AI docs, runbooks, examples, and milestone text with the Week 6 implementation."
+  default_prompt: "Use $ai-ticket-surface-sync to align the current public ticket AI docs, runbooks, examples, and milestone text with the current public ticket AI surface."

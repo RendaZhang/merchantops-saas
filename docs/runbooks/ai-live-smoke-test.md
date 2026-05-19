@@ -1,6 +1,6 @@
 # AI Live Smoke Test
 
-Last updated: 2026-04-04
+Last updated: 2026-04-10
 
 > Maintenance note: keep this page focused on the current low-cost local provider live smoke path for the public AI surface. It is intentionally ticket-summary-first and budget-limited, with ticket triage, ticket reply-draft, and import AI error summary plus mapping suggestion plus fix recommendation treated as later expansions only after the first summary succeeds. Broader AI regression scope still belongs in [ai-regression-checklist.md](ai-regression-checklist.md).
 
@@ -10,9 +10,9 @@ Use this runbook when local AI provider wiring, `.env` loading, provider normali
 
 This runbook is intentionally narrow:
 
-- prepare `.env` with local provider settings
+- prepare local provider settings in `.env` or the current shell environment
 - start Docker dependencies
-- start the API with repository-root local `.env` auto-loading
+- start the API through either local `spring-boot:run` or the Dockerized API path
 - log in as `demo-shop/admin`
 - create one fresh smoke ticket and add enough context for summary generation
 - call `POST /api/v1/tickets/{id}/ai-summary` exactly once
@@ -46,7 +46,21 @@ If you do not already have a local `.env`, create one from the example:
 Copy-Item .env.example .env
 ```
 
-Add local AI provider settings to `.env`. Recommended provider-neutral DeepSeek example:
+Add local AI provider settings to `.env`.
+
+If you are validating the OpenAI Spring AI transport pilot, use:
+
+```dotenv
+MERCHANTOPS_AI_ENABLED=true
+MERCHANTOPS_AI_PROVIDER=OPENAI
+MERCHANTOPS_AI_OPENAI_RUNTIME=SPRING_AI
+MERCHANTOPS_AI_MODEL_ID=gpt-4.1-mini
+MERCHANTOPS_AI_API_KEY=replace-with-local-openai-key
+```
+
+If you are validating the existing OpenAI rollback path instead, keep the same OpenAI settings and either omit `MERCHANTOPS_AI_OPENAI_RUNTIME` or set `MERCHANTOPS_AI_OPENAI_RUNTIME=RAW_HTTP`.
+
+Recommended provider-neutral DeepSeek example:
 
 ```dotenv
 MERCHANTOPS_AI_ENABLED=true
@@ -66,6 +80,8 @@ DEEPSEEK_MODEL=deepseek-chat
 
 Keep real provider keys only in the gitignored local `.env`.
 
+If you prefer not to edit `.env`, you can keep the same values in the current shell environment instead. The Dockerized API path does not auto-load the repository-root `.env`, so provider settings must reach the container through `--env-file` or explicit `-e MERCHANTOPS_AI_*` flags.
+
 ## 3. Start Docker Dependencies
 
 ```powershell
@@ -74,6 +90,8 @@ docker compose ps
 ```
 
 ## 4. Build And Start The API
+
+### Option A. Local `spring-boot:run` Startup
 
 Refresh local SNAPSHOT dependencies first:
 
@@ -89,6 +107,34 @@ Set-Location .\merchantops-api
 ```
 
 The main app entrypoint auto-loads the repository-root `.env` before Spring Boot starts for local dev-profile `spring-boot:run`.
+
+### Option B. Dockerized API Startup
+
+Use this option when the same verification also needs to prove the Week 10 Docker delivery path or explicit container env injection.
+
+```powershell
+docker build -t merchantops-api:local .
+docker run --rm --name merchantops-api-local `
+  --env-file .env `
+  --network merchantops-infra `
+  -p 8080:8080 `
+  -e MYSQL_HOST=mysql `
+  -e REDIS_HOST=redis `
+  -e RABBITMQ_HOST=rabbitmq `
+  merchantops-api:local
+```
+
+If the local `.env` does not already contain the required provider settings, add explicit runtime flags to the same `docker run` command, for example:
+
+```powershell
+  -e MERCHANTOPS_AI_ENABLED=true `
+  -e MERCHANTOPS_AI_PROVIDER=DEEPSEEK `
+  -e MERCHANTOPS_AI_BASE_URL=https://api.deepseek.com `
+  -e MERCHANTOPS_AI_MODEL_ID=deepseek-chat `
+  -e MERCHANTOPS_AI_API_KEY=<local-secret> `
+```
+
+Keep the secret local only; never copy a real key into tracked files, logs, or docs.
 
 ## 5. Prepare Reusable Variables
 
@@ -196,6 +242,7 @@ Expected result:
 - `status=SUCCEEDED`
 - `requestId` equals `$summaryRequestId`
 - `modelId` matches the resolved provider model
+- when validating `OPENAI + SPRING_AI`, confirm the stored row still keeps the same local status semantics and request-id correlation as the existing rollback path
 - usage fields are present when the provider returns them, otherwise `null`
 
 ## 10. Optional Stage 2 Expansion After Summary Success

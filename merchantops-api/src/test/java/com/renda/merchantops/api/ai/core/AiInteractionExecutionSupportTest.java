@@ -26,7 +26,7 @@ class AiInteractionExecutionSupportTest {
 
         assertThatThrownBy(() -> support.assertAvailable(
                 11L, 22L, "req-1", "TICKET", 33L, "SUMMARY", "ticket-summary-v1", "gpt-4.1-mini",
-                aiProperties, "disabled", "unavailable"
+                aiProperties, true, "disabled", "unavailable"
         ))
                 .isInstanceOf(BizException.class)
                 .hasMessage("disabled");
@@ -45,7 +45,7 @@ class AiInteractionExecutionSupportTest {
 
         assertThatThrownBy(() -> support.assertAvailable(
                 11L, 22L, "req-2", "IMPORT_JOB", 33L, "ERROR_SUMMARY", "import-error-summary-v1", "gpt-4.1-mini",
-                aiProperties, "disabled", "unavailable"
+                aiProperties, true, "disabled", "unavailable"
         ))
                 .isInstanceOf(BizException.class)
                 .hasMessage("unavailable");

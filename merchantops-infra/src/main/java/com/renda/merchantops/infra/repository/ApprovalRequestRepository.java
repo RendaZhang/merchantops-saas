@@ -14,6 +14,8 @@ import java.util.Set;
 
 public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequestEntity, Long> {
 
+    boolean existsByTenantIdAndPendingRequestKey(Long tenantId, String pendingRequestKey);
+
     Optional<ApprovalRequestEntity> findByIdAndTenantId(Long id, Long tenantId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

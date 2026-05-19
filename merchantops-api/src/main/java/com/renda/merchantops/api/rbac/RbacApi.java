@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_FORBIDDEN;
-import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_RBAC_FEATURE_FLAGS;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_RBAC_MANAGE_USERS;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_RBAC_READ_USERS;
 import static com.renda.merchantops.api.doc.OpenApiExamples.RESP_UNAUTHORIZED;
@@ -64,24 +63,4 @@ public interface RbacApi {
     @GetMapping("/users/manage")
     ApiResponse<RbacActionResponse> manageUsers();
 
-    @Operation(summary = "RBAC: manage feature flags", description = "Requires FEATURE_FLAG_MANAGE permission.")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "Authorized",
-                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_RBAC_FEATURE_FLAGS))
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required",
-                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "403",
-                    description = "Missing FEATURE_FLAG_MANAGE permission",
-                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_FORBIDDEN))
-            )
-    })
-    @GetMapping("/feature-flags")
-    ApiResponse<RbacActionResponse> manageFeatureFlags();
 }

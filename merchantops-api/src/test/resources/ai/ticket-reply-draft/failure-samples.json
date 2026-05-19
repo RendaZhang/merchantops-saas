@@ -1,0 +1,41 @@
+[
+  {
+    "id": "oversized-draft-invalid-response",
+    "promptContext": {
+      "id": 9401,
+      "tenantId": 1,
+      "title": "Printer replacement verification pending",
+      "description": "Ops has not confirmed whether the replacement solved the printer outage.",
+      "status": "IN_PROGRESS",
+      "assigneeUsername": "ops",
+      "createdByUsername": "admin",
+      "createdAt": "2026-04-03T09:00:00",
+      "updatedAt": "2026-04-03T09:10:00",
+      "comments": [
+        {
+          "id": 5401,
+          "content": "Replacement finished but outcome is still being checked.",
+          "createdByUsername": "ops",
+          "createdAt": "2026-04-03T09:05:00"
+        }
+      ],
+      "olderCommentsOmitted": false,
+      "operationLogs": [
+        {
+          "id": 6401,
+          "operationType": "COMMENTED",
+          "detail": "verification still pending",
+          "operatorUsername": "ops",
+          "createdAt": "2026-04-03T09:05:00"
+        }
+      ],
+      "olderOperationLogsOmitted": false
+    },
+    "opening": "Internal update for ops.",
+    "body": "The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action. The internal thread is still collecting printer replacement details, router observations, and operator notes before anyone confirms a safe next action.",
+    "nextStep": "Wait for operator verification before treating the replacement as complete.",
+    "closing": "Keep the note internal until the operator confirms the next step.",
+    "expectedStatus": "INVALID_RESPONSE",
+    "expectedMessage": "ticket ai reply draft is unavailable"
+  }
+]

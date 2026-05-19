@@ -48,9 +48,10 @@ public class AiInteractionExecutionSupport {
                                 String promptVersion,
                                 String modelId,
                                 AiProperties aiProperties,
+                                boolean featureFlagEnabled,
                                 String disabledMessage,
                                 String unavailableMessage) {
-        if (!aiProperties.isEnabled()) {
+        if (!aiProperties.isEnabled() || !featureFlagEnabled) {
             record(tenantId, userId, requestId, entityType, entityId, interactionType, promptVersion, modelId,
                     AiInteractionStatus.FEATURE_DISABLED, 0L, null, null);
             throw new BizException(ErrorCode.SERVICE_UNAVAILABLE, disabledMessage);
