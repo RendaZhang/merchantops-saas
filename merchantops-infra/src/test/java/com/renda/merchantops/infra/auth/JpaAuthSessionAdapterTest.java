@@ -1,6 +1,7 @@
 package com.renda.merchantops.infra.auth;
 
 import com.renda.merchantops.domain.auth.AuthSession;
+import com.renda.merchantops.infra.persistence.entity.AuthSessionEntity;
 import com.renda.merchantops.infra.repository.AuthSessionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,6 +71,36 @@ class JpaAuthSessionAdapterTest {
     }
 
     @Test
+    void findAllByTenantIdAndUserIdShouldMapRepositoryRowsInProvidedOrder() {
+        JpaAuthSessionAdapter adapter = new JpaAuthSessionAdapter(authSessionRepository);
+        AuthSessionEntity newer = authSessionEntity(
+                12L,
+                "newer-session",
+                LocalDateTime.of(2026, 5, 19, 10, 30),
+                LocalDateTime.of(2026, 5, 19, 12, 30),
+                null
+        );
+        AuthSessionEntity olderRevoked = authSessionEntity(
+                11L,
+                "older-session",
+                LocalDateTime.of(2026, 5, 18, 10, 30),
+                LocalDateTime.of(2026, 5, 18, 12, 30),
+                LocalDateTime.of(2026, 5, 18, 11, 0)
+        );
+        olderRevoked.setStatus("REVOKED");
+        when(authSessionRepository.findAllByTenantIdAndUserIdOrderByCreatedAtDescIdDesc(1L, 101L))
+                .thenReturn(List.of(newer, olderRevoked));
+
+        List<AuthSession> sessions = adapter.findAllByTenantIdAndUserId(1L, 101L);
+
+        assertThat(sessions).extracting(AuthSession::sessionId)
+                .containsExactly("newer-session", "older-session");
+        assertThat(sessions.get(0).createdAt()).isEqualTo(Instant.parse("2026-05-19T10:30:00Z"));
+        assertThat(sessions.get(1).revokedAt()).isEqualTo(Instant.parse("2026-05-18T11:00:00Z"));
+        verify(authSessionRepository).findAllByTenantIdAndUserIdOrderByCreatedAtDescIdDesc(1L, 101L);
+    }
+
+    @Test
     void cleanupExpiredOrRevokedSessionsShouldQueryOnePageAndDeleteCandidateIds() {
         JpaAuthSessionAdapter adapter = new JpaAuthSessionAdapter(authSessionRepository);
         Instant cutoff = Instant.parse("2026-04-15T10:00:00Z");
@@ -113,5 +144,22 @@ class JpaAuthSessionAdapterTest {
 
         assertThat(deletedCount).isZero();
         verify(authSessionRepository, never()).deleteByIdIn(any());
+    }
+
+    private AuthSessionEntity authSessionEntity(Long id,
+                                                String sessionId,
+                                                LocalDateTime createdAt,
+                                                LocalDateTime expiresAt,
+                                                LocalDateTime revokedAt) {
+        AuthSessionEntity entity = new AuthSessionEntity();
+        entity.setId(id);
+        entity.setSessionId(sessionId);
+        entity.setTenantId(1L);
+        entity.setUserId(101L);
+        entity.setStatus("ACTIVE");
+        entity.setCreatedAt(createdAt);
+        entity.setExpiresAt(expiresAt);
+        entity.setRevokedAt(revokedAt);
+        return entity;
     }
 }

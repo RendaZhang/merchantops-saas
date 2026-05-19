@@ -57,7 +57,7 @@ These horizons describe the recommended execution order. They do not replace the
 ### Horizon 1: Productization Baseline
 
 - Expand the minimal admin console from the current login/context shell into useful ticket, approval, import, AI interaction, and proposal review flows.
-- Continue the authentication lifecycle beyond the current-session/logout-all foundation, starting with current-user session visibility before deciding on refresh-token, cookie/session rotation, revocation depth, and device/session-management changes when the deployment model needs them.
+- Continue the authentication lifecycle beyond the current-session/logout-all foundation by using current-user session visibility to decide whether refresh-token, cookie/session rotation, revocation depth, or device/session-management changes are justified by the deployment model.
 - Strengthen deployment and runtime readiness through documented environment, secret-management, bootstrap, and smoke-test paths.
 - Move high-value tenant consistency guarantees from service-only checks toward database-backed constraints where practical.
 

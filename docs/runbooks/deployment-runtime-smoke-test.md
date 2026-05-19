@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-05-15
+Last updated: 2026-05-19
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -111,6 +111,11 @@ $headers = @{ Authorization = "Bearer $token" }
 $context = Invoke-RestMethod `
   -Method Get `
   -Uri "$adminBaseUrl/api/v1/context" `
+  -Headers $headers
+
+$authSessions = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$adminBaseUrl/api/v1/auth/sessions" `
   -Headers $headers
 
 $tickets = Invoke-RestMethod `
@@ -241,6 +246,7 @@ Expected result:
 
 - login returns an access token
 - context returns `tenantCode=demo-shop` and `username=admin`
+- auth sessions returns the current user's session inventory, includes a `currentSession=true` item, and does not expose a raw `sid`
 - tickets returns `page=0`, `size=10`, an `items` array, and the current tenant's first ticket page
 - when the ticket list is not empty, ticket detail returns the selected ticket with `comments` and `operationLogs` arrays; creating a disposable internal comment returns the selected ticket id, and the refreshed detail includes the server-returned comment and `COMMENTED` workflow log
 - imports returns `page=0`, `size=10`, an `items` array, and the current tenant's first import-job page or an empty list

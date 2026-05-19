@@ -21,6 +21,7 @@ public final class OpenApiExamples {
 
     public static final String RESP_SUCCESS_LOGIN = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"accessToken\":\"<jwt-token>\",\"tokenType\":\"Bearer\",\"expiresIn\":7200}}";
     public static final String RESP_SUCCESS_LOGOUT = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":null}";
+    public static final String RESP_AUTH_SESSION_LIST = "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"data\":{\"items\":[{\"currentSession\":true,\"status\":\"ACTIVE\",\"createdAt\":\"2026-05-19T10:00:00Z\",\"expiresAt\":\"2026-05-19T12:00:00Z\",\"revokedAt\":null},{\"currentSession\":false,\"status\":\"REVOKED\",\"createdAt\":\"2026-05-18T10:00:00Z\",\"expiresAt\":\"2026-05-18T12:00:00Z\",\"revokedAt\":\"2026-05-18T11:30:00Z\"},{\"currentSession\":false,\"status\":\"EXPIRED\",\"createdAt\":\"2026-05-17T10:00:00Z\",\"expiresAt\":\"2026-05-17T12:00:00Z\",\"revokedAt\":null}]}}";
     public static final String RESP_BAD_REQUEST_CREDENTIAL = "{\"code\":\"BAD_REQUEST\",\"message\":\"username or password is incorrect\",\"data\":null}";
     public static final String RESP_FORBIDDEN_USER_INACTIVE = "{\"code\":\"FORBIDDEN\",\"message\":\"user is not active\",\"data\":null}";
     public static final String RESP_BAD_REQUEST_USERNAME_EXISTS = "{\"code\":\"BAD_REQUEST\",\"message\":\"username already exists in tenant\",\"data\":null}";

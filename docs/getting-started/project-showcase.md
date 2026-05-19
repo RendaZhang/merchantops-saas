@@ -35,8 +35,9 @@ Use [quick-start.md](quick-start.md) for API startup commands, [admin-console.md
 ### 1. Login And Tenant Context
 
 - Use `POST /api/v1/auth/login` with tenant `demo-shop`, username `admin`, and password `123456`.
-- Use the returned JWT against `GET /api/v1/context`.
-- Explain that protected reads and writes revalidate tenant status, user status, roles, and permissions instead of trusting stale claims indefinitely.
+- Use the returned JWT against `GET /api/v1/context` and `GET /api/v1/auth/sessions`.
+- Explain that protected reads and writes revalidate tenant status, user status, roles, permissions, and the current server-side auth session instead of trusting stale claims indefinitely.
+- Call out that the session inventory is read-only, scoped to the current tenant/user, marks the current JWT session, and intentionally excludes raw `sid`, device metadata, and selective revoke handles.
 
 ### 2. Ticket Workflow
 
@@ -142,6 +143,7 @@ Use this short checklist for a handoff review:
 - Swagger UI and `/health` load on port `8080`.
 - Seeded admin login works for `demo-shop` in the admin console.
 - The dashboard renders tenant/operator context and restores the local token after refresh.
+- `GET /api/v1/auth/sessions` returns a current-user session inventory without raw `sid` or device metadata.
 - Ticket workflow reads, at least one ticket detail path, and a disposable internal comment path work.
 - The Imports screen loads the current-tenant import queue or empty state.
 - The Approvals screen loads the current-tenant approval queue or empty state, and approval detail loads when a request id is available.

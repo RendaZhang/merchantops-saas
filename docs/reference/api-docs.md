@@ -11,6 +11,7 @@
 
 - Security scheme: `bearerAuth` (HTTP Bearer JWT)
 - Login endpoint: `POST /api/v1/auth/login`
+- Current-user sessions endpoint: `GET /api/v1/auth/sessions`
 - Logout endpoint: `POST /api/v1/auth/logout`
 - Logout-all endpoint: `POST /api/v1/auth/logout-all`
 - Demo tenant and users:
@@ -41,6 +42,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/health` | No | Lightweight service health |
 | `GET` | `/actuator/health` | No | Spring Boot actuator health |
 | `POST` | `/api/v1/auth/login` | No | Login and get JWT token |
+| `GET` | `/api/v1/auth/sessions` | Yes | List current-user auth sessions without exposing raw `sid` |
 | `POST` | `/api/v1/auth/logout` | Yes | Revoke the current auth session |
 | `POST` | `/api/v1/auth/logout-all` | Yes | Revoke all active auth sessions for the current tenant/user |
 | `GET` | `/api/v1/dev/ping` | No | Dev ping test |
@@ -263,6 +265,30 @@ Response:
 ```
 
 Logout-all revokes every active session for the current authenticated user in the current tenant, including the caller's current session. It does not revoke sessions for other users or other tenants. Reusing any token from the revoked current user sessions on protected endpoints returns `401`.
+
+### 2b. Current-User Sessions (`GET /api/v1/auth/sessions`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "items": [
+      {
+        "currentSession": true,
+        "status": "ACTIVE",
+        "createdAt": "2026-05-19T10:00:00Z",
+        "expiresAt": "2026-05-19T12:00:00Z",
+        "revokedAt": null
+      }
+    ]
+  }
+}
+```
+
+The session inventory is scoped to the authenticated `tenantId + userId`, ordered newest first, marks the current JWT `sid`, computes `EXPIRED` from `expiresAt <= now`, and does not expose raw `sid`, row ids, tenant/user ids, device metadata, or selective revoke handles.
 
 ### 3. Current User (`GET /api/v1/user/me`)
 

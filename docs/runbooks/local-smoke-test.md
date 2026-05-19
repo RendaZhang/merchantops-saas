@@ -1,6 +1,6 @@
 # Local Smoke Test
 
-Last updated: 2026-04-10
+Last updated: 2026-05-19
 
 > Maintenance note: keep this page as the current PowerShell-first live smoke path for the public workflow surface. Keep it step-by-step, happy-path-oriented, and reusable across phases. Broad negative-path coverage and environment-wide checks belong in [automated-tests.md](automated-tests.md) and [regression-checklist.md](regression-checklist.md), not as historical add-ons here.
 
@@ -11,7 +11,7 @@ Use this runbook after the automated suite passes and you want one local end-to-
 This smoke flow covers:
 
 - health and admin login
-- current auth/context reads
+- current auth/context/session reads
 - tenant-scoped user-management loop
 - approval plus audit happy path for user disable
 - ticket workflow happy path
@@ -106,6 +106,7 @@ Expected results:
 ```powershell
 $me = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/user/me" -Headers $adminHeaders
 $context = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/context" -Headers $adminHeaders
+$authSessions = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/auth/sessions" -Headers $adminHeaders
 $roleList = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/roles" -Headers $adminHeaders
 $userPage = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/users?page=0&size=20" -Headers $adminHeaders
 $opsLookup = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/users?page=0&size=20&username=ops" -Headers $adminHeaders
@@ -117,6 +118,7 @@ $assigneeId = $opsLookup.data.items[0].id
 Expected results:
 
 - `/api/v1/user/me` and `/api/v1/context` return the current admin and tenant context
+- `/api/v1/auth/sessions` returns only current tenant/user sessions, marks the current JWT session, and does not expose a raw `sid`
 - `/api/v1/roles` returns only current-tenant role options
 - `/api/v1/users` and `/api/v1/tickets` return page objects for the current tenant only
 - `$assigneeId` resolves from the current tenant user list instead of relying on a hardcoded seeded ID

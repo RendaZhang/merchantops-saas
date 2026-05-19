@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-05-18
+Last updated: 2026-05-19
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,9 +29,9 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Next Slice Selection Pending
+### Next Slice Selection Pending After G-C1
 
-Goal: select the next narrow Productization Baseline implementation slice after Slice G-C0 recorded the authentication lifecycle contract decision.
+Goal: select the next narrow Productization Baseline implementation slice after Slice G-C1 exposed current-user auth-session inventory.
 
 Expected scope:
 
@@ -39,7 +39,7 @@ Expected scope:
 - prefer narrow backend hardening or existing Swagger-visible admin workflows unless the selected slice directly requires broader scope
 - keep completed root actor, child actor, and child-table ticket tenant-linkage invariants stable if later tenant-integrity work appears
 - keep the current bearer-token plus server-side `auth_session` contract stable unless a dedicated auth-lifecycle slice explicitly changes it
-- prefer current-user session inventory before refresh-token, cookie/session rotation, CSRF, device metadata, selective logout, or logout-all-except-current work
+- use the new current-user session inventory to decide whether selective logout, logout-all-except-current, richer device/session management, refresh-token, cookie/session rotation, or CSRF work is justified
 - avoid broader ticket creation, assignment, status-transition work, deployment automation, or AI autonomy changes unless the selected slice directly requires them
 
 Stop condition:
@@ -50,7 +50,8 @@ Stop condition:
 
 ## Recently Closed
 
-- Slice G-C0: Authentication Lifecycle Contract Decision - [ADR-0013](architecture/adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth boundary on bearer access tokens plus server-side `auth_session` validation, keeps `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, and `POST /api/v1/auth/logout-all` as the current public auth surface, defers refresh tokens, HttpOnly cookies, access-token rotation, CSRF handling, device metadata, selective device logout, and logout-all-except-current, and sequences current-user session inventory before any token transport or rotation change.
+- Slice G-C1: Current-User Session Inventory - `GET /api/v1/auth/sessions` now returns a read-only current-user session list over existing `auth_session` rows for the authenticated tenant/user, marks the current JWT `sid`, computes `ACTIVE` / `EXPIRED` / `REVOKED`, keeps rows sorted by `createdAt DESC, id DESC`, and avoids raw `sid`, device metadata, selective revoke handles, refresh-token, cookie/session rotation, CSRF, and admin UI scope.
+- Slice G-C0: Authentication Lifecycle Contract Decision - [ADR-0013](architecture/adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth boundary on bearer access tokens plus server-side `auth_session` validation, kept `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, and `POST /api/v1/auth/logout-all` as the public auth surface before G-C1, defers refresh tokens, HttpOnly cookies, access-token rotation, CSRF handling, device metadata, selective device logout, and logout-all-except-current, and sequences the now-completed G-C1 current-user session inventory before any token transport or rotation change.
 - Slice I2: Ticket Child Table Tenant Linkage - `V20__enforce_ticket_child_table_tenant_linkage.sql` now adds `ticket(id, tenant_id)` uniqueness plus composite same-tenant foreign keys from `ticket_comment(ticket_id, tenant_id)` and `ticket_operation_log(ticket_id, tenant_id)` to `ticket(id, tenant_id)`, with focused migration plus ticket workflow rejection coverage and default backend regression while leaving public APIs, Swagger, DTOs, services, and admin-console behavior unchanged.
 - Slice I1: Ticket Child Actor Tenant Integrity - `V19__enforce_ticket_child_actor_tenant_integrity.sql` now adds child indexes and composite same-tenant foreign keys from `ticket_comment(created_by, tenant_id)` and `ticket_operation_log(operator_id, tenant_id)` to `users(id, tenant_id)`, with focused migration plus ticket workflow rejection coverage and default backend regression while leaving public APIs, Swagger, DTOs, services, and admin-console behavior unchanged. Slice I2 later covered child-table `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints.
 - Slice H8: Ticket Comment Composer - the admin console now adds a plain internal comment composer to protected `/tickets/:id`, uses the existing `POST /api/v1/tickets/{id}/comments` API, validates comment create requests with Zod, clears input after successful submit, refreshes ticket detail plus the ticket list cache so the new comment and `COMMENTED` workflow log return from the server, and records frontend workspace validation plus mocked browser smoke while leaving ticket creation, assignment, status transitions, ticket AI actions, AI interaction-history drilldown, filters, pagination controls, backend API changes, refresh tokens, cookies, and token rotation deferred.
@@ -61,7 +62,7 @@ Stop condition:
 - Slice H3: Approvals Queue Screen - the admin console now includes a protected `/approvals` route over the existing `GET /api/v1/approval-requests?page=0&size=10` API, with Zod-validated approval-request list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving approval filters, pagination controls, bulk review, payload editing, rejection reasons, proposal creation, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H2: Imports Queue Screen - the admin console now includes a protected `/imports` route over the existing `GET /api/v1/import-jobs?page=0&size=10` API, with Zod-validated import-job list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving upload, detail, `/errors`, filters, pagination controls, replay, selective or edited replay, import AI actions, import AI interaction history, approval workflow UI, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H1: Feature Flags Control Screen - the admin console now includes a protected `/feature-flags` route over the existing `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` API, with Zod-validated feature-flag schemas, a live navigation item, per-row enable/disable controls, query refresh after update, in-page `权限不足` handling for generic permission `403`, and frontend workspace validation while leaving cross-tenant admin, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, backend API changes, refresh tokens, cookies, and token rotation deferred.
-- Slice G-B1: Logout-All Sessions Contract - `POST /api/v1/auth/logout-all` now revokes every `ACTIVE` auth session for the authenticated current user in the current tenant, including the caller's current session, preserves other users and other tenants, adds a minimal admin `Sign out all sessions` action, and records focused auth plus full regression plus frontend workspace validation while leaving refresh tokens, cookies, token rotation, session lists, device metadata, and selective device logout deferred.
+- Slice G-B1: Logout-All Sessions Contract - `POST /api/v1/auth/logout-all` now revokes every `ACTIVE` auth session for the authenticated current user in the current tenant, including the caller's current session, preserves other users and other tenants, adds a minimal admin `Sign out all sessions` action, and records focused auth plus full regression plus frontend workspace validation while leaving refresh tokens, cookies, token rotation, device metadata, and selective device logout deferred. Slice G-C1 later added read-only current-user session inventory.
 - Slice G-A: Auth Session Cleanup Scheduler - the backend now exposes `merchantops.auth.session.cleanup.*`, runs a bounded scheduled cleanup pass that deletes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions, keeps request-time auth behavior unchanged, and records focused auth regression plus same-origin runtime smoke evidence while leaving refresh tokens, cookies, and rotation deferred.
 - Slice F: Tenant Actor Integrity Follow-Up - `V17__enforce_ticket_actor_tenant_integrity.sql` now adds child indexes and composite same-tenant foreign keys for `ticket.assignee_id` and `ticket.created_by` to `users(id, tenant_id)`, with focused database-level rejection coverage. Slice I1 later covered ticket comment/log actor constraints, and Slice I2 later covered child-table ticket tenant constraints.
 - Slice E: First Workflow Screen - the admin console now includes a protected `/tickets` route over the existing `GET /api/v1/tickets?page=0&size=10` API, with a shared authenticated layout, Zod-validated ticket page contract, loading/empty/error states, read-only table rendering, Vite dev-proxy smoke, and Nginx same-origin runtime smoke while keeping mutations, filters, pagination controls, AI actions, approval actions, refresh tokens, and backend API changes deferred.
@@ -72,7 +73,6 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Slice G-C1: Current-User Session Inventory - add a narrow current-user session read model over existing `auth_session` rows with a current-session marker, coarse timestamps, and no refresh-token, cookie/session rotation, device metadata, or selective logout scope unless explicitly added.
 - Slice G-C2: Selective Session Revocation Follow-Up - only after G-C1, decide whether logout-all-except-current or per-session revocation is justified by the inventory UX, keeping cookie/session rotation separate.
 - Slice G-C3: Cookie Or Refresh-Token Transport Decision - only after session visibility is useful, decide through a separate ADR whether HttpOnly cookies, refresh tokens, CSRF handling, and token rotation are worth the added complexity.
 

@@ -43,6 +43,7 @@ class OpenApiDocumentationIntegrationTest {
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.openapi").exists())
                 .andExpect(jsonPath("$.info.title").value("MerchantOps SaaS API"))
-                .andExpect(content().string(containsString("/api/v1/auth/login")));
+                .andExpect(content().string(containsString("/api/v1/auth/login")))
+                .andExpect(content().string(containsString("/api/v1/auth/sessions")));
     }
 }

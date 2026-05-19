@@ -57,6 +57,7 @@ Use this checklist after foundation-level changes, security changes, environment
 - [ ] `POST /api/v1/auth/logout` revokes only the current session and sets `revoked_at`
 - [ ] `POST /api/v1/auth/logout-all` revokes every `ACTIVE` session for the current tenant/user and sets `revoked_at`
 - [ ] logout-all does not revoke sessions for another user in the same tenant or a user in another tenant
+- [ ] `GET /api/v1/auth/sessions` returns only the current tenant/user rows, marks the current JWT session, computes `ACTIVE` / `EXPIRED` / `REVOKED`, and does not expose raw `sid`
 - [ ] if auth-session cleanup changed, retention-aged expired `ACTIVE` rows and retention-aged `REVOKED` rows are deleted in bounded batches while recently revoked rows remain
 - [ ] reusing the same token after logout returns `401` with `authentication required`
 - [ ] two logins for the same user create independent sessions, and logging out one token does not invalidate the other token

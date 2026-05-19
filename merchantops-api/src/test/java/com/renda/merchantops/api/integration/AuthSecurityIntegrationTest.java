@@ -417,6 +417,67 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void listSessionsShouldReturnCurrentUserSessionsWithComputedStatusAndStableSort() throws Exception {
+        String firstAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String secondAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+        String otherTenantToken = loginAndGetToken("other-shop", "outsider", "123456");
+        String firstAdminSessionId = sessionIdFromToken(firstAdminToken);
+        String secondAdminSessionId = sessionIdFromToken(secondAdminToken);
+        String opsSessionId = sessionIdFromToken(opsToken);
+        String otherTenantSessionId = sessionIdFromToken(otherTenantToken);
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+
+        jdbcTemplate.update(
+                "UPDATE auth_session SET created_at = ? WHERE session_id = ?",
+                toUtcLocalDateTime(now.minus(3, ChronoUnit.HOURS)),
+                firstAdminSessionId
+        );
+        jdbcTemplate.update(
+                "UPDATE auth_session SET created_at = ? WHERE session_id = ?",
+                toUtcLocalDateTime(now.minus(1, ChronoUnit.HOURS)),
+                secondAdminSessionId
+        );
+        insertAuthSession(9101L, "expired-visible-admin-session", 1L, 101L, "ACTIVE",
+                now.minus(2, ChronoUnit.HOURS), now.minus(30, ChronoUnit.MINUTES), null);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(firstAdminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        mockMvc.perform(get("/api/v1/auth/sessions")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(secondAdminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.items", hasSize(3)))
+                .andExpect(jsonPath("$.data.items[0].currentSession").value(true))
+                .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.items[0].revokedAt").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].sessionId").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].id").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].tenantId").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].userId").doesNotExist())
+                .andExpect(jsonPath("$.data.items[1].currentSession").value(false))
+                .andExpect(jsonPath("$.data.items[1].status").value("EXPIRED"))
+                .andExpect(jsonPath("$.data.items[1].revokedAt").doesNotExist())
+                .andExpect(jsonPath("$.data.items[2].currentSession").value(false))
+                .andExpect(jsonPath("$.data.items[2].status").value("REVOKED"))
+                .andExpect(jsonPath("$.data.items[2].revokedAt").exists());
+
+        assertThat(sessionStatus(opsSessionId)).isEqualTo("ACTIVE");
+        assertThat(sessionStatus(otherTenantSessionId)).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void listSessionsShouldRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/sessions"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
     void logoutAllShouldRevokeOnlyCurrentTenantUserActiveSessions() throws Exception {
         String firstAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
         String secondAdminToken = loginAndGetToken("demo-shop", "admin", "123456");

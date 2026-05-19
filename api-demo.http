@@ -605,6 +605,12 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/import-jobs/{{importJobId}}/errors?page=0&size=10&errorCode=UNKNOWN_ROLE
 Authorization: Bearer {{token}}
 
+### List current-user auth sessions
+# Returns only sessions for the authenticated tenant/user, marks the current
+# JWT session, and does not expose raw sid or device metadata.
+GET {{baseUrl}}/api/v1/auth/sessions
+Authorization: Bearer {{token}}
+
 ### Logout current auth session
 # Run this at the end of a smoke flow. After it succeeds, reusing the same token on
 # protected endpoints such as GET /api/v1/context should return 401.

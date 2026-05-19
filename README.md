@@ -10,13 +10,13 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 - Current tagged milestone: `v0.7.0-beta`
 - Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
-- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, Slice G-A auth-session cleanup scheduler, Slice G-B1 logout-all sessions contract, Slice G-C0 auth lifecycle contract decision, Slice H1 Feature Flags control screen, Slice H2 Imports queue screen, Slice H3 Approvals queue screen, Slice H4 AI Interactions usage-summary screen, Slice H5 Import Job detail/errors screen, Slice H6 Approval Request detail/review controls, Slice H7 Ticket Detail activity screen, Slice H8 Ticket Comment Composer, Slice I1 ticket child actor tenant-integrity hardening, and Slice I2 ticket child table tenant-linkage hardening are complete; the next implementation slice is not selected yet
+- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, Slice G-A auth-session cleanup scheduler, Slice G-B1 logout-all sessions contract, Slice G-C0 auth lifecycle contract decision, Slice G-C1 current-user session inventory, Slice H1 Feature Flags control screen, Slice H2 Imports queue screen, Slice H3 Approvals queue screen, Slice H4 AI Interactions usage-summary screen, Slice H5 Import Job detail/errors screen, Slice H6 Approval Request detail/review controls, Slice H7 Ticket Detail activity screen, Slice H8 Ticket Comment Composer, Slice I1 ticket child actor tenant-integrity hardening, and Slice I2 ticket child table tenant-linkage hardening are complete; the next implementation slice is not selected yet
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
 - Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 
 ## Core Capabilities
 
-- Tenant-scoped authentication, context propagation, user management, role assignment, and stale-token revalidation.
+- Tenant-scoped authentication, current-user auth-session inventory, context propagation, user management, role assignment, and stale-token revalidation.
 - Ticket workflow with list/detail/create, assignment, status transitions, comments, workflow logs, and tenant-scoped audit events.
 - Async `USER_CSV` import jobs with queued execution, paged errors, replay variants, derived-job lineage, and stale-processing recovery.
 - Human-reviewed approval flows for user disable, import selective replay proposals, and ticket comment proposals.
@@ -142,7 +142,7 @@ The CI gate is intentionally minimal. It does not deploy, publish Docker images,
 - Public AI endpoints are read-only or suggestion-only. AI-generated ticket comments and import selective replay still go through separate human-reviewed approval bridges before execution.
 - AI usage/cost metadata is a governance read surface over stored runtime metadata, not billing, ledger, invoice, or commercial metering infrastructure.
 - CI does not require AI provider secrets and does not prove live vendor behavior.
-- K8s, Helm, real secret-manager integration, performance artifacts, refresh tokens, cookie/session rotation, device-aware session management, and a broader reporting system remain outside the current baseline.
+- K8s, Helm, real secret-manager integration, performance artifacts, refresh tokens, cookie/session rotation, device-aware session management beyond the read-only current-user inventory, and a broader reporting system remain outside the current baseline.
 
 ## Contributing, Security, And License
 

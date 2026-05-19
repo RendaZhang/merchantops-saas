@@ -1,10 +1,13 @@
 package com.renda.merchantops.api.auth;
 
+import com.renda.merchantops.api.dto.auth.AuthSessionListItemResponse;
+import com.renda.merchantops.api.dto.auth.AuthSessionListResponse;
 import com.renda.merchantops.api.dto.auth.LoginRequest;
 import com.renda.merchantops.api.dto.auth.LoginResponse;
 import com.renda.merchantops.api.security.CurrentUser;
 import com.renda.merchantops.api.security.JwtTokenService;
 import com.renda.merchantops.domain.auth.AuthSession;
+import com.renda.merchantops.domain.auth.AuthSessionStatus;
 import com.renda.merchantops.domain.auth.AuthSessionUseCase;
 import com.renda.merchantops.domain.auth.AuthenticationCommand;
 import com.renda.merchantops.domain.auth.AuthenticationResult;
@@ -13,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -70,5 +75,33 @@ public class AuthService {
                 currentUser.getUserId(),
                 Instant.now()
         );
+    }
+
+    public AuthSessionListResponse listSessions(CurrentUser currentUser) {
+        Instant now = Instant.now();
+        List<AuthSessionListItemResponse> items = authSessionUseCase.listSessionsForUser(
+                        currentUser.getTenantId(),
+                        currentUser.getUserId()
+                )
+                .stream()
+                .map(session -> new AuthSessionListItemResponse(
+                        Objects.equals(session.sessionId(), currentUser.getSessionId()),
+                        resolveSessionStatus(session, now),
+                        session.createdAt(),
+                        session.expiresAt(),
+                        session.revokedAt()
+                ))
+                .toList();
+        return new AuthSessionListResponse(items);
+    }
+
+    private String resolveSessionStatus(AuthSession session, Instant now) {
+        if (session.status() == AuthSessionStatus.REVOKED) {
+            return AuthSessionStatus.REVOKED.name();
+        }
+        if (!session.expiresAt().isAfter(now)) {
+            return "EXPIRED";
+        }
+        return AuthSessionStatus.ACTIVE.name();
     }
 }

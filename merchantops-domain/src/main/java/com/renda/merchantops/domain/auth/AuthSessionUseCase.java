@@ -1,6 +1,7 @@
 package com.renda.merchantops.domain.auth;
 
 import java.time.Instant;
+import java.util.List;
 
 public interface AuthSessionUseCase {
 
@@ -22,6 +23,9 @@ public interface AuthSessionUseCase {
     int revokeAllSessions(Long tenantId,
                           Long userId,
                           Instant revokedAt);
+
+    List<AuthSession> listSessionsForUser(Long tenantId,
+                                          Long userId);
 
     int cleanupExpiredOrRevokedSessions(Instant now,
                                         long retentionSeconds,

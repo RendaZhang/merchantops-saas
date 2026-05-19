@@ -15,6 +15,8 @@ public interface AuthSessionRepository extends JpaRepository<AuthSessionEntity, 
 
     Optional<AuthSessionEntity> findBySessionId(String sessionId);
 
+    List<AuthSessionEntity> findAllByTenantIdAndUserIdOrderByCreatedAtDescIdDesc(Long tenantId, Long userId);
+
     @Query("""
             select a.id
             from AuthSessionEntity a

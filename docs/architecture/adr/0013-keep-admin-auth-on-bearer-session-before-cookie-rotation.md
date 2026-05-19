@@ -17,7 +17,7 @@ The Productization Baseline already has a server-side `auth_session` foundation:
 
 The same-origin admin runtime now makes cookie-based auth technically possible, but moving directly to refresh tokens, HttpOnly cookies, token rotation, CSRF handling, and selective session management would combine several separate security and UX decisions into one large slice.
 
-That would make the next step too broad for the current Productization Baseline. It would also blur the current public contract, where Swagger-visible auth endpoints are limited to login, current-session logout, and logout-all.
+That would make the next step too broad for the current Productization Baseline. It would also blur the current public contract, which intentionally evolves in narrow Swagger-visible auth slices instead of combining token transport and session-management work.
 
 ## Decision
 
@@ -25,7 +25,7 @@ For the current Productization Baseline, MerchantOps SaaS will keep the admin au
 
 Refresh tokens, HttpOnly cookie auth, access-token rotation, CSRF protection, device metadata, selective device logout, and logout-all-except-current remain deferred until they are selected as dedicated slices.
 
-The next auth-lifecycle implementation should start with a current-user session inventory before any token transport or rotation change. That inventory should make the existing server-side session model visible enough for operators to reason about active sessions, current-session identity, and revocation behavior without changing the login response shape or browser storage model.
+The first follow-up auth-lifecycle implementation is a current-user session inventory before any token transport or rotation change. That inventory makes the existing server-side session model visible enough for operators to reason about active sessions, current-session identity, and revocation behavior without changing the login response shape or browser storage model.
 
 Any later move to cookies or refresh tokens must be handled as a separate architecture decision and implementation slice. That later decision must explicitly cover:
 
@@ -39,9 +39,9 @@ Any later move to cookies or refresh tokens must be handled as a separate archit
 
 ## Consequences
 
-- the current public auth surface stays stable: `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, and `POST /api/v1/auth/logout-all`
+- the current public auth surface stays narrow: `POST /api/v1/auth/login`, `GET /api/v1/auth/sessions`, `POST /api/v1/auth/logout`, and `POST /api/v1/auth/logout-all`
 - the admin console continues to use relative `/api/...` calls and bearer authorization headers
 - the server-side `auth_session` table remains the source of revocation truth for active, revoked, expired, and cleanup-deleted sessions
-- the next narrow implementation slice can add read-only session visibility without taking on refresh-token or cookie-auth risk
-- cookie/session rotation remains available as a future hardening step, but it should not be bundled with session inventory, selective logout, or unrelated admin-console workflow depth
+- read-only session visibility is implemented without taking on refresh-token or cookie-auth risk
+- cookie/session rotation remains available as a future hardening step, but it should not be bundled with selective logout or unrelated admin-console workflow depth
 - docs and runbooks must continue to state that no refresh-token flow, cookie/session rotation, device metadata, selective device logout, or logout-all-except-current flow is currently implemented

@@ -1,5 +1,6 @@
 package com.renda.merchantops.api.auth;
 
+import com.renda.merchantops.api.dto.auth.AuthSessionListResponse;
 import com.renda.merchantops.api.dto.auth.LoginRequest;
 import com.renda.merchantops.api.dto.auth.LoginResponse;
 import com.renda.merchantops.api.platform.response.ApiResponse;
@@ -31,5 +32,10 @@ public class AuthController implements AuthApi {
     public ApiResponse<Void> logoutAll(@AuthenticationPrincipal CurrentUser currentUser) {
         authService.logoutAll(currentUser);
         return ApiResponse.success(null);
+    }
+
+    @Override
+    public ApiResponse<AuthSessionListResponse> listSessions(@AuthenticationPrincipal CurrentUser currentUser) {
+        return ApiResponse.success(authService.listSessions(currentUser));
     }
 }

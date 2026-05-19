@@ -70,6 +70,14 @@ public class JpaAuthSessionAdapter implements AuthSessionPort {
     }
 
     @Override
+    public List<AuthSession> findAllByTenantIdAndUserId(Long tenantId, Long userId) {
+        return authSessionRepository.findAllByTenantIdAndUserIdOrderByCreatedAtDescIdDesc(tenantId, userId)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public int cleanupExpiredOrRevokedSessions(Instant cutoff, int limit) {
         List<Long> candidateIds = authSessionRepository.findCleanupCandidateIds(

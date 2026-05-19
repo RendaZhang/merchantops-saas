@@ -1,6 +1,7 @@
 package com.renda.merchantops.domain.auth;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -58,6 +59,12 @@ public final class AuthSessionService implements AuthSessionUseCase {
                                  Long userId,
                                  Instant revokedAt) {
         return authSessionPort.revokeActiveSessionsForUser(tenantId, userId, revokedAt);
+    }
+
+    @Override
+    public List<AuthSession> listSessionsForUser(Long tenantId,
+                                                 Long userId) {
+        return authSessionPort.findAllByTenantIdAndUserId(tenantId, userId);
     }
 
     @Override
