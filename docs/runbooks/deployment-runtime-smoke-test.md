@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-05-19
+Last updated: 2026-05-21
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -66,6 +66,7 @@ $adminBaseUrl = "http://localhost:8081"
 Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/health"
 Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/actuator/health"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/"
+Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/sessions"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/tickets"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/tickets/1"
 Invoke-WebRequest -Method Get -Uri "$adminBaseUrl/feature-flags"
@@ -81,6 +82,7 @@ Expected result:
 - `/health` returns `UP`.
 - `/actuator/health` returns `UP`.
 - `http://localhost:8081/` returns the admin HTML shell.
+- `http://localhost:8081/sessions` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/tickets` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/tickets/1` returns the same admin HTML shell through SPA history fallback.
 - `http://localhost:8081/feature-flags` returns the same admin HTML shell through SPA history fallback.
@@ -278,19 +280,20 @@ Open `http://localhost:8081`.
 
 1. Log in with `demo-shop` / `admin` / `123456`.
 2. Confirm the dashboard renders tenant and operator context.
-3. Open `Tickets` and confirm `/tickets` renders the read-only current tenant ticket queue.
-4. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow operation logs; submit a disposable internal comment and confirm the input clears while comments and logs refresh.
-5. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
-6. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
-7. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.
-8. Open `Approvals` and confirm `/approvals` renders the read-only current tenant approval-request queue or empty state.
-9. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
-10. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.
-11. Toggle one feature flag and restore the original value.
-12. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
-13. Refresh `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data restore while the session is active.
-14. Select `Sign out` and confirm the login screen returns.
-15. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
+3. Open `Sessions` and confirm `/sessions` renders the read-only current-user auth-session inventory.
+4. Open `Tickets` and confirm `/tickets` renders the read-only current tenant ticket queue.
+5. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow operation logs; submit a disposable internal comment and confirm the input clears while comments and logs refresh.
+6. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
+7. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
+8. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.
+9. Open `Approvals` and confirm `/approvals` renders the read-only current tenant approval-request queue or empty state.
+10. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
+11. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.
+12. Toggle one feature flag and restore the original value.
+13. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
+14. Refresh `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data restore while the session is active.
+15. Select `Sign out` and confirm the login screen returns.
+16. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
 
 Do not use `http://localhost:5173` for this runbook; that is the Vite dev-server path.
 

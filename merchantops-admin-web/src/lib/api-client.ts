@@ -5,6 +5,7 @@ import {
   type AiInteractionUsageSummary,
   type ApprovalRequest,
   type ApprovalRequestPage,
+  type AuthSessionList,
   type ContextResponse,
   type FeatureFlagItem,
   type FeatureFlagList,
@@ -21,6 +22,7 @@ import {
   aiInteractionUsageSummarySchema,
   approvalRequestSchema,
   approvalRequestPageSchema,
+  authSessionListSchema,
   contextResponseSchema,
   featureFlagItemSchema,
   featureFlagListSchema,
@@ -107,6 +109,12 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 
 export function getContext(): Promise<ContextResponse> {
   return apiRequest('/api/v1/context', contextResponseSchema, {
+    authenticated: true,
+  })
+}
+
+export function getAuthSessions(): Promise<AuthSessionList> {
+  return apiRequest('/api/v1/auth/sessions', authSessionListSchema, {
     authenticated: true,
   })
 }

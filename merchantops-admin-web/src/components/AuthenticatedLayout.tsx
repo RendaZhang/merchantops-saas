@@ -20,6 +20,7 @@ export function AuthenticatedLayout() {
   const clearSessionState = useCallback(() => {
     clearAuthSession()
     queryClient.removeQueries({ queryKey: ['context'] })
+    queryClient.removeQueries({ queryKey: ['auth-sessions'] })
     queryClient.removeQueries({ queryKey: ['tickets'] })
     queryClient.removeQueries({ queryKey: ['feature-flags'] })
     queryClient.removeQueries({ queryKey: ['import-jobs'] })

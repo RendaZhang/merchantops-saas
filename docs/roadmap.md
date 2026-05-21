@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-05-19
+Last updated: 2026-05-21
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,9 +29,9 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Next Slice Selection Pending After G-C1
+### Next Slice Selection Pending After G-C1A
 
-Goal: select the next narrow Productization Baseline implementation slice after Slice G-C1 exposed current-user auth-session inventory.
+Goal: select the next narrow Productization Baseline implementation slice after Slice G-C1A exposed current-user auth-session inventory in the admin console.
 
 Expected scope:
 
@@ -39,7 +39,7 @@ Expected scope:
 - prefer narrow backend hardening or existing Swagger-visible admin workflows unless the selected slice directly requires broader scope
 - keep completed root actor, child actor, and child-table ticket tenant-linkage invariants stable if later tenant-integrity work appears
 - keep the current bearer-token plus server-side `auth_session` contract stable unless a dedicated auth-lifecycle slice explicitly changes it
-- use the new current-user session inventory to decide whether selective logout, logout-all-except-current, richer device/session management, refresh-token, cookie/session rotation, or CSRF work is justified
+- use the admin-visible current-user session inventory to decide whether selective logout, logout-all-except-current, richer device/session management, refresh-token, cookie/session rotation, or CSRF work is justified
 - avoid broader ticket creation, assignment, status-transition work, deployment automation, or AI autonomy changes unless the selected slice directly requires them
 
 Stop condition:
@@ -50,7 +50,8 @@ Stop condition:
 
 ## Recently Closed
 
-- Slice G-C1: Current-User Session Inventory - `GET /api/v1/auth/sessions` now returns a read-only current-user session list over existing `auth_session` rows for the authenticated tenant/user, marks the current JWT `sid`, computes `ACTIVE` / `EXPIRED` / `REVOKED`, keeps rows sorted by `createdAt DESC, id DESC`, and avoids raw `sid`, device metadata, selective revoke handles, refresh-token, cookie/session rotation, CSRF, and admin UI scope.
+- Slice G-C1A: Admin Session Inventory Screen - the admin console now adds a protected `/sessions` route over the existing `GET /api/v1/auth/sessions` API, validates the response with Zod, renders a read-only current-user session table with current-session marker, status, created, expiry, and revoked timestamps, and clears the sessions query cache on login, sign out, and sign-out-all while keeping raw `sid`, device metadata, selective revoke controls, logout-all-except-current, refresh-token, cookie/session rotation, CSRF, and backend API changes deferred.
+- Slice G-C1: Current-User Session Inventory - `GET /api/v1/auth/sessions` now returns a read-only current-user session list over existing `auth_session` rows for the authenticated tenant/user, marks the current JWT `sid`, computes `ACTIVE` / `EXPIRED` / `REVOKED`, keeps rows sorted by `createdAt DESC, id DESC`, and avoids raw `sid`, device metadata, selective revoke handles, refresh-token, cookie/session rotation, and CSRF. Slice G-C1A later added the read-only admin screen over this existing contract.
 - Slice G-C0: Authentication Lifecycle Contract Decision - [ADR-0013](architecture/adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth boundary on bearer access tokens plus server-side `auth_session` validation, kept `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, and `POST /api/v1/auth/logout-all` as the public auth surface before G-C1, defers refresh tokens, HttpOnly cookies, access-token rotation, CSRF handling, device metadata, selective device logout, and logout-all-except-current, and sequences the now-completed G-C1 current-user session inventory before any token transport or rotation change.
 - Slice I2: Ticket Child Table Tenant Linkage - `V20__enforce_ticket_child_table_tenant_linkage.sql` now adds `ticket(id, tenant_id)` uniqueness plus composite same-tenant foreign keys from `ticket_comment(ticket_id, tenant_id)` and `ticket_operation_log(ticket_id, tenant_id)` to `ticket(id, tenant_id)`, with focused migration plus ticket workflow rejection coverage and default backend regression while leaving public APIs, Swagger, DTOs, services, and admin-console behavior unchanged.
 - Slice I1: Ticket Child Actor Tenant Integrity - `V19__enforce_ticket_child_actor_tenant_integrity.sql` now adds child indexes and composite same-tenant foreign keys from `ticket_comment(created_by, tenant_id)` and `ticket_operation_log(operator_id, tenant_id)` to `users(id, tenant_id)`, with focused migration plus ticket workflow rejection coverage and default backend regression while leaving public APIs, Swagger, DTOs, services, and admin-console behavior unchanged. Slice I2 later covered child-table `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints.
@@ -73,7 +74,7 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Slice G-C2: Selective Session Revocation Follow-Up - only after G-C1, decide whether logout-all-except-current or per-session revocation is justified by the inventory UX, keeping cookie/session rotation separate.
+- Slice G-C2: Selective Session Revocation Follow-Up - only after G-C1A, decide whether logout-all-except-current or per-session revocation is justified by the inventory UX, keeping cookie/session rotation separate.
 - Slice G-C3: Cookie Or Refresh-Token Transport Decision - only after session visibility is useful, decide through a separate ADR whether HttpOnly cookies, refresh tokens, CSRF handling, and token rotation are worth the added complexity.
 
 ## Default Deferrals

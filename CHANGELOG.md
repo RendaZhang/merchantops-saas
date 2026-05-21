@@ -28,6 +28,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added Productization Baseline Slice I2 tenant-integrity hardening for ticket child table linkage, including `ticket(id, tenant_id)` uniqueness plus composite same-tenant foreign keys for `ticket_comment(ticket_id, tenant_id)` and `ticket_operation_log(ticket_id, tenant_id)` back to `ticket(id, tenant_id)`.
 - Added Productization Baseline Slice G-C0 as an auth lifecycle contract decision, keeping the current admin auth boundary on bearer access tokens plus server-side `auth_session` validation and sequencing the now-completed G-C1 current-user session inventory before refresh-token or cookie/session rotation work.
 - Added Productization Baseline Slice G-C1 current-user auth-session inventory through `GET /api/v1/auth/sessions`, returning only the authenticated tenant/user sessions with current-session marking, computed `ACTIVE` / `EXPIRED` / `REVOKED` status, and no raw `sid`, row id, tenant/user id, device metadata, or selective revoke handle.
+- Added Productization Baseline Slice G-C1A as a read-only Admin Session Inventory screen at `/sessions` over the existing `GET /api/v1/auth/sessions` API, with query-cache cleanup on login, sign out, and sign-out-all while keeping raw `sid`, device metadata, selective revoke, logout-all-except-current, refresh tokens, cookies, and CSRF deferred.
 
 ### Changed
 

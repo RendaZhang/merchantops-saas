@@ -10,6 +10,7 @@ import { LoginPage } from '../features/auth/LoginPage'
 import { FeatureFlagsPage } from '../features/feature-flags/FeatureFlagsPage'
 import { ImportJobDetailPage } from '../features/imports/ImportJobDetailPage'
 import { ImportsPage } from '../features/imports/ImportsPage'
+import { SessionsPage } from '../features/sessions/SessionsPage'
 import { TicketDetailPage } from '../features/tickets/TicketDetailPage'
 import { TicketsPage } from '../features/tickets/TicketsPage'
 
@@ -28,6 +29,10 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <DashboardPage />,
+          },
+          {
+            path: 'sessions',
+            element: <SessionsPage />,
           },
           {
             path: 'tickets',

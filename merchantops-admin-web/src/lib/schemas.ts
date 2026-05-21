@@ -19,6 +19,18 @@ export const contextResponseSchema = z.object({
   username: z.string(),
 })
 
+export const authSessionListItemSchema = z.object({
+  currentSession: z.boolean(),
+  status: z.string(),
+  createdAt: z.string(),
+  expiresAt: z.string(),
+  revokedAt: z.string().nullable(),
+})
+
+export const authSessionListSchema = z.object({
+  items: z.array(authSessionListItemSchema),
+})
+
 export const ticketListItemSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -253,6 +265,8 @@ export const jwtDisplayClaimsSchema = z
 export type LoginRequest = z.infer<typeof loginRequestSchema>
 export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type ContextResponse = z.infer<typeof contextResponseSchema>
+export type AuthSessionListItem = z.infer<typeof authSessionListItemSchema>
+export type AuthSessionList = z.infer<typeof authSessionListSchema>
 export type TicketListItem = z.infer<typeof ticketListItemSchema>
 export type TicketComment = z.infer<typeof ticketCommentSchema>
 export type TicketCommentCreateRequest = z.infer<

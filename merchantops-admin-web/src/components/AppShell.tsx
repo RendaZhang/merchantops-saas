@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 
 const readyNavigationItems = [
   { label: 'Dashboard', path: '/' },
+  { label: 'Sessions', path: '/sessions' },
   { label: 'Tickets', path: '/tickets' },
   { label: 'Feature Flags', path: '/feature-flags' },
   { label: 'Imports', path: '/imports' },
@@ -81,8 +82,8 @@ export function AppShell({
             <p className="text-sm font-medium text-emerald-700">Productization Baseline</p>
             <p className="max-w-3xl text-sm text-neutral-600">
               Same-origin runtime, current tenant context, sign out, and the
-              read-only ticket, import, and approval workflows plus feature
-              flag controls and AI usage summary are connected.
+              read-only session, ticket, import, and approval workflows plus
+              feature flag controls and AI usage summary are connected.
             </p>
           </header>
 
