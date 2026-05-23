@@ -44,6 +44,7 @@ class OpenApiDocumentationIntegrationTest {
                 .andExpect(jsonPath("$.openapi").exists())
                 .andExpect(jsonPath("$.info.title").value("MerchantOps SaaS API"))
                 .andExpect(content().string(containsString("/api/v1/auth/login")))
-                .andExpect(content().string(containsString("/api/v1/auth/sessions")));
+                .andExpect(content().string(containsString("/api/v1/auth/sessions")))
+                .andExpect(content().string(containsString("/api/v1/auth/logout-others")));
     }
 }

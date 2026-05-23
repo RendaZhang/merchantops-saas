@@ -1,18 +1,32 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { useAuthenticatedRoute } from '../../components/authenticated-route-context'
 import { StatusPanel } from '../../components/StatusPanel'
-import { getAuthSessions, isAuthenticationError } from '../../lib/api-client'
+import {
+  getAuthSessions,
+  isAuthenticationError,
+  logoutOthers,
+} from '../../lib/api-client'
 import type { AuthSessionListItem } from '../../lib/schemas'
 
 const authSessionsQueryKey = ['auth-sessions'] as const
 
 export function SessionsPage() {
   const { handleAuthenticationError } = useAuthenticatedRoute()
+  const queryClient = useQueryClient()
   const authSessionsQuery = useQuery({
     queryKey: authSessionsQueryKey,
     queryFn: getAuthSessions,
+  })
+  const logoutOthersMutation = useMutation({
+    mutationFn: logoutOthers,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: authSessionsQueryKey })
+    },
+    onError: (error) => {
+      handleAuthenticationError(error)
+    },
   })
 
   useEffect(() => {
@@ -52,6 +66,14 @@ export function SessionsPage() {
   }
 
   const sessions = authSessionsQuery.data.items
+  const hasOtherActiveSessions = sessions.some(
+    (session) => !session.currentSession && session.status === 'ACTIVE',
+  )
+  const logoutOthersError = logoutOthersMutation.error
+  const logoutOthersErrorMessage =
+    logoutOthersError && !isAuthenticationError(logoutOthersError)
+      ? logoutOthersError.message
+      : null
 
   return (
     <section className="rounded-lg border border-neutral-200 bg-white">
@@ -62,10 +84,42 @@ export function SessionsPage() {
             Current-user inventory
           </h2>
         </div>
-        <p className="text-sm text-neutral-600">
-          Showing {formatSessionCount(sessions.length)}
-        </p>
+        <div className="flex flex-col gap-2 sm:items-end">
+          <p className="text-sm text-neutral-600">
+            Showing {formatSessionCount(sessions.length)}
+          </p>
+          <button
+            className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-950 disabled:border-neutral-200 disabled:text-neutral-400"
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  'Sign out every other active session for this account?',
+                )
+              ) {
+                logoutOthersMutation.mutate()
+              }
+            }}
+            disabled={logoutOthersMutation.isPending || !hasOtherActiveSessions}
+          >
+            {logoutOthersMutation.isPending
+              ? 'Signing out others...'
+              : 'Sign out other sessions'}
+          </button>
+        </div>
       </div>
+
+      {logoutOthersMutation.isSuccess ? (
+        <p className="border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-700">
+          Other active sessions were signed out.
+        </p>
+      ) : null}
+
+      {logoutOthersErrorMessage ? (
+        <p className="border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm text-rose-700">
+          {logoutOthersErrorMessage}
+        </p>
+      ) : null}
 
       <div className="overflow-x-auto">
         <table className="min-w-[860px] table-fixed divide-y divide-neutral-200 text-left">

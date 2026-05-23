@@ -47,4 +47,21 @@ public interface AuthSessionRepository extends JpaRepository<AuthSessionEntity, 
                                     @Param("activeStatus") String activeStatus,
                                     @Param("revokedStatus") String revokedStatus,
                                     @Param("revokedAt") LocalDateTime revokedAt);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update AuthSessionEntity a
+            set a.status = :revokedStatus,
+                a.revokedAt = :revokedAt
+            where a.tenantId = :tenantId
+              and a.userId = :userId
+              and a.sessionId <> :currentSessionId
+              and a.status = :activeStatus
+            """)
+    int revokeOtherActiveSessionsForUser(@Param("tenantId") Long tenantId,
+                                         @Param("userId") Long userId,
+                                         @Param("currentSessionId") String currentSessionId,
+                                         @Param("activeStatus") String activeStatus,
+                                         @Param("revokedStatus") String revokedStatus,
+                                         @Param("revokedAt") LocalDateTime revokedAt);
 }

@@ -35,6 +35,12 @@ public class AuthController implements AuthApi {
     }
 
     @Override
+    public ApiResponse<Void> logoutOthers(@AuthenticationPrincipal CurrentUser currentUser) {
+        authService.logoutOthers(currentUser);
+        return ApiResponse.success(null);
+    }
+
+    @Override
     public ApiResponse<AuthSessionListResponse> listSessions(@AuthenticationPrincipal CurrentUser currentUser) {
         return ApiResponse.success(authService.listSessions(currentUser));
     }

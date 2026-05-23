@@ -70,6 +70,22 @@ public class JpaAuthSessionAdapter implements AuthSessionPort {
     }
 
     @Override
+    @Transactional
+    public int revokeOtherActiveSessionsForUser(Long tenantId,
+                                                Long userId,
+                                                String currentSessionId,
+                                                Instant revokedAt) {
+        return authSessionRepository.revokeOtherActiveSessionsForUser(
+                tenantId,
+                userId,
+                currentSessionId,
+                AuthSessionStatus.ACTIVE.name(),
+                AuthSessionStatus.REVOKED.name(),
+                toUtcLocalDateTime(revokedAt)
+        );
+    }
+
+    @Override
     public List<AuthSession> findAllByTenantIdAndUserId(Long tenantId, Long userId) {
         return authSessionRepository.findAllByTenantIdAndUserIdOrderByCreatedAtDescIdDesc(tenantId, userId)
                 .stream()

@@ -287,6 +287,14 @@ export async function logoutAll(): Promise<void> {
   })
 }
 
+export async function logoutOthers(): Promise<void> {
+  await apiRequest('/api/v1/auth/logout-others', z.null(), {
+    method: 'POST',
+    authenticated: true,
+    allowNullData: true,
+  })
+}
+
 export function isAuthenticationError(error: unknown): boolean {
   return (
     error instanceof ApiClientError &&

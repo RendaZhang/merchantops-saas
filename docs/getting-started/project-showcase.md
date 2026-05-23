@@ -9,7 +9,7 @@ MerchantOps SaaS is a workflow-first SaaS reference implementation for merchant 
 The short story:
 
 - it is not a CRUD-only demo
-- the first product-facing admin console now proves login, tenant context, token restoration, sign-out, a read-only Sessions inventory, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics, Approvals queue/detail review controls, a Feature Flags control screen, and an AI Interactions usage-summary screen
+- the first product-facing admin console now proves login, tenant context, token restoration, sign-out, a Sessions inventory with sign-out-other-sessions, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics, Approvals queue/detail review controls, a Feature Flags control screen, and an AI Interactions usage-summary screen
 - AI is embedded into ticket and import workflows instead of being a standalone chat surface
 - AI outputs stay read-only or suggestion-only unless a separate human-reviewed workflow bridge executes them
 - governance metadata is visible enough for operational review without becoming billing or ledger infrastructure
@@ -37,7 +37,7 @@ Use [quick-start.md](quick-start.md) for API startup commands, [admin-console.md
 - Use `POST /api/v1/auth/login` with tenant `demo-shop`, username `admin`, and password `123456`.
 - Use the returned JWT against `GET /api/v1/context` and `GET /api/v1/auth/sessions`.
 - Explain that protected reads and writes revalidate tenant status, user status, roles, permissions, and the current server-side auth session instead of trusting stale claims indefinitely.
-- Call out that the session inventory is read-only, scoped to the current tenant/user, marks the current JWT session, and intentionally excludes raw `sid`, device metadata, and selective revoke handles.
+- Call out that the session inventory is scoped to the current tenant/user, marks the current JWT session, supports signing out other current-user sessions, and intentionally excludes raw `sid`, device metadata, and per-session revoke handles.
 
 ### 2. Ticket Workflow
 

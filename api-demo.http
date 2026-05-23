@@ -611,6 +611,13 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/v1/auth/sessions
 Authorization: Bearer {{token}}
 
+### Logout other current-user auth sessions
+# Run this in a multi-session smoke flow with a fresh active token. It preserves
+# the current JWT session and revokes other ACTIVE sessions for the same
+# current tenant/user. Other users and other tenants are unaffected.
+POST {{baseUrl}}/api/v1/auth/logout-others
+Authorization: Bearer {{token}}
+
 ### Logout current auth session
 # Run this at the end of a smoke flow. After it succeeds, reusing the same token on
 # protected endpoints such as GET /api/v1/context should return 401.
@@ -619,9 +626,9 @@ Authorization: Bearer {{token}}
 
 ### Logout all current-user auth sessions
 # Run this at the end of a multi-session smoke flow with a fresh active token.
-# If you ran the previous logout request with {{token}}, log in again before
-# running this request. After it succeeds, every active token for the same
-# current tenant/user should return 401 on protected endpoints such as
+# If you ran the current-session logout request with {{token}}, log in again
+# before running this request. After it succeeds, every active token for the
+# same current tenant/user should return 401 on protected endpoints such as
 # GET /api/v1/context.
 POST {{baseUrl}}/api/v1/auth/logout-all
 Authorization: Bearer {{token}}

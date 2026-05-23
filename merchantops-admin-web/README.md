@@ -2,7 +2,7 @@
 
 Vite + React admin console for the Productization Baseline.
 
-This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, a read-only current-user Sessions screen, the current tenant tickets queue plus ticket detail/activity screen with a plain internal comment composer, the read-only current tenant imports queue plus import detail diagnostics, the current tenant approvals queue plus approval detail/review controls, the feature-flag control screen, and the AI Interactions usage-summary screen.
+This app is intentionally thin. The current Productization Baseline proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, other-session sign-out that preserves the current session, a current-user Sessions screen, the current tenant tickets queue plus ticket detail/activity screen with a plain internal comment composer, the read-only current tenant imports queue plus import detail diagnostics, the current tenant approvals queue plus approval detail/review controls, the feature-flag control screen, and the AI Interactions usage-summary screen.
 
 ## Stack
 
@@ -77,6 +77,7 @@ The admin console calls:
 - `GET /api/v1/auth/sessions`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/logout-all`
+- `POST /api/v1/auth/logout-others`
 - `GET /api/v1/tickets?page=0&size=10`
 - `GET /api/v1/tickets/{id}`
 - `POST /api/v1/tickets/{id}/comments`
@@ -93,7 +94,7 @@ The admin console calls:
 
 Roles and permissions displayed in the dashboard are decoded from JWT claims for operator visibility only. They are not used as an authorization source.
 
-The Sessions route is available at `/sessions`. It renders the current user's auth-session inventory from `GET /api/v1/auth/sessions`, including `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt`. It does not include raw `sid`, row ids, tenant/user ids, device metadata, selective revocation controls, logout-all-except-current, or backend API changes.
+The Sessions route is available at `/sessions`. It renders the current user's auth-session inventory from `GET /api/v1/auth/sessions`, including `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt`, and offers `Sign out other sessions` through `POST /api/v1/auth/logout-others`. It does not include raw `sid`, row ids, tenant/user ids, device metadata, or per-session revocation controls.
 
 The Tickets route is available at `/tickets`. It renders the first page of the current tenant ticket queue as a read-only table and links each ticket title/id to `/tickets/:id`.
 
@@ -123,7 +124,9 @@ Login creates a revocable server-side auth session and the JWT carries a require
 
 `Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, and then the frontend clears the same local token plus context, auth-session list, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches. Other users and other tenants are unaffected. If the request fails, the frontend still clears the local token and returns to login, but it warns that other sessions may still be active.
 
-A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. The Sessions screen calls the narrow `GET /api/v1/auth/sessions` current-user inventory and remains read-only: it has no raw `sid`, row id, device metadata, selective revoke button, logout-all-except-current flow, refresh-token flow, cookie/session rotation, or CSRF behavior in this slice. When the access token expires or the server-side session is invalid, sign in again.
+`Sign out other sessions` calls `POST /api/v1/auth/logout-others` from `/sessions` after confirmation. On success, the backend revokes other active sessions for the same current tenant/user while preserving the current session, and the frontend refreshes the auth-session list without clearing the local token. Other users and other tenants are unaffected. Non-auth failures stay inline on the Sessions screen, while auth-ending responses use the shared session-ended path.
+
+A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. The Sessions screen calls the narrow `GET /api/v1/auth/sessions` current-user inventory and exposes only the bulk other-session sign-out action: it has no raw `sid`, row id, device metadata, per-session revoke button, refresh-token flow, cookie/session rotation, or CSRF behavior in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
 ## Verification
 
@@ -153,8 +156,9 @@ Manual smoke:
 16. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login. As `viewer`, open `/tickets/:id` when a ticket id is available, attempt to submit a disposable comment, and confirm the inline `TICKET_WRITE` permission error appears without returning to login.
 17. Refresh `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data reload while the session is active.
 18. Use `Sign out` and confirm the app returns to login.
-19. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
-20. Reusing a signed-out token against `/api/v1/context` should return `401`.
+19. Log in in another browser or private window as the same user, then return to the first window's `Sessions` screen, use `Sign out other sessions`, and confirm the first window remains signed in while the other token returns `401` on `/api/v1/context`.
+20. Log in again, use `Sign out all sessions`, and confirm the app returns to login.
+21. Reusing a signed-out token against `/api/v1/context` should return `401`.
 
 Production-like smoke uses `http://localhost:8081` instead of the Vite dev server and verifies the `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` routes through the Nginx same-origin proxy. It is documented in `../docs/runbooks/deployment-runtime-smoke-test.md`.
 

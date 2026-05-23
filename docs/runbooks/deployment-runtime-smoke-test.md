@@ -120,6 +120,28 @@ $authSessions = Invoke-RestMethod `
   -Uri "$adminBaseUrl/api/v1/auth/sessions" `
   -Headers $headers
 
+$logoutOthersLogin = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$adminBaseUrl/api/v1/auth/login" `
+  -ContentType "application/json" `
+  -Body (@{
+    tenantCode = "demo-shop"
+    username = "admin"
+    password = "123456"
+  } | ConvertTo-Json -Compress)
+
+$logoutOthersToken = $logoutOthersLogin.data.accessToken
+
+$logoutOthers = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$adminBaseUrl/api/v1/auth/logout-others" `
+  -Headers $headers
+
+$contextAfterLogoutOthers = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$adminBaseUrl/api/v1/context" `
+  -Headers $headers
+
 $tickets = Invoke-RestMethod `
   -Method Get `
   -Uri "$adminBaseUrl/api/v1/tickets?page=0&size=10" `
@@ -249,6 +271,7 @@ Expected result:
 - login returns an access token
 - context returns `tenantCode=demo-shop` and `username=admin`
 - auth sessions returns the current user's session inventory, includes a `currentSession=true` item, and does not expose a raw `sid`
+- logout-others returns `SUCCESS` with `data=null`, the original token can still call context, and the other same-user token is revoked
 - tickets returns `page=0`, `size=10`, an `items` array, and the current tenant's first ticket page
 - when the ticket list is not empty, ticket detail returns the selected ticket with `comments` and `operationLogs` arrays; creating a disposable internal comment returns the selected ticket id, and the refreshed detail includes the server-returned comment and `COMMENTED` workflow log
 - imports returns `page=0`, `size=10`, an `items` array, and the current tenant's first import-job page or an empty list
@@ -265,6 +288,7 @@ Verify the old tokens are revoked:
 
 ```powershell
 curl.exe -i -H "Authorization: Bearer $token" "$adminBaseUrl/api/v1/context"
+curl.exe -i -H "Authorization: Bearer $logoutOthersToken" "$adminBaseUrl/api/v1/context"
 curl.exe -i -H "Authorization: Bearer $logoutAllTokenA" "$adminBaseUrl/api/v1/context"
 curl.exe -i -H "Authorization: Bearer $logoutAllTokenB" "$adminBaseUrl/api/v1/context"
 ```
@@ -292,8 +316,9 @@ Open `http://localhost:8081`.
 12. Toggle one feature flag and restore the original value.
 13. Sign out, log in with `ops` or `viewer`, open `/feature-flags`, and confirm `权限不足` appears without returning to login.
 14. Refresh `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data restore while the session is active.
-15. Select `Sign out` and confirm the login screen returns.
-16. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
+15. Log in in another browser or private window as the same user, then return to the first window's `Sessions` screen, select `Sign out other sessions`, and confirm the first window remains signed in while the other token returns `401`.
+16. Select `Sign out` and confirm the login screen returns.
+17. Log in again, select `Sign out all sessions`, and confirm the login screen returns.
 
 Do not use `http://localhost:5173` for this runbook; that is the Vite dev-server path.
 

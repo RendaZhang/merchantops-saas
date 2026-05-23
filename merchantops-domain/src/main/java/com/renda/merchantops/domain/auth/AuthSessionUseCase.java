@@ -24,6 +24,11 @@ public interface AuthSessionUseCase {
                           Long userId,
                           Instant revokedAt);
 
+    int revokeOtherSessions(Long tenantId,
+                            Long userId,
+                            String currentSessionId,
+                            Instant revokedAt);
+
     List<AuthSession> listSessionsForUser(Long tenantId,
                                           Long userId);
 

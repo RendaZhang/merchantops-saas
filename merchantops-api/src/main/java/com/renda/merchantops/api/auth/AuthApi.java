@@ -132,6 +132,34 @@ public interface AuthApi {
     ApiResponse<Void> logoutAll(@Parameter(hidden = true) @AuthenticationPrincipal CurrentUser currentUser);
 
     @Operation(
+            summary = "Logout other current-user auth sessions",
+            description = "Revoke every other active auth session for the authenticated user in the current tenant while keeping the current JWT session active.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Other current-user sessions revoked",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_SUCCESS_LOGOUT))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or revoked auth session",
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = RESP_UNAUTHORIZED))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Tenant, user, or token claims are no longer active",
+                    content = @Content(mediaType = "application/json", examples = {
+                            @ExampleObject(name = "userInactive", value = RESP_FORBIDDEN_USER_INACTIVE),
+                            @ExampleObject(name = "staleClaims", value = RESP_FORBIDDEN_STALE_TOKEN)
+                    })
+            )
+    })
+    @PostMapping("/logout-others")
+    ApiResponse<Void> logoutOthers(@Parameter(hidden = true) @AuthenticationPrincipal CurrentUser currentUser);
+
+    @Operation(
             summary = "List current-user auth sessions",
             description = "Return auth sessions for the authenticated user in the current tenant. The response marks the current JWT session, computes EXPIRED from expiresAt, and does not expose raw sid or device metadata.",
             security = @SecurityRequirement(name = "bearerAuth")

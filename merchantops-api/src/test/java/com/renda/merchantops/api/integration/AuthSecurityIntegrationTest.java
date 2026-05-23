@@ -533,8 +533,91 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
+    void logoutOthersShouldRevokeOtherCurrentTenantUserActiveSessionsAndPreserveCurrentSession() throws Exception {
+        String currentAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String otherAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String thirdAdminToken = loginAndGetToken("demo-shop", "admin", "123456");
+        String opsToken = loginAndGetToken("demo-shop", "ops", "123456");
+        String otherTenantToken = loginAndGetToken("other-shop", "outsider", "123456");
+        String currentAdminSessionId = sessionIdFromToken(currentAdminToken);
+        String otherAdminSessionId = sessionIdFromToken(otherAdminToken);
+        String thirdAdminSessionId = sessionIdFromToken(thirdAdminToken);
+        String opsSessionId = sessionIdFromToken(opsToken);
+        String otherTenantSessionId = sessionIdFromToken(otherTenantToken);
+
+        mockMvc.perform(post("/api/v1/auth/logout-others")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(currentAdminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("ok"));
+
+        assertThat(sessionStatus(currentAdminSessionId)).isEqualTo("ACTIVE");
+        assertThat(sessionRevokedAt(currentAdminSessionId)).isNull();
+        assertThat(sessionStatus(otherAdminSessionId)).isEqualTo("REVOKED");
+        assertThat(sessionStatus(thirdAdminSessionId)).isEqualTo("REVOKED");
+        Instant otherAdminRevokedAt = sessionRevokedAt(otherAdminSessionId);
+        Instant thirdAdminRevokedAt = sessionRevokedAt(thirdAdminSessionId);
+        assertThat(otherAdminRevokedAt).isNotNull();
+        assertThat(thirdAdminRevokedAt).isEqualTo(otherAdminRevokedAt);
+        assertThat(sessionStatus(opsSessionId)).isEqualTo("ACTIVE");
+        assertThat(sessionStatus(otherTenantSessionId)).isEqualTo("ACTIVE");
+        assertThat(sessionRevokedAt(opsSessionId)).isNull();
+        assertThat(sessionRevokedAt(otherTenantSessionId)).isNull();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM auth_session WHERE tenant_id = ? AND user_id = ? AND status = ?",
+                Integer.class,
+                1L,
+                101L,
+                "ACTIVE"
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM auth_session WHERE tenant_id = ? AND user_id = ? AND status = ?",
+                Integer.class,
+                1L,
+                101L,
+                "REVOKED"
+        )).isEqualTo(2);
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(currentAdminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(101));
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(otherAdminToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(thirdAdminToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(opsToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(102));
+
+        mockMvc.perform(get("/api/v1/context")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken(otherTenantToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.tenantId").value(2))
+                .andExpect(jsonPath("$.data.userId").value(201));
+    }
+
+    @Test
     void logoutAllShouldRequireAuthentication() throws Exception {
         mockMvc.perform(post("/api/v1/auth/logout-all"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("authentication required"));
+    }
+
+    @Test
+    void logoutOthersShouldRequireAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout-others"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.message").value("authentication required"));

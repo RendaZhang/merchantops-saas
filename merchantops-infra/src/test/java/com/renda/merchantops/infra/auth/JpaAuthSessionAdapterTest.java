@@ -71,6 +71,38 @@ class JpaAuthSessionAdapterTest {
     }
 
     @Test
+    void revokeOtherActiveSessionsForUserShouldDelegateCurrentSessionExcludingBulkUpdate() {
+        JpaAuthSessionAdapter adapter = new JpaAuthSessionAdapter(authSessionRepository);
+        Instant revokedAt = Instant.parse("2026-04-23T10:30:00Z");
+        LocalDateTime utcRevokedAt = LocalDateTime.of(2026, 4, 23, 10, 30);
+        when(authSessionRepository.revokeOtherActiveSessionsForUser(
+                1L,
+                101L,
+                "current-session",
+                "ACTIVE",
+                "REVOKED",
+                utcRevokedAt
+        )).thenReturn(2);
+
+        int revokedCount = adapter.revokeOtherActiveSessionsForUser(
+                1L,
+                101L,
+                "current-session",
+                revokedAt
+        );
+
+        assertThat(revokedCount).isEqualTo(2);
+        verify(authSessionRepository).revokeOtherActiveSessionsForUser(
+                1L,
+                101L,
+                "current-session",
+                "ACTIVE",
+                "REVOKED",
+                utcRevokedAt
+        );
+    }
+
+    @Test
     void findAllByTenantIdAndUserIdShouldMapRepositoryRowsInProvidedOrder() {
         JpaAuthSessionAdapter adapter = new JpaAuthSessionAdapter(authSessionRepository);
         AuthSessionEntity newer = authSessionEntity(

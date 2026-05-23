@@ -14,6 +14,7 @@
 - Current-user sessions endpoint: `GET /api/v1/auth/sessions`
 - Logout endpoint: `POST /api/v1/auth/logout`
 - Logout-all endpoint: `POST /api/v1/auth/logout-all`
+- Logout-others endpoint: `POST /api/v1/auth/logout-others`
 - Demo tenant and users:
   - tenant: `demo-shop`
   - `admin / 123456`
@@ -45,6 +46,7 @@ All documented business/health endpoints below are visible in Swagger UI.
 | `GET` | `/api/v1/auth/sessions` | Yes | List current-user auth sessions without exposing raw `sid` |
 | `POST` | `/api/v1/auth/logout` | Yes | Revoke the current auth session |
 | `POST` | `/api/v1/auth/logout-all` | Yes | Revoke all active auth sessions for the current tenant/user |
+| `POST` | `/api/v1/auth/logout-others` | Yes | Revoke other active auth sessions for the current tenant/user while preserving the current session |
 | `GET` | `/api/v1/dev/ping` | No | Dev ping test |
 | `POST` | `/api/v1/dev/echo` | No | Dev echo test |
 | `GET` | `/api/v1/dev/biz-error` | No | Dev error-shape test |
@@ -266,7 +268,21 @@ Response:
 
 Logout-all revokes every active session for the current authenticated user in the current tenant, including the caller's current session. It does not revoke sessions for other users or other tenants. Reusing any token from the revoked current user sessions on protected endpoints returns `401`.
 
-### 2b. Current-User Sessions (`GET /api/v1/auth/sessions`)
+### 2b. Logout Other Sessions (`POST /api/v1/auth/logout-others`)
+
+Response:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": null
+}
+```
+
+Logout-other-sessions revokes every other active session for the current authenticated user in the current tenant while preserving the caller's current session. It does not revoke sessions for other users or other tenants. Reusing other same-user tokens on protected endpoints returns `401`, while the token that called this endpoint remains valid.
+
+### 2c. Current-User Sessions (`GET /api/v1/auth/sessions`)
 
 Response:
 
@@ -288,7 +304,7 @@ Response:
 }
 ```
 
-The session inventory is scoped to the authenticated `tenantId + userId`, ordered newest first, marks the current JWT `sid`, computes `EXPIRED` from `expiresAt <= now`, and does not expose raw `sid`, row ids, tenant/user ids, device metadata, or selective revoke handles.
+The session inventory is scoped to the authenticated `tenantId + userId`, ordered newest first, marks the current JWT `sid`, computes `EXPIRED` from `expiresAt <= now`, and does not expose raw `sid`, row ids, tenant/user ids, device metadata, or per-session revoke handles.
 
 ### 3. Current User (`GET /api/v1/user/me`)
 

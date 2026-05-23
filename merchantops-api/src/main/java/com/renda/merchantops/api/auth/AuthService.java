@@ -77,6 +77,15 @@ public class AuthService {
         );
     }
 
+    public int logoutOthers(CurrentUser currentUser) {
+        return authSessionUseCase.revokeOtherSessions(
+                currentUser.getTenantId(),
+                currentUser.getUserId(),
+                currentUser.getSessionId(),
+                Instant.now()
+        );
+    }
+
     public AuthSessionListResponse listSessions(CurrentUser currentUser) {
         Instant now = Instant.now();
         List<AuthSessionListItemResponse> items = authSessionUseCase.listSessionsForUser(

@@ -18,6 +18,11 @@ public interface AuthSessionPort {
 
     int revokeActiveSessionsForUser(Long tenantId, Long userId, Instant revokedAt);
 
+    int revokeOtherActiveSessionsForUser(Long tenantId,
+                                         Long userId,
+                                         String currentSessionId,
+                                         Instant revokedAt);
+
     List<AuthSession> findAllByTenantIdAndUserId(Long tenantId, Long userId);
 
     int cleanupExpiredOrRevokedSessions(Instant cutoff, int limit);

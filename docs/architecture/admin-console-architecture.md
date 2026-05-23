@@ -16,7 +16,7 @@ Productization Baseline Slice C defines the production-like runtime boundary: th
 
 - React Router owns the login route plus the protected Dashboard, Sessions, Tickets, Ticket Detail, Feature Flags, Imports, Import Detail, Approvals, Approval Detail, and AI Interactions routes.
 - The shared authenticated layout owns the app shell, current context query, sign-out mutations, and auth-expired redirect behavior for protected child routes.
-- TanStack Query owns the authenticated `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` fetch, mutation, and refresh behavior.
+- TanStack Query owns the authenticated `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/auth/logout-others`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` fetch, mutation, and refresh behavior.
 - `src/lib/api-client.ts` is the only fetch boundary for backend calls.
 - `src/lib/auth-token.ts` is the only local token persistence boundary.
 - Zod validates login, context, auth-session list, ticket page/list/detail/comment/comment-create/operation-log, import-job page, import-job list item, import-job detail, import-job error page, approval-request page, approval-request list item, approval-request detail/review, feature-flag list/update, AI interaction usage-summary, and JWT display-claim shapes before the UI consumes them.
@@ -41,6 +41,7 @@ The current frontend calls only:
 - `GET /api/v1/auth/sessions`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/auth/logout-all`
+- `POST /api/v1/auth/logout-others`
 - `GET /api/v1/tickets?page=0&size=10`
 - `GET /api/v1/tickets/{id}`
 - `POST /api/v1/tickets/{id}/comments`
@@ -59,7 +60,7 @@ The current frontend calls only:
 
 The dashboard also decodes role and permission claims from the JWT for display only. Client-decoded claims are not an authorization source. Backend authorization remains enforced by Spring Security, request-time JWT revalidation, and endpoint permissions.
 
-The `/sessions` route renders the current user's auth-session inventory through `GET /api/v1/auth/sessions`. It displays the backend-returned `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt` fields only. It does not expose raw `sid`, row id, tenant/user id, device metadata, selective revocation controls, or logout-all-except-current behavior.
+The `/sessions` route renders the current user's auth-session inventory through `GET /api/v1/auth/sessions`. It displays the backend-returned `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt` fields only, and offers a bulk `Sign out other sessions` action through `POST /api/v1/auth/logout-others`. It does not expose raw `sid`, row id, tenant/user id, device metadata, or per-session revocation controls.
 
 The `/tickets` route renders the first page of the current tenant ticket queue as read-only data and links each ticket title/id to `/tickets/:id`.
 
@@ -83,7 +84,7 @@ The `/ai-interactions` route renders current-tenant aggregate cards for `totalIn
 
 The frontend stores the access token in `localStorage` under `merchantops.admin.auth.v1`, together with a client-side expiry timestamp derived from the login response `expiresIn`.
 
-Refresh restores the token and refetches `/api/v1/context`. Protected route data requests and mutations such as `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` clear the local token and send the user back to login on expired local sessions, invalid stored sessions, `401`, or the current auth-ending `403` responses `tenant is not active`, `user is not active`, and `token claims are stale, please login again`. A generic permission `403` is not treated as session expiry.
+Refresh restores the token and refetches `/api/v1/context`. Protected route data requests and mutations such as `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/auth/logout-others`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` clear the local token and send the user back to login on expired local sessions, invalid stored sessions, `401`, or the current auth-ending `403` responses `tenant is not active`, `user is not active`, and `token claims are stale, please login again`. A generic permission `403` is not treated as session expiry.
 
 Login creates a backend `auth_session` row. The JWT carries a required `sid` claim, and protected backend requests validate that the session exists, belongs to the same tenant/user, is `ACTIVE`, is not revoked, and has not expired before current tenant/user/role revalidation runs. After a successful login, the frontend stores the new token and clears the context, auth-session list, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
 
@@ -93,8 +94,10 @@ A background server-side cleanup scheduler now prunes only retention-aged expire
 
 `Sign out all sessions` calls `POST /api/v1/auth/logout-all`. On success, the backend revokes every active session for the same current tenant/user, including the caller's current session, while preserving other users and other tenants; the frontend then clears the same local token plus context, auth-session list, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches. If the request fails, the frontend still clears the local token and returns to login with a warning that other sessions may still be active.
 
-Backend refresh tokens, cookies, token rotation, device metadata, selective device logout, logout-all-except-current, and cross-origin CORS policy remain deferred to later productization slices. The `/sessions` route is read-only over `GET /api/v1/auth/sessions` and remains limited to the current user's existing inventory. [ADR-0013](adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth contract on bearer access tokens plus server-side `auth_session` validation before any refresh-token or cookie/session-rotation migration.
+`Sign out other sessions` calls `POST /api/v1/auth/logout-others` from the `/sessions` route after confirmation. On success, the backend revokes other active sessions for the same current tenant/user while preserving the caller's current session; the frontend keeps the local token and invalidates the auth-session list. Non-auth failures stay inline on `/sessions`, while auth-ending responses reuse the shared session-ended redirect.
+
+Backend refresh tokens, cookies, token rotation, device metadata, per-session revocation handles, and cross-origin CORS policy remain deferred to later productization slices. The `/sessions` route remains limited to the current user's existing inventory plus the bulk other-session sign-out action. [ADR-0013](adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth contract on bearer access tokens plus server-side `auth_session` validation before any refresh-token or cookie/session-rotation migration.
 
 ## Deferred Screens
 
-The current shell no longer includes disabled navigation placeholders. Selective session revocation, logout-all-except-current, ticket creation, assignment, status transitions, ticket filters, pagination controls, approval filters/pagination/bulk review/payload editing/rejection reasons, import upload/replay/AI actions, ticket/import AI interaction filters or per-request detail, and deeper feature-flag platform scope remain later slices.
+The current shell no longer includes disabled navigation placeholders. Per-session revocation, device-aware session management, ticket creation, assignment, status transitions, ticket filters, pagination controls, approval filters/pagination/bulk review/payload editing/rejection reasons, import upload/replay/AI actions, ticket/import AI interaction filters or per-request detail, and deeper feature-flag platform scope remain later slices.
