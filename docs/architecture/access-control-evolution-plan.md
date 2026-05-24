@@ -5,7 +5,7 @@ This page defines the long-term access-control and authorization strategy from t
 ## Current Baseline
 
 - Authentication is JWT-based and tenant-scoped.
-- Admin auth currently stays on bearer access tokens plus server-side `auth_session` validation; the backend exposes narrow current-user session inventory and logout-other-sessions behavior before any refresh-token or cookie/session-rotation work.
+- Admin auth currently stays on bearer access tokens plus server-side `auth_session` validation; the backend exposes narrow current-user session inventory and logout-other-sessions behavior while per-session revocation, stable public handles, device metadata, refresh tokens, and cookie/session-rotation work remain deferred.
 - Endpoint permissions are enforced through explicit permission requirements.
 - Protected requests re-check current tenant status, user status, roles, and permissions so stale claims are rejected until re-login.
 - Approval queue, detail, approve, and reject behavior is action-aware rather than controller-wide.
@@ -18,6 +18,7 @@ This page defines the long-term access-control and authorization strategy from t
 Reference sources:
 
 - [Authentication and RBAC](../reference/authentication-and-rbac.md)
+- [Per-Session Session Management Boundary ADR](adr/0014-per-session-session-management-boundary.md)
 - [User Management](../reference/user-management.md)
 - [Audit and Approval](../reference/audit-approval.md)
 - [Feature Flags](../reference/feature-flags.md)
@@ -42,7 +43,7 @@ Reference sources:
 ### Authentication Lifecycle
 
 - Keep the current bearer-token plus server-side `auth_session` contract stable until a dedicated auth-lifecycle slice changes it.
-- Use the current-user session inventory plus logout-other-sessions behavior to evaluate whether stable per-session handles, per-session revocation, or richer device metadata are worth adding before any token transport, refresh-token, cookie/session-rotation, or CSRF work.
+- Keep per-session revocation deferred until a dedicated slice defines stable opaque handles, device metadata, privacy/display rules, retention, and failure semantics.
 - Treat refresh-token or cookie migration as a separate architecture decision, not as a default extension of logout-all.
 
 ### Permission Taxonomy

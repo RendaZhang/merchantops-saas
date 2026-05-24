@@ -60,7 +60,7 @@ The current frontend calls only:
 
 The dashboard also decodes role and permission claims from the JWT for display only. Client-decoded claims are not an authorization source. Backend authorization remains enforced by Spring Security, request-time JWT revalidation, and endpoint permissions.
 
-The `/sessions` route renders the current user's auth-session inventory through `GET /api/v1/auth/sessions`. It displays the backend-returned `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt` fields only, and offers a bulk `Sign out other sessions` action through `POST /api/v1/auth/logout-others`. It does not expose raw `sid`, row id, tenant/user id, device metadata, or per-session revocation controls.
+The `/sessions` route renders the current user's auth-session inventory through `GET /api/v1/auth/sessions`. It displays the backend-returned `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt` fields only, and offers a bulk `Sign out other sessions` action through `POST /api/v1/auth/logout-others`. It does not expose raw `sid`, row id, tenant/user id, stable public session handles, device metadata, or per-session revocation controls.
 
 The `/tickets` route renders the first page of the current tenant ticket queue as read-only data and links each ticket title/id to `/tickets/:id`.
 
@@ -96,7 +96,7 @@ A background server-side cleanup scheduler now prunes only retention-aged expire
 
 `Sign out other sessions` calls `POST /api/v1/auth/logout-others` from the `/sessions` route after confirmation. On success, the backend revokes other active sessions for the same current tenant/user while preserving the caller's current session; the frontend keeps the local token and invalidates the auth-session list. Non-auth failures stay inline on `/sessions`, while auth-ending responses reuse the shared session-ended redirect.
 
-Backend refresh tokens, cookies, token rotation, device metadata, per-session revocation handles, and cross-origin CORS policy remain deferred to later productization slices. The `/sessions` route remains limited to the current user's existing inventory plus the bulk other-session sign-out action. [ADR-0013](adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth contract on bearer access tokens plus server-side `auth_session` validation before any refresh-token or cookie/session-rotation migration.
+Backend refresh tokens, cookies, token rotation, device metadata, per-session revocation handles, and cross-origin CORS policy remain deferred to later productization slices. The `/sessions` route remains limited to the current user's existing inventory plus the bulk other-session sign-out action. [ADR-0013](adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) keeps the current admin auth contract on bearer access tokens plus server-side `auth_session` validation before any refresh-token or cookie/session-rotation migration, and [ADR-0014](adr/0014-per-session-session-management-boundary.md) defers per-session revocation until stable handles, metadata, privacy, display, and retention rules are defined.
 
 ## Deferred Screens
 

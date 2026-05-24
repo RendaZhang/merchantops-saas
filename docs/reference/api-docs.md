@@ -304,7 +304,7 @@ Response:
 }
 ```
 
-The session inventory is scoped to the authenticated `tenantId + userId`, ordered newest first, marks the current JWT `sid`, computes `EXPIRED` from `expiresAt <= now`, and does not expose raw `sid`, row ids, tenant/user ids, device metadata, or per-session revoke handles.
+The session inventory is scoped to the authenticated `tenantId + userId`, ordered newest first, marks the current JWT `sid`, computes `EXPIRED` from `expiresAt <= now`, and does not expose raw `sid`, row ids, tenant/user ids, stable public session handles, device metadata, or per-session revoke handles.
 
 ### 3. Current User (`GET /api/v1/user/me`)
 

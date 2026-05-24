@@ -94,7 +94,7 @@ The admin console calls:
 
 Roles and permissions displayed in the dashboard are decoded from JWT claims for operator visibility only. They are not used as an authorization source.
 
-The Sessions route is available at `/sessions`. It renders the current user's auth-session inventory from `GET /api/v1/auth/sessions`, including `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt`, and offers `Sign out other sessions` through `POST /api/v1/auth/logout-others`. It does not include raw `sid`, row ids, tenant/user ids, device metadata, or per-session revocation controls.
+The Sessions route is available at `/sessions`. It renders the current user's auth-session inventory from `GET /api/v1/auth/sessions`, including `currentSession`, `status`, `createdAt`, `expiresAt`, and `revokedAt`, and offers `Sign out other sessions` through `POST /api/v1/auth/logout-others`. It does not include raw `sid`, row ids, tenant/user ids, stable public session handles, device metadata, or per-session revocation controls.
 
 The Tickets route is available at `/tickets`. It renders the first page of the current tenant ticket queue as a read-only table and links each ticket title/id to `/tickets/:id`.
 
@@ -126,7 +126,7 @@ Login creates a revocable server-side auth session and the JWT carries a require
 
 `Sign out other sessions` calls `POST /api/v1/auth/logout-others` from `/sessions` after confirmation. On success, the backend revokes other active sessions for the same current tenant/user while preserving the current session, and the frontend refreshes the auth-session list without clearing the local token. Other users and other tenants are unaffected. Non-auth failures stay inline on the Sessions screen, while auth-ending responses use the shared session-ended path.
 
-A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. The Sessions screen calls the narrow `GET /api/v1/auth/sessions` current-user inventory and exposes only the bulk other-session sign-out action: it has no raw `sid`, row id, device metadata, per-session revoke button, refresh-token flow, cookie/session rotation, or CSRF behavior in this slice. When the access token expires or the server-side session is invalid, sign in again.
+A background auth-session cleanup scheduler now prunes retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions on the server side without changing the frontend contract. The Sessions screen calls the narrow `GET /api/v1/auth/sessions` current-user inventory and exposes only the bulk other-session sign-out action: it has no raw `sid`, row id, stable public session handle, device metadata, per-session revoke button, refresh-token flow, cookie/session rotation, or CSRF behavior in this slice. When the access token expires or the server-side session is invalid, sign in again.
 
 ## Verification
 

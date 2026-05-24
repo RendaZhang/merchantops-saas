@@ -30,6 +30,7 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 - Added Productization Baseline Slice G-C1 current-user auth-session inventory through `GET /api/v1/auth/sessions`, returning only the authenticated tenant/user sessions with current-session marking, computed `ACTIVE` / `EXPIRED` / `REVOKED` status, and no raw `sid`, row id, tenant/user id, device metadata, or per-session revoke handle.
 - Added Productization Baseline Slice G-C1A as a read-only Admin Session Inventory screen at `/sessions` over the existing `GET /api/v1/auth/sessions` API, with query-cache cleanup on login, sign out, and sign-out-all while keeping raw `sid`, device metadata, per-session revoke, refresh tokens, cookies, CSRF, and backend API changes deferred for that slice.
 - Added Productization Baseline Slice G-C2 logout-other-sessions contract: `POST /api/v1/auth/logout-others` revokes other active auth sessions for the current tenant/user while preserving the caller's current session, and the `/sessions` admin screen exposes a confirmed `Sign out other sessions` action that refreshes the inventory without clearing the local token.
+- Added Productization Baseline Slice G-C3 as ADR-0014, keeping the current G-C2 session-management boundary in place while deferring stable public session handles, device metadata, IP, user-agent, last-seen fields, and per-session revoke controls until a later metadata/privacy/retention decision.
 
 ### Changed
 

@@ -29,6 +29,8 @@ The first follow-up auth-lifecycle implementation is a current-user session inve
 
 Update on 2026-05-23: Slice G-C2 selected the sign-out-other-sessions part of that deferred set as a narrow logout-other-sessions contract. `POST /api/v1/auth/logout-others` now revokes other active sessions for the same current tenant/user while preserving the caller's current session. This does not change the bearer-token decision and still leaves refresh tokens, HttpOnly cookies, access-token rotation, CSRF protection, device metadata, and per-session device logout deferred.
 
+Update on 2026-05-24: [ADR-0014](0014-per-session-session-management-boundary.md) keeps per-session revocation deferred. It requires any future per-session revoke slice to define an opaque public handle plus device metadata, privacy, display, retention, and failure semantics before changing the current `/sessions` contract.
+
 Any later move to cookies or refresh tokens must be handled as a separate architecture decision and implementation slice. That later decision must explicitly cover:
 
 - SameSite policy
@@ -45,5 +47,5 @@ Any later move to cookies or refresh tokens must be handled as a separate archit
 - the admin console continues to use relative `/api/...` calls and bearer authorization headers
 - the server-side `auth_session` table remains the source of revocation truth for active, revoked, expired, and cleanup-deleted sessions
 - session visibility and logout-other-sessions are implemented without taking on refresh-token or cookie-auth risk
-- cookie/session rotation remains available as a future hardening step, but it should not be bundled with per-session device logout or unrelated admin-console workflow depth
-- docs and runbooks must continue to state that no refresh-token flow, cookie/session rotation, device metadata, or per-session device logout flow is currently implemented
+- cookie/session rotation remains available as a future hardening step, but it should not be bundled with per-session device logout, per-session revoke handles, or unrelated admin-console workflow depth
+- docs and runbooks must continue to state that no refresh-token flow, cookie/session rotation, device metadata, stable public session handle, or per-session device logout flow is currently implemented

@@ -190,7 +190,7 @@ Behavior:
 - marks exactly the row matching the current JWT `sid` with `currentSession: true` when that row is still present
 - computes `status` as `REVOKED` for persisted revoked rows, otherwise `EXPIRED` when `expiresAt <= now`, otherwise `ACTIVE`
 - returns `createdAt`, `expiresAt`, and `revokedAt` as UTC instants
-- does not expose raw `sid`, auth-session row ids, tenant/user ids, IP address, user agent, device name, location, or any per-session revoke handle
+- does not expose raw `sid`, auth-session row ids, tenant/user ids, stable public session handles, IP address, user agent, device name, location, last-seen time, or any per-session revoke handle
 - cleanup-deleted session rows are not returned
 
 Success response:
@@ -231,8 +231,9 @@ Deferred lifecycle scope:
 
 - there is no refresh token in this slice
 - there is no cookie/session rotation in this slice
-- session inventory has no device metadata, raw session handle, or per-session revoke flow in this slice
+- session inventory has no device metadata, raw session handle, stable public session handle, or per-session revoke flow in this slice
 - [ADR-0013](../architecture/adr/0013-keep-admin-auth-on-bearer-session-before-cookie-rotation.md) records the lifecycle decision to keep bearer access tokens plus server-side `auth_session` validation for now and treat token-transport changes as separate future decisions
+- [ADR-0014](../architecture/adr/0014-per-session-session-management-boundary.md) records the decision to defer per-session revocation until stable handles, metadata, privacy, display, and retention boundaries are defined
 - a background auth-session cleanup scheduler now deletes only retention-aged expired `ACTIVE` sessions and retention-aged `REVOKED` sessions
 - `auth_session.created_at`, `expires_at`, and `revoked_at` are now persisted as UTC-backed `DATETIME` columns after `V18__store_auth_session_times_as_datetime.sql`
 - after the access token expires, the user must log in again
