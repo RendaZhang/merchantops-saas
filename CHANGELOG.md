@@ -6,6 +6,12 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
+No release-level changes yet.
+
+## [v0.8.0-beta] - 2026-05-24
+
+Tagged as `Productization Baseline beta release`.
+
 ### Added
 
 - Added the Productization Baseline Slice A admin-console entry through `merchantops-admin-web/`, a standalone Vite + React + TypeScript app for login, current tenant context, local JWT restoration, and workflow navigation placeholders over the existing backend.

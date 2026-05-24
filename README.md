@@ -1,6 +1,6 @@
 # MerchantOps SaaS
 
-`v0.7.0-beta` | workflow-first, AI-enhanced SaaS reference implementation
+`v0.8.0-beta` | workflow-first, AI-enhanced SaaS reference implementation
 
 MerchantOps SaaS is an open-source, multi-tenant SaaS reference implementation for merchant operations workflows. It shows how tenant isolation, JWT/RBAC security, ticket execution, async import operations, audit/approval patterns, AI suggestions, feature flags, Docker delivery, minimal admin-console UX, and CI can fit together around a modular Spring Boot backend.
 
@@ -8,11 +8,11 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 ## Current Milestone
 
-- Current tagged milestone: `v0.7.0-beta`
-- Tagged baseline meaning: Week 10 complete - delivery hardening and portfolio packaging beta baseline
-- Current phase state: Productization Baseline active; Slice A admin entry, Slice B auth-session/logout, Slice C same-origin runtime, Slice D user-role tenant-integrity hardening, Slice E first read-only Tickets screen, Slice F root ticket actor tenant-integrity hardening, Slice G-A auth-session cleanup scheduler, Slice G-B1 logout-all sessions contract, Slice G-C0 auth lifecycle contract decision, Slice G-C1 current-user session inventory, Slice G-C1A Admin Session Inventory screen, Slice G-C2 logout other sessions contract, Slice G-C3 per-session session-management decision, Slice H1 Feature Flags control screen, Slice H2 Imports queue screen, Slice H3 Approvals queue screen, Slice H4 AI Interactions usage-summary screen, Slice H5 Import Job detail/errors screen, Slice H6 Approval Request detail/review controls, Slice H7 Ticket Detail activity screen, Slice H8 Ticket Comment Composer, Slice I1 ticket child actor tenant-integrity hardening, and Slice I2 ticket child table tenant-linkage hardening are complete; the next implementation slice is not selected yet
+- Current tagged milestone: `v0.8.0-beta`
+- Tagged baseline meaning: Productization Baseline beta release
+- Current phase state: Productization Baseline release cut is complete; admin entry/runtime, auth sessions with logout/session inventory/logout-others, tenant-integrity hardening, and the current workflow admin screens are tagged, and the next implementation slice is post-`v0.8.0-beta` selection pending
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
-- Previous tagged milestone: `v0.6.0-beta` for the completed Week 9 AI Governance, Eval, Cost, and Usage beta baseline
+- Previous tagged milestone: `v0.7.0-beta` for the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline
 
 ## Core Capabilities
 
@@ -126,7 +126,7 @@ The CI gate is intentionally minimal. It does not deploy, publish Docker images,
 - [Project Showcase](docs/getting-started/project-showcase.md): short demo and handoff path
 - [Project Status](docs/project-status.md): current implemented reality, CI evidence, and known gaps
 - [Roadmap](docs/roadmap.md): active release-line milestone, active slice, candidate next slices, and stop condition
-- [Product Strategy](docs/product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline
+- [Product Strategy](docs/product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline and `v0.8.0-beta` Productization Baseline handoff
 - [Project Plan](docs/project-plan.md): planning entry point and link to the archived foundation plan
 - [Completed 10-Week Foundation Plan](docs/archive/completed-10-week-foundation-plan.md): historical Week 1-10 build plan
 - [Reference](docs/reference/README.md): public contracts and technical reference pages

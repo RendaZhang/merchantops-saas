@@ -5,8 +5,9 @@ This page defines the long-term product strategy from the `v0.7.0-beta` foundati
 ## Strategic Baseline
 
 - Current foundation baseline: `v0.7.0-beta`, `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`.
+- Current Productization Baseline release cut: `v0.8.0-beta`, `Productization Baseline beta release`.
 - Completed foundation: tenant isolation, RBAC, user management, ticket workflow, audit/approval, async import, ticket/import AI copilot surfaces, human-reviewed execution bridges, AI governance reads, feature flags, Dockerized API delivery, minimal CI, and portfolio/open-source handoff packaging.
-- Planning mode: select narrow, evidence-backed release-line slices from the tracks below.
+- Planning mode: select narrow, evidence-backed post-`v0.8.0-beta` release-line slices from the tracks below.
 
 ## Planning Model
 

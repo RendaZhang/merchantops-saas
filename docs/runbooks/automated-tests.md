@@ -1,15 +1,15 @@
 # Automated Tests
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
 Use this runbook when you want a fast regression signal before doing manual API verification.
 
-Latest local default regression result on 2026-05-19:
+Latest local default regression result on 2026-05-24:
 
 - `BUILD SUCCESS`
-- `merchantops-api` module summary: `Tests run: 440, Failures: 0, Errors: 0, Skipped: 1`
+- `merchantops-api` module summary: `Tests run: 442, Failures: 0, Errors: 0, Skipped: 1`
 
 Latest focused Productization Baseline Slice G-C2 logout-other-sessions result on 2026-05-23:
 
@@ -52,12 +52,18 @@ Latest local Docker image build and runtime migration result on 2026-04-22:
 - admin runtime `http://localhost:8081/` returned `200`
 - same-origin login, `GET /api/v1/context`, `GET /api/v1/tickets?page=0&size=10`, `POST /api/v1/auth/logout`, and old-token `401` checks succeeded through `http://localhost:8081/api/...`
 
-Latest Productization Baseline frontend workspace result on 2026-05-23:
+Latest Productization Baseline frontend workspace result on 2026-05-24:
 
 - `npm run typecheck` from `merchantops-admin-web` completed successfully
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
-- no authenticated backend smoke or browser-driven sign-out-other-sessions check was run for this slice.
+
+Latest authenticated session-management smoke result on 2026-05-24:
+
+- local Spring Boot API on `http://localhost:8080` returned `/health` successfully
+- two `demo-shop` / `admin` logins created separate sessions
+- `GET /api/v1/auth/sessions` returned a current-user session list with exactly one `currentSession=true` row
+- `POST /api/v1/auth/logout-others` returned `200`, the current token still returned `200` from `GET /api/v1/context`, the other same-user token returned controlled `401`, and cleanup logout returned `200`
 
 Latest Productization Baseline Vite dev-proxy smoke result on 2026-04-18:
 

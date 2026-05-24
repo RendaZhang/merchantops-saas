@@ -4,7 +4,7 @@ This page is now the planning entry point. The original 10-week build plan is co
 
 ## Current Planning Sources
 
-- [Product Strategy](product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline.
+- [Product Strategy](product-strategy.md): long-term direction from the `v0.7.0-beta` foundation baseline and `v0.8.0-beta` Productization Baseline release cut.
 - [Roadmap](roadmap.md): active release-line milestone, active slice, candidate next slices, and stop condition.
 - [Project Status](project-status.md): current implemented reality, verification evidence, and known gaps.
 - [Completed 10-Week Foundation Plan](archive/completed-10-week-foundation-plan.md): archived Week 1-10 foundation plan and historical rationale.

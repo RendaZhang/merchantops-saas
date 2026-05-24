@@ -1,6 +1,6 @@
 # Release Versioning
 
-Last updated: 2026-04-13
+Last updated: 2026-05-24
 
 ## Purpose
 
@@ -8,22 +8,25 @@ This page defines how MerchantOps SaaS should record versions, tags, and release
 
 ## Current Tagged Milestone
 
-- current tag: `v0.7.0-beta`
+- current tag: `v0.8.0-beta`
+- tag date: 2026-05-24
+- tag message: `Productization Baseline beta release`
+
+This tag records the completed Productization Baseline release cut: the standalone admin console, server-side auth sessions with logout/session inventory/logout-others, same-origin admin/API runtime packaging, tenant-integrity hardening, and the first operator-facing workflow screens over existing public APIs.
+
+## Previous Tagged Milestone
+
+- previous tag: `v0.7.0-beta`
 - tag date: 2026-04-12
 - tag message: `Week 10 complete: Delivery Hardening and Portfolio Packaging beta baseline`
 
 This tag records the completed Week 10 baseline: persisted tenant feature flags for AI generation and workflow bridges, Dockerized API delivery, the minimal no-secret GitHub Actions CI gate, and portfolio/open-source handoff packaging.
 
-## Previous Tagged Milestone
-
-- previous tag: `v0.6.0-beta`
-- tag date: 2026-04-06
-- tag message: `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`
-
-This tag records the completed Week 9 baseline: the executable prompt-inventory plus eval-comparator line together with the tenant-scoped AI usage-summary read surface and its aggregate `byPromptVersion` visibility over stored runtime metadata.
-
 ## Earlier Tagged Milestones
 
+- earlier tag: `v0.6.0-beta`
+- tag date: 2026-04-06
+- tag message: `Week 9 complete: AI Governance, Eval, Cost, and Usage beta baseline`
 - earlier tag: `v0.5.0-beta`
 - tag date: 2026-04-04
 - tag message: `Week 8 complete: Agentic Workflows with Human Oversight beta baseline`
@@ -37,7 +40,7 @@ This tag records the completed Week 9 baseline: the executable prompt-inventory 
 - tag date: 2026-03-11
 - tag message: `Week 3 complete: ticket workflow baseline`
 
-These tags record the first workflow baseline, the first reusable governance baseline, the Week 5 async import/data-operations preview, and the Week 8 human-reviewed workflow baseline before the project broadened into governance and delivery-hardening release lines.
+These tags record the first workflow baseline, the first reusable governance baseline, the Week 5 async import/data-operations preview, the Week 8 human-reviewed workflow baseline, and the Week 9 AI governance baseline before the project broadened into delivery-hardening and productization release lines.
 
 ## Initial Tagged Baseline
 
@@ -101,7 +104,8 @@ Recommended direction:
 - `v0.5.0-beta`: Week 8 Agentic Workflows with Human Oversight beta baseline
 - `v0.6.0-beta`: Week 9 AI Governance, Eval, Cost, and Usage beta baseline
 - `v0.7.0-beta`: Week 10 Delivery Hardening and Portfolio Packaging beta baseline
-- later `v0.x` releases: Productization Baseline, deeper delivery maturity, access-control hardening, workflow depth, and later governance / usage / commercial-discovery milestones
+- `v0.8.0-beta`: Productization Baseline beta release
+- later `v0.x` releases: workflow depth, deeper delivery maturity, access-control hardening, and later governance / usage / commercial-discovery milestones
 
 ## Practical Rules
 

@@ -6,7 +6,7 @@ Last updated: 2026-05-24
 
 ## Current Baseline
 
-- Current tagged milestone: `v0.7.0-beta`, recording the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline.
+- Current tagged milestone: `v0.8.0-beta`, recording the completed Productization Baseline beta release.
 - Foundation status: Week 1-10 are complete and now treated as the archived foundation build-out.
 - Current public surface and limitations live in [project-status.md](project-status.md) and the matching pages under [reference/](reference/README.md).
 - Long-term product direction lives in [product-strategy.md](product-strategy.md).
@@ -22,35 +22,33 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Current Milestone
 
-- Milestone: Productization Baseline.
+- Milestone: Post-`v0.8.0-beta` Productization Baseline handoff.
 - Strategic horizon: [Product Strategy](product-strategy.md) Horizon 1.
-- Candidate release line: the next beta milestone after `v0.7.0-beta`; keep the exact tag unset until release-readiness or pre-tag work.
-- Goal: make the project easier to run, demonstrate, and evaluate without widening AI autonomy or adding unrelated modules by default.
+- Candidate release line: the next beta milestone after `v0.8.0-beta`; keep the exact tag unset until release-readiness or pre-tag work.
+- Goal: choose the next narrow workflow-depth slice without reopening completed auth transport, same-origin runtime, or release-cut scope by default.
 
 ## Active Slice
 
-### Next Slice Selection Pending After G-C3
+### Post-v0.8 Next Slice Selection Pending
 
-Goal: select the next narrow Productization Baseline implementation slice after Slice G-C3 recorded the decision to keep per-session revocation deferred until stable handles, metadata, privacy, display, and retention rules are defined.
+Goal: select the next narrow implementation slice after `v0.8.0-beta` tagged the Productization Baseline release cut.
 
 Expected scope:
 
-- keep the existing same-origin admin/API runtime contract intact
-- prefer narrow backend hardening or existing Swagger-visible admin workflows unless the selected slice directly requires broader scope
-- keep completed root actor, child actor, and child-table ticket tenant-linkage invariants stable if later tenant-integrity work appears
-- keep the current bearer-token plus server-side `auth_session` contract stable unless a dedicated auth-lifecycle slice explicitly changes it
-- prefer workflow-depth work over more auth lifecycle work unless a future slice explicitly selects auth lifecycle scope
-- keep per-session revocation, richer device/session management, refresh-token, cookie/session rotation, and CSRF work deferred by default
-- avoid broader ticket creation, assignment, status-transition work, deployment automation, or AI autonomy changes unless the selected slice directly requires them
+- prefer workflow-depth work that reuses existing public APIs and current admin-console patterns
+- prioritize either Imports Recovery Controls or Approval Queue Filters/History unless fresh evidence points to a smaller workflow-depth slice
+- keep completed auth/session/runtime, tenant-integrity, admin-screen, and ADR work stable unless the selected slice directly requires revisiting it
+- keep per-session revocation, richer device/session management, refresh-token, cookie/session rotation, CSRF, deployment automation, and AI autonomy changes deferred by default
 
 Stop condition:
 
 - the next slice is named with scope, stop condition, validation, and documentation expectations
-- the selected slice is small enough to implement without reopening completed auth/session/runtime, admin-screen, or ADR work unnecessarily
-- docs continue to distinguish implemented schema hardening, admin screens, and auth decisions from deferred workflow depth
+- the selected slice is small enough to implement without expanding public API scope unnecessarily
+- docs continue to distinguish implemented release-cut baseline from deferred workflow depth
 
 ## Recently Closed
 
+- Release Readiness Slice: `v0.8.0-beta` release cut - the Productization Baseline `Unreleased` changelog notes moved into a dated tag section, release-versioning, README, status, roadmap, product-strategy, project-plan, and automated-test evidence now reflect the current Productization Baseline beta release, and local backend, frontend, authenticated session-management smoke, open-source entry, and remote main CI checks were completed before the annotated tag.
 - Slice G-C3: Per-Session Session Management Decision - [ADR-0014](architecture/adr/0014-per-session-session-management-boundary.md) keeps the current G-C2 session-management boundary in place and defers stable public session handles, device metadata, IP, user-agent, last-seen fields, and per-session revoke controls until a later metadata/privacy/retention decision. This leaves `GET /api/v1/auth/sessions`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/logout-all`, and `POST /api/v1/auth/logout-others` unchanged and keeps cookie/session rotation separate.
 - Slice G-C2: Logout Other Sessions Contract - `POST /api/v1/auth/logout-others` now revokes other `ACTIVE` auth sessions for the authenticated current user in the current tenant while preserving the caller's current session, preserves other users and other tenants, adds a confirmed `/sessions` admin action that refreshes the auth-session query without clearing the local token, and records focused auth plus frontend workspace validation while leaving raw `sid`, per-session revoke handles, device metadata, refresh tokens, cookies, token rotation, and CSRF deferred.
 - Slice G-C1A: Admin Session Inventory Screen - the admin console now adds a protected `/sessions` route over the existing `GET /api/v1/auth/sessions` API, validates the response with Zod, renders a read-only current-user session table with current-session marker, status, created, expiry, and revoked timestamps, and clears the sessions query cache on login, sign out, and sign-out-all while keeping raw `sid`, device metadata, per-session revoke controls, refresh-token, cookie/session rotation, CSRF, and backend API changes deferred for that slice. Slice G-C2 later added the narrow logout-other-sessions backend/UI contract.
@@ -77,7 +75,8 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Workflow-depth slice selection - prefer an existing admin workflow such as approvals, imports, tickets, or AI interaction visibility where the next increment can reuse current public APIs and produce clearer operator value than more auth lifecycle work.
+- Imports Recovery Controls - add operator-facing import recovery depth over existing public import surfaces where possible, with explicit stop conditions before adding broader upload/replay scope.
+- Approval Queue Filters/History - deepen the existing approvals admin workflow with safer queue review and history visibility before considering bulk review or new action types.
 - Slice G-C4: Cookie Or Refresh-Token Transport Decision - non-default auth lifecycle candidate; select only if the next slice explicitly needs an ADR on HttpOnly cookies, refresh tokens, CSRF handling, or token rotation.
 
 ## Default Deferrals
