@@ -22,29 +22,35 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Current Milestone
 
-- Milestone: Post-`v0.8.0-beta` Productization Baseline handoff.
+- Milestone: Post-`v0.8.0-beta` Workflow Recovery and Review.
 - Strategic horizon: [Product Strategy](product-strategy.md) Horizon 1.
-- Candidate release line: the next beta milestone after `v0.8.0-beta`; keep the exact tag unset until release-readiness or pre-tag work.
-- Goal: choose the next narrow workflow-depth slice without reopening completed auth transport, same-origin runtime, or release-cut scope by default.
+- Candidate release line: prepared next beta target `v0.9.0-beta`, with the exact tag still provisional until release-readiness or pre-tag work.
+- Goal: turn one existing read-only admin workflow into a safe operator action loop by reusing current public import and approval APIs, without reopening completed auth transport, same-origin runtime, or release-cut scope by default.
 
 ## Active Slice
 
-### Post-v0.8 Next Slice Selection Pending
+### Slice A: Import Selective Replay Proposal UI
 
-Goal: select the next narrow implementation slice after `v0.8.0-beta` tagged the Productization Baseline release cut.
+Goal: let an authenticated operator create a human-reviewed import selective replay proposal from the existing import detail screen over `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, while keeping actual replay execution behind the existing approval review flow.
 
 Expected scope:
 
-- prefer workflow-depth work that reuses existing public APIs and current admin-console patterns
-- prioritize either Imports Recovery Controls or Approval Queue Filters/History unless fresh evidence points to a smaller workflow-depth slice
-- keep completed auth/session/runtime, tenant-integrity, admin-screen, and ADR work stable unless the selected slice directly requires revisiting it
+- keep this as an admin-console-first slice over existing Swagger-visible import and approval surfaces
+- add a guarded proposal panel on `/imports/:id` that uses existing `errorCodeCounts` as selectable exact replay error codes
+- allow optional proposal reason text when creating the request, but do not require import AI interaction selection in this slice
+- after successful proposal creation, expose the returned approval request and a path to `/approvals/:id`
+- refresh relevant import and approval query caches after mutation
+- keep direct replay, whole-file replay, edited replay, upload, import AI actions, backend API changes, and new approval action types out of scope
+- keep completed auth/session/runtime, tenant-integrity, admin-screen, and ADR work stable unless implementation evidence reveals a direct dependency
 - keep per-session revocation, richer device/session management, refresh-token, cookie/session rotation, CSRF, deployment automation, and AI autonomy changes deferred by default
 
 Stop condition:
 
-- the next slice is named with scope, stop condition, validation, and documentation expectations
-- the selected slice is small enough to implement without expanding public API scope unnecessarily
-- docs continue to distinguish implemented release-cut baseline from deferred workflow depth
+- `/imports/:id` can create an `IMPORT_JOB_SELECTIVE_REPLAY` approval request for selected error codes through the existing API
+- the UI handles ineligible or permission-denied paths inline without clearing the session except for existing auth-ending responses
+- success state clearly links the operator to the created approval request, where the existing approve/reject controls remain responsible for execution
+- frontend validation covers blank selections, optional reason length, mutation success, mutation failure, and mobile layout containment
+- docs continue to distinguish the planned Slice A UI from the current `v0.8.0-beta` baseline until implementation lands
 
 ## Recently Closed
 
@@ -75,8 +81,8 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Imports Recovery Controls - add operator-facing import recovery depth over existing public import surfaces where possible, with explicit stop conditions before adding broader upload/replay scope.
-- Approval Queue Filters/History - deepen the existing approvals admin workflow with safer queue review and history visibility before considering bulk review or new action types.
+- Slice B: Approval Queue Filters - add status/action-type/requester filters to `/approvals` over the existing `GET /api/v1/approval-requests` query surface so import replay proposals can be found and reviewed more easily.
+- Slice C: Import Recovery Follow-Through - add the smallest post-proposal import recovery visibility improvement, such as linking approval outcomes back to derived import jobs or filtering failed rows by `errorCode`, after Slice A exposes real operator usage.
 - Slice G-C4: Cookie Or Refresh-Token Transport Decision - non-default auth lifecycle candidate; select only if the next slice explicitly needs an ADR on HttpOnly cookies, refresh tokens, CSRF handling, or token rotation.
 
 ## Default Deferrals

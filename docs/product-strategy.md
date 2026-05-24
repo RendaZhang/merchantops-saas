@@ -8,6 +8,7 @@ This page defines the long-term product strategy from the `v0.7.0-beta` foundati
 - Current Productization Baseline release cut: `v0.8.0-beta`, `Productization Baseline beta release`.
 - Completed foundation: tenant isolation, RBAC, user management, ticket workflow, audit/approval, async import, ticket/import AI copilot surfaces, human-reviewed execution bridges, AI governance reads, feature flags, Dockerized API delivery, minimal CI, and portfolio/open-source handoff packaging.
 - Planning mode: select narrow, evidence-backed post-`v0.8.0-beta` release-line slices from the tracks below.
+- Near-term post-`v0.8.0-beta` direction: prioritize a Workflow Recovery and Review beta line that connects existing public import and approval APIs into safe operator action loops before adding broader platform, AI autonomy, or commercial-discovery scope.
 
 ## Planning Model
 
@@ -58,6 +59,7 @@ These horizons describe the recommended execution order. They do not replace the
 ### Horizon 1: Productization Baseline
 
 - Expand the minimal admin console from the current login/context shell into useful ticket, approval, import, AI interaction, and proposal review flows.
+- Prefer the next admin-console increments that turn existing read-only workflow visibility into human-reviewed operator action loops, starting with import selective replay proposal creation over the already-public approval bridge.
 - Continue the authentication lifecycle from the current-session, logout-all, and logout-other-sessions foundation while keeping per-session revocation, device metadata, refresh-token, and cookie/session-rotation work behind explicit architecture decisions such as ADR-0014.
 - Strengthen deployment and runtime readiness through documented environment, secret-management, bootstrap, and smoke-test paths.
 - Move high-value tenant consistency guarantees from service-only checks toward database-backed constraints where practical.
