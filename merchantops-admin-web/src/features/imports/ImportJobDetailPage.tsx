@@ -1,25 +1,37 @@
-import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { useAuthenticatedRoute } from '../../components/authenticated-route-context'
 import { StatusPanel } from '../../components/StatusPanel'
 import {
+  createImportSelectiveReplayProposal,
   getImportJob,
   getImportJobErrors,
   isAuthenticationError,
+  isPermissionDeniedError,
 } from '../../lib/api-client'
 import type {
+  ApprovalRequest,
   ImportJobDetail,
   ImportJobErrorCodeCount,
   ImportJobErrorItem,
+  ImportSelectiveReplayProposalRequest,
 } from '../../lib/schemas'
 
 const importJobErrorsPageRequest = { page: 0, size: 10 } as const
+const importJobsQueryKey = ['import-jobs'] as const
+const importJobDetailQueryKey = ['import-job'] as const
+const approvalRequestsQueryKey = ['approval-requests'] as const
+const PROPOSAL_REASON_MAX_LENGTH = 255
 
 export function ImportJobDetailPage() {
   const { id } = useParams()
   const { handleAuthenticationError } = useAuthenticatedRoute()
+  const queryClient = useQueryClient()
+  const [selectedErrorCodes, setSelectedErrorCodes] = useState<string[]>([])
+  const [proposalReason, setProposalReason] = useState('')
+  const [proposalValidationError, setProposalValidationError] = useState<string | null>(null)
   const jobId = parseImportJobId(id)
   const hasValidJobId = jobId !== null
   const importJobQuery = useQuery({
@@ -32,6 +44,20 @@ export function ImportJobDetailPage() {
     queryFn: () => getImportJobErrors(requireImportJobId(jobId), importJobErrorsPageRequest),
     enabled: hasValidJobId,
   })
+  const createProposalMutation = useMutation({
+    mutationFn: (request: ImportSelectiveReplayProposalRequest) =>
+      createImportSelectiveReplayProposal(requireImportJobId(jobId), request),
+    onSuccess: (approvalRequest) => {
+      setProposalValidationError(null)
+      queryClient.setQueryData(
+        ['approval-requests', 'detail', approvalRequest.id],
+        approvalRequest,
+      )
+      void queryClient.invalidateQueries({ queryKey: approvalRequestsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: importJobDetailQueryKey })
+      void queryClient.invalidateQueries({ queryKey: importJobsQueryKey })
+    },
+  })
 
   useEffect(() => {
     handleAuthenticationError(importJobQuery.error)
@@ -40,6 +66,76 @@ export function ImportJobDetailPage() {
   useEffect(() => {
     handleAuthenticationError(importJobErrorsQuery.error)
   }, [handleAuthenticationError, importJobErrorsQuery.error])
+
+  useEffect(() => {
+    handleAuthenticationError(createProposalMutation.error)
+  }, [createProposalMutation.error, handleAuthenticationError])
+
+  function handleProposalSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (createProposalMutation.isPending) {
+      return
+    }
+
+    createProposalMutation.reset()
+
+    const selectedCodesInDisplayOrder = getSelectedErrorCodesInDisplayOrder(
+      importJobQuery.data?.errorCodeCounts ?? [],
+      selectedErrorCodes,
+    )
+
+    if (selectedCodesInDisplayOrder.length === 0) {
+      setProposalValidationError('Select at least one error code.')
+      return
+    }
+
+    const trimmedReason = proposalReason.trim()
+
+    if (trimmedReason.length > PROPOSAL_REASON_MAX_LENGTH) {
+      setProposalValidationError(
+        `Proposal reason must be ${PROPOSAL_REASON_MAX_LENGTH} characters or fewer.`,
+      )
+      return
+    }
+
+    const request: ImportSelectiveReplayProposalRequest = {
+      errorCodes: selectedCodesInDisplayOrder,
+    }
+
+    if (trimmedReason) {
+      request.proposalReason = trimmedReason
+    }
+
+    setProposalValidationError(null)
+    createProposalMutation.mutate(request)
+  }
+
+  function handleErrorCodeToggle(errorCode: string, checked: boolean) {
+    setSelectedErrorCodes((currentCodes) => {
+      if (checked) {
+        return currentCodes.includes(errorCode)
+          ? currentCodes
+          : [...currentCodes, errorCode]
+      }
+
+      return currentCodes.filter((currentCode) => currentCode !== errorCode)
+    })
+    setProposalValidationError(null)
+    createProposalMutation.reset()
+  }
+
+  function handleProposalReasonChange(value: string) {
+    setProposalReason(value)
+
+    if (proposalValidationError) {
+      setProposalValidationError(null)
+    }
+
+    if (createProposalMutation.error || createProposalMutation.data) {
+      createProposalMutation.reset()
+    }
+  }
 
   if (!hasValidJobId) {
     return (
@@ -78,6 +174,8 @@ export function ImportJobDetailPage() {
   }
 
   const job = importJobQuery.data
+  const proposalErrorMessage =
+    proposalValidationError ?? getProposalMutationErrorMessage(createProposalMutation.error)
 
   return (
     <div className="grid min-w-0 gap-5">
@@ -127,6 +225,18 @@ export function ImportJobDetailPage() {
       </section>
 
       <ErrorCodeCounts counts={job.errorCodeCounts} />
+
+      <SelectiveReplayProposalPanel
+        counts={job.errorCodeCounts}
+        selectedErrorCodes={selectedErrorCodes}
+        proposalReason={proposalReason}
+        errorMessage={proposalErrorMessage}
+        isSubmitting={createProposalMutation.isPending}
+        approvalRequest={createProposalMutation.data ?? null}
+        onToggleErrorCode={handleErrorCodeToggle}
+        onProposalReasonChange={handleProposalReasonChange}
+        onSubmit={handleProposalSubmit}
+      />
 
       <FailedRowsSection
         isPending={importJobErrorsQuery.isPending}
@@ -208,6 +318,157 @@ function ErrorCodeCounts({ counts }: { counts: ImportJobErrorCodeCount[] }) {
   )
 }
 
+function SelectiveReplayProposalPanel({
+  counts,
+  selectedErrorCodes,
+  proposalReason,
+  errorMessage,
+  isSubmitting,
+  approvalRequest,
+  onToggleErrorCode,
+  onProposalReasonChange,
+  onSubmit,
+}: {
+  counts: ImportJobErrorCodeCount[]
+  selectedErrorCodes: string[]
+  proposalReason: string
+  errorMessage: string | null
+  isSubmitting: boolean
+  approvalRequest: ApprovalRequest | null
+  onToggleErrorCode: (errorCode: string, checked: boolean) => void
+  onProposalReasonChange: (value: string) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+}) {
+  const reasonLength = proposalReason.trim().length
+  const isReasonOverLimit = reasonLength > PROPOSAL_REASON_MAX_LENGTH
+
+  return (
+    <section className="min-w-0 rounded-lg border border-neutral-200 bg-white">
+      <div className="border-b border-neutral-200 p-5">
+        <p className="text-sm font-medium text-emerald-700">Selective replay</p>
+        <h3 className="mt-2 text-lg font-semibold text-neutral-950">
+          Proposal request
+        </h3>
+      </div>
+
+      <form className="grid min-w-0 gap-5 p-5" onSubmit={onSubmit}>
+        <fieldset className="grid min-w-0 gap-3" disabled={isSubmitting}>
+          <legend className="text-sm font-semibold text-neutral-950">
+            Error codes
+          </legend>
+
+          {counts.length === 0 ? (
+            <p className="text-sm text-neutral-600">
+              No error codes are available for proposal.
+            </p>
+          ) : (
+            <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {counts.map((item, index) => {
+                const checkboxId = `import-proposal-error-code-${index}`
+                const checked = selectedErrorCodes.includes(item.errorCode)
+
+                return (
+                  <label
+                    key={item.errorCode}
+                    htmlFor={checkboxId}
+                    className={[
+                      'flex min-w-0 items-start gap-3 rounded-md border p-3 transition',
+                      checked
+                        ? 'border-emerald-300 bg-emerald-50'
+                        : 'border-neutral-200 bg-white hover:border-neutral-300',
+                    ].join(' ')}
+                  >
+                    <input
+                      id={checkboxId}
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) =>
+                        onToggleErrorCode(item.errorCode, event.target.checked)
+                      }
+                      className="mt-1 h-4 w-4 shrink-0 accent-emerald-700"
+                    />
+                    <span className="min-w-0">
+                      <code className="break-all rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">
+                        {item.errorCode}
+                      </code>
+                      <span className="mt-2 block text-sm text-neutral-600">
+                        {item.count} failed {item.count === 1 ? 'row' : 'rows'}
+                      </span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </fieldset>
+
+        <div className="grid min-w-0 gap-2">
+          <label
+            className="text-sm font-semibold text-neutral-950"
+            htmlFor="selective-replay-proposal-reason"
+          >
+            Reason
+          </label>
+          <textarea
+            id="selective-replay-proposal-reason"
+            value={proposalReason}
+            rows={3}
+            disabled={isSubmitting || counts.length === 0}
+            aria-invalid={isReasonOverLimit}
+            aria-describedby="selective-replay-proposal-reason-count selective-replay-proposal-error"
+            onChange={(event) => onProposalReasonChange(event.target.value)}
+            placeholder="Optional reviewer context."
+            className={[
+              'min-h-24 w-full resize-y rounded-md border bg-white px-3 py-2 text-sm leading-6 text-neutral-900 outline-none transition disabled:bg-neutral-50 disabled:text-neutral-500',
+              isReasonOverLimit
+                ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                : 'border-neutral-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100',
+            ].join(' ')}
+          />
+          <p
+            id="selective-replay-proposal-reason-count"
+            className={[
+              'text-xs',
+              isReasonOverLimit ? 'font-medium text-rose-700' : 'text-neutral-500',
+            ].join(' ')}
+          >
+            {reasonLength}/{PROPOSAL_REASON_MAX_LENGTH}
+          </p>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="submit"
+            disabled={isSubmitting || counts.length === 0}
+            className="inline-flex w-fit rounded-md border border-emerald-700 bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:border-emerald-800 hover:bg-emerald-800 disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400"
+          >
+            {isSubmitting ? 'Creating...' : 'Create proposal'}
+          </button>
+
+          {approvalRequest ? (
+            <Link
+              to={`/approvals/${approvalRequest.id}`}
+              className="inline-flex w-fit rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-950"
+            >
+              Approval request #{approvalRequest.id}
+            </Link>
+          ) : null}
+        </div>
+
+        {errorMessage ? (
+          <p
+            id="selective-replay-proposal-error"
+            role="alert"
+            className="text-sm font-medium text-rose-700"
+          >
+            {errorMessage}
+          </p>
+        ) : null}
+      </form>
+    </section>
+  )
+}
+
 function FailedRowsSection({
   isPending,
   error,
@@ -285,6 +546,29 @@ function FailedRow({ item }: { item: ImportJobErrorItem }) {
       </td>
     </tr>
   )
+}
+
+function getSelectedErrorCodesInDisplayOrder(
+  counts: ImportJobErrorCodeCount[],
+  selectedErrorCodes: string[],
+): string[] {
+  return counts
+    .map((item) => item.errorCode)
+    .filter((errorCode) => selectedErrorCodes.includes(errorCode))
+}
+
+function getProposalMutationErrorMessage(error: unknown): string | null {
+  if (!error || isAuthenticationError(error)) {
+    return null
+  }
+
+  if (isPermissionDeniedError(error)) {
+    return 'Current account does not have USER_WRITE permission.'
+  }
+
+  return error instanceof Error
+    ? error.message
+    : 'Selective replay proposal could not be created.'
 }
 
 function parseImportJobId(value: string | undefined): number | null {

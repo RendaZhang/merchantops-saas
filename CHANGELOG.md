@@ -6,7 +6,13 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 ## [Unreleased]
 
-No release-level changes yet.
+### Added
+
+- Added post-`v0.8.0-beta` Workflow Recovery Slice A as an admin-console selective replay proposal panel on `/imports/:id`, using the existing `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` API to create human-reviewed `IMPORT_JOB_SELECTIVE_REPLAY` approval requests from selected `errorCodeCounts` plus optional reviewer context.
+
+### Changed
+
+- Admin console docs, roadmap/status pages, README, and automated-test guidance now describe the landed Import Selective Replay Proposal UI while keeping direct replay, whole-file replay, edited replay, upload, import AI actions, and backend API changes out of this slice.
 
 ## [v0.8.0-beta] - 2026-05-24
 

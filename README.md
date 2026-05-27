@@ -10,7 +10,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 - Current tagged milestone: `v0.8.0-beta`
 - Tagged baseline meaning: Productization Baseline beta release
-- Current phase state: Productization Baseline release cut is complete; admin entry/runtime, auth sessions with logout/session inventory/logout-others, tenant-integrity hardening, and the current workflow admin screens are tagged, and the next implementation slice is post-`v0.8.0-beta` selection pending
+- Current phase state: Productization Baseline release cut is complete; post-`v0.8.0-beta` Workflow Recovery and Review has started with the Import Selective Replay Proposal UI, and the next planned slice is approval queue filtering
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
 - Previous tagged milestone: `v0.7.0-beta` for the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline
 
@@ -23,7 +23,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 - AI-assisted ticket and import workflows where public AI endpoints remain read-only or suggestion-only.
 - AI governance reads for narrowed interaction history and tenant-scoped aggregate usage/cost metadata, including prompt-version breakdowns.
 - Fixed tenant-scoped feature flags for six AI generation endpoints and two approval-backed workflow bridges.
-- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, sign-out-all, sign-out-other-sessions, Sessions inventory, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics, Approvals queue/detail review controls, a Feature Flags control screen, an AI Interactions usage-summary screen, and same-origin Nginx runtime packaging.
+- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, sign-out-all, sign-out-other-sessions, Sessions inventory, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics plus selective replay proposal creation, Approvals queue/detail review controls, a Feature Flags control screen, an AI Interactions usage-summary screen, and same-origin Nginx runtime packaging.
 - Local Maven startup, Dockerized API startup, production-like admin + API runtime compose, OpenAPI/Swagger docs, and a minimal no-secret GitHub Actions quality gate.
 
 ## Quick Start

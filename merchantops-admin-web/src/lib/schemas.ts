@@ -160,6 +160,17 @@ export const importJobErrorPageSchema = z.object({
   totalPages: z.number(),
 })
 
+export const importSelectiveReplayProposalRequestSchema = z.object({
+  errorCodes: z
+    .array(z.string().trim().min(1, 'errorCodes must not contain blank values'))
+    .min(1, 'Select at least one error code.'),
+  proposalReason: z
+    .string()
+    .trim()
+    .max(255, 'Proposal reason must be 255 characters or fewer.')
+    .optional(),
+})
+
 export const approvalRequestListItemSchema = z.object({
   id: z.number(),
   actionType: z.string(),
@@ -281,6 +292,9 @@ export type ImportJobErrorCodeCount = z.infer<typeof importJobErrorCodeCountSche
 export type ImportJobErrorItem = z.infer<typeof importJobErrorItemSchema>
 export type ImportJobDetail = z.infer<typeof importJobDetailSchema>
 export type ImportJobErrorPage = z.infer<typeof importJobErrorPageSchema>
+export type ImportSelectiveReplayProposalRequest = z.infer<
+  typeof importSelectiveReplayProposalRequestSchema
+>
 export type ApprovalRequestListItem = z.infer<typeof approvalRequestListItemSchema>
 export type ApprovalRequestPage = z.infer<typeof approvalRequestPageSchema>
 export type ApprovalRequest = z.infer<typeof approvalRequestSchema>

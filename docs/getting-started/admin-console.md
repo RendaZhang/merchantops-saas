@@ -20,12 +20,12 @@ The current Productization Baseline frontend is intentionally narrow:
 - render the Ticket Detail screen at `/tickets/:id` using the current ticket detail API and add plain internal comments through the current ticket comment API
 - render the Feature Flags control screen at `/feature-flags` using the current tenant feature-flag API
 - render the Imports queue screen at `/imports` using the current tenant import-job list API
-- render the Import Detail screen at `/imports/:id` using the current import detail and first error-page APIs
+- render the Import Detail screen at `/imports/:id` using the current import detail and first error-page APIs, with human-reviewed selective replay proposal creation over existing error-code counts
 - render the Approvals queue screen at `/approvals` using the current tenant approval-request list API
 - render the Approval Detail screen at `/approvals/:id` using the current approval detail and review APIs
 - render the AI Interactions usage-summary screen at `/ai-interactions` using the current tenant AI usage-summary API
 
-It does not add per-session revoke buttons, stable public session handles, raw `sid`, device metadata, ticket creation, assignment, status transitions, filters, pagination controls, AI actions, ticket AI interaction history drilldown, approval filters, approval pagination, bulk review, payload editing, rejection reasons, proposal creation, import upload, import replay, import AI actions, AI interaction filters, per-request AI detail, entity history drilldown, raw prompt or provider payloads, billing or ledger semantics, cross-tenant feature-flag administration, percentage rollout, batch flag editing, audit detail, AI provider configuration, refresh tokens, cookies, token rotation, or CSRF behavior.
+It does not add per-session revoke buttons, stable public session handles, raw `sid`, device metadata, ticket creation, assignment, status transitions, filters, pagination controls, AI actions, ticket AI interaction history drilldown, approval filters, approval pagination, bulk review, payload editing, rejection reasons, ticket proposal creation, import upload, direct import replay, whole-file replay, edited replay, import AI actions, AI interaction filters, per-request AI detail, entity history drilldown, raw prompt or provider payloads, billing or ledger semantics, cross-tenant feature-flag administration, percentage rollout, batch flag editing, audit detail, AI provider configuration, refresh tokens, cookies, token rotation, or CSRF behavior.
 
 ## Prerequisites
 
@@ -59,7 +59,7 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-The frontend calls `/api/v1/auth/login`, `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/auth/logout`, `/api/v1/auth/logout-all`, `/api/v1/auth/logout-others`, `/api/v1/tickets?page=0&size=10`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs?page=0&size=10`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors?page=0&size=10`, `/api/v1/approval-requests?page=0&size=10`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, `/api/v1/feature-flags/{key}`, and `/api/v1/ai-interactions/usage-summary` with relative `/api/...` paths. During local development, Vite proxies those calls to `http://localhost:8080`.
+The frontend calls `/api/v1/auth/login`, `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/auth/logout`, `/api/v1/auth/logout-all`, `/api/v1/auth/logout-others`, `/api/v1/tickets?page=0&size=10`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs?page=0&size=10`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors?page=0&size=10`, `/api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `/api/v1/approval-requests?page=0&size=10`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, `/api/v1/feature-flags/{key}`, and `/api/v1/ai-interactions/usage-summary` with relative `/api/...` paths. During local development, Vite proxies those calls to `http://localhost:8080`.
 
 ## Start The Production-Like Admin Runtime
 
@@ -87,18 +87,19 @@ The API container uses `SPRING_PROFILES_ACTIVE=runtime`. Required secrets and cr
 7. Select `Feature Flags` and confirm `/feature-flags` renders eight current-tenant flags from `/api/v1/feature-flags`.
 8. Select `Imports` and confirm `/imports` renders the current tenant import-job list or empty state from `/api/v1/import-jobs?page=0&size=10`.
 9. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page from `/api/v1/import-jobs/{id}` and `/api/v1/import-jobs/{id}/errors?page=0&size=10`.
-10. Select `Approvals` and confirm `/approvals` renders the current tenant approval-request list or empty state from `/api/v1/approval-requests?page=0&size=10`.
-11. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields and read-only formatted payload from `/api/v1/approval-requests/{id}`. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
-12. Select `AI Interactions` and confirm `/ai-interactions` renders current-tenant aggregate cards plus `byInteractionType`, `byStatus`, and `byPromptVersion` breakdowns from `/api/v1/ai-interactions/usage-summary`.
-13. Toggle one flag, confirm the row reflects the persisted state returned by `PUT /api/v1/feature-flags/{key}`, and restore the original value before ending the smoke.
-14. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm the page shows `权限不足` without returning to login.
-15. Refresh `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data reload without returning to login while the session is active.
-16. Select `Sign out` and confirm the app returns to the login screen.
-17. Log in in another browser or private window as the same user, then return to the first window's `Sessions` screen, select `Sign out other sessions`, confirm the action, and confirm the first window remains signed in while the other token returns `401` on `/api/v1/context`.
-18. Log in again, select `Sign out all sessions`, and confirm the app returns to the login screen.
-19. Reusing a signed-out token against `/api/v1/context` should return `401`.
+10. If that import job has replayable error-code counts and the current user has `USER_WRITE`, select one error code, optionally enter a short reason, create a selective replay proposal through `/api/v1/import-jobs/{id}/replay-failures/selective/proposals`, and confirm the page links to the returned `/approvals/:id` request. Only use this against a disposable failed import job, because approval later executes replay.
+11. Select `Approvals` and confirm `/approvals` renders the current tenant approval-request list or empty state from `/api/v1/approval-requests?page=0&size=10`.
+12. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields and read-only formatted payload from `/api/v1/approval-requests/{id}`. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
+13. Select `AI Interactions` and confirm `/ai-interactions` renders current-tenant aggregate cards plus `byInteractionType`, `byStatus`, and `byPromptVersion` breakdowns from `/api/v1/ai-interactions/usage-summary`.
+14. Toggle one flag, confirm the row reflects the persisted state returned by `PUT /api/v1/feature-flags/{key}`, and restore the original value before ending the smoke.
+15. Sign out, log in as `ops` or `viewer`, open `/feature-flags`, and confirm the page shows `权限不足` without returning to login.
+16. Refresh `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context plus route data reload without returning to login while the session is active.
+17. Select `Sign out` and confirm the app returns to the login screen.
+18. Log in in another browser or private window as the same user, then return to the first window's `Sessions` screen, select `Sign out other sessions`, confirm the action, and confirm the first window remains signed in while the other token returns `401` on `/api/v1/context`.
+19. Log in again, select `Sign out all sessions`, and confirm the app returns to the login screen.
+20. Reusing a signed-out token against `/api/v1/context` should return `401`.
 
-The seeded `admin`, `ops`, and `viewer` users all have `TICKET_READ` and can load the read-only ticket queue plus ticket detail. The seeded `admin` and `ops` users have `TICKET_WRITE` and can add plain internal comments; `viewer` can read tickets but receives an inline `TICKET_WRITE` permission error on comment submit. The seeded `admin` user has `USER_READ` and can load the read-only imports queue, import detail diagnostics, AI Interactions usage summary, plus the approval request types visible through `USER_READ` and `TICKET_READ`.
+The seeded `admin`, `ops`, and `viewer` users all have `TICKET_READ` and can load the read-only ticket queue plus ticket detail. The seeded `admin` and `ops` users have `TICKET_WRITE` and can add plain internal comments; `viewer` can read tickets but receives an inline `TICKET_WRITE` permission error on comment submit. The seeded `admin` user has `USER_READ` and `USER_WRITE`, can load the imports queue, import detail diagnostics, AI Interactions usage summary, and approval request types visible through `USER_READ` and `TICKET_READ`, and can create import selective replay proposals when the source job is eligible.
 
 ## Production-Like Runtime Smoke Test
 
@@ -115,19 +116,20 @@ Minimum acceptance:
 7. Open `Feature Flags` and confirm the eight-key inventory loads through same-origin `/api/v1/feature-flags`.
 8. Open `Imports` and confirm the queue loads or shows the empty state through same-origin `/api/v1/import-jobs?page=0&size=10`.
 9. If an import job is present, open its source filename and confirm the detail screen loads through same-origin `/api/v1/import-jobs/{id}` plus `/api/v1/import-jobs/{id}/errors?page=0&size=10`.
-10. Open `Approvals` and confirm the queue loads or shows the empty state through same-origin `/api/v1/approval-requests?page=0&size=10`.
-11. If an approval request is present, open its request id and confirm the detail screen loads through same-origin `/api/v1/approval-requests/{id}`.
-12. Open `AI Interactions` and confirm the usage summary loads through same-origin `/api/v1/ai-interactions/usage-summary`.
-13. Toggle one flag through the UI and restore the original value.
-14. Refresh `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context restores while the server-side session is active.
-15. Select `Sign out` and confirm the app returns to login.
-16. Log in in another browser or private window as the same user, then return to the first window's `Sessions` screen, select `Sign out other sessions`, confirm the action, and confirm the first window remains signed in while the other token returns `401` on `/api/v1/context`.
-17. Log in again, select `Sign out all sessions`, and confirm the app returns to login.
-18. Reusing a signed-out token against `http://localhost:8081/api/v1/context` should return `401`.
+10. If that import job has replayable error-code counts and the current user has `USER_WRITE`, create a disposable selective replay proposal and confirm the page links to the returned approval request.
+11. Open `Approvals` and confirm the queue loads or shows the empty state through same-origin `/api/v1/approval-requests?page=0&size=10`.
+12. If an approval request is present, open its request id and confirm the detail screen loads through same-origin `/api/v1/approval-requests/{id}`.
+13. Open `AI Interactions` and confirm the usage summary loads through same-origin `/api/v1/ai-interactions/usage-summary`.
+14. Toggle one flag through the UI and restore the original value.
+15. Refresh `/sessions`, `/tickets`, `/tickets/:id` when a ticket id is available, `/feature-flags`, `/imports`, `/imports/:id` when a job id is available, `/approvals`, `/approvals/:id` when an approval id is available, and `/ai-interactions` and confirm context restores while the server-side session is active.
+16. Select `Sign out` and confirm the app returns to login.
+17. Log in in another browser or private window as the same user, then return to the first window's `Sessions` screen, select `Sign out other sessions`, confirm the action, and confirm the first window remains signed in while the other token returns `401` on `/api/v1/context`.
+18. Log in again, select `Sign out all sessions`, and confirm the app returns to login.
+19. Reusing a signed-out token against `http://localhost:8081/api/v1/context` should return `401`.
 
 ## Current Session Limits
 
-The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, or `/api/v1/ai-interactions/usage-summary` returns `401` or one of the current auth-ending `403` messages: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. A generic permission `403` does not clear the local session; `/feature-flags` shows an in-page `权限不足` state and the `/tickets/:id` comment composer shows an inline `TICKET_WRITE` permission error for ordinary permission denial.
+The frontend stores the JWT access token in `localStorage` for this baseline. It clears that token when it expires locally or when `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, or `/api/v1/ai-interactions/usage-summary` returns `401` or one of the current auth-ending `403` messages: `tenant is not active`, `user is not active`, or `token claims are stale, please login again`. A generic permission `403` does not clear the local session; `/feature-flags` shows an in-page `权限不足` state, `/tickets/:id` comment composer shows an inline `TICKET_WRITE` permission error, and `/imports/:id` proposal creation shows an inline `USER_WRITE` permission error for ordinary permission denial.
 
 Login creates a server-side auth session and the JWT carries a required `sid` claim. After a successful login, the frontend stores the new token and clears the context, auth-session list, ticket list/detail, import-jobs, import-job detail, import-job errors, approval request list/detail, feature-flags, and AI interaction usage-summary query caches so stale tenant data from a previous session cannot survive a user or tenant switch.
 

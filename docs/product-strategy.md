@@ -59,7 +59,7 @@ These horizons describe the recommended execution order. They do not replace the
 ### Horizon 1: Productization Baseline
 
 - Expand the minimal admin console from the current login/context shell into useful ticket, approval, import, AI interaction, and proposal review flows.
-- Prefer the next admin-console increments that turn existing read-only workflow visibility into human-reviewed operator action loops, starting with import selective replay proposal creation over the already-public approval bridge.
+- Prefer the next admin-console increments that turn existing workflow visibility into human-reviewed operator action loops; after import selective replay proposal creation, prioritize finding and following through on pending recovery approvals.
 - Continue the authentication lifecycle from the current-session, logout-all, and logout-other-sessions foundation while keeping per-session revocation, device metadata, refresh-token, and cookie/session-rotation work behind explicit architecture decisions such as ADR-0014.
 - Strengthen deployment and runtime readiness through documented environment, secret-management, bootstrap, and smoke-test paths.
 - Move high-value tenant consistency guarantees from service-only checks toward database-backed constraints where practical.

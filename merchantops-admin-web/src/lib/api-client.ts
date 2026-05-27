@@ -13,6 +13,7 @@ import {
   type ImportJobDetail,
   type ImportJobErrorPage,
   type ImportJobPage,
+  type ImportSelectiveReplayProposalRequest,
   type LoginRequest,
   type LoginResponse,
   type TicketComment,
@@ -30,6 +31,7 @@ import {
   importJobDetailSchema,
   importJobErrorPageSchema,
   importJobPageSchema,
+  importSelectiveReplayProposalRequestSchema,
   loginRequestSchema,
   loginResponseSchema,
   ticketCommentCreateRequestSchema,
@@ -189,6 +191,29 @@ export function getImportJobErrors(
     importJobErrorPageSchema,
     {
       authenticated: true,
+    },
+  )
+}
+
+export async function createImportSelectiveReplayProposal(
+  id: number,
+  request: ImportSelectiveReplayProposalRequest,
+): Promise<ApprovalRequest> {
+  const parsedRequest = importSelectiveReplayProposalRequestSchema.safeParse(request)
+
+  if (!parsedRequest.success) {
+    throw new ApiClientError(
+      parsedRequest.error.issues[0]?.message ?? 'Check the selective replay proposal.',
+    )
+  }
+
+  return apiRequest(
+    `/api/v1/import-jobs/${id}/replay-failures/selective/proposals`,
+    approvalRequestSchema,
+    {
+      method: 'POST',
+      authenticated: true,
+      body: JSON.stringify(parsedRequest.data),
     },
   )
 }
