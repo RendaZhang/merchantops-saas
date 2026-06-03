@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-05-21
+Last updated: 2026-06-03
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -276,7 +276,7 @@ Expected result:
 - when the ticket list is not empty, ticket detail returns the selected ticket with `comments` and `operationLogs` arrays; creating a disposable internal comment returns the selected ticket id, and the refreshed detail includes the server-returned comment and `COMMENTED` workflow log
 - imports returns `page=0`, `size=10`, an `items` array, and the current tenant's first import-job page or an empty list
 - when the import list is not empty, import detail returns the selected job and import errors returns the selected job's first error page
-- approvals returns `page=0`, `size=10`, an `items` array, and the current tenant's visible approval-request page or an empty list
+- approvals returns `page=0`, `size=10`, an `items` array, and the current tenant's visible approval-request page or an empty list; optional `status`, `actionType`, and `requestedBy` filters continue to use the same list API
 - when the approval list is not empty, approval detail returns the selected request
 - feature flags returns the fixed eight-key inventory for the current tenant
 - AI interaction usage summary returns aggregate totals plus `byInteractionType`, `byStatus`, and `byPromptVersion` arrays
@@ -310,7 +310,7 @@ Open `http://localhost:8081`.
 6. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
 7. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
 8. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.
-9. Open `Approvals` and confirm `/approvals` renders the read-only current tenant approval-request queue or empty state.
+9. Open `Approvals` and confirm `/approvals` renders the current tenant approval-request queue or empty state, apply status/action-type/requester filters, confirm invalid requester input stays inline without a request, and use `Clear` to return to the unfiltered queue.
 10. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
 11. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.
 12. Toggle one feature flag and restore the original value.

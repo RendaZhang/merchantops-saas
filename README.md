@@ -10,7 +10,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 
 - Current tagged milestone: `v0.8.0-beta`
 - Tagged baseline meaning: Productization Baseline beta release
-- Current phase state: Productization Baseline release cut is complete; post-`v0.8.0-beta` Workflow Recovery and Review has started with the Import Selective Replay Proposal UI, and the next planned slice is approval queue filtering
+- Current phase state: Productization Baseline release cut is complete; post-`v0.8.0-beta` Workflow Recovery and Review now has Slice A Import Selective Replay Proposal UI and Slice B Approval Queue Filters complete, and the next planned slice is Import Recovery Follow-Through
 - Week 10 completed baseline: Slice A feature flags, Slice B Dockerized API, Slice C minimal GitHub Actions CI, and Slice D portfolio/open-source handoff packaging
 - Previous tagged milestone: `v0.7.0-beta` for the completed Week 10 Delivery Hardening and Portfolio Packaging beta baseline
 
@@ -23,7 +23,7 @@ This repository is built for portfolio review, open-source handoff, and implemen
 - AI-assisted ticket and import workflows where public AI endpoints remain read-only or suggestion-only.
 - AI governance reads for narrowed interaction history and tenant-scoped aggregate usage/cost metadata, including prompt-version breakdowns.
 - Fixed tenant-scoped feature flags for six AI generation endpoints and two approval-backed workflow bridges.
-- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, sign-out-all, sign-out-other-sessions, Sessions inventory, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics plus selective replay proposal creation, Approvals queue/detail review controls, a Feature Flags control screen, an AI Interactions usage-summary screen, and same-origin Nginx runtime packaging.
+- Minimal Vite/React admin console for login, current tenant context, token restoration, backend sign-out, sign-out-all, sign-out-other-sessions, Sessions inventory, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics plus selective replay proposal creation, Approvals queue filters/detail review controls, a Feature Flags control screen, an AI Interactions usage-summary screen, and same-origin Nginx runtime packaging.
 - Local Maven startup, Dockerized API startup, production-like admin + API runtime compose, OpenAPI/Swagger docs, and a minimal no-secret GitHub Actions quality gate.
 
 ## Quick Start
@@ -136,7 +136,7 @@ The CI gate is intentionally minimal. It does not deploy, publish Docker images,
 
 ## Current Limitations
 
-- The admin console currently includes login/context/sign-out, sign-out-all, sign-out-other-sessions, Sessions inventory, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics, Approvals queue/detail review controls, a Feature Flags control screen, and an AI Interactions usage-summary screen; stable public session handles, per-session revocation controls, device-aware session management, ticket creation, assignment, status transitions, filters, pagination controls, approval filters/pagination/bulk review/payload editing/rejection reasons, AI interaction filters or per-request detail, and deeper import workflow actions remain later workflow screens.
+- The admin console currently includes login/context/sign-out, sign-out-all, sign-out-other-sessions, Sessions inventory, Tickets queue/detail activity with a plain internal comment composer, Imports queue/detail diagnostics, Approvals queue filters/detail review controls, a Feature Flags control screen, and an AI Interactions usage-summary screen; stable public session handles, per-session revocation controls, device-aware session management, ticket creation, assignment, status transitions, filters outside the approval queue, pagination controls, approval bulk review/payload editing/rejection reasons, AI interaction filters or per-request detail, and deeper import workflow actions remain later workflow screens.
 - The public import workflow currently supports one business import type: `USER_CSV`.
 - Feature flags are fixed-key and tenant-scoped only; there is no cross-tenant admin surface, percentage rollout, or generic flag platform.
 - Public AI endpoints are read-only or suggestion-only. AI-generated ticket comments and import selective replay still go through separate human-reviewed approval bridges before execution.

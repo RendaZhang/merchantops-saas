@@ -1,6 +1,6 @@
 # Admin Console Architecture
 
-The admin console is a standalone frontend module at `merchantops-admin-web/`. It is not served from Spring Boot static resources. The current Productization Baseline plus post-`v0.8.0-beta` Workflow Recovery surface uses the existing login/context/session inventory APIs, current-session logout, current-user logout-all, the existing ticket queue/detail/comment APIs, the existing import-job list/detail/error/selective-replay-proposal APIs, the existing approval-request list/detail/review APIs, the existing feature-flag list/update API, and the existing AI interaction usage-summary API.
+The admin console is a standalone frontend module at `merchantops-admin-web/`. It is not served from Spring Boot static resources. The current Productization Baseline plus post-`v0.8.0-beta` Workflow Recovery surface uses the existing login/context/session inventory APIs, current-session logout, current-user logout-all, the existing ticket queue/detail/comment APIs, the existing import-job list/detail/error/selective-replay-proposal APIs, the existing approval-request filtered list/detail/review APIs, the existing feature-flag list/update API, and the existing AI interaction usage-summary API.
 
 Productization Baseline Slice C defines the production-like runtime boundary: the built admin app is served by an Nginx container, and that container proxies same-origin `/api/...` requests to the API container.
 
@@ -16,7 +16,7 @@ Productization Baseline Slice C defines the production-like runtime boundary: th
 
 - React Router owns the login route plus the protected Dashboard, Sessions, Tickets, Ticket Detail, Feature Flags, Imports, Import Detail, Approvals, Approval Detail, and AI Interactions routes.
 - The shared authenticated layout owns the app shell, current context query, sign-out mutations, and auth-expired redirect behavior for protected child routes.
-- TanStack Query owns the authenticated `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/auth/logout-others`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `/api/v1/approval-requests`, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` fetch, mutation, and refresh behavior.
+- TanStack Query owns the authenticated `/api/v1/context`, `/api/v1/auth/sessions`, `/api/v1/auth/logout-others`, `/api/v1/tickets`, `/api/v1/tickets/{id}`, `/api/v1/tickets/{id}/comments`, `/api/v1/import-jobs`, `/api/v1/import-jobs/{id}`, `/api/v1/import-jobs/{id}/errors`, `/api/v1/import-jobs/{id}/replay-failures/selective/proposals`, `/api/v1/approval-requests` with optional filters, `/api/v1/approval-requests/{id}`, `/api/v1/approval-requests/{id}/approve`, `/api/v1/approval-requests/{id}/reject`, `/api/v1/feature-flags`, and `/api/v1/ai-interactions/usage-summary` fetch, mutation, and refresh behavior.
 - `src/lib/api-client.ts` is the only fetch boundary for backend calls.
 - `src/lib/auth-token.ts` is the only local token persistence boundary.
 - Zod validates login, context, auth-session list, ticket page/list/detail/comment/comment-create/operation-log, import-job page, import-job list item, import-job detail, import-job error page, import selective replay proposal requests, approval-request page, approval-request list item, approval-request detail/review, feature-flag list/update, AI interaction usage-summary, and JWT display-claim shapes before the UI consumes them.
@@ -49,7 +49,7 @@ The current frontend calls only:
 - `GET /api/v1/import-jobs/{id}`
 - `GET /api/v1/import-jobs/{id}/errors?page=0&size=10`
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
-- `GET /api/v1/approval-requests?page=0&size=10`
+- `GET /api/v1/approval-requests?page=0&size=10` with optional `status`, `actionType`, and `requestedBy`
 - `GET /api/v1/approval-requests/{id}`
 - `POST /api/v1/approval-requests/{id}/approve`
 - `POST /api/v1/approval-requests/{id}/reject`
@@ -71,9 +71,9 @@ The `/imports` route renders the first page of the current tenant import-job que
 
 The `/imports/:id` route renders import-job overview, counts, timing, error-code diagnostics, and the first failed-row page through the existing import detail and `/errors` APIs. It also renders a guarded selective replay proposal panel from existing `errorCodeCounts`, validates selected error codes plus optional `proposalReason`, calls the existing proposal endpoint, stores the returned approval detail in cache, invalidates import and approval list/detail queries, and links success to `/approvals/:id`. It does not add upload, direct replay, whole-file replay, edited replay, import AI actions, filters, pagination controls, approval review execution, `sourceInteractionId` selection, or new backend APIs.
 
-The `/approvals` route renders the first page of the current tenant approval-request queue as read-only data and links each request id to `/approvals/:id`.
+The `/approvals` route renders the first page of the current tenant approval-request queue as read-only data, adds local filter controls for `status`, `actionType`, and `requestedBy`, and links each request id to `/approvals/:id`. Draft filter input does not refetch until `Apply`; `requestedBy` is trimmed and must be a positive whole-number user id before the query key changes; `Clear` returns to the unfiltered first-page request. It does not add URL-synced filters, pagination controls, bulk review, payload editing, rejection reasons, proposal creation, or new backend APIs.
 
-The `/approvals/:id` route renders approval request detail, read-only formatted `payloadJson`, and safe inline confirmation controls for pending approve/reject actions through the existing approval detail and review APIs. `Approve` synchronously executes the underlying action, while `Reject` resolves the request without execution. It does not add bulk review, filters, pagination controls, payload editing, rejection reasons, proposal creation, or new backend APIs.
+The `/approvals/:id` route renders approval request detail, read-only formatted `payloadJson`, and safe inline confirmation controls for pending approve/reject actions through the existing approval detail and review APIs. `Approve` synchronously executes the underlying action, while `Reject` resolves the request without execution. It does not add bulk review, pagination controls, payload editing, rejection reasons, proposal creation, or new backend APIs.
 
 The `/feature-flags` route renders the current tenant's fixed feature-flag inventory and lets authorized users toggle one flag at a time through the existing update endpoint. It does not add cross-tenant administration, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, or new backend APIs. Generic permission `403` responses render an in-page `权限不足` state instead of clearing the local session.
 
@@ -101,4 +101,4 @@ Backend refresh tokens, cookies, token rotation, device metadata, per-session re
 
 ## Deferred Screens
 
-The current shell no longer includes disabled navigation placeholders. Per-session revocation, device-aware session management, ticket creation, assignment, status transitions, ticket filters, pagination controls, approval filters/pagination/bulk review/payload editing/rejection reasons, import upload/direct replay/whole-file replay/edited replay/AI actions, ticket/import AI interaction filters or per-request detail, and deeper feature-flag platform scope remain later slices.
+The current shell no longer includes disabled navigation placeholders. Per-session revocation, device-aware session management, ticket creation, assignment, status transitions, ticket filters, pagination controls, approval pagination/bulk review/payload editing/rejection reasons, import upload/direct replay/whole-file replay/edited replay/AI actions, ticket/import AI interaction filters or per-request detail, and deeper feature-flag platform scope remain later slices.

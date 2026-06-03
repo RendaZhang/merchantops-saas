@@ -80,6 +80,9 @@ type ImportJobErrorPageRequest = {
 type ApprovalRequestPageRequest = {
   page?: number
   size?: number
+  status?: string
+  actionType?: string
+  requestedBy?: number
 }
 
 export class ApiClientError extends Error {
@@ -221,11 +224,20 @@ export async function createImportSelectiveReplayProposal(
 export function getApprovalRequests({
   page = 0,
   size = 10,
+  status,
+  actionType,
+  requestedBy,
 }: ApprovalRequestPageRequest = {}): Promise<ApprovalRequestPage> {
   const searchParams = new URLSearchParams({
     page: String(page),
     size: String(size),
   })
+  appendNonEmptySearchParam(searchParams, 'status', status)
+  appendNonEmptySearchParam(searchParams, 'actionType', actionType)
+
+  if (requestedBy !== undefined && Number.isSafeInteger(requestedBy) && requestedBy > 0) {
+    searchParams.set('requestedBy', String(requestedBy))
+  }
 
   return apiRequest(
     `/api/v1/approval-requests?${searchParams.toString()}`,
@@ -234,6 +246,18 @@ export function getApprovalRequests({
       authenticated: true,
     },
   )
+}
+
+function appendNonEmptySearchParam(
+  searchParams: URLSearchParams,
+  key: string,
+  value: string | undefined,
+): void {
+  const normalizedValue = value?.trim()
+
+  if (normalizedValue) {
+    searchParams.set(key, normalizedValue)
+  }
 }
 
 export function getApprovalRequest(id: number): Promise<ApprovalRequest> {

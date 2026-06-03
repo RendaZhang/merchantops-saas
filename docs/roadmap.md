@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-05-27
+Last updated: 2026-06-01
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,28 +29,30 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice B: Approval Queue Filters
+### Slice C: Import Recovery Follow-Through
 
-Goal: let an authenticated operator narrow the approval queue by existing status, action-type, and requester filters so import replay proposals and other pending review work can be found without scanning the first unfiltered page.
+Goal: add the smallest post-proposal import recovery visibility improvement now that operators can create selective replay proposals and find the resulting approval requests from the admin console.
 
 Expected scope:
 
-- keep this as an admin-console-first slice over the existing `GET /api/v1/approval-requests` query surface
-- add status, action-type, and requester filter controls to `/approvals`
-- validate and send only non-empty filter values, preserving the existing page/size defaults
-- keep approval detail, review execution, proposal creation, bulk review, pagination controls beyond the current first page, backend API changes, and new approval action types out of scope
+- keep this as a narrow admin-console-first workflow recovery slice
+- reuse existing public import and approval APIs where possible
+- consider the smallest useful follow-through such as linking approval outcomes back to derived import jobs or filtering failed rows by `errorCode`
+- keep approval review semantics, approval action types, auth transport, same-origin runtime, release-cut scope, and broad import execution changes out of scope
+- keep import upload, direct replay, whole-file replay, edited replay, import AI actions, source interaction selection, and AI autonomy deferred by default
 - keep completed auth/session/runtime, tenant-integrity, admin-screen, and ADR work stable unless implementation evidence reveals a direct dependency
-- keep per-session revocation, richer device/session management, refresh-token, cookie/session rotation, CSRF, deployment automation, and AI autonomy changes deferred by default
+- keep per-session revocation, richer device/session management, refresh-token, cookie/session rotation, CSRF, and deployment automation deferred by default
 
 Stop condition:
 
-- `/approvals` can request filtered approval pages by `status`, `actionType`, and `requestedBy` through the existing API
-- generic permission `403` remains inline where applicable, while `401` and auth-ending `403` still use the shared session-ended path
-- filter controls remain responsive and do not change approval review semantics
-- frontend workspace validation passes and docs describe the new queue-filtering scope
+- one narrow import recovery follow-through improvement is visible in the admin console
+- the slice does not change approval review semantics or widen the backend public contract beyond implementation evidence
+- frontend workspace validation and any required focused smoke pass
+- docs describe the new workflow recovery scope and keep deferred import replay variants separate
 
 ## Recently Closed
 
+- Slice B: Approval Queue Filters - the admin console now adds status, action-type, and requester filter controls to `/approvals`, keeps draft input local until `Apply`, sends only normalized non-empty filters over the existing `GET /api/v1/approval-requests?page=0&size=10` query surface, validates positive whole-number `requestedBy` values before a request, keeps `Clear` available for empty filtered results, and preserves generic permission `403` inline while `401` and auth-ending `403` still use the shared session-ended path. Approval detail, approve/reject execution, pagination controls, URL query params, backend API changes, and new approval action types stayed out of scope.
 - Slice A: Import Selective Replay Proposal UI - the admin console now adds a proposal panel to `/imports/:id`, validates selected `errorCodeCounts` plus optional `proposalReason`, calls the existing `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` API, shows inline non-auth mutation errors, and links successful responses to `/approvals/:id` while keeping actual replay execution behind the existing approval review flow. Direct replay, whole-file replay, edited replay, upload, import AI actions, backend API changes, and `sourceInteractionId` selection stayed deferred.
 - Release Readiness Slice: `v0.8.0-beta` release cut - the Productization Baseline `Unreleased` changelog notes moved into a dated tag section, release-versioning, README, status, roadmap, product-strategy, project-plan, and automated-test evidence now reflect the current Productization Baseline beta release, and local backend, frontend, authenticated session-management smoke, open-source entry, and remote main CI checks were completed before the annotated tag.
 - Slice G-C3: Per-Session Session Management Decision - [ADR-0014](architecture/adr/0014-per-session-session-management-boundary.md) keeps the current G-C2 session-management boundary in place and defers stable public session handles, device metadata, IP, user-agent, last-seen fields, and per-session revoke controls until a later metadata/privacy/retention decision. This leaves `GET /api/v1/auth/sessions`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/logout-all`, and `POST /api/v1/auth/logout-others` unchanged and keeps cookie/session rotation separate.
@@ -62,10 +64,10 @@ Stop condition:
 - Slice I1: Ticket Child Actor Tenant Integrity - `V19__enforce_ticket_child_actor_tenant_integrity.sql` now adds child indexes and composite same-tenant foreign keys from `ticket_comment(created_by, tenant_id)` and `ticket_operation_log(operator_id, tenant_id)` to `users(id, tenant_id)`, with focused migration plus ticket workflow rejection coverage and default backend regression while leaving public APIs, Swagger, DTOs, services, and admin-console behavior unchanged. Slice I2 later covered child-table `(ticket_id, tenant_id) -> ticket(id, tenant_id)` constraints.
 - Slice H8: Ticket Comment Composer - the admin console now adds a plain internal comment composer to protected `/tickets/:id`, uses the existing `POST /api/v1/tickets/{id}/comments` API, validates comment create requests with Zod, clears input after successful submit, refreshes ticket detail plus the ticket list cache so the new comment and `COMMENTED` workflow log return from the server, and records frontend workspace validation plus mocked browser smoke while leaving ticket creation, assignment, status transitions, ticket AI actions, AI interaction-history drilldown, filters, pagination controls, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H7: Ticket Detail + Activity Timeline Screen - the admin console now links from `/tickets` to protected `/tickets/:id`, uses the existing `GET /api/v1/tickets/{id}` API, validates ticket detail plus comment and operation-log shapes with Zod, renders read-only ticket core fields plus separate comments and workflow operation-log sections, and records frontend workspace validation plus mocked browser layout verification while leaving ticket writes, AI actions, AI interaction history drilldown, filters, pagination controls, backend API changes, refresh tokens, cookies, and token rotation deferred by that slice.
-- Slice H6: Approval Request Detail + Safe Review Controls - the admin console now links from `/approvals` to protected `/approvals/:id`, uses the existing `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject` APIs, validates detail and review response shapes with Zod, renders read-only approval metadata plus formatted `payloadJson`, and gates pending approve/reject through inline confirmation while leaving bulk review, filters, pagination controls, payload editing, rejection reasons, proposal creation, backend API changes, refresh tokens, cookies, and token rotation deferred.
+- Slice H6: Approval Request Detail + Safe Review Controls - the admin console now links from `/approvals` to protected `/approvals/:id`, uses the existing `GET /api/v1/approval-requests/{id}`, `POST /api/v1/approval-requests/{id}/approve`, and `POST /api/v1/approval-requests/{id}/reject` APIs, validates detail and review response shapes with Zod, renders read-only approval metadata plus formatted `payloadJson`, and gates pending approve/reject through inline confirmation while leaving bulk review, pagination controls, payload editing, rejection reasons, proposal creation, backend API changes, refresh tokens, cookies, and token rotation deferred. Workflow Recovery Slice B later added queue filters.
 - Slice H5: Import Job Detail + Errors Screen - the admin console now links from `/imports` to protected `/imports/:id`, uses the existing `GET /api/v1/import-jobs/{id}` and `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` APIs, validates detail and failed-row page shapes with Zod, renders read-only overview/count/timing/error-code diagnostics plus the first failed-row page, and records frontend workspace validation plus mocked browser layout verification while leaving upload, replay, selective or edited replay, import AI actions, filters, pagination controls, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H4: AI Interactions Usage Summary Screen - the admin console now includes a protected `/ai-interactions` route over the existing `GET /api/v1/ai-interactions/usage-summary` API, with Zod-validated usage-summary schemas, a live navigation item, aggregate metric cards, read-only `byInteractionType` / `byStatus` / `byPromptVersion` breakdown tables, and frontend workspace validation while leaving filters, per-request detail, ticket/import entity history drilldown, raw prompt/provider payloads, billing/ledger semantics, write actions, backend API changes, refresh tokens, cookies, and token rotation deferred.
-- Slice H3: Approvals Queue Screen - the admin console now includes a protected `/approvals` route over the existing `GET /api/v1/approval-requests?page=0&size=10` API, with Zod-validated approval-request list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving approval filters, pagination controls, bulk review, payload editing, rejection reasons, proposal creation, backend API changes, refresh tokens, cookies, and token rotation deferred.
+- Slice H3: Approvals Queue Screen - the admin console now includes a protected `/approvals` route over the existing `GET /api/v1/approval-requests?page=0&size=10` API, with Zod-validated approval-request list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving pagination controls, bulk review, payload editing, rejection reasons, proposal creation, backend API changes, refresh tokens, cookies, and token rotation deferred. Workflow Recovery Slice B later added queue filters.
 - Slice H2: Imports Queue Screen - the admin console now includes a protected `/imports` route over the existing `GET /api/v1/import-jobs?page=0&size=10` API, with Zod-validated import-job list schemas, a live navigation item, loading/empty/error/table states, and frontend workspace validation while leaving upload, detail, `/errors`, filters, pagination controls, replay, selective or edited replay, import AI actions, import AI interaction history, approval workflow UI, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice H1: Feature Flags Control Screen - the admin console now includes a protected `/feature-flags` route over the existing `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` API, with Zod-validated feature-flag schemas, a live navigation item, per-row enable/disable controls, query refresh after update, in-page `权限不足` handling for generic permission `403`, and frontend workspace validation while leaving cross-tenant admin, percentage rollout, environment policy, batch editing, audit detail, AI provider configuration, backend API changes, refresh tokens, cookies, and token rotation deferred.
 - Slice G-B1: Logout-All Sessions Contract - `POST /api/v1/auth/logout-all` now revokes every `ACTIVE` auth session for the authenticated current user in the current tenant, including the caller's current session, preserves other users and other tenants, adds a minimal admin `Sign out all sessions` action, and records focused auth plus full regression plus frontend workspace validation while leaving refresh tokens, cookies, token rotation, device metadata, and selective device logout deferred. Slice G-C1 later added read-only current-user session inventory.
@@ -79,7 +81,6 @@ Stop condition:
 
 ## Candidate Next Slices
 
-- Slice C: Import Recovery Follow-Through - add the smallest post-proposal import recovery visibility improvement, such as linking approval outcomes back to derived import jobs or filtering failed rows by `errorCode`, after Slice A exposes real operator usage.
 - Slice G-C4: Cookie Or Refresh-Token Transport Decision - non-default auth lifecycle candidate; select only if the next slice explicitly needs an ADR on HttpOnly cookies, refresh tokens, CSRF handling, or token rotation.
 
 ## Default Deferrals
