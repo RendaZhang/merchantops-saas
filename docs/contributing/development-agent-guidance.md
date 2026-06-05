@@ -1,6 +1,6 @@
 # Development Agent Guidance
 
-Last updated: 2026-03-28
+Last updated: 2026-05-15
 
 ## Purpose
 
@@ -27,7 +27,7 @@ For module-local ownership questions, also read the module notes in [../../merch
 - Read [testing-agent-guidance.md](testing-agent-guidance.md) for the current verification baseline and preferred regression commands.
 - Start with [../runbooks/automated-tests.md](../runbooks/automated-tests.md) for the current automated regression entry point.
 - Public API changes require test updates and doc/runbook updates in the same change.
-- Swagger rendering, live infra health, and uncovered authenticated paths still require manual follow-up through the linked testing guidance and runbooks.
+- Swagger UI visual rendering, live infra health, and uncovered authenticated paths still require manual follow-up through the linked testing guidance and runbooks.
 
 ## Development Concerns
 
@@ -207,6 +207,7 @@ For future repository additions:
 - permission enforcement stays at controller/interceptor level, not repository level
 - protected JWT requests that depend on current roles or permissions must reject stale claims after status, role, or permission changes
 - when access changes are supposed to take effect immediately, do not treat successful re-login alone as sufficient verification; the pre-change token must also be rejected on the next protected request
+- for revoke-style auth UI actions such as logout or logout-all, only show success wording when the backend confirmed the revoke request; if the frontend clears local session state after a failed revoke-style call, keep the user-visible message explicit that server-side revocation may not have happened
 
 ### Extension Checklist
 

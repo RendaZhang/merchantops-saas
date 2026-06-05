@@ -1,0 +1,73 @@
+[
+  {
+    "id": "blank-top-error-pattern-item",
+    "detail": {
+      "job": {
+        "id": 9501,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-error-summary-failure.csv",
+        "storageKey": "1/week9-error-summary-failure.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-failure-9501",
+        "totalCount": 2,
+        "successCount": 0,
+        "failureCount": 2,
+        "errorSummary": "role validation blocked the import",
+        "createdAt": "2026-04-04T09:00:00",
+        "startedAt": "2026-04-04T09:00:02",
+        "finishedAt": "2026-04-04T09:00:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "count": 2
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 95011,
+          "tenantId": 1,
+          "importJobId": 9501,
+          "rowNumber": 2,
+          "errorCode": "UNKNOWN_ROLE",
+          "errorMessage": "roleCodes must exist in current tenant",
+          "rawPayload": "policy-role,Policy Role,policy-role@example.com,secret-pass-1,READ_ONLY",
+          "createdAt": "2026-04-04T09:00:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [
+      {
+        "id": 95011,
+        "tenantId": 1,
+        "importJobId": 9501,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "policy-role,Policy Role,policy-role@example.com,secret-pass-1,READ_ONLY",
+        "createdAt": "2026-04-04T09:00:04"
+      }
+    ],
+    "providerResult": {
+      "summary": "The failures cluster around tenant role validation.",
+      "topErrorPatterns": [
+        " ",
+        "UNKNOWN_ROLE remains the dominant failure group."
+      ],
+      "recommendedNextSteps": [
+        "Review tenant role mappings before replay."
+      ],
+      "modelId": "gpt-4.1-mini",
+      "inputTokens": 120,
+      "outputTokens": 44,
+      "totalTokens": 164,
+      "costMicros": null
+    },
+    "expectedStatus": "INVALID_RESPONSE",
+    "expectedMessage": "import ai error summary is unavailable"
+  }
+]

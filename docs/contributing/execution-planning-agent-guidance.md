@@ -1,6 +1,6 @@
 # Execution Planning Agent Guidance
 
-Last updated: 2026-03-22
+Last updated: 2026-04-13
 
 ## Purpose
 
@@ -37,8 +37,9 @@ Use these sources in this order when deciding what is actually true:
 1. code, tests, Swagger/OpenAPI, and the current staged diff
 2. [../project-status.md](../project-status.md)
 3. [../roadmap.md](../roadmap.md)
-4. [../project-plan.md](../project-plan.md)
-5. [../../README.md](../../README.md)
+4. [../product-strategy.md](../product-strategy.md)
+5. [../project-plan.md](../project-plan.md)
+6. [../../README.md](../../README.md)
 
 Rules:
 
@@ -70,7 +71,7 @@ Use this pass to anchor the phase readout before comparing milestone text.
 
 1. run the Phase Evidence Pass first
 2. determine the current phase from [../project-status.md](../project-status.md)
-3. compare the current implementation and public API surface against [../roadmap.md](../roadmap.md) and [../project-plan.md](../project-plan.md)
+3. compare the current implementation and public API surface against [../roadmap.md](../roadmap.md), [../product-strategy.md](../product-strategy.md), and [../project-plan.md](../project-plan.md)
 4. separate findings into `completed`, `in progress`, `internal groundwork`, and `not started`
 5. identify the smallest sensible next slice that moves the current phase forward
 6. describe the next tasks in implementation order
@@ -136,8 +137,9 @@ Do not silently rewrite the plan. Explain why an adjustment is needed and which 
 Execution-planning work commonly requires updates in these places:
 
 - [../project-status.md](../project-status.md): current implementation reality
-- [../roadmap.md](../roadmap.md): near-term next steps
-- [../project-plan.md](../project-plan.md): milestone shape and longer-range sequencing
+- [../roadmap.md](../roadmap.md): active release-line milestone, active slice, and candidate slice sequence
+- [../product-strategy.md](../product-strategy.md): milestone shape and longer-range sequencing
+- [../project-plan.md](../project-plan.md): planning entry point and source navigation
 - [documentation-maintenance.md](documentation-maintenance.md): if routing rules or doc workflow expectations changed
 - [../architecture/README.md](../architecture/README.md) and `docs/architecture/adr/`: if the recommendation implies a new architecture decision
 
@@ -148,5 +150,6 @@ Execution-planning work commonly requires updates in these places:
 - [testing-agent-guidance.md](testing-agent-guidance.md): verification baseline and regression expectations
 - [review-release-agent-guidance.md](review-release-agent-guidance.md): staged review and release rules
 - [../project-status.md](../project-status.md): current repository reality
-- [../roadmap.md](../roadmap.md): next-phase intent
-- [../project-plan.md](../project-plan.md): longer-range milestone plan
+- [../roadmap.md](../roadmap.md): active release-line milestone and slice sequence
+- [../product-strategy.md](../product-strategy.md): longer-range product and engineering strategy
+- [../project-plan.md](../project-plan.md): planning entry point

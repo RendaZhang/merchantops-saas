@@ -16,9 +16,13 @@ Current reality:
 
 - the ticket AI public surface now includes `GET /api/v1/tickets/{id}/ai-interactions`, `POST /api/v1/tickets/{id}/ai-summary`, `POST /api/v1/tickets/{id}/ai-triage`, and `POST /api/v1/tickets/{id}/ai-reply-draft`
 - the import AI public surface now includes `GET /api/v1/import-jobs/{id}/ai-interactions`, `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation`
+- the shared AI governance read surface now includes `GET /api/v1/ai-interactions/usage-summary`, returning tenant-scoped aggregate `byInteractionType`, `byStatus`, and `byPromptVersion` visibility over stored ticket and import AI interactions without exposing per-request cross-entity detail
 - the current public AI workflows are still read-only or suggestion-only; no public AI endpoint mutates ticket or import business state directly
 - the current workflow also includes two separate human-reviewed execution bridges outside the AI endpoint set: `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` and `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`; both are documented with the import or ticket workflow docs rather than as AI endpoints because they create approval requests instead of generating AI output
 - prompt versioning and eval guidance already apply to the live ticket and import AI paths, not just future design work
+- Week 9 Slice A now adds an executable six-workflow prompt inventory in `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java`
+- Week 9 Slice A also adds a unified comparator pass in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java`, backed by per-workflow golden, failure, and policy sample files under `merchantops-api/src/test/resources/ai/`
+- Week 9 Slice B plus Slice C now widen the same governance baseline with tenant-scoped usage/cost and aggregate prompt-version visibility over stored `ai_interaction_record` rows, still without turning that surface into billing or per-request reporting
 
 ## Related Documents
 

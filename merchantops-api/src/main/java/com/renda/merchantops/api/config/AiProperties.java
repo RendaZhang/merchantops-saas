@@ -41,6 +41,8 @@ public class AiProperties {
     @Min(100)
     private int timeoutMs = 15000;
 
+    private OpenAiRuntime openAiRuntime = OpenAiRuntime.RAW_HTTP;
+
     @Valid
     private OpenAiProperties openai = new OpenAiProperties();
 
@@ -73,6 +75,15 @@ public class AiProperties {
             case OPENAI -> normalizeNullable(modelId);
             case DEEPSEEK -> firstNonBlank(modelId, envLike("DEEPSEEK_MODEL"), DEFAULT_DEEPSEEK_MODEL);
         };
+    }
+
+    public OpenAiRuntime resolveOpenAiRuntime() {
+        return openAiRuntime == null ? OpenAiRuntime.RAW_HTTP : openAiRuntime;
+    }
+
+    public enum OpenAiRuntime {
+        RAW_HTTP,
+        SPRING_AI
     }
 
     @Data

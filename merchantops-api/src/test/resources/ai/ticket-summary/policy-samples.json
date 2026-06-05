@@ -1,0 +1,48 @@
+[
+  {
+    "id": "ambiguous-noisy-summary",
+    "promptContext": {
+      "id": 9202,
+      "tenantId": 1,
+      "title": "Printer drops offline after router change",
+      "description": "The store printer reconnects briefly and then disappears after a weekend network change.",
+      "status": "OPEN",
+      "assigneeUsername": "ops",
+      "createdByUsername": "admin",
+      "createdAt": "2026-04-01T10:00:00",
+      "updatedAt": "2026-04-01T10:12:00",
+      "comments": [
+        {
+          "id": 5202,
+          "content": "The staff is not sure whether the issue is power, cable, or the router update.",
+          "createdByUsername": "ops",
+          "createdAt": "2026-04-01T10:05:00"
+        }
+      ],
+      "olderCommentsOmitted": false,
+      "operationLogs": [
+        {
+          "id": 6202,
+          "operationType": "COMMENTED",
+          "detail": "latest note recorded",
+          "operatorUsername": "ops",
+          "createdAt": "2026-04-01T10:05:00"
+        }
+      ],
+      "olderOperationLogsOmitted": false
+    },
+    "providerSummary": "Issue: The printer intermittently drops offline after a recent router change. Current: the ticket remains OPEN and the latest internal note says the root cause is still unclear. Next: confirm whether the issue is network or hardware before any operator attempts a targeted fix.",
+    "mustContain": [
+      "Issue:",
+      "Current:",
+      "Next:",
+      "root cause is still unclear"
+    ],
+    "mustNotContain": [
+      "automatically",
+      "cross-tenant",
+      "hidden context",
+      "already fixed"
+    ]
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "blank-summary-invalid-response",
+    "promptContext": {
+      "id": 9201,
+      "tenantId": 1,
+      "title": "Receipt printer unavailable",
+      "description": "Cashier cannot print receipts after a restart.",
+      "status": "OPEN",
+      "assigneeUsername": null,
+      "createdByUsername": "admin",
+      "createdAt": "2026-04-01T09:00:00",
+      "updatedAt": "2026-04-01T09:05:00",
+      "comments": [
+        {
+          "id": 5201,
+          "content": "Store staff confirmed the printer stayed offline after a restart.",
+          "createdByUsername": "ops",
+          "createdAt": "2026-04-01T09:03:00"
+        }
+      ],
+      "olderCommentsOmitted": false,
+      "operationLogs": [
+        {
+          "id": 6201,
+          "operationType": "CREATED",
+          "detail": "ticket created",
+          "operatorUsername": "admin",
+          "createdAt": "2026-04-01T09:00:00"
+        }
+      ],
+      "olderOperationLogsOmitted": false
+    },
+    "providerSummary": "   ",
+    "expectedStatus": "INVALID_RESPONSE",
+    "expectedMessage": "ticket ai summary is unavailable"
+  }
+]

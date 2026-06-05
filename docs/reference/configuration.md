@@ -9,8 +9,14 @@
 Override example:
 
 ```bash
-SPRING_PROFILES_ACTIVE=prod ./mvnw -f merchantops-api/pom.xml spring-boot:run
+SPRING_PROFILES_ACTIVE=runtime ./mvnw -f merchantops-api/pom.xml spring-boot:run
 ```
+
+The production-like Docker runtime uses:
+
+- `SPRING_PROFILES_ACTIVE=runtime`
+
+The `runtime` profile is for container execution with explicit environment injection. It does not auto-load the repository-root `.env`.
 
 ## `application-dev.yml`
 
@@ -22,10 +28,27 @@ The `dev` profile contains local integration settings for:
 - JWT
 - local import storage root
 
+The `dev` profile provides local defaults for developer startup. Do not treat those defaults as the production-like runtime contract.
+
+## `application-runtime.yml`
+
+The `runtime` profile contains container runtime settings for:
+
+- MySQL service hostname default: `mysql`
+- Redis service hostname default: `redis`
+- RabbitMQ service hostname default: `rabbitmq`
+- runtime import storage default: `/app/data/imports`
+- required runtime-injected database credentials
+- required runtime-injected RabbitMQ credentials
+- required runtime-injected `JWT_SECRET`
+
+If required runtime variables are missing, the API should fail startup instead of silently falling back to dev credentials.
+
 ## `application.yml`
 
 Shared application configuration currently includes:
 
+- `server.port=8080`
 - `spring.application.name=merchantops-saas`
 - `SPRING_PROFILES_ACTIVE=dev` by default
 - `springdoc.show-actuator=true`
@@ -46,6 +69,7 @@ Shared application configuration currently includes:
   - `merchantops.ai.api-key=`
   - `merchantops.ai.model-id=`
   - `merchantops.ai.timeout-ms=15000`
+  - `merchantops.ai.openai-runtime=RAW_HTTP`
   - `merchantops.ai.openai.base-url=`
   - `merchantops.ai.openai.api-key=`
 - import processing defaults:
@@ -55,6 +79,12 @@ Shared application configuration currently includes:
   - `merchantops.import.processing.enqueue-recovery-batch-size=100`
   - `merchantops.import.processing.enqueue-recovery-delay-ms=300000`
   - `merchantops.import.processing.enqueue-recovery-min-age-seconds=60`
+- auth-session cleanup defaults:
+  - `merchantops.auth.session.cleanup.enabled=true`
+  - `merchantops.auth.session.cleanup.retention-seconds=604800`
+  - `merchantops.auth.session.cleanup.fixed-delay-ms=3600000`
+  - `merchantops.auth.session.cleanup.batch-size=100`
+  - auth-session times are persisted and evaluated as UTC instants, so changing the host or container timezone should not shift expiry or cleanup eligibility semantics
 
 ## Supported Environment Variable Overrides
 
@@ -84,6 +114,7 @@ Shared application configuration currently includes:
 - `MERCHANTOPS_AI_API_KEY`
 - `MERCHANTOPS_AI_MODEL_ID`
 - `MERCHANTOPS_AI_TIMEOUT_MS`
+- `MERCHANTOPS_AI_OPENAI_RUNTIME`
 - `MERCHANTOPS_AI_OPENAI_BASE_URL`
 - `MERCHANTOPS_AI_OPENAI_API_KEY`
 - `DEEPSEEK_API_KEY`
@@ -96,6 +127,11 @@ Shared application configuration currently includes:
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_BATCH_SIZE`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_DELAY_MS`
 - `IMPORT_PROCESSING_ENQUEUE_RECOVERY_MIN_AGE_SECONDS`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_ENABLED`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_RETENTION_SECONDS`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_FIXED_DELAY_MS`
+- `MERCHANTOPS_AUTH_SESSION_CLEANUP_BATCH_SIZE`
+- `SPRING_PROFILES_ACTIVE`
 
 ## Local `.env` Bootstrap
 
@@ -103,14 +139,108 @@ Shared application configuration currently includes:
 - That bootstrap ignores blank lines and comments, trims simple quotes, and does not override already-set system properties or OS environment variables.
 - That bootstrap does not search outside the repository root and is skipped for non-dev profile startup.
 - This local bootstrap is intentionally limited to the main app entrypoint and does not change `@SpringBootTest` behavior.
+- This local bootstrap is also skipped for container launches. Dockerized API and runtime-compose paths must receive env values explicitly through `--env-file`, compose `env_file`, or platform-provided environment variables.
+
+## Secret Contract
+
+Required local infra values:
+
+- `MYSQL_ROOT_PASSWORD`
+- `MYSQL_DATABASE`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `RABBITMQ_DEFAULT_USER`
+- `RABBITMQ_DEFAULT_PASS`
+- `TZ`
+
+Required API runtime secret:
+
+- `JWT_SECRET`
+
+Required API runtime connectivity values:
+
+- `MYSQL_DATABASE`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `RABBITMQ_DEFAULT_USER`
+- `RABBITMQ_DEFAULT_PASS`
+
+The runtime compose overlay supplies container service hosts for `MYSQL_HOST`, `REDIS_HOST`, and `RABBITMQ_HOST`. Other deployment environments must provide equivalent host and port values.
+
+Optional runtime secrets:
+
+- `MERCHANTOPS_AI_API_KEY`
+- `MERCHANTOPS_AI_OPENAI_API_KEY`
+- `DEEPSEEK_API_KEY`
+
+Optional AI provider keys can stay blank for non-AI operation. When AI generation is enabled but provider credentials are absent, the AI endpoints keep their controlled degraded-mode behavior.
+
+Tracked files may contain local demo defaults only. Real deployment secrets must be injected by the runtime environment and must not be copied into Docker images.
+
+## Dockerized API Runtime
+
+The official container delivery path keeps infra in `docker-compose.yml` and runs the API separately on the pinned bridge network `merchantops-infra`:
+
+```powershell
+docker build -t merchantops-api:local .
+docker run --rm --name merchantops-api-local `
+  --env-file .env `
+  --network merchantops-infra `
+  -p 8080:8080 `
+  -e MYSQL_HOST=mysql `
+  -e REDIS_HOST=redis `
+  -e RABBITMQ_HOST=rabbitmq `
+  merchantops-api:local
+```
+
+Container runtime expectations:
+
+- the image exposes port `8080`
+- `MYSQL_HOST`, `REDIS_HOST`, and `RABBITMQ_HOST` should point to the compose service names when the container joins `merchantops-infra`
+- `.env` continues to provide credentials, timezone, JWT overrides, and optional AI provider overrides, but those values are injected at runtime instead of being copied into the image
+- `TZ` still affects process locale and log formatting, but auth-session validity windows are written and compared through UTC instants rather than local wall-clock offsets
+
+## Same-Origin Admin Runtime
+
+Productization Baseline Slice C adds a production-like local runtime overlay:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.runtime.yml up -d --build
+```
+
+Runtime shape:
+
+- `merchantops-api` runs the API image with `SPRING_PROFILES_ACTIVE=runtime`
+- `merchantops-admin-web` serves the built Vite app through Nginx on `http://localhost:8081`
+- Nginx proxies browser requests from `/api/...` to `http://merchantops-api:8080`
+- the browser sees one origin for the admin shell and API calls
+
+This same-origin path deliberately avoids CORS, cookies, refresh tokens, and token rotation in this slice.
+
+## Auth Session Cleanup Controls
+
+- `merchantops.auth.session.cleanup.enabled` enables or disables the scheduled cleanup task. Default: `true`.
+- `merchantops.auth.session.cleanup.retention-seconds` defines how long already-invalid auth sessions remain queryable before deletion. Default: `604800` seconds (7 days).
+- `merchantops.auth.session.cleanup.fixed-delay-ms` defines both the fixed delay and initial delay for the cleanup scheduler. Default: `3600000` ms (1 hour).
+- `merchantops.auth.session.cleanup.batch-size` caps one cleanup pass to a single bounded delete batch. Default: `100`.
+
+Cleanup rules are status-aware:
+
+- `ACTIVE` sessions become cleanup candidates only when `expires_at < now - retention`
+- `REVOKED` sessions become cleanup candidates only when `revoked_at < now - retention`
+
+Auth-session timestamps are now stored through `V18__store_auth_session_times_as_datetime.sql` as UTC-backed `DATETIME` columns. Login writes `created_at` and `expires_at` from UTC instants, JWT `iat` / `exp` use those same instants, and cleanup compares them in UTC so runtime timezone changes do not shift expiry or retention windows.
+
+The cleanup task deletes at most one batch per run. Disabling the task stops scheduled deletion but does not change login, logout, JWT `sid`, or protected-request auth behavior.
 
 ## AI Provider Controls
 
-- `merchantops.ai.enabled` gates the current public AI generation surface: ticket `ai-summary`, `ai-triage`, `ai-reply-draft`, plus import `ai-error-summary`, `ai-mapping-suggestion`, and `ai-fix-recommendation`. When `false`, those endpoints return controlled `503 SERVICE_UNAVAILABLE` responses such as `ticket ai summary is disabled` or `import ai error summary is disabled`.
+- `merchantops.ai.enabled` is the config-level master switch for the six public AI generation endpoints: ticket `ai-summary`, `ai-triage`, `ai-reply-draft`, plus import `ai-error-summary`, `ai-mapping-suggestion`, and `ai-fix-recommendation`. When `false`, those endpoints return controlled `503 SERVICE_UNAVAILABLE` responses such as `ticket ai summary is disabled` or `import ai error summary is disabled`.
 - `merchantops.ai.prompt-version`, `merchantops.ai.triage-prompt-version`, `merchantops.ai.reply-draft-prompt-version`, `merchantops.ai.import-error-summary-prompt-version`, `merchantops.ai.import-mapping-suggestion-prompt-version`, and `merchantops.ai.import-fix-recommendation-prompt-version` are the explicit prompt identifiers stored into `ai_interaction_record` and returned in the public AI responses.
 - `merchantops.ai.provider` selects the active provider path. Current supported values are `OPENAI` and `DEEPSEEK`.
 - `merchantops.ai.base-url`, `merchantops.ai.api-key`, and `merchantops.ai.model-id` are the provider-neutral runtime keys. Use these first for new local and deployed setups.
 - `merchantops.ai.timeout-ms` controls provider connect and read timeouts for the provider-normalized structured-output clients.
+- `merchantops.ai.openai-runtime` selects the internal OpenAI transport when `merchantops.ai.provider=OPENAI`. `RAW_HTTP` is the default existing `/v1/responses` path and `SPRING_AI` switches only the OpenAI transport to Spring AI's chat-completions client. This selector does not affect DeepSeek and does not introduce `spring.ai.*` configuration keys.
 - `merchantops.ai.openai.base-url` and `merchantops.ai.openai.api-key` remain supported as legacy OpenAI compatibility keys.
 - `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, and `DEEPSEEK_MODEL` are supported as local convenience aliases only when `merchantops.ai.provider=DEEPSEEK` and the provider-neutral key is blank.
 - Runtime resolution order is: provider-neutral `merchantops.ai.*`, then provider-specific compatibility keys, then provider defaults.
@@ -118,6 +248,30 @@ Shared application configuration currently includes:
   - `OPENAI`: base URL defaults to `https://api.openai.com`
   - `DEEPSEEK`: base URL defaults to `https://api.deepseek.com` and model defaults to `deepseek-chat`
 - Leaving the required provider model or credentials blank keeps the rest of the application usable; only the current public AI generation endpoints degrade with controlled `503` responses.
+
+## Persisted Feature Flag Controls
+
+Current tenant-scoped persisted flags are managed through `GET /api/v1/feature-flags` and `PUT /api/v1/feature-flags/{key}` rather than `application.yml`.
+
+Current AI generation flags:
+
+- `ai.ticket.summary.enabled`
+- `ai.ticket.triage.enabled`
+- `ai.ticket.reply-draft.enabled`
+- `ai.import.error-summary.enabled`
+- `ai.import.mapping-suggestion.enabled`
+- `ai.import.fix-recommendation.enabled`
+
+Current workflow bridge flags:
+
+- `workflow.import.selective-replay-proposal.enabled`
+- `workflow.ticket.comment-proposal.enabled`
+
+Current flag behavior:
+
+- the six AI generation endpoints require both `merchantops.ai.enabled=true` and the matching persisted feature flag
+- `GET /api/v1/tickets/{id}/ai-interactions`, `GET /api/v1/import-jobs/{id}/ai-interactions`, and `GET /api/v1/ai-interactions/usage-summary` are not gated by the persisted flag set
+- the two Week 8 workflow proposal bridges use only their matching persisted workflow flag; they do not read `merchantops.ai.enabled`
 
 ## Import Processing Controls
 

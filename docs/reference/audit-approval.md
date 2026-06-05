@@ -1,6 +1,6 @@
 # Audit And Approval Patterns
 
-Last updated: 2026-04-04
+Last updated: 2026-04-06
 
 ## Current Scope
 
@@ -42,7 +42,8 @@ Week 6 also adds a separate `ai_interaction_record` model for AI runtime traceab
 - permission: `USER_READ`
 - required query params: `entityType`, `entityId`
 - still entity-scoped read only; there is no global or paged audit search yet
-- current entity families emitted by public write flows: `USER`, `TICKET`, `APPROVAL_REQUEST`, and `IMPORT_JOB`
+- current entity families emitted by public write flows: `USER`, `TICKET`, `APPROVAL_REQUEST`, `IMPORT_JOB`, and `FEATURE_FLAG`
+- feature-flag updates currently emit `entityType=FEATURE_FLAG` and `actionType=FEATURE_FLAG_UPDATED` with before/after snapshots over the stored tenant-scoped flag row
 
 ### `POST /api/v1/users/{id}/disable-requests`
 

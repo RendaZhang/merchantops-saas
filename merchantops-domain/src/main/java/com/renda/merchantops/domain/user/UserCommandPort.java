@@ -11,5 +11,5 @@ public interface UserCommandPort {
 
     ManagedUser saveManagedUser(ManagedUser user);
 
-    void replaceUserRoles(Long userId, List<Long> roleIds);
+    void replaceUserRoles(Long tenantId, Long userId, List<Long> roleIds);
 }

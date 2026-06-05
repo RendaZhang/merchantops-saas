@@ -90,4 +90,11 @@ class AiPropertiesTest {
 
         assertThat(properties.getTimeoutMs()).isEqualTo(15000);
     }
+
+    @Test
+    void shouldDefaultOpenAiRuntimeToRawHttp() {
+        AiProperties properties = new AiProperties();
+
+        assertThat(properties.resolveOpenAiRuntime()).isEqualTo(AiProperties.OpenAiRuntime.RAW_HTTP);
+    }
 }

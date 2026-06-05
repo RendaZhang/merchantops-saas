@@ -1,9 +1,8 @@
 package com.renda.merchantops.api.rbac;
 
-import com.renda.merchantops.api.rbac.RbacApi;
 import com.renda.merchantops.api.dto.rbac.RbacActionResponse;
-import com.renda.merchantops.api.security.RequirePermission;
 import com.renda.merchantops.api.platform.response.ApiResponse;
+import com.renda.merchantops.api.security.RequirePermission;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -19,11 +18,5 @@ public class RbacDemoController implements RbacApi {
     @RequirePermission("USER_WRITE")
     public ApiResponse<RbacActionResponse> manageUsers() {
         return ApiResponse.success(new RbacActionResponse("manage users", "allowed"));
-    }
-
-    @Override
-    @RequirePermission("FEATURE_FLAG_MANAGE")
-    public ApiResponse<RbacActionResponse> manageFeatureFlags() {
-        return ApiResponse.success(new RbacActionResponse("manage feature flags", "allowed"));
     }
 }

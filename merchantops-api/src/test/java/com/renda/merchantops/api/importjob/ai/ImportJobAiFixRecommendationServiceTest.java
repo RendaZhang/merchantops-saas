@@ -54,6 +54,7 @@ class ImportJobAiFixRecommendationServiceTest {
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties
         );
 
@@ -102,6 +103,7 @@ class ImportJobAiFixRecommendationServiceTest {
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -124,6 +126,7 @@ class ImportJobAiFixRecommendationServiceTest {
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -148,6 +151,7 @@ class ImportJobAiFixRecommendationServiceTest {
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -189,6 +193,7 @@ class ImportJobAiFixRecommendationServiceTest {
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 
@@ -232,6 +237,7 @@ class ImportJobAiFixRecommendationServiceTest {
                 new ImportJobFixRecommendationPromptBuilder(),
                 importJobFixRecommendationAiProvider,
                 new AiInteractionExecutionSupport(recordUseCase),
+                com.renda.merchantops.api.support.TestFeatureFlagGateSupport.alwaysEnabledGateService(),
                 aiProperties()
         );
 

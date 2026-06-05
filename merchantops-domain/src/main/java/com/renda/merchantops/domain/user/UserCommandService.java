@@ -87,7 +87,7 @@ public final class UserCommandService implements UserCommandUseCase {
         ));
         // Role bindings live outside the user row, so the service must complete that write
         // explicitly before emitting the user-created audit snapshot.
-        userCommandPort.replaceUserRoles(savedUser.id(), roles.stream().map(RoleItem::id).toList());
+        userCommandPort.replaceUserRoles(tenantId, savedUser.id(), roles.stream().map(RoleItem::id).toList());
 
         userAuditPort.recordEvent(
                 tenantId,
@@ -202,7 +202,7 @@ public final class UserCommandService implements UserCommandUseCase {
             throw new BizException(ErrorCode.BAD_REQUEST, "roleCodes must exist in current tenant");
         }
 
-        userCommandPort.replaceUserRoles(user.id(), roles.stream().map(RoleItem::id).toList());
+        userCommandPort.replaceUserRoles(tenantId, user.id(), roles.stream().map(RoleItem::id).toList());
         // Persist the user again to refresh updatedAt/updatedBy so role changes remain visible
         // to read models and audit trails even though the user core fields stay the same.
         ManagedUser savedUser = userCommandPort.saveManagedUser(new ManagedUser(

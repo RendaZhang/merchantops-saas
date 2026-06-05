@@ -1,6 +1,6 @@
 # Review And Release Agent Guidance
 
-Last updated: 2026-03-10
+Last updated: 2026-04-13
 
 ## Purpose
 
@@ -52,7 +52,7 @@ Equivalent plain-language requests are also valid, for example "review the stage
 - Do not tag a feature or topic branch unless the requester explicitly asks for it
 - Before creating or suggesting a new tag, verify that [../../CHANGELOG.md](../../CHANGELOG.md) and [release-versioning.md](release-versioning.md) are aligned with that milestone
 - Treat tag-ready docs as a checklist, not a best-effort hint: [../../CHANGELOG.md](../../CHANGELOG.md), [release-versioning.md](release-versioning.md), [../project-status.md](../project-status.md), and [../roadmap.md](../roadmap.md) are the minimum required doc set
-- Also require [../../README.md](../../README.md) and [../project-plan.md](../project-plan.md) when the current tagged baseline summary, active-phase framing, or release cadence changed
+- Also require [../../README.md](../../README.md) when the current tagged baseline summary changed, [../product-strategy.md](../product-strategy.md) when release cadence or long-term milestone framing changed, and [../project-plan.md](../project-plan.md) when planning navigation changed
 
 ## Branch Guidance
 
@@ -65,9 +65,10 @@ Review and release work commonly requires doc updates in these places:
 - [../../CHANGELOG.md](../../CHANGELOG.md): release-level notable changes
 - [release-versioning.md](release-versioning.md): current tag baseline and next-version rules
 - [../project-status.md](../project-status.md): current tagged milestone and active phase
-- [../roadmap.md](../roadmap.md): post-milestone handoff and near-term sequence
+- [../roadmap.md](../roadmap.md): post-milestone handoff, active release-line milestone, and slice sequence
 - [../../README.md](../../README.md): current tagged milestone summary and high-level release baseline
-- [../project-plan.md](../project-plan.md): planning anchor and release cadence when milestone framing changed
+- [../product-strategy.md](../product-strategy.md): release cadence and milestone framing when long-term strategy changed
+- [../project-plan.md](../project-plan.md): planning entry point when navigation changed
 
 ## Related Documents
 

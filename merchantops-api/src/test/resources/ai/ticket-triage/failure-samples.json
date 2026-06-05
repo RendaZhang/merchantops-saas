@@ -1,0 +1,40 @@
+[
+  {
+    "id": "missing-priority-invalid-response",
+    "promptContext": {
+      "id": 9301,
+      "tenantId": 1,
+      "title": "Checkout printer still offline",
+      "description": "The lane printer is still blocking receipt printing during active service.",
+      "status": "OPEN",
+      "assigneeUsername": null,
+      "createdByUsername": "admin",
+      "createdAt": "2026-04-02T09:00:00",
+      "updatedAt": "2026-04-02T09:06:00",
+      "comments": [
+        {
+          "id": 5301,
+          "content": "Cashiers cannot complete normal receipt flow.",
+          "createdByUsername": "ops",
+          "createdAt": "2026-04-02T09:04:00"
+        }
+      ],
+      "olderCommentsOmitted": false,
+      "operationLogs": [
+        {
+          "id": 6301,
+          "operationType": "CREATED",
+          "detail": "ticket created",
+          "operatorUsername": "admin",
+          "createdAt": "2026-04-02T09:00:00"
+        }
+      ],
+      "olderOperationLogsOmitted": false
+    },
+    "classification": "DEVICE_ISSUE",
+    "priority": null,
+    "reasoning": "The outage affects an active store lane and still needs operator review.",
+    "expectedStatus": "INVALID_RESPONSE",
+    "expectedMessage": "ticket ai triage is unavailable"
+  }
+]

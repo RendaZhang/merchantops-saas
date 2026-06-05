@@ -18,6 +18,11 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_REJECTED = "REJECTED";
+    private static final String DUPLICATE_PENDING_DISABLE_MESSAGE = "pending disable request already exists for user";
+    private static final String DUPLICATE_PENDING_IMPORT_SELECTIVE_REPLAY_MESSAGE =
+            "pending selective replay proposal already exists for source job and selected errorCodes";
+    private static final String DUPLICATE_PENDING_TICKET_COMMENT_MESSAGE =
+            "pending ticket comment proposal already exists for ticket and comment content";
 
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 10;
@@ -46,6 +51,8 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         requireTenantAndOperator(tenantId, requestedBy);
         String resolvedRequestId = requireRequestId(requestId);
         requireUserCanBeDisabled(tenantId, userId);
+        String pendingRequestKey = ApprovalPendingRequestKeyPolicy.userStatusDisableKey(tenantId, userId);
+        ensurePendingRequestKeyAvailable(tenantId, pendingRequestKey, DUPLICATE_PENDING_DISABLE_MESSAGE);
 
         return approvalRequestPort.save(new ApprovalRequestRecord(
                 null,
@@ -57,7 +64,7 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
                 null,
                 STATUS_PENDING,
                 "{\"status\":\"DISABLED\"}",
-                ApprovalPendingRequestKeyPolicy.userStatusDisableKey(tenantId, userId),
+                pendingRequestKey,
                 resolvedRequestId,
                 LocalDateTime.now(),
                 null,
@@ -75,6 +82,11 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         PreparedImportSelectiveReplayApproval prepared = approvalImportSelectiveReplayPort.prepareProposal(
                 tenantId,
                 requireImportSelectiveReplayCommand(command)
+        );
+        ensurePendingRequestKeyAvailable(
+                tenantId,
+                prepared.pendingRequestKey(),
+                DUPLICATE_PENDING_IMPORT_SELECTIVE_REPLAY_MESSAGE
         );
         return approvalRequestPort.save(new ApprovalRequestRecord(
                 null,
@@ -104,6 +116,11 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
         PreparedTicketCommentApproval prepared = approvalTicketCommentProposalPort.prepareProposal(
                 tenantId,
                 requireTicketCommentCommand(command)
+        );
+        ensurePendingRequestKeyAvailable(
+                tenantId,
+                prepared.pendingRequestKey(),
+                DUPLICATE_PENDING_TICKET_COMMENT_MESSAGE
         );
         return approvalRequestPort.save(new ApprovalRequestRecord(
                 null,
@@ -324,5 +341,14 @@ public class ApprovalRequestDomainService implements ApprovalRequestUseCase {
             throw new BizException(ErrorCode.BAD_REQUEST, "ticketId missing");
         }
         return command;
+    }
+
+    private void ensurePendingRequestKeyAvailable(Long tenantId, String pendingRequestKey, String duplicateMessage) {
+        if (pendingRequestKey == null || pendingRequestKey.isBlank()) {
+            return;
+        }
+        if (approvalRequestPort.existsPendingRequestKey(tenantId, pendingRequestKey)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, duplicateMessage);
+        }
     }
 }

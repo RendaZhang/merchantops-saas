@@ -1,0 +1,49 @@
+[
+  {
+    "id": "internal-suggestion-only-reply",
+    "promptContext": {
+      "id": 9402,
+      "tenantId": 1,
+      "title": "Printer still unstable after router maintenance",
+      "description": "The latest ticket notes suggest the issue may be network-related, but nothing is confirmed.",
+      "status": "OPEN",
+      "assigneeUsername": "ops",
+      "createdByUsername": "admin",
+      "createdAt": "2026-04-03T10:00:00",
+      "updatedAt": "2026-04-03T10:12:00",
+      "comments": [
+        {
+          "id": 5402,
+          "content": "The team wants an internal draft only and has not confirmed the root cause.",
+          "createdByUsername": "ops",
+          "createdAt": "2026-04-03T10:06:00"
+        }
+      ],
+      "olderCommentsOmitted": false,
+      "operationLogs": [
+        {
+          "id": 6402,
+          "operationType": "COMMENTED",
+          "detail": "draft request recorded",
+          "operatorUsername": "ops",
+          "createdAt": "2026-04-03T10:06:00"
+        }
+      ],
+      "olderOperationLogsOmitted": false
+    },
+    "opening": "Internal note for ops.",
+    "body": "The latest comments still point to an intermittent printer issue after the router change, so this draft should stay internal and avoid claiming a completed fix.",
+    "nextStep": "Confirm whether the router change is related before any operator updates the ticket outcome.",
+    "closing": "I will keep this as an internal suggestion until an operator verifies the next step.",
+    "mustContain": [
+      "Internal note",
+      "Confirm whether the router change is related",
+      "internal suggestion"
+    ],
+    "mustNotContain": [
+      "sent to the customer",
+      "automatically updated",
+      "cross-tenant"
+    ]
+  }
+]

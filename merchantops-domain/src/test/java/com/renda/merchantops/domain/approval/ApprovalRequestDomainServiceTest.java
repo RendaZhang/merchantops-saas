@@ -222,6 +222,38 @@ class ApprovalRequestDomainServiceTest {
     }
 
     @Test
+    void createTicketCommentRequestShouldRejectDuplicatePendingRequestBeforeSave() {
+        CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
+        String pendingRequestKey = ApprovalPendingRequestKeyPolicy.ticketCommentCreateKey(1L, 301L, "Reply draft content");
+        requestPort.existingPendingKeys = Set.of(pendingRequestKey);
+        CapturingApprovalTicketCommentProposalPort ticketCommentPort = new CapturingApprovalTicketCommentProposalPort();
+        ticketCommentPort.prepared = new PreparedTicketCommentApproval(
+                301L,
+                "Reply draft content",
+                9002L,
+                "{\"commentContent\":\"Reply draft content\",\"sourceInteractionId\":9002}",
+                pendingRequestKey
+        );
+        ApprovalRequestUseCase useCase = new ApprovalRequestDomainService(
+                requestPort,
+                new CapturingApprovalTargetUserPort(Optional.of(new ApprovalTargetUser(103L, "ACTIVE"))),
+                new NoopApprovalActionPort(),
+                new NoopApprovalImportSelectiveReplayPort(),
+                ticketCommentPort
+        );
+
+        assertThatThrownBy(() -> useCase.createTicketCommentRequest(
+                1L,
+                101L,
+                "ticket-comment-proposal-duplicate-precheck",
+                new TicketCommentApprovalCommand(301L, "Reply draft content", 9002L)
+        ))
+                .isInstanceOf(BizException.class)
+                .hasMessage("pending ticket comment proposal already exists for ticket and comment content");
+        assertThat(requestPort.savedRequest).isNull();
+    }
+
+    @Test
     void approveTicketCommentShouldDispatchCommentCreationAndPersistApprovedStatus() {
         CapturingApprovalRequestPort requestPort = new CapturingApprovalRequestPort();
         requestPort.lockedRequest = Optional.of(ticketCommentApprovalRequest(
@@ -369,11 +401,17 @@ class ApprovalRequestDomainServiceTest {
         private Optional<ApprovalRequestRecord> lockedRequest = Optional.empty();
         private ApprovalRequestPageCriteria pageCriteria;
         private ApprovalRequestPageResult pageResult;
+        private Set<String> existingPendingKeys = Set.of();
 
         @Override
         public ApprovalRequestRecord save(ApprovalRequestRecord request) {
             this.savedRequest = request;
             return savedResponse == null ? request : savedResponse;
+        }
+
+        @Override
+        public boolean existsPendingRequestKey(Long tenantId, String pendingRequestKey) {
+            return existingPendingKeys.contains(pendingRequestKey);
         }
 
         @Override

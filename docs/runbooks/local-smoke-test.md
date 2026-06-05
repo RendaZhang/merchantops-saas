@@ -1,6 +1,6 @@
 # Local Smoke Test
 
-Last updated: 2026-03-28
+Last updated: 2026-05-19
 
 > Maintenance note: keep this page as the current PowerShell-first live smoke path for the public workflow surface. Keep it step-by-step, happy-path-oriented, and reusable across phases. Broad negative-path coverage and environment-wide checks belong in [automated-tests.md](automated-tests.md) and [regression-checklist.md](regression-checklist.md), not as historical add-ons here.
 
@@ -11,7 +11,7 @@ Use this runbook after the automated suite passes and you want one local end-to-
 This smoke flow covers:
 
 - health and admin login
-- current auth/context reads
+- current auth/context/session reads
 - tenant-scoped user-management loop
 - approval plus audit happy path for user disable
 - ticket workflow happy path
@@ -55,7 +55,7 @@ Set-Location .\merchantops-api
 ..\mvnw.cmd spring-boot:run
 ```
 
-Do not default to `java -jar .\merchantops-api\target\merchantops-api-0.0.1-SNAPSHOT.jar` for local smoke tests. The current build is not packaged as a runnable fat jar.
+This runbook still defaults to `spring-boot:run` because repo-root `.env` auto-loading and live edit/restart loops are tied to that path. For delivery-baseline verification, use [deployment-runtime-smoke-test.md](deployment-runtime-smoke-test.md) to run the Dockerized API plus Nginx-served admin console through the same-origin `/api` proxy.
 If port `8080` is already busy, stop the conflicting process or start the app on another port and update `$baseUrl` in the later smoke steps to match.
 
 ## 3. Prepare Reusable Variables
@@ -106,6 +106,7 @@ Expected results:
 ```powershell
 $me = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/user/me" -Headers $adminHeaders
 $context = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/context" -Headers $adminHeaders
+$authSessions = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/auth/sessions" -Headers $adminHeaders
 $roleList = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/roles" -Headers $adminHeaders
 $userPage = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/users?page=0&size=20" -Headers $adminHeaders
 $opsLookup = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/v1/users?page=0&size=20&username=ops" -Headers $adminHeaders
@@ -117,6 +118,7 @@ $assigneeId = $opsLookup.data.items[0].id
 Expected results:
 
 - `/api/v1/user/me` and `/api/v1/context` return the current admin and tenant context
+- `/api/v1/auth/sessions` returns only current tenant/user sessions, marks the current JWT session, and does not expose a raw `sid`
 - `/api/v1/roles` returns only current-tenant role options
 - `/api/v1/users` and `/api/v1/tickets` return page objects for the current tenant only
 - `$assigneeId` resolves from the current tenant user list instead of relying on a hardcoded seeded ID
@@ -206,7 +208,7 @@ $refreshedLogin = Invoke-RestMethod `
 $refreshedToken = $refreshedLogin.data.accessToken
 $refreshedHeaders = @{ Authorization = "Bearer $refreshedToken" }
 
-curl.exe -i -H "Authorization: Bearer $refreshedToken" "$baseUrl/api/v1/rbac/users/manage"
+curl.exe -i -H "Authorization: Bearer $refreshedToken" "$baseUrl/api/v1/feature-flags"
 ```
 
 Expected results:
@@ -216,7 +218,7 @@ Expected results:
 - `PUT /api/v1/users/{id}` updates only `displayName` and `email`
 - `PUT /api/v1/users/{id}/roles` replaces the old role set
 - the pre-change token now returns `403` with `token claims are stale, please login again`
-- the refreshed login returns a new token whose access matches the new roles
+- the refreshed login returns a new token whose access matches the new roles, including `FEATURE_FLAG_MANAGE`
 
 ## 7. Approval And User-Disable Loop
 
@@ -443,14 +445,14 @@ If the job stays in `QUEUED` or `PROCESSING`, treat that as a live infra or work
 
 This smoke path intentionally stops at the clean-success import baseline. Failed-row replay through `POST /api/v1/import-jobs/{id}/replay-failures`, narrow whole-file replay through `POST /api/v1/import-jobs/{id}/replay-file`, exact-error-code selective replay through `POST /api/v1/import-jobs/{id}/replay-failures/selective`, approval-backed selective replay proposal through `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, and edited replay through `POST /api/v1/import-jobs/{id}/replay-failures/edited` are part of the broader import regression surface and should be checked through [regression-checklist.md](regression-checklist.md) when those paths change.
 
-## 10. Optional RBAC Demo Checks
+## 10. Optional RBAC Demo And Feature-Flag Checks
 
-Run these only if you want a quick sanity check on the seeded demo endpoints:
+Run these only if you want a quick sanity check on the remaining seeded demo endpoints plus the real feature-flag management surface:
 
 ```powershell
+curl.exe -i -H "Authorization: Bearer $token" "$baseUrl/api/v1/feature-flags"
 curl.exe -i -H "Authorization: Bearer $token" "$baseUrl/api/v1/rbac/users"
 curl.exe -i -H "Authorization: Bearer $token" "$baseUrl/api/v1/rbac/users/manage"
-curl.exe -i -H "Authorization: Bearer $token" "$baseUrl/api/v1/rbac/feature-flags"
 ```
 
 Use `ops` or `viewer` to confirm permission-denied behavior if you need extra demo-RBAC validation.
@@ -523,6 +525,7 @@ WHERE title LIKE 'smoke-% POS register frozen';
 DELETE ur
 FROM user_role ur
 JOIN users u ON u.id = ur.user_id
+  AND u.tenant_id = ur.tenant_id
 WHERE u.username LIKE 'smoke-%';
 
 DELETE FROM users

@@ -1,6 +1,6 @@
 # AI Integration
 
-Last updated: 2026-03-30
+Last updated: 2026-04-09
 
 ## Purpose
 
@@ -23,6 +23,7 @@ The current public AI contracts are now live:
 | `POST` | `/api/v1/tickets/{id}/ai-summary` | `TICKET_READ` | Generate a suggestion-only summary for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-triage` | `TICKET_READ` | Generate suggestion-only classification and priority guidance for one current-tenant ticket |
 | `POST` | `/api/v1/tickets/{id}/ai-reply-draft` | `TICKET_READ` | Generate a suggestion-only internal ticket comment draft for one current-tenant ticket |
+| `GET` | `/api/v1/ai-interactions/usage-summary` | `USER_READ` | Aggregate current-tenant AI runtime usage and cost metadata across stored ticket and import rows |
 | `GET` | `/api/v1/import-jobs/{id}/ai-interactions` | `USER_READ` | Page operator-visible AI interaction history for one current-tenant import job |
 | `POST` | `/api/v1/import-jobs/{id}/ai-error-summary` | `USER_READ` | Generate a suggestion-only error summary for one current-tenant import job |
 | `POST` | `/api/v1/import-jobs/{id}/ai-mapping-suggestion` | `USER_READ` | Generate a suggestion-only canonical-field mapping proposal for one current-tenant import job |
@@ -30,14 +31,25 @@ The current public AI contracts are now live:
 
 Current public AI scope is intentionally narrow:
 
-- eight public AI endpoints only: two history read endpoints plus six suggestion-generating endpoints
+- nine public AI endpoints only: three read endpoints plus six suggestion-generating endpoints
 - the generation endpoints use no request body; the server derives the prompt from current tenant-scoped ticket or import-job context
 - the history endpoints support `page`, `size`, `interactionType`, and `status` query params over stored `ai_interaction_record` rows
+- the tenant-scoped usage-summary endpoint supports optional `from`, `to`, `entityType`, `interactionType`, and `status` query params over the same stored `ai_interaction_record` rows
 - no new public AI generation endpoint was added in Week 8; instead, the current workflow now includes two normal workflow endpoints outside the AI endpoint set:
   - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`, which can optionally reference a successful import `FIX_RECOMMENDATION` interaction as provenance
   - `POST /api/v1/tickets/{id}/comments/proposals/ai-reply-draft`, which accepts final `commentContent` plus optional same-ticket `REPLY_DRAFT` provenance
-- no ticket status change, comment write, approval trigger, replay trigger, or other workflow mutation from the eight public AI endpoints themselves
-- no public raw prompt or raw provider response in the response body, and no billing or ledger semantics on the history response
+- the six generation endpoints now require both config-level `merchantops.ai.enabled=true` and their matching persisted feature flag:
+  - `ai.ticket.summary.enabled`
+  - `ai.ticket.triage.enabled`
+  - `ai.ticket.reply-draft.enabled`
+  - `ai.import.error-summary.enabled`
+  - `ai.import.mapping-suggestion.enabled`
+  - `ai.import.fix-recommendation.enabled`
+- the three read endpoints are not part of that persisted flag set, so stored history and aggregate usage-summary visibility remain available when generation is gated off
+- the two adjacent workflow endpoints above are gated separately by persisted workflow flags `workflow.import.selective-replay-proposal.enabled` and `workflow.ticket.comment-proposal.enabled`
+- the usage-summary endpoint returns aggregate counts plus usage/cost totals and `byInteractionType`, `byStatus`, and `byPromptVersion` breakdowns only; it does not return a cross-entity per-request detail list
+- no ticket status change, comment write, approval trigger, replay trigger, or other workflow mutation from the nine public AI endpoints themselves
+- no public raw prompt or raw provider response in the response body, and no billing or ledger semantics on the history or tenant-summary responses
 
 ## Public Response Contract
 
@@ -479,6 +491,184 @@ Example:
 }
 ```
 
+`GET /api/v1/ai-interactions/usage-summary` returns a narrowed tenant-scoped aggregate shape over stored AI runtime metadata:
+
+- `from`
+- `to`
+- `totalInteractions`
+- `succeededCount`
+- `failedCount`
+- `totalPromptTokens`
+- `totalCompletionTokens`
+- `totalTokens`
+- `totalCostMicros`
+- `byInteractionType[]`
+- `byStatus[]`
+- `byPromptVersion[]`
+
+Each `byInteractionType[]` record includes:
+
+- `interactionType`
+- `count`
+- `succeededCount`
+- `failedCount`
+- `totalTokens`
+- `totalCostMicros`
+
+Each `byStatus[]` record includes:
+
+- `status`
+- `count`
+- `totalTokens`
+- `totalCostMicros`
+
+Each `byPromptVersion[]` record includes:
+
+- `promptVersion`
+- `count`
+- `succeededCount`
+- `failedCount`
+- `totalTokens`
+- `totalCostMicros`
+
+Current usage-summary query behavior stays narrow:
+
+- tenant scope is enforced directly on stored `ai_interaction_record` rows, so no cross-tenant aggregate leakage is allowed
+- `from` and `to` are optional inclusive ISO-8601 `LocalDateTime` filters; `from > to` returns `400`
+- `entityType` is optional and limited to exact-match trimmed `TICKET` or `IMPORT_JOB`
+- `interactionType` and `status` are optional exact-match trimmed filters over stored canonical values such as `SUMMARY`, `ERROR_SUMMARY`, `SUCCEEDED`, and `INVALID_RESPONSE`
+- `failedCount` is every non-`SUCCEEDED` row, while `succeededCount` is `status=SUCCEEDED`
+- `byInteractionType[]` ordering is `count DESC, interactionType ASC`
+- `byStatus[]` ordering is `count DESC, status ASC`
+- `byPromptVersion[]` ordering is `count DESC, promptVersion ASC`
+- null token and cost fields still count toward interaction totals but contribute zero to aggregate sums
+- request-level fields such as `requestId`, `outputSummary`, and `modelId` are intentionally excluded; `promptVersion` is exposed only through aggregate `byPromptVersion[]` buckets
+- raw prompt text, raw provider payload, cross-entity per-request detail listing, and billing or ledger semantics are still excluded
+
+Example:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "ok",
+  "data": {
+    "from": "2026-04-01T00:00:00",
+    "to": "2026-04-05T23:59:59",
+    "totalInteractions": 6,
+    "succeededCount": 4,
+    "failedCount": 2,
+    "totalPromptTokens": 530,
+    "totalCompletionTokens": 263,
+    "totalTokens": 793,
+    "totalCostMicros": 6200,
+    "byInteractionType": [
+      {
+        "interactionType": "ERROR_SUMMARY",
+        "count": 2,
+        "succeededCount": 1,
+        "failedCount": 1,
+        "totalTokens": 232,
+        "totalCostMicros": 0
+      },
+      {
+        "interactionType": "MAPPING_SUGGESTION",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 161,
+        "totalCostMicros": 2200
+      },
+      {
+        "interactionType": "REPLY_DRAFT",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 228,
+        "totalCostMicros": 2100
+      },
+      {
+        "interactionType": "SUMMARY",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 172,
+        "totalCostMicros": 1900
+      },
+      {
+        "interactionType": "TRIAGE",
+        "count": 1,
+        "succeededCount": 0,
+        "failedCount": 1,
+        "totalTokens": 0,
+        "totalCostMicros": 0
+      }
+    ],
+    "byStatus": [
+      {
+        "status": "SUCCEEDED",
+        "count": 4,
+        "totalTokens": 773,
+        "totalCostMicros": 6200
+      },
+      {
+        "status": "INVALID_RESPONSE",
+        "count": 1,
+        "totalTokens": 0,
+        "totalCostMicros": 0
+      },
+      {
+        "status": "PROVIDER_TIMEOUT",
+        "count": 1,
+        "totalTokens": 20,
+        "totalCostMicros": 0
+      }
+    ],
+    "byPromptVersion": [
+      {
+        "promptVersion": "import-error-summary-v1",
+        "count": 2,
+        "succeededCount": 1,
+        "failedCount": 1,
+        "totalTokens": 232,
+        "totalCostMicros": 0
+      },
+      {
+        "promptVersion": "import-mapping-suggestion-v1",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 161,
+        "totalCostMicros": 2200
+      },
+      {
+        "promptVersion": "ticket-reply-draft-v1",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 228,
+        "totalCostMicros": 2100
+      },
+      {
+        "promptVersion": "ticket-summary-v1",
+        "count": 1,
+        "succeededCount": 1,
+        "failedCount": 0,
+        "totalTokens": 172,
+        "totalCostMicros": 1900
+      },
+      {
+        "promptVersion": "ticket-triage-v1",
+        "count": 1,
+        "succeededCount": 0,
+        "failedCount": 1,
+        "totalTokens": 0,
+        "totalCostMicros": 0
+      }
+    ]
+  }
+}
+```
+
 ## Current Context Assembly Boundary
 
 The current ticket summary, triage, and reply-draft prompts are built only from the target ticket in the current tenant:
@@ -534,13 +724,22 @@ The current runtime keeps AI plumbing narrow rather than introducing a general c
 - a shared AI interaction execution support layer for feature gating, request-id normalization, failure mapping, and `ai_interaction_record` persistence across ticket and import workflows
 - a shared provider-normalized structured-output client
 - instance-level provider configuration under `merchantops.ai.*`
-- an enable/disable flag plus provider-configuration guard
+- a config-level `merchantops.ai.enabled` master switch plus one persisted tenant-scoped feature flag per generation endpoint
+- provider-configuration guard
 - timeout-based controlled degradation
 
-The current provider-normalized client supports two protocol paths:
+The current provider-normalized client supports three internal transport paths across two providers:
 
-- `OPENAI`: `POST /v1/responses` with strict `json_schema`
+- `OPENAI + RAW_HTTP`: direct `POST /v1/responses` with strict `json_schema`
+- `OPENAI + SPRING_AI`: Spring AI OpenAI chat-completions transport to `POST /v1/chat/completions` with `response_format=json_schema`
 - `DEEPSEEK`: `POST /chat/completions` with `response_format={type=json_object}` plus provider-aware JSON-only instructions and a minimal example JSON payload
+
+OpenAI transport selection stays internal behind `StructuredOutputAiClient`:
+
+- `merchantops.ai.openai-runtime=RAW_HTTP` is the default rollback-safe path
+- `merchantops.ai.openai-runtime=SPRING_AI` changes only the OpenAI transport layer
+- the six workflow providers, prompt builders, governance checks, persisted feature flags, history records, and public response contracts stay unchanged
+- runtime ownership remains under `merchantops.ai.*`; this slice does not introduce `spring.ai.*` as a second configuration source
 
 Endpoint-specific output policy remains strict across both providers:
 
@@ -550,8 +749,9 @@ Endpoint-specific output policy remains strict across both providers:
 - import error summary requires `summary`, `topErrorPatterns`, and `recommendedNextSteps`
 - import mapping suggestion requires `summary`, `suggestedFieldMappings`, `confidenceNotes`, and `recommendedOperatorChecks`
 - import fix recommendation requires `summary`, `recommendedFixes`, `confidenceNotes`, and `recommendedOperatorChecks`
-- request tests lock `Authorization`, `X-Client-Request-Id`, model id, system or user roles, and provider-specific structured-output wiring for both protocol paths
+- request tests lock `Authorization`, `X-Client-Request-Id`, model id, system or user roles, and provider-specific structured-output wiring for both OpenAI transport variants plus the DeepSeek path
 - OpenAI response parsing scans all `output[].content[]` parts, concatenates later `output_text` fragments in order, and ignores earlier non-text parts when valid text exists
+- Spring AI OpenAI response parsing extracts the first assistant text from `ChatResponse`, then applies the same workflow-local JSON validation and failure mapping as the existing OpenAI provider path
 - DeepSeek response parsing extracts the message content string, then applies the same endpoint-specific JSON validation and failure mapping
 - upstream `408` and `504` HTTP responses are classified as provider timeouts so the timeout degradation path and `ai_interaction_record.status=PROVIDER_TIMEOUT` stay aligned
 - provider-returned blank items in import `topErrorPatterns` or `recommendedNextSteps` stay mapped as `INVALID_RESPONSE`
@@ -594,15 +794,18 @@ Current status values include:
 - `PROVIDER_UNAVAILABLE`
 - `INVALID_RESPONSE`
 
-This record is still the governance-facing source of truth. The public ticket and import history endpoints expose the same narrowed read shape over their stored rows, including runtime usage/cost metadata when available, while still not exposing raw prompt text or raw provider payloads and while remaining outside billing or ledger semantics. The import history endpoint reads the same `entityType=IMPORT_JOB` rows already written by the import error-summary, mapping-suggestion, and fix-recommendation slices.
+This record is still the governance-facing source of truth. The public ticket and import history endpoints expose the same narrowed read shape over their stored rows, including runtime usage/cost metadata when available, while the tenant-scoped usage-summary endpoint exposes an aggregate read over the same stored rows. All three read surfaces still exclude raw prompt text and raw provider payloads and still remain outside billing or ledger semantics. The import history endpoint and tenant usage-summary endpoint both read the same `entityType=IMPORT_JOB` rows already written by the import error-summary, mapping-suggestion, and fix-recommendation slices.
 
 ## Evaluation Baseline
 
 The current public AI slices establish a minimal eval and visibility path:
 
 - explicit prompt versioning through `ticket-summary-v1`, `ticket-triage-v1`, `ticket-reply-draft-v1`, `import-error-summary-v1`, `import-mapping-suggestion-v1`, and `import-fix-recommendation-v1`
-- golden-sample ticket and import inputs at `merchantops-api/src/test/resources/ai/ticket-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-triage/golden-samples.json`, `merchantops-api/src/test/resources/ai/ticket-reply-draft/golden-samples.json`, `merchantops-api/src/test/resources/ai/import-job-error-summary/golden-samples.json`, `merchantops-api/src/test/resources/ai/import-job-mapping-suggestion/golden-samples.json`, and `merchantops-api/src/test/resources/ai/import-job-fix-recommendation/golden-samples.json`
+- a shared executable workflow catalog in `merchantops-api/src/main/java/com/renda/merchantops/api/ai/core/AiGenerationWorkflow.java` plus an intentionally paired but independently maintained eval inventory in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalInventory.java`, so unreviewed prompt-version bumps fail the governance baseline until both sides are updated on purpose
+- checked-in golden, failure, and policy datasets under `merchantops-api/src/test/resources/ai/<workflow>/`
 - checked-in provider-response fixtures per workflow that drive the real provider parser and service path in automated golden tests
+- a shared comparator pass in `merchantops-api/src/test/java/com/renda/merchantops/api/ai/eval/AiWorkflowEvalComparatorTest.java` that reports checked workflows, prompt versions, sample counts, and failing assertions
+- thin per-workflow golden tests that now reuse the shared evaluator logic instead of maintaining independent assertion paths
 - focused automated tests for generation-endpoint happy path, permission failure, tenant isolation, symmetric degraded-mode coverage, provider-normalized request-contract assertions, endpoint-specific required-field validation, import prompt sanitization, import no-side-effect assertions, import `400` eligibility checks for no-failure, unsupported-import-type, no-header-signal, and no-row-signal jobs, sensitive-output rejection for fix recommendation, and ticket plus import history-endpoint filter/sort/non-leakage coverage including import read-after-write visibility after real generation calls
 - the local provider live smoke path in [../runbooks/ai-live-smoke-test.md](../runbooks/ai-live-smoke-test.md)
 - the operational checklist in [../runbooks/ai-regression-checklist.md](../runbooks/ai-regression-checklist.md)
@@ -613,14 +816,17 @@ Current non-happy-path behavior:
 
 - missing `TICKET_READ` remains `403`
 - missing `USER_READ` remains `403` for import AI error summary, mapping suggestion, and fix recommendation
+- missing `USER_READ` remains `403` for `GET /api/v1/ai-interactions/usage-summary`
 - cross-tenant or missing tickets remain `404`
 - cross-tenant or missing import jobs remain `404`
 - `GET /api/v1/tickets/{id}/ai-interactions` is read-only and does not create new interaction rows or mutate ticket workflow state
 - `GET /api/v1/import-jobs/{id}/ai-interactions` is read-only and does not create new interaction rows or mutate import job state, import error rows, replay lineage, approvals, or business audit state
+- `GET /api/v1/ai-interactions/usage-summary` is read-only and does not create new interaction rows or mutate ticket state, import state, approvals, or business audit state
+- `GET /api/v1/ai-interactions/usage-summary` returns `400 BAD_REQUEST` when `from > to` or when `entityType` is outside `TICKET` and `IMPORT_JOB`
 - `POST /api/v1/tickets/{id}/ai-reply-draft` remains read-only even though the current workflow now includes a separate approval-backed ticket comment proposal endpoint outside the AI endpoint set
 - `POST /api/v1/import-jobs/{id}/ai-error-summary`, `POST /api/v1/import-jobs/{id}/ai-mapping-suggestion`, and `POST /api/v1/import-jobs/{id}/ai-fix-recommendation` remain read-only even though the current workflow now includes a separate approval-backed selective replay proposal path outside the AI endpoint set
-- disabled AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled`
-- disabled import AI returns controlled `503 SERVICE_UNAVAILABLE` messages such as `import ai error summary is disabled`, `import ai mapping suggestion is disabled`, or `import ai fix recommendation is disabled`
+- disabled AI generation returns controlled `503 SERVICE_UNAVAILABLE` messages such as `ticket ai summary is disabled`, `ticket ai triage is disabled`, or `ticket ai reply draft is disabled` whether the gate is closed by `merchantops.ai.enabled=false` or by the matching persisted feature flag
+- disabled import AI generation returns controlled `503 SERVICE_UNAVAILABLE` messages such as `import ai error summary is disabled`, `import ai mapping suggestion is disabled`, or `import ai fix recommendation is disabled` whether the gate is closed by `merchantops.ai.enabled=false` or by the matching persisted feature flag
 - missing provider configuration or provider failure returns controlled `503 SERVICE_UNAVAILABLE`
 - mapping suggestion returns controlled `400 BAD_REQUEST` when the job has no failure signal or no sanitized header signal
 - fix recommendation returns controlled `400 BAD_REQUEST` when the job has no failure signal, is not `USER_CSV`, or has no sanitized row-level signal
@@ -629,30 +835,34 @@ Current non-happy-path behavior:
 - raw provider exceptions are not exposed to API consumers
 - the rest of the ticket workflow remains usable even when AI is unavailable
 - the rest of the import workflow remains usable even when AI is unavailable
+- the separate workflow proposal bridges remain independently controllable through `workflow.import.selective-replay-proposal.enabled` and `workflow.ticket.comment-proposal.enabled` without widening the nine public AI endpoints
 
 ## Current Limitations
 
 The current public AI slices are intentionally narrower than the Week 6 long-range plan.
 
 Not implemented yet:
-- any direct AI-driven ticket or import write-back from the eight public AI endpoints themselves
+- any direct AI-driven ticket or import write-back from the nine public AI endpoints themselves
 - any AI endpoint that directly executes approval or replay
 - broader approval-integrated execution beyond the current Week 8 import selective replay and ticket comment proposal bridges
 - tenant-level BYOK
-- tenant billing, ledger, or invoice-style AI usage/cost reporting
+- broader tenant-scoped runtime reporting beyond the current aggregate usage summary, such as per-request cross-entity listings or trend-oriented reporting
+- tenant billing, ledger, or invoice-style AI usage/cost semantics
 - attachments or external-system context enrichment
 
 ## Planned Next Workflow Areas
 
-The current public AI baseline should stay stable while the Week 9 governance and evaluation layer moves forward:
+The current public AI baseline should stay stable while Week 10 delivery hardening lands on top of the completed Week 9 governance and evaluation layer:
 
-- keep the completed Week 6 ticket AI read surface and completed Week 7 import AI read surface stable instead of widening them with another read-only slice first
+- keep the completed Week 6 ticket AI read surface, the completed Week 7 import AI read surface, and the completed Week 9 tenant usage-summary read surface stable instead of widening them into broader reporting too quickly
 - treat the completed Week 8 import selective replay proposal flow and the completed Week 8 ticket comment proposal flow as the first two human-reviewed execution bridges from suggestion-only AI guidance into approval-bounded workflow execution
-- future approval-aware write-back should build on those separate proposal/approval/execution patterns instead of bypassing them or widening the eight public AI endpoints directly
+- treat the completed Week 9 Slice A executable eval baseline plus the completed Week 9 Slice B plus Slice C tenant-scoped usage-summary read as the current governance visibility baseline on top of stored `ai_interaction_record` rows
+- treat the completed Week 10 Slice A persisted feature-flag baseline as the current rollout-safety control for the six generation endpoints and the two workflow bridges
+- future approval-aware write-back should build on those separate proposal/approval/execution patterns instead of bypassing them or widening the nine public AI endpoints directly
 
 Later roadmap areas remain:
 
-- Week 9 broader AI governance, eval, cost, and usage reporting
+- broader tenant-scoped AI governance and reporting beyond the current aggregate usage summary, still without billing or ledger semantics
 - later human-reviewed workflow expansion only after the current Week 8 execution bridges and approval hardening baseline are proven stable
 
 ## Related Documents

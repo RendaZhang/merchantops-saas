@@ -14,9 +14,9 @@ public interface PermissionRepository extends JpaRepository<PermissionEntity, Lo
             FROM permission p
             JOIN role_permission rp ON rp.permission_id = p.id
             JOIN user_role ur ON ur.role_id = rp.role_id
-            JOIN `role` r ON r.id = ur.role_id
+            JOIN `role` r ON r.id = ur.role_id AND r.tenant_id = ur.tenant_id
             WHERE ur.user_id = :userId
-              AND r.tenant_id = :tenantId
+              AND ur.tenant_id = :tenantId
             ORDER BY p.id
             """, nativeQuery = true)
     List<PermissionEntity> findPermissionsByUserIdAndTenantId(@Param("userId") Long userId,

@@ -36,7 +36,7 @@ public class OpenApiConfig {
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
                                         .description("Input JWT accessToken from /api/v1/auth/login")))
-                .addTagsItem(new Tag().name("Authentication").description("Login and token acquisition"))
+                .addTagsItem(new Tag().name("Authentication").description("Login, session inventory, and logout"))
                 .addTagsItem(new Tag().name("Health").description("Health and readiness endpoints"))
                 .addTagsItem(new Tag().name("Development").description("Development-only public test endpoints"))
                 .addTagsItem(new Tag().name("Context").description("Current authenticated tenant/user context"))

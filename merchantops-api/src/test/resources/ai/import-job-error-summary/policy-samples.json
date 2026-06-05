@@ -1,0 +1,86 @@
+[
+  {
+    "id": "sanitized-error-summary-baseline",
+    "detail": {
+      "job": {
+        "id": 9502,
+        "tenantId": 1,
+        "importType": "USER_CSV",
+        "sourceType": "CSV",
+        "sourceFilename": "week9-error-summary-policy.csv",
+        "storageKey": "1/week9-error-summary-policy.csv",
+        "sourceJobId": null,
+        "status": "FAILED",
+        "requestedBy": 101,
+        "requestId": "req-import-policy-9502",
+        "totalCount": 2,
+        "successCount": 0,
+        "failureCount": 2,
+        "errorSummary": "tenant role validation blocked the import",
+        "createdAt": "2026-04-04T09:10:00",
+        "startedAt": "2026-04-04T09:10:02",
+        "finishedAt": "2026-04-04T09:10:05"
+      },
+      "errorCodeCounts": [
+        {
+          "errorCode": "UNKNOWN_ROLE",
+          "count": 2
+        }
+      ],
+      "itemErrors": [
+        {
+          "id": 95021,
+          "tenantId": 1,
+          "importJobId": 9502,
+          "rowNumber": 2,
+          "errorCode": "UNKNOWN_ROLE",
+          "errorMessage": "roleCodes must exist in current tenant",
+          "rawPayload": "policy-user,Policy User,policy-user@example.com,secret-pass-1,READ_ONLY",
+          "createdAt": "2026-04-04T09:10:04"
+        }
+      ]
+    },
+    "promptWindowErrors": [
+      {
+        "id": 95021,
+        "tenantId": 1,
+        "importJobId": 9502,
+        "rowNumber": 2,
+        "errorCode": "UNKNOWN_ROLE",
+        "errorMessage": "roleCodes must exist in current tenant",
+        "rawPayload": "policy-user,Policy User,policy-user@example.com,secret-pass-1,READ_ONLY",
+        "createdAt": "2026-04-04T09:10:04"
+      }
+    ],
+    "providerResult": {
+      "summary": "The failures cluster around tenant role validation and still require operator review before any replay preparation.",
+      "topErrorPatterns": [
+        "UNKNOWN_ROLE is the dominant failure group across structurally complete rows."
+      ],
+      "recommendedNextSteps": [
+        "Review tenant role mappings before replay."
+      ],
+      "modelId": "gpt-4.1-mini",
+      "inputTokens": 122,
+      "outputTokens": 46,
+      "totalTokens": 168,
+      "costMicros": null
+    },
+    "promptMustContain": [
+      "sourceFilename: week9-error-summary-policy.csv",
+      "passwordPresent=true",
+      "roleCodesPresent=true"
+    ],
+    "promptMustNotContain": [
+      "policy-user@example.com",
+      "secret-pass-1",
+      "READ_ONLY"
+    ],
+    "outputMustNotContain": [
+      "policy-user@example.com",
+      "secret-pass-1",
+      "READ_ONLY",
+      "automatically replayed"
+    ]
+  }
+]

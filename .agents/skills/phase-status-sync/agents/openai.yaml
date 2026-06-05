@@ -1,4 +1,4 @@
 interface:
   display_name: "Phase Status Sync"
-  short_description: "Align plan, status, and roadmap"
-  default_prompt: "Use $phase-status-sync to align project-plan, project-status, and roadmap with the current repository reality."
+  short_description: "Align status, roadmap, and strategy"
+  default_prompt: "Use $phase-status-sync to align project-status, roadmap, project-plan navigation, and product-strategy with the current repository reality, including the release-line milestone and slice planning model."
