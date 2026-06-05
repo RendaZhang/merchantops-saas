@@ -75,6 +75,7 @@ type ImportJobPageRequest = {
 type ImportJobErrorPageRequest = {
   page?: number
   size?: number
+  errorCode?: string
 }
 
 type ApprovalRequestPageRequest = {
@@ -182,12 +183,13 @@ export function getImportJob(id: number): Promise<ImportJobDetail> {
 
 export function getImportJobErrors(
   id: number,
-  { page = 0, size = 10 }: ImportJobErrorPageRequest = {},
+  { page = 0, size = 10, errorCode }: ImportJobErrorPageRequest = {},
 ): Promise<ImportJobErrorPage> {
   const searchParams = new URLSearchParams({
     page: String(page),
     size: String(size),
   })
+  appendNonEmptySearchParam(searchParams, 'errorCode', errorCode)
 
   return apiRequest(
     `/api/v1/import-jobs/${id}/errors?${searchParams.toString()}`,

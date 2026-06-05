@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-06-01
+Last updated: 2026-06-05
 
 > Maintenance note: keep this page focused on the active release-line milestone, active slice, candidate next slices, and stop condition. Use [project-status.md](project-status.md) for current implementation reality, [product-strategy.md](product-strategy.md) for long-term strategy, and [reference/](reference/README.md) for exact public contracts.
 
@@ -29,29 +29,11 @@ Future roadmap updates should use a milestone-and-slice format rather than rebui
 
 ## Active Slice
 
-### Slice C: Import Recovery Follow-Through
-
-Goal: add the smallest post-proposal import recovery visibility improvement now that operators can create selective replay proposals and find the resulting approval requests from the admin console.
-
-Expected scope:
-
-- keep this as a narrow admin-console-first workflow recovery slice
-- reuse existing public import and approval APIs where possible
-- consider the smallest useful follow-through such as linking approval outcomes back to derived import jobs or filtering failed rows by `errorCode`
-- keep approval review semantics, approval action types, auth transport, same-origin runtime, release-cut scope, and broad import execution changes out of scope
-- keep import upload, direct replay, whole-file replay, edited replay, import AI actions, source interaction selection, and AI autonomy deferred by default
-- keep completed auth/session/runtime, tenant-integrity, admin-screen, and ADR work stable unless implementation evidence reveals a direct dependency
-- keep per-session revocation, richer device/session management, refresh-token, cookie/session rotation, CSRF, and deployment automation deferred by default
-
-Stop condition:
-
-- one narrow import recovery follow-through improvement is visible in the admin console
-- the slice does not change approval review semantics or widen the backend public contract beyond implementation evidence
-- frontend workspace validation and any required focused smoke pass
-- docs describe the new workflow recovery scope and keep deferred import replay variants separate
+No active implementation slice has been selected after completed Slice C. Use `EP next` to choose the next narrow Workflow Recovery and Review slice from current repository evidence before starting implementation.
 
 ## Recently Closed
 
+- Slice C: Import Detail Failed Rows `errorCode` Filter - the admin console now lets operators click an error-code diagnostic on `/imports/:id` to reload the first failed-row page through the existing `GET /api/v1/import-jobs/{id}/errors?page=0&size=10&errorCode=...` query surface, shows the active filter with a clear control, keeps selective replay proposal checkbox state independent from failed-row viewing, and preserves inline non-auth errors plus session-ended handling. Approval outcome back-links, derived-job search, direct replay, whole-file replay, edited replay, import upload, import AI actions, pagination controls, URL query params, and backend API changes stayed out of scope.
 - Slice B: Approval Queue Filters - the admin console now adds status, action-type, and requester filter controls to `/approvals`, keeps draft input local until `Apply`, sends only normalized non-empty filters over the existing `GET /api/v1/approval-requests?page=0&size=10` query surface, validates positive whole-number `requestedBy` values before a request, keeps `Clear` available for empty filtered results, and preserves generic permission `403` inline while `401` and auth-ending `403` still use the shared session-ended path. Approval detail, approve/reject execution, pagination controls, URL query params, backend API changes, and new approval action types stayed out of scope.
 - Slice A: Import Selective Replay Proposal UI - the admin console now adds a proposal panel to `/imports/:id`, validates selected `errorCodeCounts` plus optional `proposalReason`, calls the existing `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` API, shows inline non-auth mutation errors, and links successful responses to `/approvals/:id` while keeping actual replay execution behind the existing approval review flow. Direct replay, whole-file replay, edited replay, upload, import AI actions, backend API changes, and `sourceInteractionId` selection stayed deferred.
 - Release Readiness Slice: `v0.8.0-beta` release cut - the Productization Baseline `Unreleased` changelog notes moved into a dated tag section, release-versioning, README, status, roadmap, product-strategy, project-plan, and automated-test evidence now reflect the current Productization Baseline beta release, and local backend, frontend, authenticated session-management smoke, open-source entry, and remote main CI checks were completed before the annotated tag.

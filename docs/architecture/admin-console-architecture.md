@@ -47,7 +47,7 @@ The current frontend calls only:
 - `POST /api/v1/tickets/{id}/comments`
 - `GET /api/v1/import-jobs?page=0&size=10`
 - `GET /api/v1/import-jobs/{id}`
-- `GET /api/v1/import-jobs/{id}/errors?page=0&size=10`
+- `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` with optional `errorCode`
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
 - `GET /api/v1/approval-requests?page=0&size=10` with optional `status`, `actionType`, and `requestedBy`
 - `GET /api/v1/approval-requests/{id}`
@@ -69,7 +69,7 @@ The `/tickets/:id` route renders ticket title, description, status, assignee, cr
 
 The `/imports` route renders the first page of the current tenant import-job queue as read-only data and links each source filename to `/imports/:id`.
 
-The `/imports/:id` route renders import-job overview, counts, timing, error-code diagnostics, and the first failed-row page through the existing import detail and `/errors` APIs. It also renders a guarded selective replay proposal panel from existing `errorCodeCounts`, validates selected error codes plus optional `proposalReason`, calls the existing proposal endpoint, stores the returned approval detail in cache, invalidates import and approval list/detail queries, and links success to `/approvals/:id`. It does not add upload, direct replay, whole-file replay, edited replay, import AI actions, filters, pagination controls, approval review execution, `sourceInteractionId` selection, or new backend APIs.
+The `/imports/:id` route renders import-job overview, counts, timing, error-code diagnostics, and the first failed-row page through the existing import detail and `/errors` APIs. Error diagnostics can reload that first failed-row page with an exact `errorCode` filter and show a clearable active filter without changing selective replay proposal checkbox state. The route also renders a guarded selective replay proposal panel from existing `errorCodeCounts`, validates selected error codes plus optional `proposalReason`, calls the existing proposal endpoint, stores the returned approval detail in cache, invalidates import and approval list/detail queries, and links success to `/approvals/:id`. It does not add upload, direct replay, whole-file replay, edited replay, import AI actions, pagination controls, URL query params, approval review execution, `sourceInteractionId` selection, or new backend APIs.
 
 The `/approvals` route renders the first page of the current tenant approval-request queue as read-only data, adds local filter controls for `status`, `actionType`, and `requestedBy`, and links each request id to `/approvals/:id`. Draft filter input does not refetch until `Apply`; `requestedBy` is trimmed and must be a positive whole-number user id before the query key changes; `Clear` returns to the unfiltered first-page request. It does not add URL-synced filters, pagination controls, bulk review, payload editing, rejection reasons, proposal creation, or new backend APIs.
 

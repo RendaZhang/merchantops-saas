@@ -30,18 +30,34 @@ export function ImportJobDetailPage() {
   const { handleAuthenticationError } = useAuthenticatedRoute()
   const queryClient = useQueryClient()
   const [selectedErrorCodes, setSelectedErrorCodes] = useState<string[]>([])
+  const [errorCodeFilter, setErrorCodeFilter] = useState<{
+    jobId: number | null
+    errorCode: string | null
+  }>({ jobId: null, errorCode: null })
   const [proposalReason, setProposalReason] = useState('')
   const [proposalValidationError, setProposalValidationError] = useState<string | null>(null)
   const jobId = parseImportJobId(id)
   const hasValidJobId = jobId !== null
+  const activeErrorCodeFilter =
+    errorCodeFilter.jobId === jobId ? errorCodeFilter.errorCode : null
   const importJobQuery = useQuery({
     queryKey: ['import-job', jobId],
     queryFn: () => getImportJob(requireImportJobId(jobId)),
     enabled: hasValidJobId,
   })
   const importJobErrorsQuery = useQuery({
-    queryKey: ['import-job-errors', jobId, importJobErrorsPageRequest],
-    queryFn: () => getImportJobErrors(requireImportJobId(jobId), importJobErrorsPageRequest),
+    queryKey: [
+      'import-job-errors',
+      jobId,
+      importJobErrorsPageRequest.page,
+      importJobErrorsPageRequest.size,
+      activeErrorCodeFilter,
+    ],
+    queryFn: () =>
+      getImportJobErrors(requireImportJobId(jobId), {
+        ...importJobErrorsPageRequest,
+        errorCode: activeErrorCodeFilter ?? undefined,
+      }),
     enabled: hasValidJobId,
   })
   const createProposalMutation = useMutation({
@@ -123,6 +139,14 @@ export function ImportJobDetailPage() {
     })
     setProposalValidationError(null)
     createProposalMutation.reset()
+  }
+
+  function handleViewFailedRows(errorCode: string) {
+    setErrorCodeFilter({ jobId, errorCode })
+  }
+
+  function handleClearFailedRowsFilter() {
+    setErrorCodeFilter({ jobId, errorCode: null })
   }
 
   function handleProposalReasonChange(value: string) {
@@ -224,7 +248,11 @@ export function ImportJobDetailPage() {
         <TimingPanel job={job} />
       </section>
 
-      <ErrorCodeCounts counts={job.errorCodeCounts} />
+      <ErrorCodeCounts
+        counts={job.errorCodeCounts}
+        activeErrorCodeFilter={activeErrorCodeFilter}
+        onViewRows={handleViewFailedRows}
+      />
 
       <SelectiveReplayProposalPanel
         counts={job.errorCodeCounts}
@@ -243,6 +271,8 @@ export function ImportJobDetailPage() {
         error={importJobErrorsQuery.error}
         items={importJobErrorsQuery.data?.items ?? []}
         total={importJobErrorsQuery.data?.total ?? 0}
+        activeErrorCodeFilter={activeErrorCodeFilter}
+        onClearErrorCodeFilter={handleClearFailedRowsFilter}
       />
     </div>
   )
@@ -293,7 +323,15 @@ function DetailItem({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ErrorCodeCounts({ counts }: { counts: ImportJobErrorCodeCount[] }) {
+function ErrorCodeCounts({
+  counts,
+  activeErrorCodeFilter,
+  onViewRows,
+}: {
+  counts: ImportJobErrorCodeCount[]
+  activeErrorCodeFilter: string | null
+  onViewRows: (errorCode: string) => void
+}) {
   return (
     <section className="min-w-0 rounded-lg border border-neutral-200 bg-white">
       <div className="border-b border-neutral-200 p-5">
@@ -304,14 +342,31 @@ function ErrorCodeCounts({ counts }: { counts: ImportJobErrorCodeCount[] }) {
         <p className="p-5 text-sm text-neutral-600">No error code counts were returned.</p>
       ) : (
         <div className="grid min-w-0 gap-0 divide-y divide-neutral-200 md:grid-cols-3 md:divide-x md:divide-y-0">
-          {counts.map((item) => (
-            <div key={item.errorCode} className="min-w-0 p-5">
-              <code className="break-all rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">
-                {item.errorCode}
-              </code>
-              <p className="mt-3 text-2xl font-semibold text-neutral-950">{item.count}</p>
-            </div>
-          ))}
+          {counts.map((item) => {
+            const isActive = activeErrorCodeFilter === item.errorCode
+
+            return (
+              <div key={item.errorCode} className="min-w-0 p-5">
+                <code className="break-all rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">
+                  {item.errorCode}
+                </code>
+                <p className="mt-3 text-2xl font-semibold text-neutral-950">{item.count}</p>
+                <button
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => onViewRows(item.errorCode)}
+                  className={[
+                    'mt-4 inline-flex w-fit rounded-md border px-3 py-2 text-sm font-medium transition',
+                    isActive
+                      ? 'border-emerald-700 bg-emerald-700 text-white'
+                      : 'border-neutral-300 text-neutral-700 hover:border-neutral-500 hover:text-neutral-950',
+                  ].join(' ')}
+                >
+                  {isActive ? 'Viewing rows' : 'View rows'}
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
     </section>
@@ -474,30 +529,60 @@ function FailedRowsSection({
   error,
   items,
   total,
+  activeErrorCodeFilter,
+  onClearErrorCodeFilter,
 }: {
   isPending: boolean
   error: Error | null
   items: ImportJobErrorItem[]
   total: number
+  activeErrorCodeFilter: string | null
+  onClearErrorCodeFilter: () => void
 }) {
+  const isFiltered = activeErrorCodeFilter !== null
+
   return (
     <section className="min-w-0 rounded-lg border border-neutral-200 bg-white">
-      <div className="flex flex-col gap-2 border-b border-neutral-200 p-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <div className="flex flex-col gap-3 border-b border-neutral-200 p-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-emerald-700">Failed rows</p>
           <h3 className="mt-2 text-lg font-semibold text-neutral-950">
-            First error page
+            {isFiltered ? 'Rows matching error code' : 'First error page'}
           </h3>
+          {isFiltered ? (
+            <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+              <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900">
+                <span className="shrink-0 text-emerald-700">Filter</span>
+                <code className="break-all text-[0.7rem]">{activeErrorCodeFilter}</code>
+              </span>
+              <button
+                type="button"
+                onClick={onClearErrorCodeFilter}
+                className="inline-flex w-fit rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:border-neutral-500 hover:text-neutral-950"
+              >
+                Clear filter
+              </button>
+            </div>
+          ) : null}
         </div>
-        <p className="text-sm text-neutral-600">Showing {items.length} of {total}</p>
+        <p className="text-sm text-neutral-600">
+          Showing {items.length} of {total}
+          {isFiltered ? ' matching rows' : ''}
+        </p>
       </div>
 
       {isPending ? (
-        <p className="p-5 text-sm text-neutral-600">Loading failed rows.</p>
+        <p className="p-5 text-sm text-neutral-600">
+          {isFiltered ? 'Loading matching failed rows.' : 'Loading failed rows.'}
+        </p>
       ) : error && !isAuthenticationError(error) ? (
         <p className="p-5 text-sm font-medium text-rose-700">{error.message}</p>
       ) : items.length === 0 ? (
-        <p className="p-5 text-sm text-neutral-600">No failed rows were returned.</p>
+        <p className="p-5 text-sm text-neutral-600">
+          {isFiltered
+            ? 'No failed rows matching this error code were returned.'
+            : 'No failed rows were returned.'}
+        </p>
       ) : (
         <div className="max-w-full overflow-x-auto">
           <table className="min-w-[980px] table-fixed divide-y divide-neutral-200 text-left">

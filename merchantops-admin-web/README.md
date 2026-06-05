@@ -2,7 +2,7 @@
 
 Vite + React admin console for the Productization Baseline.
 
-This app is intentionally thin. The current Productization Baseline plus post-`v0.8.0-beta` Workflow Recovery work proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, other-session sign-out that preserves the current session, a current-user Sessions screen, the current tenant tickets queue plus ticket detail/activity screen with a plain internal comment composer, the current tenant imports queue plus import detail diagnostics and selective replay proposal creation, the current tenant approvals queue filters plus approval detail/review controls, the feature-flag control screen, and the AI Interactions usage-summary screen.
+This app is intentionally thin. The current Productization Baseline plus post-`v0.8.0-beta` Workflow Recovery work proves the frontend placement, local run path, login flow, current tenant context, token restoration, backend current-session sign-out, all-session sign-out for the current user, other-session sign-out that preserves the current session, a current-user Sessions screen, the current tenant tickets queue plus ticket detail/activity screen with a plain internal comment composer, the current tenant imports queue plus import detail diagnostics, failed-row `errorCode` filtering, and selective replay proposal creation, the current tenant approvals queue filters plus approval detail/review controls, the feature-flag control screen, and the AI Interactions usage-summary screen.
 
 ## Stack
 
@@ -83,7 +83,7 @@ The admin console calls:
 - `POST /api/v1/tickets/{id}/comments`
 - `GET /api/v1/import-jobs?page=0&size=10`
 - `GET /api/v1/import-jobs/{id}`
-- `GET /api/v1/import-jobs/{id}/errors?page=0&size=10`
+- `GET /api/v1/import-jobs/{id}/errors?page=0&size=10` with optional `errorCode`
 - `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals`
 - `GET /api/v1/approval-requests?page=0&size=10` with optional `status`, `actionType`, and `requestedBy`
 - `GET /api/v1/approval-requests/{id}`
@@ -103,7 +103,7 @@ The Ticket Detail route is available at `/tickets/:id`. It renders ticket title,
 
 The Imports route is available at `/imports`. It renders the first page of the current tenant import-job queue as a read-only table and links each source filename to `/imports/:id`.
 
-The Import Detail route is available at `/imports/:id`. It renders job overview, counts, timing, `errorCodeCounts`, and the first failed-row page from the existing import detail and `/errors` APIs. It also lets an authorized user create a human-reviewed selective replay proposal from selected error codes plus optional reviewer context through the existing proposal API, then links the returned approval request to `/approvals/:id`. It does not include import upload, direct replay, whole-file replay, edited replay, import AI actions, filters, pagination controls, approval review execution, `sourceInteractionId` selection, or backend API changes.
+The Import Detail route is available at `/imports/:id`. It renders job overview, counts, timing, `errorCodeCounts`, and the first failed-row page from the existing import detail and `/errors` APIs. Error diagnostics can reload that same first failed-row page with an exact `errorCode` filter, and the active filter can be cleared without changing selective replay proposal checkbox state. The route also lets an authorized user create a human-reviewed selective replay proposal from selected error codes plus optional reviewer context through the existing proposal API, then links the returned approval request to `/approvals/:id`. It does not include import upload, direct replay, whole-file replay, edited replay, import AI actions, pagination controls, URL query params, approval review execution, `sourceInteractionId` selection, or backend API changes.
 
 The Approvals route is available at `/approvals`. It renders the first page of the current tenant approval-request queue as a read-only table, keeps local draft filters for status, action type, and requester id, applies only normalized non-empty filters to the existing list API, validates `requestedBy` as a positive whole-number user id before requesting, and links each request id to `/approvals/:id`. It does not include URL query params, pagination controls, bulk review, payload editing, rejection reasons, proposal creation, or backend API changes.
 
@@ -149,7 +149,7 @@ Manual smoke:
 8. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow logs from `/api/v1/tickets/{id}`. As `admin` or `ops`, submit a disposable internal comment and confirm the input clears and the refreshed detail shows the new comment plus a `COMMENTED` workflow log from `/api/v1/tickets/{id}/comments`.
 9. Open `Feature Flags` and confirm `/feature-flags` renders eight flags from `/api/v1/feature-flags`.
 10. Open `Imports` and confirm `/imports` renders the current tenant import queue or empty state from `/api/v1/import-jobs?page=0&size=10`.
-11. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page from `/api/v1/import-jobs/{id}` and `/api/v1/import-jobs/{id}/errors?page=0&size=10`.
+11. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page from `/api/v1/import-jobs/{id}` and `/api/v1/import-jobs/{id}/errors?page=0&size=10`. If error-code diagnostics are present, click `View rows`, confirm the failed-row request adds `errorCode=<selected-code>`, then clear the filter and confirm the unfiltered first page returns.
 12. If that import job has replayable error-code counts and the current user has `USER_WRITE`, select one error code, optionally enter a short reason, create a disposable selective replay proposal through `/api/v1/import-jobs/{id}/replay-failures/selective/proposals`, and confirm the page links to the returned `/approvals/:id` request.
 13. Open `Approvals` and confirm `/approvals` renders the current tenant approval queue or empty state from `/api/v1/approval-requests?page=0&size=10`. Apply status, action-type, requester, and combined filters, confirm only normalized non-empty filters are sent, confirm invalid requester ids stay inline without an approval-request call, and confirm `Clear` returns to the unfiltered request.
 14. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload from `/api/v1/approval-requests/{id}`. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.

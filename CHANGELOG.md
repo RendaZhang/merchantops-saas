@@ -10,10 +10,11 @@ Low-level implementation steps stay in Git commit history. This changelog is int
 
 - Added post-`v0.8.0-beta` Workflow Recovery Slice A as an admin-console selective replay proposal panel on `/imports/:id`, using the existing `POST /api/v1/import-jobs/{id}/replay-failures/selective/proposals` API to create human-reviewed `IMPORT_JOB_SELECTIVE_REPLAY` approval requests from selected `errorCodeCounts` plus optional reviewer context.
 - Added post-`v0.8.0-beta` Workflow Recovery Slice B as approval queue filters on `/approvals`, sending normalized `status`, `actionType`, and positive integer `requestedBy` query parameters through the existing `GET /api/v1/approval-requests` API while preserving first-page scope and approval review semantics.
+- Added post-`v0.8.0-beta` Workflow Recovery Slice C as an Import Detail failed-row `errorCode` filter on `/imports/:id`, reusing the existing `GET /api/v1/import-jobs/{id}/errors?page=0&size=10&errorCode=...` API while keeping proposal checkbox selection independent from failed-row viewing.
 
 ### Changed
 
-- Admin console docs, roadmap/status pages, README, and automated-test guidance now describe the landed Import Selective Replay Proposal UI and Approval Queue Filters slice, keep direct replay, whole-file replay, edited replay, upload, import AI actions, approval pagination/bulk review/payload editing/rejection reasons, and backend API changes deferred, and promote Import Recovery Follow-Through as the next planned workflow-recovery slice.
+- Admin console docs, roadmap/status pages, README, and automated-test guidance now describe the landed Import Selective Replay Proposal UI, Approval Queue Filters, and Import Detail Failed Rows `errorCode` Filter slices, while keeping direct replay, whole-file replay, edited replay, upload, import AI actions, approval pagination/bulk review/payload editing/rejection reasons, approval outcome back-links, and backend API changes deferred.
 
 ## [v0.8.0-beta] - 2026-05-24
 

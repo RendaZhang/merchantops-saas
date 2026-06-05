@@ -1,6 +1,6 @@
 # Deployment Runtime Smoke Test
 
-Last updated: 2026-06-03
+Last updated: 2026-06-05
 
 Use this runbook when a change touches Docker delivery, runtime environment injection, admin-console packaging, or the same-origin `/api` proxy path.
 
@@ -309,7 +309,7 @@ Open `http://localhost:8081`.
 5. If a ticket is present, open its title or id and confirm `/tickets/:id` renders ticket detail, comments, and workflow operation logs; submit a disposable internal comment and confirm the input clears while comments and logs refresh.
 6. Open `Feature Flags` and confirm `/feature-flags` renders eight current-tenant feature flags.
 7. Open `Imports` and confirm `/imports` renders the read-only current tenant import-job queue or empty state.
-8. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page.
+8. If an import job is present, open its source filename and confirm `/imports/:id` renders job detail plus the first failed-row page; when error-code diagnostics are present, click `View rows`, confirm the failed-row request adds `errorCode=<selected-code>`, then clear the filter and confirm the unfiltered first page returns.
 9. Open `Approvals` and confirm `/approvals` renders the current tenant approval-request queue or empty state, apply status/action-type/requester filters, confirm invalid requester input stays inline without a request, and use `Clear` to return to the unfiltered queue.
 10. If an approval request is present, open its request id and confirm `/approvals/:id` renders detail fields plus read-only formatted payload. Only use approve/reject controls against a disposable pending request, because approve synchronously executes the underlying action and reject resolves the request.
 11. Open `AI Interactions` and confirm `/ai-interactions` renders the aggregate usage summary.

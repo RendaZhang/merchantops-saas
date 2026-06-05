@@ -1,6 +1,6 @@
 # Automated Tests
 
-Last updated: 2026-06-01
+Last updated: 2026-06-05
 
 > Maintenance note: keep this page focused on the current default regression entry point, the current automated coverage boundary, and the remaining manual-only checks. Do not grow it into a historical per-slice changelog; when suites expand or narrow, fold the new reality into the main coverage sections and keep [project-status.md](../project-status.md) aligned.
 
@@ -58,11 +58,22 @@ Latest post-`v0.8.0-beta` Workflow Recovery Slice B frontend workspace result on
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
 
-Latest post-`v0.8.0-beta` Workflow Recovery Slice A frontend workspace result on 2026-05-27:
+Latest post-`v0.8.0-beta` Workflow Recovery Slice C frontend workspace result on 2026-06-05:
 
 - `npm run typecheck` from `merchantops-admin-web` completed successfully
 - `npm run lint` from `merchantops-admin-web` completed successfully
 - `npm run build` from `merchantops-admin-web` completed successfully
+
+Latest mocked admin import failed-row `errorCode` filter browser smoke result on 2026-06-05:
+
+- a static built-admin mock server served `/imports/7001` with mocked context, import detail, failed-row pages, filtered empty results, generic `403`, and `401` responses
+- the initial Import Detail route loaded `GET /api/v1/import-jobs/7001/errors?page=0&size=10`
+- clicking `View rows` for `UNKNOWN_ROLE` sent `GET /api/v1/import-jobs/7001/errors?page=0&size=10&errorCode=UNKNOWN_ROLE` and rendered only the matching failed row in the failed-row table
+- selecting a selective replay proposal checkbox remained independent from failed-row filter changes, and filter interactions did not create a proposal request
+- `EMPTY_RESULT` rendered the filtered empty-state copy; `Clear filter` restored the unfiltered failed-row table state
+- generic `403 permission denied` stayed inline on `/imports/7001`; `401` cleared local auth state and redirected to `/login` with the session-ended message
+- mobile viewport `390x844` kept page-level horizontal overflow contained while the failed-row table remained inside its own scroll container
+- in-app Browser navigation to the localhost mock target returned `ERR_BLOCKED_BY_CLIENT`, so the rendered smoke used local Chrome headless through the DevTools protocol without adding frontend test dependencies
 
 Latest mocked admin approval queue filter browser smoke result on 2026-06-01:
 
@@ -168,7 +179,7 @@ If the same change also touches AI provider wiring or live vendor compatibility,
 
 ## Coverage Baseline
 
-Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, logout-others, current-user session inventory, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, root and child ticket actor tenant-integrity hardening, ticket child-table tenant-linkage hardening, and frontend compile/lint/build coverage for the Dashboard, Sessions, Tickets, Ticket Detail/comment composer, Feature Flags, Imports, Import Detail/selective replay proposal UI, Approvals queue filters, Approval Detail, and AI Interactions admin routes. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
+Current automated coverage remains centered on the completed Week 2-6 public workflow baseline, the completed Week 7 import AI read baseline, the current two Week 8 human-reviewed execution bridges, the completed Week 9 tenant-scoped AI governance read baseline, the completed Week 10 Slice A persisted feature-flag hardening baseline, and the Productization Baseline auth-session/logout, logout-all, logout-others, current-user session inventory, UTC-stable auth-session/JWT time handling, status-aware auth-session cleanup, same-origin runtime foundation, `user_role` tenant-integrity hardening, root and child ticket actor tenant-integrity hardening, ticket child-table tenant-linkage hardening, and frontend compile/lint/build coverage for the Dashboard, Sessions, Tickets, Ticket Detail/comment composer, Feature Flags, Imports, Import Detail failed-row filter/selective replay proposal UI, Approvals queue filters, Approval Detail, and AI Interactions admin routes. Week 10 Slice C runs the Maven baseline in GitHub Actions, and Productization Baseline Slice C adds admin frontend checks plus API/admin image construction as no-secret CI gates. Today that means:
 
 - auth and permission checks for login, server-side auth-session creation, current-user session inventory with current-session marking, computed `ACTIVE` / `EXPIRED` / `REVOKED` list status, tenant/user isolation, JWT/session expiry alignment from shared UTC instants, required JWT `sid`, current-session logout revocation, logout-all same-user token invalidation with other-user and other-tenant preservation, logout-others current-session preservation with same-user token invalidation plus other-user and other-tenant preservation, revoked/sidless/expired session `401` behavior, retention-window cleanup of old `ACTIVE` and `REVOKED` auth-session rows, old-token `401` behavior after cleanup, JVM-timezone-stable JWT claim generation, the `V15 -> V18` auth-session migration path, database-level rejection of cross-tenant `user_role` bindings, database-level rejection of cross-tenant root ticket assignee/creator bindings, ticket comment/log child actor bindings, and ticket comment/log parent-ticket tenant linkages, and the current public user-management, feature-flag, ticket, AI interaction-history, tenant AI usage-summary, AI summary, AI triage, AI reply-draft, audit, approval, and import-job endpoints
 - controller binding and request-scoped forwarding for the current public workflow surface, including the AI interaction-history, tenant AI usage-summary, AI summary, AI triage, and AI reply-draft endpoints
